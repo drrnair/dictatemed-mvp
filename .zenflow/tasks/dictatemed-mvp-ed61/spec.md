@@ -1,9 +1,10 @@
 # DictateMED MVP - Technical Specification
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** December 2025
-**Status:** Draft
+**Status:** Revised
 **Based on:** requirements.md v1.0
+**Revision Notes:** Addressed review feedback - fixed model IDs, audio retention, added rate limiting, error taxonomy, health checks, accessibility, encryption details
 
 ---
 
@@ -73,7 +74,10 @@
 
 #### AWS Bedrock (Claude)
 - **Region:** ap-southeast-2 (Sydney)
-- **Models:** `anthropic.claude-3-opus-20240229`, `anthropic.claude-3-sonnet-20240229`
+- **Models:** Use environment variables for model IDs (see section 10.1)
+  - Primary (Opus-tier): `BEDROCK_MODEL_PRIMARY` - for complex letters
+  - Fast (Sonnet-tier): `BEDROCK_MODEL_FAST` - for simple letters and hallucination checks
+  - **Note:** Verify available model IDs in AWS Bedrock console before deployment. Current models may include `anthropic.claude-sonnet-4-20250514` or similar.
 - **Auth:** IAM roles via AWS SDK
 - **BAA:** Covered under AWS BAA
 
@@ -82,6 +86,34 @@
 - **MFA:** Required for all users
 - **Connections:** Username/password, SSO (optional)
 - **RBAC:** Admin, Specialist roles
+
+### 1.4 Rate Limiting Strategy
+
+To prevent abuse and manage external API costs, the following rate limits apply:
+
+| Resource | Limit | Window | Scope |
+|----------|-------|--------|-------|
+| Letters created | 100 | per day | per user |
+| Recordings uploaded | 50 | per day | per user |
+| Documents uploaded | 100 | per day | per user |
+| Transcription requests | 20 | concurrent | per practice |
+| Letter generation requests | 10 | concurrent | per practice |
+| API requests (general) | 1000 | per hour | per user |
+
+**Implementation:**
+- Use Redis or Upstash for distributed rate limiting
+- Return `429 Too Many Requests` with `Retry-After` header
+- Log rate limit hits for usage analysis
+- Configurable limits per practice tier (future)
+
+```typescript
+// src/lib/rate-limit.ts
+interface RateLimitConfig {
+  key: string;           // e.g., "letters:user:{userId}"
+  limit: number;
+  windowMs: number;
+}
+```
 
 ---
 
@@ -328,13 +360,15 @@ dictatemed-mvp/
 │   │   │   └── presigned-urls.ts
 │   │   │
 │   │   └── db/
-│   │       └── client.ts             # Prisma client singleton
+│   │       ├── client.ts             # Prisma client singleton
+│   │       └── encryption.ts         # PHI encryption service (AES-256-GCM)
 │   │
 │   ├── lib/                          # Shared utilities
 │   │   ├── auth.ts                   # Auth0 helpers
 │   │   ├── validation.ts             # Zod schemas
-│   │   ├── errors.ts                 # Custom error classes
+│   │   ├── errors.ts                 # Custom error classes (see section 7.4)
 │   │   ├── logger.ts                 # Structured logging
+│   │   ├── rate-limit.ts             # Rate limiting utilities
 │   │   └── utils.ts                  # General utilities
 │   │
 │   ├── hooks/                        # React hooks
@@ -955,6 +989,8 @@ interface GetProvenanceResponse {
 ```typescript
 // POST /api/transcription/webhook
 // Deepgram callback when transcription complete
+
+// Security: Webhook signature validation required (see section 7.3)
 interface DeepgramWebhookPayload {
   request_id: string;
   metadata: {
@@ -975,6 +1011,50 @@ interface DeepgramWebhookPayload {
   };
 }
 ```
+
+### 5.5 Health Check Endpoint
+
+```typescript
+// GET /api/health
+// System health check for monitoring and load balancers
+
+interface HealthCheckResponse {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  timestamp: string;
+  version: string;
+  checks: {
+    database: ServiceStatus;
+    deepgram: ServiceStatus;
+    bedrock: ServiceStatus;
+    s3: ServiceStatus;
+  };
+}
+
+interface ServiceStatus {
+  status: 'up' | 'down' | 'degraded';
+  latencyMs?: number;
+  message?: string;
+}
+
+// Example response
+{
+  "status": "healthy",
+  "timestamp": "2025-12-21T10:30:00Z",
+  "version": "1.0.0",
+  "checks": {
+    "database": { "status": "up", "latencyMs": 5 },
+    "deepgram": { "status": "up", "latencyMs": 120 },
+    "bedrock": { "status": "up", "latencyMs": 200 },
+    "s3": { "status": "up", "latencyMs": 15 }
+  }
+}
+```
+
+**Health Check Implementation Notes:**
+- Cached for 30 seconds to avoid hammering external services
+- Deep checks (Deepgram, Bedrock) run async with timeout
+- Returns 200 for healthy/degraded, 503 for unhealthy
+- Used by AWS ALB health checks
 
 ---
 
@@ -997,15 +1077,23 @@ export class DeepgramService {
 
   async transcribeRecording(
     audioUrl: string,
-    mode: 'AMBIENT' | 'DICTATION'
+    mode: 'AMBIENT' | 'DICTATION',
+    speakerMode: 'two' | 'multi' = 'two'
   ): Promise<TranscriptionResult> {
     const options = {
       model: 'nova-3-medical',
       smart_format: true,
       diarize: mode === 'AMBIENT',
       diarize_version: '2024-10-01',
+      // Multi-speaker mode: detect up to 6 speakers (family, interpreter, colleague)
+      // Two-speaker mode: optimize for clinician + patient only
+      ...(mode === 'AMBIENT' && {
+        diarize_min_speakers: speakerMode === 'two' ? 2 : 2,
+        diarize_max_speakers: speakerMode === 'two' ? 2 : 6,
+      }),
       keyterms: CARDIOLOGY_KEYTERMS,
-      redact: ['pci', 'ssn', 'phone', 'email'],
+      // Redaction includes Australian-specific patterns
+      redact: ['pci', 'ssn', 'phone', 'email', 'numbers'],
       callback: process.env.DEEPGRAM_WEBHOOK_URL,
     };
 
@@ -1019,6 +1107,24 @@ export class DeepgramService {
 }
 ```
 
+**Speaker Diarization Modes:**
+
+| Mode | Max Speakers | Use Case |
+|------|--------------|----------|
+| Two-speaker (default) | 2 | Standard clinician + patient consultation |
+| Multi-speaker | 6 | Family members, interpreters, colleagues present |
+
+**Speaker Role Assignment:**
+- Speaker 0: Clinician (speaks first in most consultations)
+- Speaker 1: Patient
+- Speakers 2-5: Other (family, interpreter) - labeled as "Other" in transcript
+- Manual role correction available in UI if auto-assignment is incorrect
+
+**Australian PHI Redaction Notes:**
+- Deepgram's `numbers` redaction covers Medicare numbers (10-digit format)
+- Australian phone formats (04xx, +61) covered by `phone` redaction
+- Application-layer fallback for any missed patterns (see PHI Obfuscator)
+
 ### 6.2 AWS Bedrock Integration
 
 ```typescript
@@ -1028,14 +1134,14 @@ import {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } from '@aws-sdk/client-bedrock-runtime';
-import { selectModel } from './model-selector';
+import { selectModel, MODELS } from './model-selector';
 
 export class BedrockService {
   private client: BedrockRuntimeClient;
 
   constructor() {
     this.client = new BedrockRuntimeClient({
-      region: 'ap-southeast-2',
+      region: process.env.AWS_REGION || 'ap-southeast-2',
     });
   }
 
@@ -1064,8 +1170,8 @@ export class BedrockService {
     letter: string,
     sources: SourceMaterial[]
   ): Promise<HallucinationCheckResult> {
-    // Use faster model for critic
-    const modelId = 'anthropic.claude-3-sonnet-20240229';
+    // Use faster model for critic - always use FAST tier
+    const modelId = MODELS.FAST;
     // ... implementation
   }
 }
@@ -1076,6 +1182,14 @@ export class BedrockService {
 ```typescript
 // src/infrastructure/bedrock/model-selector.ts
 
+// Model IDs from environment variables - verify in AWS Bedrock console
+export const MODELS = {
+  // Primary: Opus-tier model for complex reasoning
+  PRIMARY: process.env.BEDROCK_MODEL_PRIMARY || 'anthropic.claude-3-opus-20240229',
+  // Fast: Sonnet-tier model for simple tasks and hallucination checks
+  FAST: process.env.BEDROCK_MODEL_FAST || 'anthropic.claude-3-sonnet-20240229',
+} as const;
+
 interface LetterContext {
   letterType: LetterType;
   sourceCount: number;
@@ -1085,27 +1199,24 @@ interface LetterContext {
 }
 
 export function selectModel(context: LetterContext): string {
-  const OPUS = 'anthropic.claude-3-opus-20240229';
-  const SONNET = 'anthropic.claude-3-sonnet-20240229';
-
-  // Use Opus (30% of cases) for:
+  // Use PRIMARY/Opus-tier (30% of cases) for:
   // - New patient letters (more comprehensive)
   // - Complex procedures (TAVI, TEER, complex PCI)
   // - Multiple conflicting sources
   // - Low style confidence (needs more reasoning)
 
-  if (context.letterType === 'NEW_PATIENT') return OPUS;
-  if (context.procedureComplexity === 'complex') return OPUS;
-  if (context.hasConflictingData) return OPUS;
-  if (context.styleConfidence < 0.5) return OPUS;
+  if (context.letterType === 'NEW_PATIENT') return MODELS.PRIMARY;
+  if (context.procedureComplexity === 'complex') return MODELS.PRIMARY;
+  if (context.hasConflictingData) return MODELS.PRIMARY;
+  if (context.styleConfidence < 0.5) return MODELS.PRIMARY;
 
-  // Use Sonnet (70% of cases) for:
+  // Use FAST/Sonnet-tier (70% of cases) for:
   // - Follow-up letters
   // - Standard procedures
   // - High style confidence
   // - Single source documents
 
-  return SONNET;
+  return MODELS.FAST;
 }
 ```
 
@@ -1113,7 +1224,80 @@ export function selectModel(context: LetterContext): string {
 
 ## 7. Security Implementation
 
-### 7.1 PHI Obfuscation Pipeline
+### 7.1 Patient Data Encryption
+
+Patient PHI is encrypted at the application layer before database storage using AES-256-GCM.
+
+```typescript
+// src/infrastructure/db/encryption.ts
+
+import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16;
+const AUTH_TAG_LENGTH = 16;
+
+// Key from AWS Secrets Manager or environment
+const getEncryptionKey = (): Buffer => {
+  const key = process.env.PHI_ENCRYPTION_KEY;
+  if (!key || Buffer.from(key, 'base64').length !== 32) {
+    throw new Error('PHI_ENCRYPTION_KEY must be a 32-byte base64 encoded key');
+  }
+  return Buffer.from(key, 'base64');
+};
+
+export interface PatientData {
+  name: string;
+  dateOfBirth: string;
+  medicareNumber?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+}
+
+export function encryptPatientData(data: PatientData): string {
+  const key = getEncryptionKey();
+  const iv = randomBytes(IV_LENGTH);
+  const cipher = createCipheriv(ALGORITHM, key, iv);
+
+  const plaintext = JSON.stringify(data);
+  const encrypted = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final()
+  ]);
+  const authTag = cipher.getAuthTag();
+
+  // Format: iv:authTag:ciphertext (all base64)
+  return `${iv.toString('base64')}:${authTag.toString('base64')}:${encrypted.toString('base64')}`;
+}
+
+export function decryptPatientData(encryptedString: string): PatientData {
+  const key = getEncryptionKey();
+  const [ivB64, authTagB64, ciphertextB64] = encryptedString.split(':');
+
+  const iv = Buffer.from(ivB64, 'base64');
+  const authTag = Buffer.from(authTagB64, 'base64');
+  const ciphertext = Buffer.from(ciphertextB64, 'base64');
+
+  const decipher = createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+
+  const decrypted = Buffer.concat([
+    decipher.update(ciphertext),
+    decipher.final()
+  ]);
+
+  return JSON.parse(decrypted.toString('utf8'));
+}
+```
+
+**Key Management:**
+- Encryption key stored in AWS Secrets Manager
+- Key rotation: Annual rotation with re-encryption migration
+- Separate keys for dev/staging/production environments
+- Never log or expose encryption keys
+
+### 7.2 PHI Obfuscation Pipeline
 
 ```typescript
 // src/domains/safety/phi-obfuscator.ts
@@ -1220,6 +1404,185 @@ export class ValueExtractor {
 
     return values;
   }
+}
+```
+
+### 7.4 Webhook Security
+
+Deepgram webhooks are secured using HMAC-SHA256 signature validation.
+
+```typescript
+// src/app/api/transcription/webhook/route.ts
+
+import { createHmac, timingSafeEqual } from 'crypto';
+import { NextRequest, NextResponse } from 'next/server';
+
+const WEBHOOK_SECRET = process.env.DEEPGRAM_WEBHOOK_SECRET!;
+
+function verifyWebhookSignature(
+  payload: string,
+  signature: string,
+  secret: string
+): boolean {
+  // Deepgram sends signature in format: sha256=<hash>
+  const [algorithm, hash] = signature.split('=');
+  if (algorithm !== 'sha256' || !hash) {
+    return false;
+  }
+
+  const expectedHash = createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+
+  // Use timing-safe comparison to prevent timing attacks
+  return timingSafeEqual(
+    Buffer.from(hash, 'hex'),
+    Buffer.from(expectedHash, 'hex')
+  );
+}
+
+export async function POST(request: NextRequest) {
+  const signature = request.headers.get('x-deepgram-signature');
+  const payload = await request.text();
+
+  if (!signature || !verifyWebhookSignature(payload, signature, WEBHOOK_SECRET)) {
+    return NextResponse.json(
+      { error: 'Invalid webhook signature' },
+      { status: 401 }
+    );
+  }
+
+  // Process validated webhook payload
+  const data = JSON.parse(payload);
+  // ... handle transcription result
+}
+```
+
+**Webhook Security Measures:**
+- HMAC-SHA256 signature validation on all incoming webhooks
+- Timing-safe comparison prevents timing attacks
+- Webhook secret stored in AWS Secrets Manager
+- Request replay protection via timestamp validation (optional)
+- Log all webhook events for audit
+
+### 7.5 Error Classification Taxonomy
+
+Structured error handling with categorized error types for consistent API responses and logging.
+
+```typescript
+// src/lib/errors.ts
+
+export enum ErrorCode {
+  // Authentication & Authorization (1xxx)
+  UNAUTHORIZED = 1001,
+  FORBIDDEN = 1002,
+  SESSION_EXPIRED = 1003,
+  MFA_REQUIRED = 1004,
+
+  // Validation (2xxx)
+  VALIDATION_ERROR = 2001,
+  INVALID_FILE_TYPE = 2002,
+  FILE_TOO_LARGE = 2003,
+  INVALID_PATIENT_DATA = 2004,
+
+  // Recording & Transcription (3xxx)
+  RECORDING_FAILED = 3001,
+  TRANSCRIPTION_FAILED = 3002,
+  TRANSCRIPTION_TIMEOUT = 3003,
+  AUDIO_QUALITY_TOO_LOW = 3004,
+  DIARIZATION_FAILED = 3005,
+
+  // Document Processing (4xxx)
+  DOCUMENT_UPLOAD_FAILED = 4001,
+  DOCUMENT_EXTRACTION_FAILED = 4002,
+  UNSUPPORTED_DOCUMENT_FORMAT = 4003,
+  OCR_FAILED = 4004,
+
+  // Letter Generation (5xxx)
+  GENERATION_FAILED = 5001,
+  GENERATION_TIMEOUT = 5002,
+  HALLUCINATION_DETECTED = 5003,
+  SOURCE_ANCHOR_FAILED = 5004,
+  STYLE_LEARNING_FAILED = 5005,
+
+  // External Services (6xxx)
+  DEEPGRAM_ERROR = 6001,
+  BEDROCK_ERROR = 6002,
+  S3_ERROR = 6003,
+  AUTH0_ERROR = 6004,
+
+  // Rate Limiting (7xxx)
+  RATE_LIMIT_EXCEEDED = 7001,
+  CONCURRENT_LIMIT_EXCEEDED = 7002,
+
+  // System (9xxx)
+  INTERNAL_ERROR = 9001,
+  DATABASE_ERROR = 9002,
+  CONFIGURATION_ERROR = 9003,
+}
+
+export class AppError extends Error {
+  constructor(
+    public code: ErrorCode,
+    message: string,
+    public details?: Record<string, unknown>,
+    public isOperational = true
+  ) {
+    super(message);
+    this.name = 'AppError';
+  }
+
+  toJSON() {
+    return {
+      code: this.code,
+      message: this.message,
+      details: this.details,
+    };
+  }
+}
+
+// Specific error classes for type safety
+export class TranscriptionError extends AppError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(ErrorCode.TRANSCRIPTION_FAILED, message, details);
+  }
+}
+
+export class GenerationError extends AppError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(ErrorCode.GENERATION_FAILED, message, details);
+  }
+}
+
+export class ExtractionError extends AppError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(ErrorCode.DOCUMENT_EXTRACTION_FAILED, message, details);
+  }
+}
+
+// Error response helper
+export function errorResponse(error: AppError | Error) {
+  if (error instanceof AppError) {
+    const status = getHttpStatus(error.code);
+    return { status, body: error.toJSON() };
+  }
+
+  // Unknown errors - log and return generic
+  console.error('Unhandled error:', error);
+  return {
+    status: 500,
+    body: {
+      code: ErrorCode.INTERNAL_ERROR,
+      message: 'An unexpected error occurred',
+    },
+  };
+}
+
+function getHttpStatus(code: ErrorCode): number {
+  if (code >= 1001 && code <= 1999) return 401; // Auth
+  if (code >= 2001 && code <= 2999) return 400; // Validation
+  if (code >= 7001 && code <= 7999) return 429; // Rate limit
+  return 500; // Default
 }
 ```
 
@@ -1340,10 +1703,18 @@ export class ValueExtractor {
 
 | Level | Tool | Coverage Target |
 |-------|------|-----------------|
-| Unit Tests | Vitest | 80% of domain logic |
+| Unit Tests | Vitest | 80% of domain logic, >95% for safety modules |
 | Integration Tests | Vitest + Prisma | All API endpoints |
 | E2E Tests | Playwright | Critical user flows |
+| Accessibility Tests | axe-core + Playwright | WCAG 2.1 AA compliance |
 | Manual Testing | Checklist | Edge cases, clinical accuracy |
+
+**Safety-Critical Module Coverage:**
+The following modules require >95% test coverage due to their clinical safety impact:
+- `src/domains/safety/phi-obfuscator.ts`
+- `src/domains/safety/value-extractor.ts`
+- `src/domains/safety/hallucination-detector.ts`
+- `src/infrastructure/db/encryption.ts`
 
 ### 9.2 Key Test Scenarios
 
@@ -1386,7 +1757,67 @@ export class ValueExtractor {
 - >98% value extraction accuracy
 - Zero critical errors in pilot
 
-### 9.4 Commands
+### 9.4 Accessibility Testing
+
+WCAG 2.1 AA compliance is required per requirements. Accessibility testing is integrated into the development workflow.
+
+**Tooling:**
+- **axe-core**: Automated accessibility auditing
+- **Playwright**: Accessibility assertions in E2E tests
+- **eslint-plugin-jsx-a11y**: Lint-time accessibility checks
+
+```typescript
+// tests/e2e/accessibility.spec.ts
+
+import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+test.describe('Accessibility', () => {
+  test('dashboard has no WCAG violations', async ({ page }) => {
+    await page.goto('/dashboard');
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test('letter review page is keyboard navigable', async ({ page }) => {
+    await page.goto('/letters/123');
+
+    // Tab through all interactive elements
+    await page.keyboard.press('Tab');
+    const focused = await page.evaluate(() => document.activeElement?.tagName);
+    expect(focused).not.toBe('BODY');
+
+    // Source panel should be focusable
+    await page.focus('[data-testid="source-panel"]');
+    await expect(page.locator('[data-testid="source-panel"]')).toBeFocused();
+  });
+});
+```
+
+**Accessibility Checklist (Manual):**
+- [ ] All images have meaningful alt text
+- [ ] Color contrast ratio ≥ 4.5:1 for normal text, ≥ 3:1 for large text
+- [ ] All form inputs have associated labels
+- [ ] Focus indicators visible on all interactive elements
+- [ ] Skip navigation link available
+- [ ] Headings follow logical hierarchy (h1 → h2 → h3)
+- [ ] Error messages announced to screen readers
+- [ ] Modals trap focus appropriately
+- [ ] Recording controls accessible via keyboard
+
+**CI Integration:**
+```bash
+# Run accessibility tests
+npm run test:a11y
+
+# Include in verification
+npm run verify  # includes a11y checks
+```
+
+### 9.5 Commands
 
 ```bash
 # Lint
@@ -1403,6 +1834,9 @@ npm run test:integration
 
 # E2E tests
 npm run test:e2e
+
+# Accessibility tests
+npm run test:a11y
 
 # All checks (CI)
 npm run verify
@@ -1438,6 +1872,13 @@ DEEPGRAM_API_KEY="your-api-key"
 DEEPGRAM_WEBHOOK_URL="https://your-domain.com/api/transcription/webhook"
 DEEPGRAM_WEBHOOK_SECRET="your-webhook-secret"
 
+# AWS Bedrock Models (verify IDs in AWS console before deployment)
+BEDROCK_MODEL_PRIMARY="anthropic.claude-3-opus-20240229"
+BEDROCK_MODEL_FAST="anthropic.claude-3-sonnet-20240229"
+
+# Patient Data Encryption (32-byte base64 encoded key)
+PHI_ENCRYPTION_KEY="[generate-32-byte-random-base64]"
+
 # Feature Flags
 ENABLE_HALLUCINATION_CHECK="true"
 ENABLE_STYLE_LEARNING="true"
@@ -1449,7 +1890,10 @@ ENABLE_STYLE_LEARNING="true"
 # AWS Resources Required
 - S3 Bucket: dictatemed-uploads (ap-southeast-2)
   - Encryption: AES-256
-  - Lifecycle: Delete audio after 24h, documents after 90d
+  - Lifecycle:
+    - Audio: Delete immediately after transcription completes (application-triggered, not S3 lifecycle)
+    - S3 lifecycle fallback: Delete audio after 24h (safety net for orphaned files)
+    - Documents: 90 days (configurable per practice)
   - CORS: Allow uploads from app domain
 
 - IAM Role: dictatemed-app
@@ -1508,4 +1952,4 @@ ENABLE_STYLE_LEARNING="true"
 
 ---
 
-*Technical Specification v1.0 | DictateMED MVP | December 2025*
+*Technical Specification v1.1 | DictateMED MVP | December 2025*
