@@ -28,7 +28,7 @@
 | **Transcription** | Deepgram Nova-3 Medical | - | 63.7% better WER, medical keyterms, diarization |
 | **AI/LLM** | Claude via AWS Bedrock | Opus/Sonnet | BAA coverage, zero retention, best quality |
 | **Hosting** | AWS (Sydney) | ap-southeast-2 | Australian data residency requirement |
-| **Deployment** | AWS Amplify or Vercel | - | Next.js optimized, edge functions |
+| **Deployment** | Vercel (MVP) → AWS (Production) | - | Vercel for rapid MVP testing; migrate to AWS Amplify post-pilot for full data residency |
 
 ### 1.2 Key Dependencies
 
@@ -185,12 +185,48 @@ interface RateLimitConfig {
 - No lost recordings
 - PWA requirement
 
-#### Decision 5: Background Processing via Queues
-**Choice:** Use AWS SQS + Lambda for heavy processing
+#### Decision 5: Background Processing
+**Choice (MVP):** Use Next.js API routes with webhook callbacks
 **Rationale:**
-- Transcription can take minutes
-- Don't block user workflows
-- Reliable retry mechanism
+- Simpler infrastructure for MVP
+- Deepgram webhooks handle async transcription completion
+- Letter generation runs in API route with timeout handling
+
+**Post-MVP Migration:** Consider AWS SQS + Lambda if:
+- Processing times exceed API route limits
+- Need more robust retry/dead-letter handling
+- Volume exceeds Vercel function limits
+
+#### Decision 6: Offline Sync Conflict Resolution
+**Choice:** Lock editing to single device until sync
+**Rationale:**
+- Medical documentation requires data integrity
+- Prevents accidental data loss from conflicting edits
+- Simpler to implement than conflict resolution UI
+- Users can unlock from another device if needed
+
+**Implementation:**
+- Letters in "IN_REVIEW" status acquire a device lock
+- Lock includes device ID and timestamp
+- Lock auto-releases after 30 minutes of inactivity
+- If user attempts to edit locked letter on another device: "This letter is being edited on another device. Wait for sync or force unlock."
+- Force unlock available with confirmation (clears unsaved changes on other device)
+
+#### Decision 7: Email Notifications
+**Choice (MVP):** In-app notifications only
+**Rationale:**
+- Reduces infrastructure complexity
+- Most users will be in-app when letters complete
+- Push notifications via PWA provide mobile alerts
+
+**Post-MVP:** Add AWS SES for email notifications if users request it
+
+#### Decision 8: Document Retention
+**Choice (MVP):** Fixed at 90 days
+**Rationale:**
+- Simplifies implementation
+- Covers typical audit requirements
+- Can be made configurable post-MVP if needed
 
 ---
 
@@ -1884,31 +1920,50 @@ ENABLE_HALLUCINATION_CHECK="true"
 ENABLE_STYLE_LEARNING="true"
 ```
 
-### 10.2 Infrastructure Setup
+### 10.2 Infrastructure Setup (MVP)
+
+**Deployment Strategy:** Vercel for MVP rapid iteration, migrate to AWS Amplify post-pilot.
 
 ```yaml
-# AWS Resources Required
-- S3 Bucket: dictatemed-uploads (ap-southeast-2)
+# MVP Infrastructure (Vercel + AWS Services)
+
+## Vercel (Application Hosting)
+- Project: dictatemed-mvp
+- Framework: Next.js
+- Region: Sydney (syd1) or closest available
+- Environment variables: Configure in Vercel dashboard
+- Functions timeout: 60s (Pro plan may be needed for longer letter generation)
+
+## AWS Resources Required (ap-southeast-2)
+- S3 Bucket: dictatemed-uploads
   - Encryption: AES-256
   - Lifecycle:
-    - Audio: Delete immediately after transcription completes (application-triggered, not S3 lifecycle)
-    - S3 lifecycle fallback: Delete audio after 24h (safety net for orphaned files)
-    - Documents: 90 days (configurable per practice)
-  - CORS: Allow uploads from app domain
+    - Audio: Delete immediately after transcription (application-triggered)
+    - S3 lifecycle fallback: Delete audio after 24h (orphan cleanup)
+    - Documents: 90 days (fixed for MVP)
+  - CORS: Allow uploads from Vercel domains (*.vercel.app, custom domain)
 
-- IAM Role: dictatemed-app
-  - S3: GetObject, PutObject, DeleteObject
-  - Bedrock: InvokeModel
-  - CloudWatch: PutMetricData, CreateLogGroup, CreateLogStream, PutLogEvents
+- IAM User: dictatemed-vercel (for Vercel to access AWS)
+  - S3: GetObject, PutObject, DeleteObject on dictatemed-uploads/*
+  - Bedrock: InvokeModel on claude models
+  - Credentials: Store in Vercel environment variables
 
-- RDS PostgreSQL: dictatemed-db (db.t3.medium)
-  - Encryption: Enabled
-  - Backup: 7 days
-  - Multi-AZ: Enabled for production
+## Database (Managed PostgreSQL)
+- Provider: Vercel Postgres, Supabase, or Neon (serverless-friendly)
+- Alternative: AWS RDS if Vercel DB latency is an issue
+- Encryption: Enabled
+- Backup: Daily
 
-- Secrets Manager: dictatemed-secrets
-  - DATABASE_URL, DEEPGRAM_API_KEY, AUTH0_SECRET
+## Secrets Management
+- MVP: Vercel environment variables (encrypted)
+- Post-MVP: AWS Secrets Manager for rotation support
 ```
+
+**Post-MVP Migration Notes:**
+- Move to AWS Amplify for full Australian data residency
+- Migrate database to AWS RDS Sydney
+- Use AWS Secrets Manager for all credentials
+- Add CloudWatch for monitoring
 
 ---
 
@@ -1916,12 +1971,13 @@ ENABLE_STYLE_LEARNING="true"
 
 | Risk | Mitigation |
 |------|------------|
-| Deepgram accuracy insufficient | Custom keyterm list, fallback to AssemblyAI |
-| Claude hallucinations | Critic model validation, source anchoring |
-| Offline sync conflicts | Last-write-wins with conflict notification |
-| PHI exposure | Tokenization before LLM, BAA coverage |
-| Slow transcription | Background processing, notification system |
-| Model cost overruns | Intelligent model selection, usage monitoring |
+| Deepgram accuracy insufficient | Custom keyterm list (100 cardiology terms), fallback to AssemblyAI |
+| Claude hallucinations | Critic model validation, source anchoring, mandatory value verification |
+| Offline sync conflicts | Device locking with 30-min auto-release; force unlock available |
+| PHI exposure | Tokenization before LLM, Deepgram redaction, BAA coverage |
+| Slow transcription | Webhook callbacks, in-app notifications |
+| Model cost overruns | Intelligent Sonnet/Opus selection (70/30 split), usage monitoring |
+| Vercel function timeouts | Monitor generation times; migrate to AWS if >60s common |
 
 ---
 
@@ -1949,6 +2005,23 @@ ENABLE_STYLE_LEARNING="true"
 - BAA required before production with Deepgram, AWS
 - Audio deleted immediately after transcription
 - Account deletion must be GDPR-aligned (immediate, permanent)
+
+---
+
+## 13. Post-MVP Reminders
+
+**Review these items when moving from MVP to production:**
+
+| Item | Current MVP Approach | Post-MVP Consideration |
+|------|---------------------|------------------------|
+| **Deployment** | Vercel | Migrate to AWS Amplify for full data residency |
+| **Background Jobs** | Next.js API + webhooks | Evaluate AWS SQS + Lambda if timeouts occur |
+| **Email Notifications** | In-app only | Add AWS SES if users request email alerts |
+| **Document Retention** | Fixed 90 days | Make configurable per-practice |
+| **Database** | Vercel Postgres/Supabase | Consider AWS RDS Sydney for latency |
+| **Secrets** | Vercel env vars | AWS Secrets Manager with rotation |
+| **Monitoring** | Vercel Analytics | Add CloudWatch, structured logging |
+| **Google Cloud** | Not evaluated | Alternative to AWS if needed |
 
 ---
 
