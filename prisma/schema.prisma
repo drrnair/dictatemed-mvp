@@ -1,0 +1,296 @@
+// prisma/schema.prisma
+// DictateMED MVP Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ Organization & Users ============
+
+model Practice {
+  id         String   @id @default(uuid())
+  name       String
+  settings   Json     @default("{}")
+  letterhead String? // S3 key for letterhead image
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users User[]
+
+  @@map("practices")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  auth0Id      String    @unique
+  email        String    @unique
+  name         String
+  role         UserRole  @default(SPECIALIST)
+  signature    String? // S3 key for signature image
+  styleProfile Json      @default("{}") // Learned style preferences
+  settings     Json      @default("{}")
+  practiceId   String
+  practice     Practice  @relation(fields: [practiceId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastLoginAt  DateTime?
+
+  recordings Recording[]
+  documents  Document[]
+  letters    Letter[]
+  auditLogs  AuditLog[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  SPECIALIST
+}
+
+// ============ Patients ============
+
+model Patient {
+  id            String   @id @default(uuid())
+  // PHI stored encrypted via AES-256-GCM, minimal data
+  encryptedData String // Encrypted JSON: name, dob, medicare, etc.
+  practiceId    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  recordings Recording[]
+  documents  Document[]
+  letters    Letter[]
+
+  @@map("patients")
+}
+
+// ============ Recordings ============
+
+model Recording {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  patientId String?
+  patient   Patient?  @relation(fields: [patientId], references: [id])
+
+  mode   RecordingMode
+  status RecordingStatus @default(UPLOADING)
+
+  // Audio metadata
+  durationSeconds Int?
+  audioQuality    String? // excellent/good/fair/poor
+  s3AudioKey      String?
+
+  // Consent
+  consentType ConsentType?
+  consentAt   DateTime?
+
+  // Transcription
+  transcriptRaw  Json?   // Full Deepgram response
+  transcriptText String? // Plain text transcript
+  speakers       Json?   // Speaker diarization data
+
+  // Processing
+  processingError String?
+  processedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  letters Letter[]
+
+  @@index([userId, createdAt])
+  @@map("recordings")
+}
+
+enum RecordingMode {
+  AMBIENT
+  DICTATION
+}
+
+enum RecordingStatus {
+  UPLOADING
+  UPLOADED
+  TRANSCRIBING
+  TRANSCRIBED
+  FAILED
+}
+
+enum ConsentType {
+  VERBAL
+  WRITTEN
+  STANDING
+}
+
+// ============ Documents ============
+
+model Document {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  patientId String?
+  patient   Patient? @relation(fields: [patientId], references: [id])
+
+  filename  String
+  mimeType  String
+  sizeBytes Int
+  s3Key     String
+
+  documentType DocumentType?
+  status       DocumentStatus @default(UPLOADING)
+
+  // Extraction results
+  extractedData   Json?   // Structured clinical data
+  extractedText   String? // OCR/parsed text
+  processingError String?
+  processedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  letterDocuments LetterDocument[]
+
+  @@index([userId, createdAt])
+  @@map("documents")
+}
+
+enum DocumentType {
+  ECHO_REPORT
+  ANGIOGRAM_REPORT
+  ECG_REPORT
+  HOLTER_REPORT
+  REFERRAL_LETTER
+  OTHER
+}
+
+enum DocumentStatus {
+  UPLOADING
+  UPLOADED
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+// ============ Letters ============
+
+model Letter {
+  id          String     @id @default(uuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  patientId   String?
+  patient     Patient?   @relation(fields: [patientId], references: [id])
+  recordingId String?
+  recording   Recording? @relation(fields: [recordingId], references: [id])
+
+  letterType LetterType
+  status     LetterStatus @default(GENERATING)
+
+  // Content
+  contentDraft String? // Initial AI-generated content
+  contentFinal String? // After physician edits
+  contentDiff  Json?   // Diff between draft and final
+
+  // Source anchoring
+  sourceAnchors Json? // Map of text segments to sources
+
+  // Clinical safety
+  extractedValues    Json? // LVEF, stenosis, etc.
+  verifiedValues     Json? // Which values physician confirmed
+  hallucinationFlags Json? // Critic model findings
+  clinicalConcepts   Json? // Diagnoses, meds, procedures
+
+  // Model tracking
+  primaryModel    String? // Model used for generation
+  criticModel     String? // Model used for hallucination check
+  styleConfidence Float?  // 0-1 confidence in style match
+
+  // Device locking for offline sync
+  lockedByDeviceId String?
+  lockedAt         DateTime?
+
+  // Timing
+  generatedAt      DateTime?
+  reviewStartedAt  DateTime?
+  approvedAt       DateTime?
+  reviewDurationMs Int? // Time spent reviewing
+
+  // Processing
+  processingError String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents  LetterDocument[]
+  provenance Provenance?
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("letters")
+}
+
+enum LetterType {
+  NEW_PATIENT
+  FOLLOW_UP
+  ANGIOGRAM_PROCEDURE
+  ECHO_REPORT
+}
+
+enum LetterStatus {
+  GENERATING
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  FAILED
+}
+
+model LetterDocument {
+  id         String   @id @default(uuid())
+  letterId   String
+  letter     Letter   @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id])
+
+  @@unique([letterId, documentId])
+  @@map("letter_documents")
+}
+
+// ============ Provenance & Audit ============
+
+model Provenance {
+  id       String @id @default(uuid())
+  letterId String @unique
+  letter   Letter @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  // Complete audit trail as structured JSON
+  data Json
+
+  // Cryptographic hash for tamper detection
+  hash String
+
+  createdAt DateTime @default(now())
+
+  @@map("provenance")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id])
+  action       String // login, logout, letter.create, letter.approve, etc.
+  resourceType String? // letter, recording, document
+  resourceId   String?
+  metadata     Json     @default("{}")
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
