@@ -4,6 +4,9 @@
 import { getSession as getAuth0Session } from '@auth0/nextjs-auth0';
 import { prisma } from '@/infrastructure/db/client';
 
+// Re-export getSession for API routes
+export { getSession as getAuth0RawSession } from '@auth0/nextjs-auth0';
+
 /**
  * User session with database information
  */
@@ -106,4 +109,16 @@ export async function hasAccessToResource(
     return false;
   }
   return user.practiceId === resourcePracticeId;
+}
+
+/**
+ * Get session with user info for API routes.
+ * Returns a session-like object compatible with API route patterns.
+ */
+export async function getSession(): Promise<{ user: AuthUser } | null> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return null;
+  }
+  return { user };
 }

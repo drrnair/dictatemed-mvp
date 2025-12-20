@@ -1,21 +1,236 @@
 // src/app/(dashboard)/record/page.tsx
-// Recording page placeholder
+// Recording page with dual-mode audio capture
+
+'use client';
+
+import { useState, useCallback, useRef } from 'react';
+import {
+  ModeSelector,
+  RecordingControls,
+  RecordingTimer,
+  WaveformVisualizer,
+  AudioQualityIndicator,
+  ConsentDialog,
+  type RecordingMode,
+  type ConsentType,
+} from '@/components/recording';
+import { useRecording } from '@/hooks/useRecording';
+import { useOfflineQueue } from '@/hooks/useOfflineQueue';
+import { AlertCircle, Loader2, Cloud, CloudOff, Upload } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function RecordPage() {
+  const [selectedMode, setSelectedMode] = useState<RecordingMode>('AMBIENT');
+  const [showConsentDialog, setShowConsentDialog] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const consentTypeRef = useRef<ConsentType>('VERBAL');
+
+  const {
+    state,
+    durationSeconds,
+    audioLevel,
+    quality,
+    error,
+    start,
+    pause,
+    resume,
+    stop,
+    reset,
+  } = useRecording();
+
+  const {
+    pendingCount,
+    syncStatus,
+    isOnline,
+    queueRecording,
+    syncNow,
+  } = useOfflineQueue();
+
+  // Handle starting a recording
+  const handleStartClick = useCallback(() => {
+    setShowConsentDialog(true);
+  }, []);
+
+  // Handle consent confirmation
+  const handleConsentConfirm = useCallback(
+    async (consentType: ConsentType) => {
+      setShowConsentDialog(false);
+      consentTypeRef.current = consentType;
+      await start({
+        mode: selectedMode,
+        consentType,
+      });
+    },
+    [selectedMode, start]
+  );
+
+  // Handle consent cancellation
+  const handleConsentCancel = useCallback(() => {
+    setShowConsentDialog(false);
+  }, []);
+
+  // Handle stopping the recording
+  const handleStop = useCallback(async () => {
+    try {
+      setIsSaving(true);
+      const result = await stop();
+
+      // Queue recording for upload (works offline)
+      await queueRecording({
+        mode: selectedMode,
+        consentType: consentTypeRef.current,
+        audioBlob: result.blob,
+        durationSeconds: result.durationSeconds,
+      });
+
+      // Reset after a short delay to show completion state
+      setTimeout(() => {
+        reset();
+        setIsSaving(false);
+      }, 1000);
+    } catch (err) {
+      console.error('Failed to save recording:', err);
+      setIsSaving(false);
+    }
+  }, [stop, reset, queueRecording, selectedMode]);
+
+  const isRecording = state === 'recording' || state === 'paused';
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Record</h1>
-        <p className="text-muted-foreground">
-          Start a new consultation recording session.
-        </p>
+      {/* Header with status */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Record</h1>
+          <p className="text-muted-foreground">
+            Start a new consultation recording session.
+          </p>
+        </div>
+
+        {/* Network and sync status */}
+        <div className="flex items-center gap-2">
+          {/* Network indicator */}
+          <div
+            className={cn(
+              'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium',
+              isOnline
+                ? 'bg-green-500/10 text-green-600'
+                : 'bg-destructive/10 text-destructive'
+            )}
+          >
+            {isOnline ? (
+              <Cloud className="h-3.5 w-3.5" />
+            ) : (
+              <CloudOff className="h-3.5 w-3.5" />
+            )}
+            {isOnline ? 'Online' : 'Offline'}
+          </div>
+
+          {/* Pending recordings */}
+          {pendingCount > 0 && (
+            <button
+              type="button"
+              onClick={() => syncNow()}
+              disabled={!isOnline || syncStatus === 'syncing'}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium',
+                'bg-primary/10 text-primary',
+                'hover:bg-primary/20 transition-colors',
+                (!isOnline || syncStatus === 'syncing') && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              {syncStatus === 'syncing' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Upload className="h-3.5 w-3.5" />
+              )}
+              {pendingCount} pending
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="rounded-lg border border-dashed border-border p-12 text-center">
-        <p className="text-muted-foreground">
-          Recording interface will be implemented in Phase 2.
-        </p>
+      {/* Mode selector */}
+      <div className="rounded-lg border border-border bg-card p-6">
+        <h2 className="mb-4 text-sm font-medium text-muted-foreground">
+          Recording Mode
+        </h2>
+        <ModeSelector
+          mode={selectedMode}
+          onModeChange={setSelectedMode}
+          disabled={isRecording}
+        />
       </div>
+
+      {/* Recording interface */}
+      <div className="rounded-lg border border-border bg-card p-6">
+        {/* Waveform visualizer */}
+        <WaveformVisualizer
+          audioLevel={audioLevel}
+          isActive={state === 'recording'}
+          className="mb-6"
+        />
+
+        {/* Timer */}
+        <div className="mb-6">
+          <RecordingTimer durationSeconds={durationSeconds} state={state} />
+        </div>
+
+        {/* Recording controls */}
+        <RecordingControls
+          state={state}
+          onStart={handleStartClick}
+          onPause={pause}
+          onResume={resume}
+          onStop={handleStop}
+          disabled={isSaving}
+        />
+
+        {/* Error message */}
+        {error && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-destructive">
+            <AlertCircle className="h-5 w-5" />
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Saving indicator */}
+        {isSaving && (
+          <div className="mt-4 flex items-center justify-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <p className="text-sm">Saving recording...</p>
+          </div>
+        )}
+      </div>
+
+      {/* Audio quality indicator (visible during recording) */}
+      {isRecording && (
+        <AudioQualityIndicator quality={quality} audioLevel={audioLevel} />
+      )}
+
+      {/* Recording tips */}
+      {!isRecording && (
+        <div className="rounded-lg border border-border bg-muted/50 p-4">
+          <h3 className="mb-2 font-medium">Recording Tips</h3>
+          <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
+            <li>Ensure you&apos;re in a quiet environment</li>
+            <li>Position the microphone 15-30cm from your mouth</li>
+            <li>Speak clearly at a consistent volume</li>
+            <li>
+              {selectedMode === 'AMBIENT'
+                ? 'Both patient and physician voices will be captured'
+                : 'Dictate clearly for optimal transcription'}
+            </li>
+          </ul>
+        </div>
+      )}
+
+      {/* Consent dialog */}
+      <ConsentDialog
+        isOpen={showConsentDialog}
+        onConfirm={handleConsentConfirm}
+        onCancel={handleConsentCancel}
+      />
     </div>
   );
 }

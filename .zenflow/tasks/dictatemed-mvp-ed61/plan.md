@@ -185,7 +185,7 @@ Set up GitHub Actions for continuous integration.
 
 ### Phase 2: Audio & Transcription (Weeks 4-6)
 
-#### [ ] 2.1 IndexedDB Offline Infrastructure
+#### [x] 2.1 IndexedDB Offline Infrastructure
 Set up IndexedDB schema and offline-first infrastructure for PWA functionality.
 
 **Tasks:**
@@ -206,7 +206,7 @@ Set up IndexedDB schema and offline-first infrastructure for PWA functionality.
 - Can store and retrieve test data
 - Offline detection fires appropriate events
 
-#### [ ] 2.2 Recording Interface
+#### [x] 2.2 Recording Interface
 Build dual-mode audio recording UI with quality monitoring.
 
 **Tasks:**
@@ -232,7 +232,7 @@ Build dual-mode audio recording UI with quality monitoring.
 - Audio quality indicator updates in real-time
 - Consent must be confirmed before recording starts
 
-#### [ ] 2.3 Offline Recording Queue
+#### [x] 2.3 Offline Recording Queue
 Implement offline recording storage using IndexedDB infrastructure.
 
 **Tasks:**
@@ -252,7 +252,7 @@ Implement offline recording storage using IndexedDB infrastructure.
 - Recordings sync automatically when online
 - Pending count displayed in UI
 
-#### [ ] 2.4 Recording API Endpoints
+#### [x] 2.4 Recording API Endpoints
 Create backend API for recording management.
 
 **Tasks:**
@@ -275,7 +275,7 @@ Create backend API for recording management.
 npm run test:integration -- recordings
 ```
 
-#### [ ] 2.5 Cardiology Keyterms Configuration
+#### [x] 2.5 Cardiology Keyterms Configuration
 Create the 100-term cardiology vocabulary list for Deepgram.
 
 **Tasks:**
@@ -295,7 +295,7 @@ Create the 100-term cardiology vocabulary list for Deepgram.
 - 100 keyterms defined and categorized
 - Keyterms exportable for Deepgram API
 
-#### [ ] 2.6 Deepgram Integration
+#### [x] 2.6 Deepgram Integration
 Integrate Deepgram Nova-3 Medical for transcription.
 
 **Tasks:**
@@ -316,7 +316,7 @@ Integrate Deepgram Nova-3 Medical for transcription.
 - Cardiology terms transcribed correctly
 - Speaker diarization labels correct
 
-#### [ ] 2.7 Transcription Webhook
+#### [x] 2.7 Transcription Webhook
 Handle Deepgram webhook callbacks.
 
 **Tasks:**
@@ -335,7 +335,7 @@ Handle Deepgram webhook callbacks.
 - Transcript stored in database
 - Error handling for failed transcriptions
 
-#### [ ] 2.8 Transcript Display
+#### [x] 2.8 Transcript Display
 Show transcription results with speaker labels.
 
 **Tasks:**
