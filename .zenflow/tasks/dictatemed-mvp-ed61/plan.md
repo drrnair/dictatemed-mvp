@@ -1,6 +1,6 @@
 # DictateMED MVP - Implementation Plan
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** December 2025
 **Based on:** spec.md v1.0, requirements.md v1.0
 
@@ -25,6 +25,14 @@ Create a detailed implementation plan based on `spec.md`.
 
 ---
 
+## Important Notes
+
+> **Model IDs**: The spec references older Claude model IDs (`claude-3-opus-20240229`, `claude-3-sonnet-20240229`). Before implementation, verify current Bedrock model IDs and update accordingly. Current models may include `claude-sonnet-4-20250514` or newer.
+
+> **Tests**: Unit and integration tests should be created alongside each feature, not batched at the end. Each task's verification section indicates when tests are expected.
+
+---
+
 ## Implementation Tasks
 
 ### Phase 1: Foundation (Weeks 1-3)
@@ -41,6 +49,8 @@ Create Next.js 14 project with TypeScript, Tailwind CSS, and essential tooling.
 - Configure Vitest for unit testing
 - Configure Playwright for E2E testing
 - Create `.gitignore` with node_modules, .env.local, .next, dist, coverage
+- Create test directory structure (`tests/unit/`, `tests/integration/`, `tests/e2e/`)
+- Create development setup script
 
 **Files to create:**
 - `package.json` - dependencies per spec section 1.2
@@ -50,6 +60,8 @@ Create Next.js 14 project with TypeScript, Tailwind CSS, and essential tooling.
 - `vitest.config.ts` - test configuration
 - `playwright.config.ts` - E2E configuration
 - `.env.example` - environment template per spec section 10.1
+- `scripts/setup-dev.sh` - development environment setup
+- `tests/unit/.gitkeep`, `tests/integration/.gitkeep`, `tests/e2e/.gitkeep`
 
 **Verification:**
 ```bash
@@ -65,11 +77,13 @@ Set up PostgreSQL database with Prisma ORM and initial schema.
 - Generate initial migration
 - Create seed script for development data
 - Set up Prisma client singleton
+- Implement patient data encryption service for PHI fields
 
 **Files to create:**
 - `prisma/schema.prisma` - full schema from spec
 - `prisma/seed.ts` - development seed data
 - `src/infrastructure/db/client.ts` - Prisma singleton
+- `src/infrastructure/db/encryption.ts` - PHI encryption/decryption service
 
 **Verification:**
 ```bash
@@ -109,17 +123,20 @@ Set up S3 bucket for document and audio storage.
 - Configure S3 bucket with encryption (AES-256)
 - Set up IAM role with minimal permissions
 - Implement pre-signed URL generation
-- Configure CORS for uploads
+- Configure CORS policy for browser uploads (allow app domain)
 - Set lifecycle rules (audio 24h, documents 90d)
+- Document S3 bucket setup in setup script
 
 **Files to create:**
 - `src/infrastructure/s3/client.ts` - S3 client wrapper
 - `src/infrastructure/s3/presigned-urls.ts` - URL generation
+- `scripts/setup-s3.sh` - S3 bucket configuration script (optional, for documentation)
 
 **Verification:**
 - Can generate pre-signed upload URL
 - Can generate pre-signed download URL
 - Files encrypted at rest
+- CORS allows uploads from localhost and production domain
 
 #### [ ] 1.5 Basic UI Layout
 Create application shell with navigation and responsive layout.
@@ -168,7 +185,28 @@ Set up GitHub Actions for continuous integration.
 
 ### Phase 2: Audio & Transcription (Weeks 4-6)
 
-#### [ ] 2.1 Recording Interface
+#### [ ] 2.1 IndexedDB Offline Infrastructure
+Set up IndexedDB schema and offline-first infrastructure for PWA functionality.
+
+**Tasks:**
+- Design IndexedDB schema for recordings, documents, and pending operations
+- Implement generic IndexedDB wrapper with TypeScript types
+- Create offline detection service
+- Build sync manager base class for background operations
+- Set up service worker foundation for offline caching
+
+**Files to create:**
+- `src/lib/offline-db.ts` - IndexedDB wrapper with typed collections
+- `src/lib/offline-detection.ts` - Network status monitoring
+- `src/lib/sync-manager.ts` - Base sync manager class
+- `public/sw.js` - Service worker skeleton (expanded in Phase 6)
+
+**Verification:**
+- IndexedDB initializes without errors
+- Can store and retrieve test data
+- Offline detection fires appropriate events
+
+#### [ ] 2.2 Recording Interface
 Build dual-mode audio recording UI with quality monitoring.
 
 **Tasks:**
@@ -194,20 +232,19 @@ Build dual-mode audio recording UI with quality monitoring.
 - Audio quality indicator updates in real-time
 - Consent must be confirmed before recording starts
 
-#### [ ] 2.2 Offline Recording Queue
-Implement IndexedDB-based offline recording storage.
+#### [ ] 2.3 Offline Recording Queue
+Implement offline recording storage using IndexedDB infrastructure.
 
 **Tasks:**
-- Set up IndexedDB schema for audio blobs
+- Extend IndexedDB schema for audio blobs
 - Implement queue add/remove operations
-- Create sync manager for background upload
+- Create recording-specific sync manager
 - Add offline-first recording workflow
 - Show pending recordings indicator
 
 **Files to create:**
-- `src/lib/offline-db.ts` - IndexedDB wrapper
 - `src/hooks/useOfflineQueue.ts` - Queue management hook
-- `src/domains/recording/offline-sync.ts` - Sync manager
+- `src/domains/recording/offline-sync.ts` - Recording sync manager
 - `src/stores/recording.store.ts` - Recording state
 
 **Verification:**
@@ -215,7 +252,7 @@ Implement IndexedDB-based offline recording storage.
 - Recordings sync automatically when online
 - Pending count displayed in UI
 
-#### [ ] 2.3 Recording API Endpoints
+#### [ ] 2.4 Recording API Endpoints
 Create backend API for recording management.
 
 **Tasks:**
@@ -238,13 +275,33 @@ Create backend API for recording management.
 npm run test:integration -- recordings
 ```
 
-#### [ ] 2.4 Deepgram Integration
+#### [ ] 2.5 Cardiology Keyterms Configuration
+Create the 100-term cardiology vocabulary list for Deepgram.
+
+**Tasks:**
+- Compile anatomy terms (LAD, LCx, RCA, LMCA, D1, D2, OM1, OM2, PDA, PLV)
+- Compile procedure terms (TAVI, TEER, PCI, CABG, ICD, CRT-D, CRT-P, PPM)
+- Compile measurement terms (LVEF, RVEF, GLS, TAPSE, E/e', LVEDP)
+- Compile condition terms (NSTEMI, STEMI, HFrEF, HFpEF, HFmrEF, AF, AFL)
+- Compile device terms (DES, BMS, Watchman, Amulet, MitraClip, SAPIEN, Evolut)
+- Compile medication terms (Ticagrelor, Prasugrel, Apixaban, Rivaroxaban, Entresto)
+- Create seed script for keyterms
+
+**Files to create:**
+- `src/infrastructure/deepgram/keyterms.ts` - Full 100-term vocabulary list
+- `scripts/seed-keyterms.ts` - Keyterm seeding utility
+
+**Verification:**
+- 100 keyterms defined and categorized
+- Keyterms exportable for Deepgram API
+
+#### [ ] 2.6 Deepgram Integration
 Integrate Deepgram Nova-3 Medical for transcription.
 
 **Tasks:**
 - Set up Deepgram SDK client
 - Configure Nova-3 Medical model
-- Add cardiology keyterms (100 terms per spec)
+- Integrate cardiology keyterms from 2.5
 - Implement speaker diarization for ambient mode
 - Configure PHI redaction (PCI, SSN, phone, email)
 - Set up webhook callback URL
@@ -252,7 +309,6 @@ Integrate Deepgram Nova-3 Medical for transcription.
 **Files to create:**
 - `src/infrastructure/deepgram/client.ts` - Deepgram service
 - `src/infrastructure/deepgram/types.ts` - Type definitions
-- `src/infrastructure/deepgram/keyterms.ts` - Cardiology vocabulary
 - `src/domains/recording/transcription.service.ts` - Transcription logic
 
 **Verification:**
@@ -260,7 +316,7 @@ Integrate Deepgram Nova-3 Medical for transcription.
 - Cardiology terms transcribed correctly
 - Speaker diarization labels correct
 
-#### [ ] 2.5 Transcription Webhook
+#### [ ] 2.7 Transcription Webhook
 Handle Deepgram webhook callbacks.
 
 **Tasks:**
@@ -279,7 +335,7 @@ Handle Deepgram webhook callbacks.
 - Transcript stored in database
 - Error handling for failed transcriptions
 
-#### [ ] 2.6 Transcript Display
+#### [ ] 2.8 Transcript Display
 Show transcription results with speaker labels.
 
 **Tasks:**
@@ -773,7 +829,28 @@ Build letter management with search/filter.
 - Filters work correctly
 - Pagination loads efficiently
 
-#### [ ] 6.4 Practice Settings (Multi-User)
+#### [ ] 6.4 Patient Management (Minimal)
+Implement minimal patient tracking for letter association.
+
+**Tasks:**
+- Create patients list page with search
+- Implement patient creation/editing
+- Add patient selection to letter creation flow
+- Ensure PHI encryption for patient data
+- Enable patient-based letter filtering
+
+**Files to create:**
+- `src/app/(dashboard)/patients/page.tsx` - Patient list
+- `src/components/patients/PatientList.tsx` - Patient table
+- `src/components/patients/PatientForm.tsx` - Create/edit form
+- `src/domains/patients/patient.service.ts` - Patient logic
+
+**Verification:**
+- Can create and search patients
+- Patient data encrypted in database
+- Letters can be linked to patients
+
+#### [ ] 6.5 Practice Settings (Multi-User)
 Implement practice-level configuration.
 
 **Tasks:**
@@ -793,7 +870,7 @@ Implement practice-level configuration.
 - Letterhead appears on letters
 - Usage stats visible
 
-#### [ ] 6.5 User Settings
+#### [ ] 6.6 User Settings
 Build individual user preferences.
 
 **Tasks:**
@@ -813,27 +890,30 @@ Build individual user preferences.
 - Settings persist
 - Account deletion removes all data
 
-#### [ ] 6.6 PWA Configuration
+#### [ ] 6.7 PWA Configuration
 Make application installable and offline-capable.
 
 **Tasks:**
-- Create PWA manifest
-- Implement service worker
-- Add install prompt
-- Configure caching strategy
-- Test offline functionality
+- Expand service worker from Phase 2.1 skeleton
+- Create PWA manifest with app metadata
+- Add install prompt handling
+- Configure caching strategy (network-first for API, cache-first for assets)
+- Integrate with Next.js using next-pwa or similar
+- Test offline functionality end-to-end
 
 **Files to create:**
 - `public/manifest.json` - PWA manifest
-- `public/sw.js` - Service worker
-- `public/icons/` - App icons
+- `public/icons/` - App icons (192x192, 512x512)
+- Update `public/sw.js` - Full service worker implementation
+- `next.config.js` - PWA plugin configuration
 
 **Verification:**
 - App installable on Chrome/Safari
 - Offline indicator works
 - Recording works offline
+- Cached assets load when offline
 
-#### [ ] 6.7 Error Handling & Recovery
+#### [ ] 6.8 Error Handling & Recovery
 Implement comprehensive error handling.
 
 **Tasks:**
@@ -853,40 +933,42 @@ Implement comprehensive error handling.
 - Failed operations can be retried
 - Errors logged for debugging
 
-#### [ ] 6.8 Performance Optimization
+#### [ ] 6.9 Performance Optimization
 Optimize for <200ms UI response.
 
 **Tasks:**
 - Implement code splitting
-- Add React Server Components
-- Optimize bundle size
-- Add loading states
+- Leverage React Server Components throughout
+- Optimize bundle size (analyze with next/bundle-analyzer)
+- Add loading states and Suspense boundaries
 - Profile and fix bottlenecks
+- Implement streaming for letter generation responses
 
 **Verification:**
 - UI response <200ms
 - Initial load <3 seconds
 - Lighthouse score >90
 
-#### [ ] 6.9 Documentation & Onboarding
-Create user documentation and onboarding flow.
+#### [ ] 6.10 Onboarding Flow
+Create first-time user onboarding experience.
 
 **Tasks:**
-- Create first-time user onboarding
-- Build in-app help tooltips
-- Write API documentation
-- Create admin guide
+- Create step-by-step onboarding wizard
+- Build in-app help tooltips for key features
+- Create sample letter walkthrough
+- Add contextual help triggers
 
 **Files to create:**
 - `src/components/onboarding/OnboardingFlow.tsx`
-- `docs/` - Documentation files
+- `src/components/onboarding/OnboardingStep.tsx`
+- `src/components/common/HelpTooltip.tsx`
 
 **Verification:**
 - New users complete onboarding
 - Help available in context
 - Pilot users can self-onboard
 
-#### [ ] 6.10 Final Testing & Pilot Deploy
+#### [ ] 6.11 Final Testing & Pilot Deploy
 Complete testing and deploy for pilot.
 
 **Tasks:**
@@ -966,4 +1048,19 @@ npx prisma db seed
 
 ---
 
-*Implementation Plan v1.0 | DictateMED MVP | December 2025*
+## Task Summary
+
+| Phase | Tasks | Focus |
+|-------|-------|-------|
+| Phase 1 | 1.1 - 1.6 (6 tasks) | Foundation: scaffolding, database, auth, S3, UI, CI/CD |
+| Phase 2 | 2.1 - 2.8 (8 tasks) | Audio: offline infra, recording, APIs, keyterms, Deepgram, webhook, display |
+| Phase 3 | 3.1 - 3.4 (4 tasks) | Documents: upload, APIs, extraction, linking |
+| Phase 4 | 4.1 - 4.9 (9 tasks) | Letters: prompts, Bedrock, model selection, PHI, anchoring, values, hallucination, concepts, APIs |
+| Phase 5 | 5.1 - 5.8 (8 tasks) | Review: editor, source panel, verification, flags, diff view, concepts, review page, provenance |
+| Phase 6 | 6.1 - 6.11 (11 tasks) | Polish: style, notifications, search, patients, practice settings, user settings, PWA, errors, performance, onboarding, deploy |
+
+**Total: 46 tasks across 6 phases**
+
+---
+
+*Implementation Plan v1.1 | DictateMED MVP | December 2025*
