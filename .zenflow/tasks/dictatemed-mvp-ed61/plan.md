@@ -37,7 +37,7 @@ Create a detailed implementation plan based on `spec.md`.
 
 ### Phase 1: Foundation (Weeks 1-3)
 
-#### [ ] 1.1 Project Scaffolding
+#### [x] 1.1 Project Scaffolding
 Create Next.js 14 project with TypeScript, Tailwind CSS, and essential tooling.
 
 **Tasks:**
@@ -68,7 +68,7 @@ Create Next.js 14 project with TypeScript, Tailwind CSS, and essential tooling.
 npm run lint && npm run typecheck && npm run test
 ```
 
-#### [ ] 1.2 Database Schema & Prisma Setup
+#### [x] 1.2 Database Schema & Prisma Setup
 Set up PostgreSQL database with Prisma ORM and initial schema.
 
 **Tasks:**
@@ -90,7 +90,7 @@ Set up PostgreSQL database with Prisma ORM and initial schema.
 npx prisma migrate dev && npx prisma db seed
 ```
 
-#### [ ] 1.3 Auth0 Integration
+#### [x] 1.3 Auth0 Integration
 Implement authentication with MFA support.
 
 **Tasks:**
@@ -116,7 +116,7 @@ Implement authentication with MFA support.
 - Session expires after 30 min inactivity
 - Auth events logged in database
 
-#### [ ] 1.4 AWS S3 Configuration
+#### [x] 1.4 AWS S3 Configuration
 Set up S3 bucket for document and audio storage.
 
 **Tasks:**
@@ -138,7 +138,7 @@ Set up S3 bucket for document and audio storage.
 - Files encrypted at rest
 - CORS allows uploads from localhost and production domain
 
-#### [ ] 1.5 Basic UI Layout
+#### [x] 1.5 Basic UI Layout
 Create application shell with navigation and responsive layout.
 
 **Tasks:**
@@ -164,7 +164,7 @@ Create application shell with navigation and responsive layout.
 - Offline indicator appears when disconnected
 - Error boundary catches and displays errors
 
-#### [ ] 1.6 CI/CD Pipeline
+#### [x] 1.6 CI/CD Pipeline
 Set up GitHub Actions for continuous integration.
 
 **Tasks:**
