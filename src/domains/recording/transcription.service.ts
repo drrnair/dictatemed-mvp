@@ -44,8 +44,8 @@ export async function startTranscription(recordingId: string): Promise<string> {
     data: { status: 'TRANSCRIBING' },
   });
 
-  // Submit to Deepgram with callback URL
-  const callbackUrl = `${BASE_URL}/api/transcription/webhook`;
+  // Submit to Deepgram with callback URL including recordingId
+  const callbackUrl = `${BASE_URL}/api/transcription/webhook?recordingId=${recordingId}`;
   const requestId = await submitTranscription({
     recordingId,
     audioUrl,

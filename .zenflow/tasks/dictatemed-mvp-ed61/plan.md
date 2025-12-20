@@ -358,7 +358,7 @@ Show transcription results with speaker labels.
 
 ### Phase 3: Document Processing (Weeks 7-8)
 
-#### [ ] 3.1 Document Upload Interface
+#### [x] 3.1 Document Upload Interface
 Build document upload and preview UI.
 
 **Tasks:**
@@ -379,7 +379,7 @@ Build document upload and preview UI.
 - Progress indicator shows during upload
 - Large files rejected with message
 
-#### [ ] 3.2 Document API Endpoints
+#### [x] 3.2 Document API Endpoints
 Create backend API for document management.
 
 **Tasks:**
@@ -400,7 +400,7 @@ Create backend API for document management.
 npm run test:integration -- documents
 ```
 
-#### [ ] 3.3 Clinical Data Extraction
+#### [x] 3.3 Clinical Data Extraction
 Extract structured data from clinical documents using Claude Vision.
 
 **Tasks:**
@@ -423,7 +423,7 @@ Extract structured data from clinical documents using Claude Vision.
 - Angio report: Stenosis percentages per vessel extracted
 - Extraction completes in <30 seconds
 
-#### [ ] 3.4 Document-Letter Association
+#### [x] 3.4 Document-Letter Association
 Link documents to letters for source traceability.
 
 **Tasks:**

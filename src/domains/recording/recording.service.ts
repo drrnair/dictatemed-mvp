@@ -2,7 +2,7 @@
 // Recording domain service
 
 import { prisma } from '@/infrastructure/db/client';
-import { getUploadUrl, getDownloadUrl } from '@/infrastructure/s3/presigned-urls';
+import { getUploadUrl, getDownloadUrl, deleteObject } from '@/infrastructure/s3/presigned-urls';
 import { logger } from '@/lib/logger';
 import type {
   Recording,
@@ -216,8 +216,18 @@ export async function deleteRecording(
     throw new Error('Recording not found');
   }
 
-  // For now, just delete the record
-  // TODO: Also delete audio from S3
+  // Delete audio from S3 if it exists
+  if (recording.s3AudioKey) {
+    try {
+      await deleteObject(recording.s3AudioKey);
+      logger.info('Audio deleted from S3', { recordingId, s3Key: recording.s3AudioKey });
+    } catch (error) {
+      // Log but don't fail - we still want to delete the database record
+      logger.error('Failed to delete audio from S3', { recordingId, s3Key: recording.s3AudioKey }, error instanceof Error ? error : undefined);
+    }
+  }
+
+  // Delete the database record
   await prisma.recording.delete({
     where: { id: recordingId },
   });
