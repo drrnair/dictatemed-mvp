@@ -3,7 +3,7 @@
 // src/components/consultation/NewUploadsSection.tsx
 // Section for uploading new documents/images for a consultation
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Upload, Camera, X, FileText, Image, Loader2, Info, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -42,6 +42,10 @@ export function NewUploadsSection({
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Ref to access current files in callbacks without dependency issues
+  const filesRef = useRef<UploadedFile[]>([]);
+  filesRef.current = files;
+
   const validateFile = (file: File): string | null => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
       return 'Invalid file type. Please upload PDF or image files.';
@@ -52,35 +56,11 @@ export function NewUploadsSection({
     return null;
   };
 
-  const addFiles = useCallback((newFiles: FileList | File[]) => {
-    const fileArray = Array.from(newFiles);
-
-    if (files.length + fileArray.length > MAX_FILES) {
-      alert(`Maximum ${MAX_FILES} files allowed per consultation.`);
-      return;
-    }
-
-    const uploadFiles: UploadedFile[] = fileArray.map((file) => ({
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      file,
-      status: 'pending',
-      progress: 0,
-      error: validateFile(file) || undefined,
-    }));
-
-    setFiles((prev) => [...prev, ...uploadFiles]);
-
-    // Auto-upload valid files
-    uploadFiles.forEach((uf) => {
-      if (!uf.error) {
-        uploadFile(uf.id);
-      }
-    });
-  }, [files.length]);
-
-  const uploadFile = async (fileId: string) => {
-    const uploadFile = files.find((f) => f.id === fileId);
-    if (!uploadFile || uploadFile.status !== 'pending') return;
+  // Upload function that uses ref to get current files
+  const performUpload = useCallback(async (fileId: string, fileToUpload?: UploadedFile) => {
+    // Use passed file or find from ref
+    const targetFile = fileToUpload ?? filesRef.current.find((f) => f.id === fileId);
+    if (!targetFile || targetFile.status !== 'pending') return;
 
     setFiles((prev) =>
       prev.map((f) =>
@@ -94,9 +74,9 @@ export function NewUploadsSection({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          filename: uploadFile.file.name,
-          mimeType: uploadFile.file.type,
-          sizeBytes: uploadFile.file.size,
+          filename: targetFile.file.name,
+          mimeType: targetFile.file.type,
+          sizeBytes: targetFile.file.size,
           consultationId,
         }),
       });
@@ -114,9 +94,9 @@ export function NewUploadsSection({
 
       const uploadResponse = await fetch(uploadUrl, {
         method: 'PUT',
-        body: uploadFile.file,
+        body: targetFile.file,
         headers: {
-          'Content-Type': uploadFile.file.type,
+          'Content-Type': targetFile.file.type,
         },
       });
 
@@ -153,7 +133,33 @@ export function NewUploadsSection({
         )
       );
     }
-  };
+  }, [consultationId, onUploadComplete]);
+
+  const addFiles = useCallback((newFiles: FileList | File[]) => {
+    const fileArray = Array.from(newFiles);
+
+    if (filesRef.current.length + fileArray.length > MAX_FILES) {
+      alert(`Maximum ${MAX_FILES} files allowed per consultation.`);
+      return;
+    }
+
+    const uploadFiles: UploadedFile[] = fileArray.map((file) => ({
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      file,
+      status: 'pending',
+      progress: 0,
+      error: validateFile(file) || undefined,
+    }));
+
+    setFiles((prev) => [...prev, ...uploadFiles]);
+
+    // Auto-upload valid files - pass the file object to avoid stale closure
+    uploadFiles.forEach((uf) => {
+      if (!uf.error) {
+        performUpload(uf.id, uf);
+      }
+    });
+  }, [performUpload]);
 
   const removeFile = (fileId: string) => {
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
@@ -259,7 +265,7 @@ export function NewUploadsSection({
               key={fileItem.id}
               file={fileItem}
               onRemove={() => removeFile(fileItem.id)}
-              onRetry={() => uploadFile(fileItem.id)}
+              onRetry={() => performUpload(fileItem.id)}
             />
           ))}
         </div>

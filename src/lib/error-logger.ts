@@ -85,12 +85,16 @@ class ErrorLogger {
 
     if (isDev) {
       // Detailed logging in development
+      // eslint-disable-next-line no-console
       console.group(`🚨 [${severity.toUpperCase()}] ${error.name}`);
       consoleMethod('Message:', error.message);
+      // eslint-disable-next-line no-console
       console.log('Context:', context);
       if (error.stack) {
+        // eslint-disable-next-line no-console
         console.log('Stack:', error.stack);
       }
+      // eslint-disable-next-line no-console
       console.groupEnd();
     } else {
       // Sanitized logging in production

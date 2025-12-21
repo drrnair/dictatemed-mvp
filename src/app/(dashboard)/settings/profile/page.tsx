@@ -4,6 +4,7 @@
 // User profile settings including signature upload and account management
 
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import {
   User,
   Upload,
@@ -345,10 +346,13 @@ export default function ProfileSettingsPage() {
           {signaturePreview && (
             <div className="border rounded-lg p-4 bg-muted/30">
               <p className="text-sm text-muted-foreground mb-2">Current signature:</p>
-              <img
+              <Image
                 src={signaturePreview}
                 alt="Signature"
-                className="max-h-24 object-contain"
+                width={200}
+                height={96}
+                className="max-h-24 w-auto object-contain"
+                unoptimized
               />
             </div>
           )}

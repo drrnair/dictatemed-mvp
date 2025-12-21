@@ -13,6 +13,7 @@ import {
   getNetworkStatusSnapshot,
   getNetworkStatusServerSnapshot,
 } from '@/lib/offline-detection';
+import { logger } from '@/lib/logger';
 import type { PendingRecording } from '@/lib/offline-db';
 import type { RecordingMode, ConsentType } from '@/stores/recording.store';
 import { useSyncExternalStore } from 'react';
@@ -87,8 +88,14 @@ export function useOfflineQueue(): UseOfflineQueueReturn {
 
       // If online with good connection, try to sync immediately
       if (offlineDetection.hasGoodConnection()) {
-        // Don't await - let it sync in background
-        recordingSyncManager.sync().catch(console.error);
+        // Don't await - let it sync in background with proper error handling
+        recordingSyncManager.sync().catch((error) => {
+          logger.error(
+            'Background sync failed',
+            { recordingId: id },
+            error instanceof Error ? error : undefined
+          );
+        });
       }
 
       return id;

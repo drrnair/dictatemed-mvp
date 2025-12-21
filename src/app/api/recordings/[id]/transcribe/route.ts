@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/infrastructure/db/client';
 import { getDownloadUrl } from '@/infrastructure/s3/presigned-urls';
+import { submitTranscription } from '@/infrastructure/deepgram/client';
 import { logger } from '@/lib/logger';
 
 interface RouteParams {
@@ -82,32 +83,51 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Get audio download URL for transcription service
     const { url: audioUrl } = await getDownloadUrl(recording.s3AudioKey);
 
-    // TODO: Trigger actual Deepgram transcription
-    // For now, this is a placeholder that simulates the transcription request
-    // In production, this would:
-    // 1. Call Deepgram API with the audio URL
-    // 2. Deepgram processes the audio asynchronously
-    // 3. Deepgram calls back to /api/transcription/webhook when complete
-    // 4. Webhook handler updates the recording with transcript
+    // Build callback URL for Deepgram webhook
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const callbackUrl = `${appUrl}/api/transcription/webhook?recordingId=${id}`;
 
-    logger.info('Transcription initiated', {
+    logger.info('Initiating Deepgram transcription', {
       recordingId: id,
       userId,
       mode: recording.mode,
       s3AudioKey: recording.s3AudioKey,
     });
 
-    // Placeholder: In real implementation, queue a background job or call Deepgram API
-    const transcriptionJobId = `deepgram_${id}_${Date.now()}`;
+    let transcriptionJobId: string;
 
-    // Simulate async transcription by logging what would happen
-    logger.info('Deepgram transcription would be triggered', {
-      recordingId: id,
-      audioUrl,
-      mode: recording.mode,
-      callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/transcription/webhook`,
-      jobId: transcriptionJobId,
-    });
+    try {
+      // Submit to Deepgram API with callback
+      transcriptionJobId = await submitTranscription({
+        recordingId: id,
+        audioUrl,
+        mode: recording.mode as 'AMBIENT' | 'DICTATION',
+        callbackUrl,
+      });
+
+      logger.info('Deepgram transcription submitted successfully', {
+        recordingId: id,
+        jobId: transcriptionJobId,
+        callbackUrl,
+      });
+    } catch (deepgramError) {
+      // Revert status to UPLOADED on Deepgram failure
+      await prisma.recording.update({
+        where: { id },
+        data: { status: 'FAILED' },
+      });
+
+      logger.error(
+        'Deepgram submission failed',
+        { recordingId: id },
+        deepgramError instanceof Error ? deepgramError : undefined
+      );
+
+      return NextResponse.json(
+        { error: 'Failed to submit to transcription service' },
+        { status: 502 }
+      );
+    }
 
     // Create audit log
     await prisma.auditLog.create({

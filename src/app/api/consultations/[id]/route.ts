@@ -84,8 +84,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           dateOfBirth: decrypted.dateOfBirth,
           mrn: decrypted.medicareNumber,
         };
-      } catch {
-        patientSummary = { id: consultation.patient.id, name: '[Decryption error]', dateOfBirth: '' };
+      } catch (decryptError) {
+        // Log the decryption error for debugging
+        log.error(
+          'Failed to decrypt patient data',
+          { consultationId: consultation.id, patientId: consultation.patient.id },
+          decryptError instanceof Error ? decryptError : undefined
+        );
+
+        // Return error response instead of showing corrupted data
+        return NextResponse.json(
+          {
+            error: 'Failed to decrypt patient data',
+            code: 'DECRYPTION_ERROR',
+            consultationId: consultation.id,
+          },
+          { status: 500 }
+        );
       }
     }
 

@@ -69,13 +69,25 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       userId,
     });
 
-    // Process asynchronously (fire and forget)
-    processDocument(id, document.type, document.url ?? '').catch((error) => {
+    // Process asynchronously with proper error handling
+    processDocument(id, document.type, document.url ?? '').catch(async (error) => {
       log.error(
         'Document processing failed',
         { documentId: id },
         error instanceof Error ? error : undefined
       );
+
+      // Update document status to FAILED so users can retry
+      try {
+        await updateDocumentStatus(id, 'FAILED', undefined, error instanceof Error ? error.message : 'Unknown error');
+        log.info('Document status updated to FAILED', { documentId: id });
+      } catch (updateError) {
+        log.error(
+          'Failed to update document status to FAILED',
+          { documentId: id },
+          updateError instanceof Error ? updateError : undefined
+        );
+      }
     });
 
     return NextResponse.json(

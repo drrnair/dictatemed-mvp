@@ -127,6 +127,7 @@ export function VerificationPanelExample() {
         val.id === valueId ? { ...val, verified: true } : val
       )
     );
+    // eslint-disable-next-line no-console
     console.log('Verified value:', valueId);
   };
 
@@ -135,6 +136,7 @@ export function VerificationPanelExample() {
     setExtractedValues((prev) =>
       prev.map((val) => ({ ...val, verified: true }))
     );
+    // eslint-disable-next-line no-console
     console.log('Verified all values');
   };
 
@@ -147,6 +149,7 @@ export function VerificationPanelExample() {
           : flag
       )
     );
+    // eslint-disable-next-line no-console
     console.log('Dismissed flag:', flagId, 'Reason:', reason);
   };
 
@@ -154,6 +157,7 @@ export function VerificationPanelExample() {
   const handleValueClick = (valueId: string) => {
     const value = extractedValues.find((v) => v.id === valueId);
     if (value) {
+      // eslint-disable-next-line no-console
       console.log('Navigate to source:', value.sourceAnchorId);
       // In real implementation, this would scroll to the source in the transcript
       // and highlight the relevant text

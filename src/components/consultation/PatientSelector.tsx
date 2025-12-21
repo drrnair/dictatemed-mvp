@@ -45,10 +45,24 @@ export function PatientSelector({ value, onChange, disabled }: PatientSelectorPr
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Load recent patients function
+  const loadRecentPatients = useCallback(async () => {
+    try {
+      const response = await fetch('/api/patients/search?recent=true&limit=5');
+      if (response.ok) {
+        const data = await response.json();
+        setRecentPatients(data.patients || []);
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to load recent patients:', err);
+    }
+  }, []);
+
   // Load recent patients on mount
   useEffect(() => {
     loadRecentPatients();
-  }, []);
+  }, [loadRecentPatients]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -59,18 +73,6 @@ export function PatientSelector({ value, onChange, disabled }: PatientSelectorPr
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const loadRecentPatients = useCallback(async () => {
-    try {
-      const response = await fetch('/api/patients/search?recent=true&limit=5');
-      if (response.ok) {
-        const data = await response.json();
-        setRecentPatients(data.patients || []);
-      }
-    } catch {
-      // Silently fail for recent patients
-    }
   }, []);
 
   const searchPatients = useCallback(async (query: string) => {
@@ -368,6 +370,7 @@ function CreatePatientDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter patient's full name"
+              // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
             />
           </div>

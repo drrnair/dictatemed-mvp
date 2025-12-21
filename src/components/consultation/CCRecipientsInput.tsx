@@ -170,6 +170,7 @@ function AddRecipientForm({ onAdd, onCancel, disabled }: AddRecipientFormProps) 
           }}
           placeholder="Dr. Jane Doe"
           disabled={disabled}
+          // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus
         />
       </div>

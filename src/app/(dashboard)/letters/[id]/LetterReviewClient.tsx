@@ -3,7 +3,7 @@
 // src/app/(dashboard)/letters/[id]/LetterReviewClient.tsx
 // Client component for interactive letter review
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { LetterEditor } from '@/components/letters/LetterEditor';
 import { SourcePanel } from '@/components/letters/SourcePanel';
@@ -141,39 +141,85 @@ export function LetterReviewClient({
 
   const canApprove = allCriticalVerified && !hasChanges;
 
-  // Stable save function wrapped in useCallback
+  // Ref to track in-flight save request and prevent race conditions
+  const saveAbortControllerRef = useRef<AbortController | null>(null);
+  const pendingSaveRef = useRef<string | null>(null);
+
+  // Stable save function wrapped in useCallback with request deduplication
   const handleSaveDraft = useCallback(async () => {
     if (isReadOnly) return;
+
+    // Cancel any in-flight request
+    if (saveAbortControllerRef.current) {
+      saveAbortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    const abortController = new AbortController();
+    saveAbortControllerRef.current = abortController;
+
+    // Track the content being saved to detect if it changed
+    const contentToSave = content;
+    pendingSaveRef.current = contentToSave;
 
     setIsSaving(true);
     try {
       const response = await fetch(`/api/letters/${letter.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentFinal: content }),
+        body: JSON.stringify({ contentFinal: contentToSave }),
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
         throw new Error('Failed to save draft');
       }
+
+      // Clear pending save only if content hasn't changed during save
+      if (pendingSaveRef.current === contentToSave) {
+        pendingSaveRef.current = null;
+      }
     } catch (error) {
-      console.error('Error saving draft:', error);
+      // Ignore abort errors (expected when request is cancelled)
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
+      // Log non-abort errors
+      if (typeof window !== 'undefined') {
+        // eslint-disable-next-line no-console
+        console.error('Error saving draft:', error);
+      }
     } finally {
-      setIsSaving(false);
+      // Only clear saving state if this is still the active request
+      if (saveAbortControllerRef.current === abortController) {
+        setIsSaving(false);
+        saveAbortControllerRef.current = null;
+      }
     }
   }, [isReadOnly, letter.id, content]);
 
-  // Auto-save draft
+  // Auto-save draft with proper cleanup
   useEffect(() => {
     if (hasChanges && !isReadOnly) {
       const timer = setTimeout(() => {
-        void handleSaveDraft();
+        handleSaveDraft().catch(() => {
+          // Error already logged in handleSaveDraft
+        });
       }, 2000);
 
       return () => clearTimeout(timer);
     }
     return undefined;
   }, [content, hasChanges, isReadOnly, handleSaveDraft]);
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (saveAbortControllerRef.current) {
+        saveAbortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Fetch source data when active anchor changes
   useEffect(() => {

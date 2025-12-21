@@ -51,11 +51,7 @@ export function TemplateSelector({
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('ALL');
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Load templates
-  useEffect(() => {
-    loadTemplates();
-  }, []);
-
+  // Load templates function
   const loadTemplates = useCallback(async () => {
     try {
       setLoading(true);
@@ -70,6 +66,11 @@ export function TemplateSelector({
       setLoading(false);
     }
   }, []);
+
+  // Load templates on mount
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
 
   const selectedTemplate = templates.find((t) => t.id === value);
 

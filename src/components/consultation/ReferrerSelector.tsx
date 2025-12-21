@@ -38,22 +38,7 @@ export function ReferrerSelector({ value, onChange, disabled }: ReferrerSelector
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load recent referrers on mount
-  useEffect(() => {
-    loadRecentReferrers();
-  }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
+  // Load recent referrers function
   const loadRecentReferrers = useCallback(async () => {
     try {
       const response = await fetch('/api/referrers?limit=5');
@@ -64,6 +49,22 @@ export function ReferrerSelector({ value, onChange, disabled }: ReferrerSelector
     } catch {
       // Silently fail for recent referrers
     }
+  }, []);
+
+  // Load recent referrers on mount
+  useEffect(() => {
+    loadRecentReferrers();
+  }, [loadRecentReferrers]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const searchReferrers = useCallback(async (query: string) => {
@@ -359,6 +360,7 @@ function CreateReferrerDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Dr. John Smith"
+              // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
             />
           </div>

@@ -15,6 +15,10 @@ const updateLetterSchema = z.object({
   content: z.string().min(1),
 });
 
+const patchLetterSchema = z.object({
+  contentFinal: z.string().min(1),
+});
+
 /**
  * GET /api/letters/:id - Get a letter by ID
  */
@@ -102,6 +106,75 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 /**
+ * PATCH /api/letters/:id - Partial update (save draft with contentFinal)
+ */
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const log = logger.child({ action: 'patchLetter' });
+
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const body = await request.json();
+    const validated = patchLetterSchema.safeParse(body);
+
+    if (!validated.success) {
+      return NextResponse.json(
+        { error: 'Invalid request', details: validated.error.format() },
+        { status: 400 }
+      );
+    }
+
+    // Import prisma client
+    const { prisma } = await import('@/infrastructure/db/client');
+
+    // Verify letter belongs to user
+    const letter = await prisma.letter.findFirst({
+      where: { id, userId: session.user.id },
+    });
+
+    if (!letter) {
+      return NextResponse.json({ error: 'Letter not found' }, { status: 404 });
+    }
+
+    if (letter.status === 'APPROVED') {
+      return NextResponse.json(
+        { error: 'Cannot edit approved letter' },
+        { status: 400 }
+      );
+    }
+
+    // Update contentFinal (the edited version)
+    const updated = await prisma.letter.update({
+      where: { id },
+      data: {
+        contentFinal: validated.data.contentFinal,
+        status: 'IN_REVIEW',
+      },
+    });
+
+    log.info('Letter draft saved', { letterId: id, userId: session.user.id });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    log.error(
+      'Failed to patch letter',
+      {},
+      error instanceof Error ? error : undefined
+    );
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to save draft' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * DELETE /api/letters/:id - Delete a letter
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
@@ -156,7 +229,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     log.info('Letter deleted', { letterId: id, userId: session.user.id });
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     log.error(
       'Failed to delete letter',
