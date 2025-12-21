@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getDocument, updateDocumentStatus } from '@/domains/documents/document.service';
 import { processDocument } from '@/domains/documents/extraction.service';
+import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
 interface RouteParams {
@@ -23,10 +24,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const userId = session.user.id;
     const { id } = await params;
 
+    // Check rate limit (stricter for processing - 5 requests/min like transcriptions)
+    const rateLimitKey = createRateLimitKey(userId, 'document-processing');
+    const rateLimit = checkRateLimit(rateLimitKey, 'transcriptions'); // Use transcription limit (5/min)
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded for document processing', retryAfter: rateLimit.retryAfterMs },
+        { status: 429, headers: getRateLimitHeaders(rateLimit) }
+      );
+    }
+
     // Get document
-    const document = await getDocument(session.user.id, id);
+    const document = await getDocument(userId, id);
 
     if (!document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
@@ -54,7 +66,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     log.info('Starting document processing', {
       documentId: id,
       type: document.type,
-      userId: session.user.id,
+      userId,
     });
 
     // Process asynchronously (fire and forget)
@@ -66,11 +78,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     });
 
-    return NextResponse.json({
-      status: 'processing',
-      documentId: id,
-      message: 'Document processing started',
-    });
+    return NextResponse.json(
+      {
+        status: 'processing',
+        documentId: id,
+        message: 'Document processing started',
+      },
+      { headers: getRateLimitHeaders(rateLimit) }
+    );
   } catch (error) {
     log.error(
       'Failed to start document processing',

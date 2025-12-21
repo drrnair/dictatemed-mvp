@@ -4,7 +4,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { FileText, Image as ImageIcon, Eye, Download, Trash2, Loader2, ExternalLink } from 'lucide-react';
+import { FileText, Image as ImageIcon, Eye, Download, Trash2, Loader2, ExternalLink, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface DocumentData {
@@ -321,20 +321,7 @@ export function DocumentViewer({ document: doc, onClose }: DocumentViewerProps) 
         className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white"
         aria-label="Close viewer"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M18 6 6 18" />
-          <path d="m6 6 12 12" />
-        </svg>
+        <X className="h-6 w-6" />
       </button>
 
       {/* Document display */}

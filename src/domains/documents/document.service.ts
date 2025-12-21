@@ -47,14 +47,14 @@ function inferDocumentType(name: string, _mimeType: string): DocumentType {
 /**
  * Map our DocumentType to Prisma's DocumentType enum.
  */
-function mapToPrismaDocumentType(type: DocumentType): 'ECHO_REPORT' | 'ANGIOGRAM_REPORT' | 'ECG_REPORT' | 'HOLTER_REPORT' | 'REFERRAL_LETTER' | 'OTHER' {
+function mapToPrismaDocumentType(type: DocumentType): 'ECHO_REPORT' | 'ANGIOGRAM_REPORT' | 'ECG_REPORT' | 'HOLTER_REPORT' | 'LAB_RESULT' | 'REFERRAL_LETTER' | 'OTHER' {
   switch (type) {
     case 'ECHO_REPORT':
       return 'ECHO_REPORT';
     case 'ANGIOGRAM_REPORT':
       return 'ANGIOGRAM_REPORT';
     case 'LAB_RESULT':
-      return 'OTHER'; // Lab results map to OTHER in Prisma schema
+      return 'LAB_RESULT';
     case 'REFERRAL':
       return 'REFERRAL_LETTER';
     case 'OTHER':
@@ -72,6 +72,8 @@ function mapFromPrismaDocumentType(type: string | null): DocumentType {
       return 'ECHO_REPORT';
     case 'ANGIOGRAM_REPORT':
       return 'ANGIOGRAM_REPORT';
+    case 'LAB_RESULT':
+      return 'LAB_RESULT';
     case 'REFERRAL_LETTER':
       return 'REFERRAL';
     case 'ECG_REPORT':

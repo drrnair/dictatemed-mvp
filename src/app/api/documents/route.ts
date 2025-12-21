@@ -9,6 +9,7 @@ import {
   listDocuments,
 } from '@/domains/documents/document.service';
 import type { DocumentType, DocumentStatus } from '@/domains/documents/document.types';
+import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
 const createDocumentSchema = z.object({
@@ -39,6 +40,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const userId = session.user.id;
+
+    // Check rate limit (20 requests/min for documents)
+    const rateLimitKey = createRateLimitKey(userId, 'documents');
+    const rateLimit = checkRateLimit(rateLimitKey, 'documents');
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfterMs },
+        { status: 429, headers: getRateLimitHeaders(rateLimit) }
+      );
+    }
+
     const body = await request.json();
     const validated = createDocumentSchema.safeParse(body);
 
@@ -49,15 +62,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await createDocument(session.user.id, validated.data);
+    const result = await createDocument(userId, validated.data);
 
     log.info('Document created', {
       documentId: result.id,
-      userId: session.user.id,
+      userId,
       name: validated.data.name,
     });
 
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json(result, { status: 201, headers: getRateLimitHeaders(rateLimit) });
   } catch (error) {
     log.error(
       'Failed to create document',
