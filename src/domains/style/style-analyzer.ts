@@ -241,6 +241,159 @@ function parseStyleAnalysisResponse(
 }
 
 /**
+ * Analyze complete historical letters to detect writing style patterns.
+ * Unlike edit-based analysis, this looks at the overall style of finished letters.
+ */
+export async function analyzeLettersForStyle(
+  letters: string[]
+): Promise<StyleAnalysisResult> {
+  const log = logger.child({ action: 'analyzeLettersForStyle', letterCount: letters.length });
+
+  if (letters.length === 0) {
+    throw new Error('No letters provided for analysis');
+  }
+
+  // Build analysis prompt for complete letters
+  const prompt = buildLetterAnalysisPrompt(letters);
+
+  log.info('Starting historical letter analysis', {
+    letterCount: letters.length,
+    promptLength: prompt.length,
+  });
+
+  try {
+    // Use Sonnet for cost efficiency
+    const response = await generateTextWithRetry({
+      prompt,
+      modelId: MODELS.SONNET,
+      maxTokens: 4096,
+      temperature: 0.2,
+      systemPrompt: LETTER_ANALYSIS_SYSTEM_PROMPT,
+    });
+
+    log.info('Historical letter analysis complete', {
+      inputTokens: response.inputTokens,
+      outputTokens: response.outputTokens,
+    });
+
+    // Parse Claude's response
+    const analysis = parseStyleAnalysisResponse(response.content, letters.length, response.modelId);
+
+    return analysis;
+  } catch (error) {
+    log.error('Historical letter analysis failed', {}, error instanceof Error ? error : undefined);
+    throw error;
+  }
+}
+
+/**
+ * Build prompt for analyzing complete historical letters.
+ */
+function buildLetterAnalysisPrompt(letters: string[]): string {
+  let prompt = `I need you to analyze a physician's writing style from their historical medical letters.
+
+Below are ${letters.length} complete medical letters written by this physician. Analyze these letters to identify their consistent writing style preferences.
+
+Your task is to identify patterns in:
+1. Greeting style (formal vs casual)
+2. Closing style (formal vs casual)
+3. Paragraph structure (long vs short paragraphs)
+4. Medication formatting (generic names, brand names, or both)
+5. Clinical value formatting (concise "LVEF 55%" vs verbose "LVEF of 55%")
+6. Overall formality level
+7. Sentence complexity preferences
+8. Vocabulary choices and preferences
+9. Section ordering patterns
+
+# HISTORICAL LETTERS
+
+`;
+
+  // Add each letter
+  for (let i = 0; i < letters.length; i++) {
+    const letter = letters[i];
+    if (letter) {
+      // Truncate very long letters to avoid context limits
+      const truncatedLetter = letter.length > 3000 ? letter.slice(0, 3000) + '\n[... truncated ...]' : letter;
+      prompt += `## Letter ${i + 1}\n\n${truncatedLetter}\n\n---\n\n`;
+    }
+  }
+
+  prompt += `
+# YOUR ANALYSIS
+
+Please provide your analysis in the following JSON format:
+
+\`\`\`json
+{
+  "detectedPreferences": {
+    "greetingStyle": "formal" | "casual" | "mixed" | null,
+    "closingStyle": "formal" | "casual" | "mixed" | null,
+    "paragraphStructure": "long" | "short" | "mixed" | null,
+    "medicationFormat": "generic" | "brand" | "both" | null,
+    "clinicalValueFormat": "concise" | "verbose" | "mixed" | null,
+    "formalityLevel": "very-formal" | "formal" | "neutral" | "casual" | null,
+    "sentenceComplexity": "simple" | "moderate" | "complex" | null
+  },
+  "examples": {
+    "greeting": [{ "before": "N/A", "after": "Dear Dr. Smith,", "pattern": "Uses formal greeting with title" }],
+    "closing": [{ "before": "N/A", "after": "Yours sincerely,", "pattern": "Formal sign-off" }],
+    "medication": [{ "before": "N/A", "after": "metformin 500mg", "pattern": "Uses generic medication names" }],
+    "clinicalValue": [{ "before": "N/A", "after": "HbA1c 7.2%", "pattern": "Concise clinical values" }],
+    "vocabulary": [{ "before": "N/A", "after": "patient reports", "reason": "Standard clinical phrasing" }]
+  },
+  "confidence": {
+    "greetingStyle": 0.0-1.0,
+    "closingStyle": 0.0-1.0,
+    "paragraphStructure": 0.0-1.0,
+    "medicationFormat": 0.0-1.0,
+    "clinicalValueFormat": 0.0-1.0,
+    "formalityLevel": 0.0-1.0,
+    "sentenceComplexity": 0.0-1.0
+  },
+  "insights": [
+    "The physician uses formal greetings with professional titles...",
+    "Paragraphs are typically 3-4 sentences...",
+    "..."
+  ],
+  "vocabularyMap": {
+    "example_formal_term": "simpler_alternative"
+  },
+  "preferredSectionOrder": ["History", "Examination", "Impression", "Plan"]
+}
+\`\`\`
+
+Guidelines for confidence scores:
+- 0.9-1.0: Very consistent pattern across all letters
+- 0.7-0.9: Consistent pattern with minor variations
+- 0.5-0.7: Moderate pattern, some variation
+- 0.3-0.5: Weak pattern, significant variation
+- 0.0-0.3: No clear pattern detected
+
+For the "examples" field, since these are complete letters (not before/after edits), use "N/A" for the "before" field and extract actual examples from the letters for the "after" field.
+`;
+
+  return prompt;
+}
+
+/**
+ * System prompt for historical letter analysis.
+ */
+const LETTER_ANALYSIS_SYSTEM_PROMPT = `You are an expert medical writing analyst specializing in identifying physician writing style preferences.
+
+Your role is to analyze complete medical letters written by a physician to identify their consistent writing style patterns.
+
+Focus on:
+- Concrete, observable patterns (not subjective interpretations)
+- Consistency across multiple letters
+- Medical writing conventions and terminology
+- Australian medical practice standards (if evident)
+
+Be conservative with confidence scores - only assign high confidence when patterns are clearly consistent across multiple letters.
+
+Extract specific examples from the letters to support each detected preference.`;
+
+/**
  * Merge new analysis results with existing style profile.
  * Uses weighted averaging based on confidence and sample size.
  */

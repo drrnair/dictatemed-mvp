@@ -3,7 +3,7 @@
 
 import { prisma } from '@/infrastructure/db/client';
 import { logger } from '@/lib/logger';
-import { analyzeEditsForStyle, mergeStyleAnalysis } from './style-analyzer';
+import { analyzeEditsForStyle, mergeStyleAnalysis, analyzeLettersForStyle } from './style-analyzer';
 import type {
   StyleProfile,
   StyleEdit,
@@ -160,6 +160,84 @@ export async function analyzeStyle(
   });
 
   return styleProfile;
+}
+
+/**
+ * Analyze historical letters uploaded by a physician to bootstrap their style profile.
+ * This allows style learning without requiring edit-based learning first.
+ */
+export async function analyzeHistoricalLetters(
+  userId: string,
+  letterTexts: string[]
+): Promise<{ profileUpdated: boolean; profile: StyleProfile | null }> {
+  const log = logger.child({ action: 'analyzeHistoricalLetters', userId });
+
+  if (letterTexts.length === 0) {
+    throw new Error('No letters provided for analysis');
+  }
+
+  log.info('Starting historical letter analysis', { letterCount: letterTexts.length });
+
+  // Analyze letters with Claude
+  const analysis = await analyzeLettersForStyle(letterTexts);
+
+  // Get existing style profile
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { styleProfile: true },
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Parse existing profile
+  const existingProfile = user.styleProfile as Record<string, unknown>;
+  const existingAnalysis = existingProfile?.lastAnalysis as StyleAnalysisResult | null;
+
+  // Merge with existing analysis if present
+  const mergedAnalysis = existingAnalysis
+    ? mergeStyleAnalysis(existingAnalysis, analysis)
+    : analysis;
+
+  // Convert analysis to style profile
+  const styleProfile = analysisToProfile(mergedAnalysis);
+
+  // Update user's style profile
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      styleProfile: {
+        ...styleProfile,
+        lastAnalysis: mergedAnalysis,
+        historicalLettersAnalyzed: letterTexts.length,
+      } as never,
+    },
+  });
+
+  log.info('Historical letter analysis completed', {
+    lettersAnalyzed: letterTexts.length,
+    totalEditsAnalyzed: styleProfile.totalEditsAnalyzed,
+  });
+
+  // Create audit log
+  await prisma.auditLog.create({
+    data: {
+      userId,
+      action: 'style.historical_letters_analyzed',
+      resourceType: 'user',
+      resourceId: userId,
+      metadata: {
+        lettersAnalyzed: letterTexts.length,
+        confidence: styleProfile.confidence,
+      },
+    },
+  });
+
+  return {
+    profileUpdated: true,
+    profile: styleProfile,
+  };
 }
 
 /**

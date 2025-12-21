@@ -3,9 +3,9 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
 import type { StyleProfile } from '@/domains/style/style.types';
+import { Upload, FileText, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 interface EditStatistics {
   totalEdits: number;
@@ -21,11 +21,17 @@ interface StyleData {
 }
 
 export default function StyleSettingsPage() {
-  const router = useRouter();
   const [styleData, setStyleData] = useState<StyleData | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // File upload state
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch current style profile and statistics
   useEffect(() => {
@@ -80,6 +86,88 @@ export default function StyleSettingsPage() {
     }
   };
 
+  // Handle file selection
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    for (const file of Array.from(files)) {
+      // Validate file type
+      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+      if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|doc|docx|txt)$/i)) {
+        errors.push(`${file.name}: Unsupported file type`);
+        continue;
+      }
+
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        errors.push(`${file.name}: File too large (max 10MB)`);
+        continue;
+      }
+
+      validFiles.push(file);
+    }
+
+    if (errors.length > 0) {
+      setUploadError(errors.join(', '));
+    }
+
+    if (validFiles.length > 0) {
+      setUploadedFiles(prev => [...prev, ...validFiles].slice(0, 10));
+      setUploadError(null);
+    }
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Remove a file from the list
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Upload and analyze historical letters
+  const uploadAndAnalyze = async () => {
+    if (uploadedFiles.length === 0) return;
+
+    try {
+      setUploading(true);
+      setUploadError(null);
+      setUploadSuccess(null);
+
+      const formData = new FormData();
+      uploadedFiles.forEach(file => {
+        formData.append('files', file);
+      });
+
+      const response = await fetch('/api/style/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Upload failed');
+      }
+
+      setUploadSuccess(`Successfully analyzed ${data.lettersProcessed} letters. Your style profile has been updated.`);
+      setUploadedFiles([]);
+
+      // Refresh style data
+      await fetchStyleData();
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Failed to upload letters');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -96,8 +184,95 @@ export default function StyleSettingsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Writing Style Profile</h1>
         <p className="text-gray-600">
-          DictateMED learns your writing style from the edits you make to AI-generated letters.
+          DictateMED learns your writing style from the edits you make to AI-generated letters,
+          or you can upload historical letters to bootstrap your style profile.
         </p>
+      </div>
+
+      {/* Historical Letter Upload Section */}
+      <div className="bg-white rounded-lg shadow mb-6 p-6">
+        <h2 className="text-xl font-semibold mb-2">Upload Historical Letters</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Upload your past medical letters (PDF, DOC, DOCX, or TXT) to quickly build your style profile.
+          This is optional - your profile will also learn from edits you make to AI-generated letters.
+        </p>
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.doc,.docx,.txt"
+          multiple
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
+        {/* Upload area */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-700 font-medium">Click to upload letters</p>
+          <p className="text-sm text-gray-500 mt-1">PDF, DOC, DOCX, or TXT (max 10MB each, up to 10 files)</p>
+        </button>
+
+        {/* Selected files list */}
+        {uploadedFiles.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-sm font-medium text-gray-700">{uploadedFiles.length} file(s) selected:</p>
+            {uploadedFiles.map((file, index) => (
+              <div key={index} className="flex items-center justify-between bg-gray-50 rounded px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm truncate max-w-[200px]">{file.name}</span>
+                  <span className="text-xs text-gray-500">({(file.size / 1024).toFixed(1)} KB)</span>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                  className="text-gray-400 hover:text-red-500"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+
+            <button
+              onClick={uploadAndAnalyze}
+              disabled={uploading}
+              className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" />
+                  Analyze {uploadedFiles.length} Letter{uploadedFiles.length > 1 ? 's' : ''}
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Upload success message */}
+        {uploadSuccess && (
+          <div className="mt-4 flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+            <CheckCircle className="h-5 w-5" />
+            <p className="text-sm">{uploadSuccess}</p>
+          </div>
+        )}
+
+        {/* Upload error message */}
+        {uploadError && (
+          <div className="mt-4 flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <AlertCircle className="h-5 w-5" />
+            <p className="text-sm">{uploadError}</p>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -108,7 +283,11 @@ export default function StyleSettingsPage() {
 
       {/* Statistics Card */}
       <div className="bg-white rounded-lg shadow mb-6 p-6">
-        <h2 className="text-xl font-semibold mb-4">Edit Statistics</h2>
+        <h2 className="text-xl font-semibold mb-2">Learn from Your Edits</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          As you edit AI-generated letters, DictateMED learns your preferences automatically.
+        </p>
+        <h3 className="text-md font-medium mb-3 text-gray-700">Edit Statistics</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <div className="text-2xl font-bold text-blue-600">{stats?.totalEdits ?? 0}</div>
