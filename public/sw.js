@@ -1,9 +1,17 @@
 // public/sw.js
 // Service Worker for DictateMED PWA
-// Skeleton implementation - expanded in Phase 6
+// Enhanced implementation with comprehensive caching and offline support
 
-const CACHE_NAME = 'dictatemed-v1';
-const RUNTIME_CACHE = 'dictatemed-runtime';
+const CACHE_VERSION = '1.0.0';
+const CACHE_NAME = `dictatemed-static-v${CACHE_VERSION}`;
+const RUNTIME_CACHE = `dictatemed-runtime-v${CACHE_VERSION}`;
+const IMAGE_CACHE = `dictatemed-images-v${CACHE_VERSION}`;
+const AUDIO_CACHE = `dictatemed-audio-v${CACHE_VERSION}`;
+
+// Cache size limits (in entries)
+const MAX_RUNTIME_ENTRIES = 100;
+const MAX_IMAGE_ENTRIES = 60;
+const MAX_AUDIO_ENTRIES = 20;
 
 // Static assets to cache on install
 const STATIC_ASSETS = [
@@ -39,16 +47,29 @@ self.addEventListener('install', (event) => {
 // ============ Activate Event ============
 
 self.addEventListener('activate', (event) => {
+  const currentCaches = [CACHE_NAME, RUNTIME_CACHE, IMAGE_CACHE, AUDIO_CACHE];
+
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE_NAME && name !== RUNTIME_CACHE)
-          .map((name) => caches.delete(name))
+          .filter((name) => !currentCaches.includes(name))
+          .map((name) => {
+            console.log('[SW] Deleting old cache:', name);
+            return caches.delete(name);
+          })
       );
     }).then(() => {
-      // Take control of all pages
+      console.log('[SW] Service Worker activated');
+      // Take control of all pages immediately
       return self.clients.claim();
+    }).then(() => {
+      // Notify clients that SW is ready
+      return self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'SW_ACTIVATED', version: CACHE_VERSION });
+        });
+      });
     })
   );
 });
@@ -80,9 +101,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Cache-first strategy for images
+  if (isImage(url.pathname)) {
+    event.respondWith(cacheFirst(request, IMAGE_CACHE, MAX_IMAGE_ENTRIES));
+    return;
+  }
+
+  // Cache-first strategy for audio files
+  if (isAudio(url.pathname)) {
+    event.respondWith(cacheFirst(request, AUDIO_CACHE, MAX_AUDIO_ENTRIES));
+    return;
+  }
+
   // Cache-first strategy for static assets
   if (isStaticAsset(url.pathname)) {
-    event.respondWith(cacheFirst(request));
+    event.respondWith(cacheFirst(request, CACHE_NAME));
     return;
   }
 
@@ -109,7 +142,7 @@ async function networkFirst(request) {
   }
 }
 
-async function cacheFirst(request) {
+async function cacheFirst(request, cacheName = CACHE_NAME, maxEntries = null) {
   const cached = await caches.match(request);
   if (cached) {
     return cached;
@@ -118,8 +151,13 @@ async function cacheFirst(request) {
   try {
     const response = await fetch(request);
     if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
+      const cache = await caches.open(cacheName);
       cache.put(request, response.clone());
+
+      // Enforce cache size limit
+      if (maxEntries) {
+        await trimCache(cacheName, maxEntries);
+      }
     }
     return response;
   } catch (error) {
@@ -157,14 +195,69 @@ function isStaticAsset(pathname) {
   return (
     pathname.startsWith('/_next/static/') ||
     pathname.startsWith('/fonts/') ||
-    pathname.startsWith('/images/') ||
     pathname.endsWith('.js') ||
     pathname.endsWith('.css') ||
+    pathname.endsWith('.woff') ||
     pathname.endsWith('.woff2') ||
+    pathname.endsWith('.ttf') ||
+    pathname.endsWith('.eot')
+  );
+}
+
+function isImage(pathname) {
+  return (
+    pathname.startsWith('/images/') ||
+    pathname.startsWith('/icons/') ||
     pathname.endsWith('.png') ||
+    pathname.endsWith('.jpg') ||
+    pathname.endsWith('.jpeg') ||
+    pathname.endsWith('.gif') ||
+    pathname.endsWith('.webp') ||
     pathname.endsWith('.svg') ||
     pathname.endsWith('.ico')
   );
+}
+
+function isAudio(pathname) {
+  return (
+    pathname.endsWith('.mp3') ||
+    pathname.endsWith('.wav') ||
+    pathname.endsWith('.ogg') ||
+    pathname.endsWith('.webm') ||
+    pathname.endsWith('.m4a')
+  );
+}
+
+// Trim cache to max entries (LRU)
+async function trimCache(cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+
+  if (keys.length > maxEntries) {
+    // Remove oldest entries
+    const toDelete = keys.slice(0, keys.length - maxEntries);
+    await Promise.all(toDelete.map((key) => cache.delete(key)));
+  }
+}
+
+// Clear all caches (used by settings)
+async function clearAllCaches() {
+  const cacheNames = await caches.keys();
+  await Promise.all(cacheNames.map((name) => caches.delete(name)));
+  console.log('[SW] All caches cleared');
+}
+
+// Get cache size information
+async function getCacheSize() {
+  const cacheNames = await caches.keys();
+  const sizes = await Promise.all(
+    cacheNames.map(async (name) => {
+      const cache = await caches.open(name);
+      const keys = await cache.keys();
+      return { name, entries: keys.length };
+    })
+  );
+  return sizes;
 }
 
 // ============ Background Sync (Phase 6) ============
@@ -216,8 +309,41 @@ self.addEventListener('notificationclick', (event) => {
 
 // ============ Message Handler ============
 
-self.addEventListener('message', (event) => {
-  if (event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+self.addEventListener('message', async (event) => {
+  const { type, payload } = event.data;
+
+  switch (type) {
+    case 'SKIP_WAITING':
+      self.skipWaiting();
+      break;
+
+    case 'CLEAR_CACHES':
+      await clearAllCaches();
+      event.ports[0]?.postMessage({ success: true });
+      break;
+
+    case 'GET_CACHE_SIZE':
+      const sizes = await getCacheSize();
+      event.ports[0]?.postMessage({ sizes });
+      break;
+
+    case 'CACHE_URLS':
+      if (payload?.urls) {
+        const cache = await caches.open(RUNTIME_CACHE);
+        await Promise.all(
+          payload.urls.map((url) =>
+            fetch(url).then((response) => {
+              if (response.ok) {
+                return cache.put(url, response);
+              }
+            }).catch(() => {})
+          )
+        );
+        event.ports[0]?.postMessage({ success: true });
+      }
+      break;
+
+    default:
+      console.log('[SW] Unknown message type:', type);
   }
 });

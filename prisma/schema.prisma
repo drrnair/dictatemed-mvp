@@ -41,10 +41,12 @@ model User {
   updatedAt    DateTime  @updatedAt
   lastLoginAt  DateTime?
 
-  recordings Recording[]
-  documents  Document[]
-  letters    Letter[]
-  auditLogs  AuditLog[]
+  recordings    Recording[]
+  documents     Document[]
+  letters       Letter[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  styleEdits    StyleEdit[]
 
   @@map("users")
 }
@@ -238,6 +240,7 @@ model Letter {
 
   documents  LetterDocument[]
   provenance Provenance?
+  styleEdits StyleEdit[]
 
   @@index([userId, createdAt])
   @@index([status])
@@ -303,4 +306,56 @@ model AuditLog {
   @@index([userId, createdAt])
   @@index([action, createdAt])
   @@map("audit_logs")
+}
+
+// ============ Notifications ============
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  read      Boolean          @default(false)
+  data      Json?            // Additional context data (letterId, recordingId, etc.)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  LETTER_READY
+  TRANSCRIPTION_COMPLETE
+  DOCUMENT_PROCESSED
+  REVIEW_REMINDER
+  SYSTEM
+}
+
+// ============ Style Learning ============
+
+model StyleEdit {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  letterId  String
+  letter    Letter   @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  // Edit content
+  beforeText String @db.Text // Original AI-generated text
+  afterText  String @db.Text // Physician-edited text
+
+  // Edit metadata
+  editType         String // addition, deletion, modification, formatting
+  sectionType      String? // greeting, history, examination, impression, plan, closing, other
+  characterChanges Int // Total chars added/removed
+  wordChanges      Int // Total words added/removed
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([letterId])
+  @@map("style_edits")
 }

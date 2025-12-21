@@ -112,6 +112,13 @@ export async function hasAccessToResource(
 }
 
 /**
+ * Check if a user is an admin of their practice
+ */
+export function isPracticeAdmin(user: AuthUser): boolean {
+  return user.role === 'ADMIN';
+}
+
+/**
  * Get session with user info for API routes.
  * Returns a session-like object compatible with API route patterns.
  */

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DictateMED - Offline</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      color: #1f2937;
+    }
+
+    .container {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      padding: 3rem 2rem;
+      max-width: 32rem;
+      width: 100%;
+      text-align: center;
+    }
+
+    .icon {
+      width: 6rem;
+      height: 6rem;
+      margin: 0 auto 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .icon::after {
+      content: '';
+      position: absolute;
+      width: 5rem;
+      height: 5rem;
+      background: white;
+      border-radius: 50%;
+    }
+
+    .icon svg {
+      position: relative;
+      z-index: 1;
+      width: 3rem;
+      height: 3rem;
+      stroke: #667eea;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #111827;
+    }
+
+    p {
+      font-size: 1.125rem;
+      line-height: 1.75rem;
+      color: #6b7280;
+      margin-bottom: 2rem;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: #fef3c7;
+      border-radius: 9999px;
+      margin-bottom: 2rem;
+      font-weight: 500;
+      color: #92400e;
+    }
+
+    .status-dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      background: #f59e0b;
+      border-radius: 50%;
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 0.875rem 2rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.4);
+    }
+
+    .features {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .features h2 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #9ca3af;
+      margin-bottom: 1.5rem;
+    }
+
+    .features ul {
+      list-style: none;
+      text-align: left;
+    }
+
+    .features li {
+      padding: 0.75rem 0;
+      color: #4b5563;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .features li::before {
+      content: '✓';
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      background: #d1fae5;
+      color: #065f46;
+      border-radius: 50%;
+      flex-shrink: 0;
+      font-weight: bold;
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 2rem 1.5rem;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      p {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z" />
+      </svg>
+    </div>
+
+    <h1>You're Offline</h1>
+
+    <p>
+      No internet connection detected. Please check your connection and try again.
+    </p>
+
+    <div class="status">
+      <span class="status-dot"></span>
+      <span>Waiting for connection...</span>
+    </div>
+
+    <button onclick="location.reload()" id="retry-button">
+      Retry Connection
+    </button>
+
+    <div class="features">
+      <h2>While you're offline</h2>
+      <ul>
+        <li>Your recordings are safely queued</li>
+        <li>Changes will sync automatically when reconnected</li>
+        <li>Most features remain accessible offline</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // Listen for online event
+    window.addEventListener('online', function() {
+      console.log('Connection restored');
+      // Automatically reload when connection is restored
+      setTimeout(() => {
+        location.reload();
+      }, 500);
+    });
+
+    // Update status text if online
+    if (navigator.onLine) {
+      document.querySelector('.status').innerHTML = '<span style="width: 0.5rem; height: 0.5rem; background: #10b981; border-radius: 50%;"></span><span>Connection restored</span>';
+      setTimeout(() => {
+        location.reload();
+      }, 1000);
+    }
+
+    // Add keyboard shortcut for retry (R key)
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        location.reload();
+      }
+    });
+  </script>
+</body>
+</html>

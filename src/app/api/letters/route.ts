@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/letters - List letters with filtering
- * Query params: status, letterType, patientId, limit, offset
+ * Query params: search, type, status, startDate, endDate, page, limit, sortBy, sortOrder
  */
 export async function GET(request: NextRequest) {
   const log = logger.child({ action: 'listLetters' });
@@ -131,20 +131,24 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const patientId = searchParams.get('patientId');
-    const status = searchParams.get('status') as LetterType | null;
-    const letterType = searchParams.get('letterType') as LetterType | null;
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50;
-    const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0;
+    const search = searchParams.get('search');
+    const letterType = searchParams.get('type') as LetterType | null;
+    const status = searchParams.get('status');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 20;
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
+
+    // Import dependencies
+    const { prisma } = await import('@/infrastructure/db/client');
+    const { decryptPatientData } = await import('@/infrastructure/db/encryption');
 
     // Build where clause
     const where: any = {
       userId: session.user.id,
     };
-
-    if (patientId) {
-      where.patientId = patientId;
-    }
 
     if (status) {
       where.status = status;
@@ -154,25 +158,103 @@ export async function GET(request: NextRequest) {
       where.letterType = letterType;
     }
 
-    // Import prisma client
-    const { prisma } = await import('@/infrastructure/db/client');
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        where.createdAt.lte = new Date(endDate);
+      }
+    }
 
+    // Calculate offset from page
+    const offset = (page - 1) * limit;
+
+    // Build orderBy
+    const orderBy: any = {};
+    if (sortBy === 'approvedAt') {
+      orderBy.approvedAt = sortOrder;
+    } else {
+      orderBy.createdAt = sortOrder;
+    }
+
+    // Fetch letters with patient data
     const [letters, total] = await Promise.all([
       prisma.letter.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         take: limit,
         skip: offset,
+        include: {
+          patient: true,
+        },
       }),
       prisma.letter.count({ where }),
     ]);
 
+    // Decrypt patient data and filter by search if needed
+    let processedLetters = letters.map((letter) => {
+      let patientName = 'Unknown Patient';
+      if (letter.patient?.encryptedData) {
+        try {
+          const patientData = decryptPatientData(letter.patient.encryptedData);
+          patientName = patientData.name;
+        } catch (error) {
+          log.warn('Failed to decrypt patient data', { patientId: letter.patientId });
+        }
+      }
+
+      return {
+        id: letter.id,
+        patientId: letter.patientId,
+        patientName,
+        letterType: letter.letterType,
+        status: letter.status,
+        createdAt: letter.createdAt,
+        approvedAt: letter.approvedAt,
+        hallucinationRiskScore: letter.hallucinationRiskScore,
+      };
+    });
+
+    // Apply client-side search filter (since patient data is encrypted)
+    if (search) {
+      const searchLower = search.toLowerCase();
+      processedLetters = processedLetters.filter((letter) =>
+        letter.patientName.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Calculate stats
+    const allLetters = await prisma.letter.findMany({
+      where: { userId: session.user.id },
+      select: {
+        status: true,
+        approvedAt: true,
+      },
+    });
+
+    const stats = {
+      total: allLetters.length,
+      pendingReview: allLetters.filter((l) => l.status === 'IN_REVIEW' || l.status === 'DRAFT').length,
+      approvedThisWeek: allLetters.filter((l) => {
+        if (!l.approvedAt) return false;
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return new Date(l.approvedAt) >= weekAgo;
+      }).length,
+    };
+
     return NextResponse.json({
-      letters,
-      total,
-      limit,
-      offset,
-      hasMore: offset + letters.length < total,
+      letters: processedLetters,
+      pagination: {
+        page,
+        limit,
+        total: search ? processedLetters.length : total,
+        totalPages: Math.ceil((search ? processedLetters.length : total) / limit),
+        hasMore: page * limit < (search ? processedLetters.length : total),
+      },
+      stats,
     });
   } catch (error) {
     log.error(
