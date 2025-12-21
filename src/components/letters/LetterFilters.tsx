@@ -61,14 +61,14 @@ export function LetterFilters({ filters, onFilterChange, onClearFilters }: Lette
         <div className="flex flex-wrap gap-2">
           {/* Letter Type */}
           <Select
-            value={filters.type || ''}
-            onValueChange={(value: string) => onFilterChange({ type: value as LetterType | '' })}
+            value={filters.type || 'all'}
+            onValueChange={(value: string) => onFilterChange({ type: value === 'all' ? '' : value as LetterType })}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Types</SelectItem>
+              <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="NEW_PATIENT">New Patient</SelectItem>
               <SelectItem value="FOLLOW_UP">Follow Up</SelectItem>
               <SelectItem value="ANGIOGRAM_PROCEDURE">Angiogram</SelectItem>
@@ -78,14 +78,14 @@ export function LetterFilters({ filters, onFilterChange, onClearFilters }: Lette
 
           {/* Status */}
           <Select
-            value={filters.status || ''}
-            onValueChange={(value: string) => onFilterChange({ status: value as LetterStatus | '' })}
+            value={filters.status || 'all'}
+            onValueChange={(value: string) => onFilterChange({ status: value === 'all' ? '' : value as LetterStatus })}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="GENERATING">Generating</SelectItem>
               <SelectItem value="DRAFT">Draft</SelectItem>
               <SelectItem value="IN_REVIEW">In Review</SelectItem>
