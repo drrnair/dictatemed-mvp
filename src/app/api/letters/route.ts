@@ -12,6 +12,7 @@ import type { LetterType } from '@/domains/letters/letter.types';
 const generateLetterSchema = z.object({
   patientId: z.string().uuid(),
   letterType: z.enum(['NEW_PATIENT', 'FOLLOW_UP', 'ANGIOGRAM_PROCEDURE', 'ECHO_REPORT']),
+  templateId: z.string().uuid().optional(), // Optional template for enhanced generation
   sources: z.object({
     transcript: z
       .object({

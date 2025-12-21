@@ -2,28 +2,39 @@
 // Settings page with navigation to sub-settings
 
 import Link from 'next/link';
-import { Building2, Sparkles } from 'lucide-react';
+import { Building2, Sparkles, Heart, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
-type SettingsRoute = '/settings/practice' | '/settings/style';
+import type { Route } from 'next';
 
 const settingsLinks: Array<{
   title: string;
   description: string;
-  href: SettingsRoute;
+  href: Route;
   icon: typeof Building2;
 }> = [
   {
     title: 'Practice',
     description: 'Manage practice details, letterhead, and team members',
-    href: '/settings/practice',
+    href: '/settings/practice' as Route,
     icon: Building2,
   },
   {
     title: 'Writing Style',
     description: 'View and customize your letter writing style preferences',
-    href: '/settings/style',
+    href: '/settings/style' as Route,
     icon: Sparkles,
+  },
+  {
+    title: 'Subspecialties',
+    description: 'Select your cardiology subspecialty interests for tailored templates',
+    href: '/settings/subspecialties' as Route,
+    icon: Heart,
+  },
+  {
+    title: 'Letter Templates',
+    description: 'Browse and manage your favorite letter templates',
+    href: '/settings/templates' as Route,
+    icon: FileText,
   },
 ];
 

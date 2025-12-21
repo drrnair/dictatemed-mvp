@@ -22,6 +22,8 @@ import { parseSourceAnchors, validateClinicalSources, generateSourceSummary } fr
 import { extractClinicalValues, calculateVerificationRate } from './clinical-extraction';
 import { detectHallucinations, calculateHallucinationRisk, recommendApproval } from './hallucination-detection';
 import { extractClinicalConcepts, getICD10Codes, getMBSItems } from './clinical-concepts';
+import { getEffectivePromptTemplate, recordTemplateUsage } from './templates/template.service';
+import { applyStyleHints } from '../style/style.service';
 
 export interface GenerateLetterInput {
   patientId: string;
@@ -29,6 +31,7 @@ export interface GenerateLetterInput {
   sources: LetterSources;
   phi: PHI;
   userPreference?: 'quality' | 'balanced' | 'cost' | undefined;
+  templateId?: string | undefined; // Optional template for enhanced generation
 }
 
 export interface GenerateLetterResult {
@@ -96,13 +99,27 @@ export async function generateLetter(
     throw new Error(`PHI obfuscation failed: ${transcriptValidation.leakedPHI.join(', ')}`);
   }
 
-  // Step 3: Build prompt
+  // Step 3: Build prompt (with optional template and style enhancements)
   const promptBuilder = LETTER_PROMPTS[input.letterType];
   if (!promptBuilder) {
     throw new Error(`No prompt builder for letter type: ${input.letterType}`);
   }
 
-  const prompt = promptBuilder(
+  // Get template prompt if templateId is provided
+  let templateContext: string | null = null;
+  if (input.templateId) {
+    const templateData = await getEffectivePromptTemplate(userId, input.templateId);
+    if (templateData) {
+      templateContext = templateData.promptTemplate;
+      log.info('Using template', { templateId: input.templateId });
+    }
+  }
+
+  // Get user's style hints
+  const { hints: styleHints } = await applyStyleHints(userId, '');
+
+  // Build base prompt (pass null for styleContext - we'll append our own)
+  let prompt = promptBuilder(
     obfuscatedSources,
     {
       nameToken: obfuscatedSources.deobfuscationMap.tokens.nameToken,
@@ -110,8 +127,22 @@ export async function generateLetter(
       medicareToken: obfuscatedSources.deobfuscationMap.tokens.medicareToken,
       genderToken: obfuscatedSources.deobfuscationMap.tokens.genderToken,
     },
-    null // No style context for MVP
+    null // No legacy style context - we use templates and hints instead
   );
+
+  // Append template-specific instructions if available
+  if (templateContext) {
+    prompt = `${prompt}\n\n# TEMPLATE-SPECIFIC INSTRUCTIONS\n\n${templateContext}`;
+  }
+
+  // Append style hints if available
+  const styleKeys = Object.keys(styleHints) as Array<keyof typeof styleHints>;
+  if (styleKeys.some((k) => styleHints[k] !== undefined)) {
+    const styleSection = formatStyleHintsForPrompt(styleHints);
+    if (styleSection) {
+      prompt = `${prompt}\n\n${styleSection}`;
+    }
+  }
 
   log.info('Prompt built', {
     promptLength: prompt.length,
@@ -179,6 +210,7 @@ export async function generateLetter(
     data: {
       userId,
       patientId: input.patientId,
+      templateId: input.templateId, // Link to template if used
       letterType: input.letterType,
       status: 'DRAFT',
       contentDraft: letterWithoutAnchors, // Prisma uses contentDraft, not draftContent
@@ -195,6 +227,11 @@ export async function generateLetter(
       generatedAt: new Date(),
     },
   });
+
+  // Record template usage for recommendations
+  if (input.templateId) {
+    await recordTemplateUsage(userId, input.templateId);
+  }
 
   log.info('Letter saved', {
     letterId: letter.id,
@@ -456,4 +493,36 @@ function mapPrismaLetter(record: PrismaLetterModel): Letter {
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
+}
+
+/**
+ * Format style hints for inclusion in the prompt.
+ */
+function formatStyleHintsForPrompt(hints: {
+  greeting?: string;
+  closing?: string;
+  paragraphLength?: string;
+  medicationFormat?: string;
+  clinicalValueFormat?: string;
+  formality?: string;
+  vocabulary?: string;
+  sectionOrder?: string;
+  generalGuidance?: string;
+}): string | null {
+  const parts: string[] = [];
+
+  if (hints.greeting) parts.push(`• ${hints.greeting}`);
+  if (hints.closing) parts.push(`• ${hints.closing}`);
+  if (hints.paragraphLength) parts.push(`• ${hints.paragraphLength}`);
+  if (hints.medicationFormat) parts.push(`• ${hints.medicationFormat}`);
+  if (hints.clinicalValueFormat) parts.push(`• ${hints.clinicalValueFormat}`);
+  if (hints.formality) parts.push(`• ${hints.formality}`);
+  if (hints.vocabulary) parts.push(`• ${hints.vocabulary}`);
+  if (hints.sectionOrder) parts.push(`• ${hints.sectionOrder}`);
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  return `# PHYSICIAN STYLE PREFERENCES\n\n${parts.join('\n')}${hints.generalGuidance ? `\n\n${hints.generalGuidance}` : ''}`;
 }

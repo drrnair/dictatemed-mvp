@@ -41,12 +41,16 @@ model User {
   updatedAt    DateTime  @updatedAt
   lastLoginAt  DateTime?
 
-  recordings    Recording[]
-  documents     Document[]
-  letters       Letter[]
-  auditLogs     AuditLog[]
-  notifications Notification[]
-  styleEdits    StyleEdit[]
+  // Subspecialty interests for template recommendations
+  subspecialties String[] @default([]) // Array of Subspecialty enum values
+
+  recordings          Recording[]
+  documents           Document[]
+  letters             Letter[]
+  auditLogs           AuditLog[]
+  notifications       Notification[]
+  styleEdits          StyleEdit[]
+  templatePreferences UserTemplatePreference[]
 
   @@map("users")
 }
@@ -193,6 +197,10 @@ model Letter {
   patient     Patient?   @relation(fields: [patientId], references: [id])
   recordingId String?
   recording   Recording? @relation(fields: [recordingId], references: [id])
+
+  // Template reference (optional - letters can still use basic letterType)
+  templateId String?
+  template   LetterTemplate? @relation(fields: [templateId], references: [id])
 
   letterType LetterType
   status     LetterStatus @default(GENERATING)
@@ -358,4 +366,93 @@ model StyleEdit {
   @@index([userId, createdAt])
   @@index([letterId])
   @@map("style_edits")
+}
+
+// ============ Letter Templates ============
+
+// Subspecialty categories for cardiology
+enum Subspecialty {
+  GENERAL_CARDIOLOGY
+  INTERVENTIONAL
+  STRUCTURAL
+  ELECTROPHYSIOLOGY
+  IMAGING
+  HEART_FAILURE
+  CARDIAC_SURGERY
+}
+
+// Template category for grouping
+enum TemplateCategory {
+  CONSULTATION
+  PROCEDURE
+  DIAGNOSTIC
+  FOLLOW_UP
+  DISCHARGE
+}
+
+// Letter templates with subspecialty tagging
+model LetterTemplate {
+  id          String   @id @default(uuid())
+  name        String   // e.g., "New Patient Consultation"
+  description String?  // Brief description of when to use
+  slug        String   @unique // URL-friendly identifier
+
+  // Categorization
+  category       TemplateCategory
+  subspecialties Subspecialty[] // Which subspecialties this applies to
+  isGeneric      Boolean        @default(false) // Available to all subspecialties
+
+  // Parent template for variants (e.g., "TTE Report" is parent of "Stress Echo Report")
+  parentId String?
+  parent   LetterTemplate?  @relation("TemplateVariants", fields: [parentId], references: [id])
+  variants LetterTemplate[] @relation("TemplateVariants")
+
+  // Template content
+  promptTemplate   String  @db.Text // System prompt additions for this template
+  sectionOrder     String[] // Default section order for this template
+  requiredSections String[] // Sections that must be included
+  optionalSections String[] // Sections that can be added
+
+  // Sample/example content for UI preview
+  sampleContent String? @db.Text
+
+  // Metadata
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0) // For display ordering
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  letters         Letter[]
+  userPreferences UserTemplatePreference[]
+
+  @@index([category])
+  @@index([isGeneric])
+  @@map("letter_templates")
+}
+
+// User preferences for templates (favorites, per-template style overrides)
+model UserTemplatePreference {
+  id         String         @id @default(uuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId String
+  template   LetterTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  // Preference flags
+  isFavorite Boolean @default(false)
+  usageCount Int     @default(0) // Track usage for recommendations
+
+  // Per-template style overrides (extends global styleProfile)
+  styleOverrides Json @default("{}") // Partial StyleProfile overrides
+
+  // Last used for recency-based recommendations
+  lastUsedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, templateId])
+  @@index([userId, isFavorite])
+  @@map("user_template_preferences")
 }
