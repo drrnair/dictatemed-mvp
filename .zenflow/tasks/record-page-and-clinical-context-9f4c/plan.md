@@ -18,47 +18,139 @@ Do not make assumptions on important decisions — get clarification first.
 
 ## Workflow Steps
 
-### [ ] Step: Technical Specification
+### [x] Step: Technical Specification
+<!-- chat-id: fa9b053f-13ee-41d8-9509-19d3647f3500 -->
 
-Assess the task's difficulty, as underestimating it leads to poor outcomes.
-- easy: Straightforward implementation, trivial bug fix or feature
-- medium: Moderate complexity, some edge cases or caveats to consider
-- hard: Complex logic, many caveats, architectural considerations, or high-risk changes
+**Completed:** Technical specification created at `.zenflow/tasks/record-page-and-clinical-context-9f4c/spec.md`
 
-Create a technical specification for the task that is appropriate for the complexity level:
-- Review the existing codebase architecture and identify reusable components.
-- Define the implementation approach based on established patterns in the project.
-- Identify all source code files that will be created or modified.
-- Define any necessary data model, API, or interface changes.
-- Describe verification steps using the project's test and lint commands.
+**Assessment:** Medium complexity
+- Most infrastructure already exists (Consultation model, APIs, components)
+- Primarily UI reorganization with component enhancements
+- No new external service integrations required
+- Clear data model with established patterns
 
-Save the output to `{@artifacts_path}/spec.md` with:
-- Technical context (language, dependencies)
-- Implementation approach
-- Source code structure changes
-- Data model / API / interface changes
-- Verification approach
+**Key Findings:**
+- Existing `ConsultationContextForm`, `PatientSelector`, `ReferrerSelector`, `LetterTypeSelector` components can be reused
+- Recording components (`RecordingSection`, `RecordingModeSelector`, etc.) fully implemented
+- `PreviousMaterialsPanel` and `NewUploadsSection` exist and work
+- Prisma schema already supports `Consultation` with `selectedLetterIds`, `selectedDocumentIds`
+- All required API endpoints exist
 
-If the task is complex enough, create a detailed implementation plan based on `{@artifacts_path}/spec.md`:
-- Break down the work into concrete tasks (incrementable, testable milestones)
-- Each task should reference relevant contracts and include verification steps
-- Replace the Implementation step below with the planned tasks
-
-Rule of thumb for step size: each step should represent a coherent unit of work (e.g., implement a component, add an API endpoint, write tests for a module). Avoid steps that are too granular (single function).
-
-Save to `{@artifacts_path}/plan.md`. If the feature is trivial and doesn't warrant this breakdown, keep the Implementation step below as is.
+**Implementation Approach:** Enhance existing page layout and components rather than rebuild
 
 ---
 
-### [ ] Step: Implementation
+### [ ] Step: Layout Refinement
 
-Implement the task according to the technical specification and general engineering best practices.
+Refactor `src/app/(dashboard)/record/page.tsx` layout:
 
-1. Break the task into steps where possible.
-2. Implement the required changes in the codebase.
-3. Add and run relevant tests and linters.
-4. Perform basic manual verification if applicable.
-5. After completion, write a report to `{@artifacts_path}/report.md` describing:
-   - What was implemented
-   - How the solution was tested
-   - The biggest issues or challenges encountered
+1. Reorganize into 3 clear card sections:
+   - **Consultation Details** (patient, referrer, CC, letter type) - Required
+   - **Clinical Context** (previous materials + new uploads) - Optional
+   - **Recording** (mode selector + controls) - Enabled when context valid
+
+2. Improve visual hierarchy:
+   - Clear section headers with descriptions
+   - Proper spacing between sections
+   - Disabled state styling for recording section
+
+3. Verify:
+   - Form validation blocks recording when context incomplete
+   - Responsive layout on desktop/tablet/mobile
+
+**Files to modify:**
+- `src/app/(dashboard)/record/page.tsx`
+
+---
+
+### [ ] Step: Clinical Context Section
+
+Create unified clinical context component:
+
+1. Create `src/components/consultation/ClinicalContextSection.tsx`:
+   - Combines previous materials panel and new uploads
+   - Shows previous materials when patient selected
+   - Allows document uploads linked to consultation
+   - Handles empty states gracefully
+
+2. Enhance `PreviousMaterialsPanel`:
+   - Better visual display of letters vs documents
+   - Type badges and dates
+   - Selection checkboxes with select all/clear
+
+3. Verify:
+   - Materials load when patient selected
+   - Selection persists via consultation update
+   - Uploads link to consultation
+
+**Files:**
+- Create: `src/components/consultation/ClinicalContextSection.tsx`
+- Modify: `src/components/consultation/PreviousMaterialsPanel.tsx` (if needed)
+
+---
+
+### [ ] Step: Recording Mode Selector
+
+Update recording section for horizontal mode selection:
+
+1. Update `RecordingModeSelector.tsx`:
+   - Horizontal toggle group layout
+   - Icons + labels: Ambient | Dictation | Upload Audio
+   - Visual indication of selected mode
+   - Mode descriptions below when selected
+
+2. Ensure `RecordingSection.tsx`:
+   - Shows appropriate controls per mode
+   - Handles disabled state properly
+   - Links recording to consultation
+
+3. Verify:
+   - Mode switching works smoothly
+   - All three modes functional
+   - Touch targets meet 44px minimum
+
+**Files to modify:**
+- `src/components/recording/RecordingModeSelector.tsx`
+- `src/components/recording/RecordingSection.tsx` (if needed)
+
+---
+
+### [ ] Step: Integration & Polish
+
+Final integration and verification:
+
+1. End-to-end data flow:
+   - Verify consultation context saved correctly
+   - Verify selected materials linked to consultation
+   - Verify uploaded documents linked to consultation
+   - Verify recording linked to consultation
+   - Verify letter generation receives all context
+
+2. Responsive testing:
+   - Desktop (1440px+)
+   - Tablet (768-1024px)
+   - Mobile (< 768px)
+
+3. Accessibility:
+   - Keyboard navigation
+   - Focus states
+   - Screen reader labels
+
+4. Run verification:
+   ```bash
+   npm run lint
+   npm run typecheck
+   npm run test
+   ```
+
+5. Write completion report to `{@artifacts_path}/report.md`
+
+**Verification checklist:**
+- [ ] Context form validates required fields
+- [ ] Previous materials selectable as context
+- [ ] Documents uploadable and linked
+- [ ] Recording modes all functional
+- [ ] Letter generation includes all context sources
+- [ ] Responsive on all breakpoints
+- [ ] No lint/type errors
+- [ ] Tests pass
