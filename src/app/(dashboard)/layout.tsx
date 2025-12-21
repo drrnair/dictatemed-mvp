@@ -3,6 +3,7 @@
 
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
+import { OnboardingRedirect } from '@/components/layout/OnboardingRedirect';
 import { getCurrentUser } from '@/lib/auth';
 
 export default async function DashboardLayout({
@@ -14,6 +15,9 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-background">
+      {/* Client-side onboarding redirect check */}
+      <OnboardingRedirect onboardingCompleted={user?.onboardingCompleted ?? false} />
+
       {/* Sidebar */}
       <Sidebar />
 

@@ -18,6 +18,8 @@ export interface AuthUser {
   name: string;
   role: 'ADMIN' | 'SPECIALIST';
   practiceId: string;
+  subspecialties: string[];
+  onboardingCompleted: boolean;
 }
 
 /**
@@ -47,6 +49,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         name: true,
         role: true,
         practiceId: true,
+        subspecialties: true,
       },
     });
 
@@ -69,6 +72,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
             name: true,
             role: true,
             practiceId: true,
+            subspecialties: true,
           },
         });
       } else {
@@ -87,6 +91,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
             name: userName,
             role: 'ADMIN', // First user is admin of their practice
             practiceId: practice.id,
+            subspecialties: [], // Empty until onboarding
           },
           select: {
             id: true,
@@ -95,10 +100,15 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
             name: true,
             role: true,
             practiceId: true,
+            subspecialties: true,
           },
         });
       }
     }
+
+    // Onboarding is considered complete if user has selected at least one subspecialty
+    const subspecialties = user.subspecialties || [];
+    const onboardingCompleted = subspecialties.length > 0;
 
     return {
       id: user.id,
@@ -107,6 +117,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       name: user.name ?? email.split('@')[0],
       role: user.role,
       practiceId: user.practiceId,
+      subspecialties,
+      onboardingCompleted,
     };
   } catch (error) {
     logger.error('getCurrentUser error', { action: 'auth' }, error instanceof Error ? error : new Error(String(error)));
