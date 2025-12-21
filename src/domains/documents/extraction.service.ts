@@ -205,6 +205,8 @@ function calculateConfidence(
   const expectedFields: Record<DocumentType, number> = {
     ECHO_REPORT: 25, // Core echo measurements
     ANGIOGRAM_REPORT: 15, // Core vessel data
+    ECG_REPORT: 8, // ECG findings
+    HOLTER_REPORT: 10, // Holter monitoring data
     LAB_RESULT: 10, // Common lab values
     REFERRAL: 3, // Summary, findings, recommendations
     OTHER: 3,

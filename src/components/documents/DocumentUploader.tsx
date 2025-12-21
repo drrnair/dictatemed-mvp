@@ -4,7 +4,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Upload, X, FileText, Image, AlertCircle } from 'lucide-react';
+import { Upload, X, FileText, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -242,7 +242,7 @@ export function DocumentUploader({
               {uploadFile.file.type === 'application/pdf' ? (
                 <FileText className="h-8 w-8 text-red-500 shrink-0" />
               ) : (
-                <Image className="h-8 w-8 text-blue-500 shrink-0" />
+                <ImageIcon className="h-8 w-8 text-blue-500 shrink-0" />
               )}
 
               {/* File info */}

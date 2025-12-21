@@ -31,11 +31,19 @@ export const uploadRecordingSchema = z.object({
   fileSize: z.number().int().min(1).max(100 * 1024 * 1024), // Max 100MB
 });
 
+export const updateRecordingSchema = z.object({
+  patientId: uuidSchema.optional().nullable(),
+  mode: recordingModeSchema.optional(),
+  consentType: consentTypeSchema.optional(),
+  audioQuality: z.enum(['excellent', 'good', 'fair', 'poor']).optional(),
+});
+
 export const recordingQuerySchema = paginationSchema.extend({
   status: z
     .enum(['UPLOADING', 'UPLOADED', 'TRANSCRIBING', 'TRANSCRIBED', 'FAILED'])
     .optional(),
   patientId: uuidSchema.optional(),
+  mode: recordingModeSchema.optional(),
 });
 
 // ============ Document Schemas ============
@@ -114,6 +122,7 @@ export const updatePatientSchema = createPatientSchema.partial();
 
 export type CreateRecordingInput = z.infer<typeof createRecordingSchema>;
 export type UploadRecordingInput = z.infer<typeof uploadRecordingSchema>;
+export type UpdateRecordingInput = z.infer<typeof updateRecordingSchema>;
 export type RecordingQuery = z.infer<typeof recordingQuerySchema>;
 
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>;

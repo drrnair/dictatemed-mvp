@@ -9,6 +9,7 @@ import type {
   CreateRecordingInput,
   CreateRecordingResult,
   ConfirmUploadInput,
+  UpdateRecordingInput,
   RecordingListQuery,
   RecordingListResult,
   RecordingStatus,
@@ -135,6 +136,60 @@ export async function getRecording(
 }
 
 /**
+ * Update a recording.
+ */
+export async function updateRecording(
+  userId: string,
+  recordingId: string,
+  input: UpdateRecordingInput
+): Promise<Recording> {
+  const log = logger.child({ userId, recordingId, action: 'updateRecording' });
+
+  // Verify recording exists and belongs to user
+  const existing = await prisma.recording.findFirst({
+    where: { id: recordingId, userId },
+  });
+
+  if (!existing) {
+    throw new Error('Recording not found');
+  }
+
+  // Build update data with proper Prisma types
+  type RecordingUpdateData = Parameters<typeof prisma.recording.update>[0]['data'];
+  const updateData: RecordingUpdateData = {};
+
+  if (input.patientId !== undefined) {
+    updateData.patientId = input.patientId;
+  }
+  if (input.mode !== undefined) {
+    updateData.mode = input.mode as 'AMBIENT' | 'DICTATION';
+  }
+  if (input.consentType !== undefined) {
+    updateData.consentType = input.consentType as 'VERBAL' | 'WRITTEN' | 'STANDING';
+  }
+  if (input.audioQuality !== undefined) {
+    updateData.audioQuality = input.audioQuality;
+  }
+
+  // Update recording
+  const recording = await prisma.recording.update({
+    where: { id: recordingId },
+    data: updateData,
+  });
+
+  log.info('Recording updated', { updates: Object.keys(updateData) });
+
+  // Generate download URL if audio is available
+  let audioUrl: string | undefined;
+  if (recording.s3AudioKey) {
+    const result = await getDownloadUrl(recording.s3AudioKey);
+    audioUrl = result.url;
+  }
+
+  return mapRecording(recording, audioUrl);
+}
+
+/**
  * List recordings for a user with pagination and filters.
  */
 export async function listRecordings(
@@ -149,6 +204,7 @@ export async function listRecordings(
     userId,
     ...(query.status && { status: query.status }),
     ...(query.patientId && { patientId: query.patientId }),
+    ...(query.mode && { mode: query.mode }),
   };
 
   const [recordings, total] = await Promise.all([

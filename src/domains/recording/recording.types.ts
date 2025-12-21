@@ -43,11 +43,19 @@ export interface ConfirmUploadInput {
   audioQuality?: 'excellent' | 'good' | 'fair' | 'poor' | undefined;
 }
 
+export interface UpdateRecordingInput {
+  patientId?: string | null | undefined;
+  mode?: RecordingMode | undefined;
+  consentType?: ConsentType | undefined;
+  audioQuality?: 'excellent' | 'good' | 'fair' | 'poor' | undefined;
+}
+
 export interface RecordingListQuery {
   page?: number | undefined;
   limit?: number | undefined;
   status?: RecordingStatus | undefined;
   patientId?: string | undefined;
+  mode?: RecordingMode | undefined;
 }
 
 export interface RecordingListResult {

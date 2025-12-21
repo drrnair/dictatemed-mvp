@@ -16,13 +16,13 @@ const createDocumentSchema = z.object({
   name: z.string().min(1).max(255),
   mimeType: z.enum(['application/pdf', 'image/png', 'image/jpeg']),
   size: z.number().int().positive().max(20 * 1024 * 1024), // 20MB max
-  type: z.enum(['ECHO_REPORT', 'ANGIOGRAM_REPORT', 'LAB_RESULT', 'REFERRAL', 'OTHER']).optional(),
+  type: z.enum(['ECHO_REPORT', 'ANGIOGRAM_REPORT', 'ECG_REPORT', 'HOLTER_REPORT', 'LAB_RESULT', 'REFERRAL', 'OTHER']).optional(),
   patientId: z.string().uuid().optional(),
 });
 
 const listDocumentsSchema = z.object({
   patientId: z.string().uuid().optional(),
-  type: z.enum(['ECHO_REPORT', 'ANGIOGRAM_REPORT', 'LAB_RESULT', 'REFERRAL', 'OTHER']).optional(),
+  type: z.enum(['ECHO_REPORT', 'ANGIOGRAM_REPORT', 'ECG_REPORT', 'HOLTER_REPORT', 'LAB_RESULT', 'REFERRAL', 'OTHER']).optional(),
   status: z.enum(['UPLOADING', 'UPLOADED', 'PROCESSING', 'PROCESSED', 'FAILED']).optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().max(100).optional(),

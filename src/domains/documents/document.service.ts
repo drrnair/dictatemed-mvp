@@ -34,6 +34,12 @@ function inferDocumentType(name: string, _mimeType: string): DocumentType {
   ) {
     return 'ANGIOGRAM_REPORT';
   }
+  if (lowerName.includes('ecg') || lowerName.includes('ekg') || lowerName.includes('electrocardiogram')) {
+    return 'ECG_REPORT';
+  }
+  if (lowerName.includes('holter') || lowerName.includes('24-hour') || lowerName.includes('24 hour')) {
+    return 'HOLTER_REPORT';
+  }
   if (lowerName.includes('lab') || lowerName.includes('pathology') || lowerName.includes('blood')) {
     return 'LAB_RESULT';
   }
@@ -53,6 +59,10 @@ function mapToPrismaDocumentType(type: DocumentType): 'ECHO_REPORT' | 'ANGIOGRAM
       return 'ECHO_REPORT';
     case 'ANGIOGRAM_REPORT':
       return 'ANGIOGRAM_REPORT';
+    case 'ECG_REPORT':
+      return 'ECG_REPORT';
+    case 'HOLTER_REPORT':
+      return 'HOLTER_REPORT';
     case 'LAB_RESULT':
       return 'LAB_RESULT';
     case 'REFERRAL':
@@ -72,12 +82,14 @@ function mapFromPrismaDocumentType(type: string | null): DocumentType {
       return 'ECHO_REPORT';
     case 'ANGIOGRAM_REPORT':
       return 'ANGIOGRAM_REPORT';
+    case 'ECG_REPORT':
+      return 'ECG_REPORT';
+    case 'HOLTER_REPORT':
+      return 'HOLTER_REPORT';
     case 'LAB_RESULT':
       return 'LAB_RESULT';
     case 'REFERRAL_LETTER':
       return 'REFERRAL';
-    case 'ECG_REPORT':
-    case 'HOLTER_REPORT':
     case 'OTHER':
     default:
       return 'OTHER';

@@ -1,7 +1,7 @@
 // src/domains/documents/document.types.ts
 // Document domain type definitions
 
-export type DocumentType = 'ECHO_REPORT' | 'ANGIOGRAM_REPORT' | 'LAB_RESULT' | 'REFERRAL' | 'OTHER';
+export type DocumentType = 'ECHO_REPORT' | 'ANGIOGRAM_REPORT' | 'ECG_REPORT' | 'HOLTER_REPORT' | 'LAB_RESULT' | 'REFERRAL' | 'OTHER';
 
 export type DocumentStatus = 'UPLOADING' | 'UPLOADED' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
 

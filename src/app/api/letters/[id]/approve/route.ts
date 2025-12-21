@@ -52,6 +52,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    if (error instanceof Error && error.message === 'Letter not found') {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to approve letter' },
       { status: 500 }

@@ -118,7 +118,8 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/letters - List letters for a patient
+ * GET /api/letters - List letters with filtering
+ * Query params: status, letterType, patientId, limit, offset
  */
 export async function GET(request: NextRequest) {
   const log = logger.child({ action: 'listLetters' });
@@ -131,14 +132,48 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const patientId = searchParams.get('patientId');
+    const status = searchParams.get('status') as LetterType | null;
+    const letterType = searchParams.get('letterType') as LetterType | null;
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50;
+    const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0;
 
-    if (!patientId) {
-      return NextResponse.json({ error: 'patientId required' }, { status: 400 });
+    // Build where clause
+    const where: any = {
+      userId: session.user.id,
+    };
+
+    if (patientId) {
+      where.patientId = patientId;
     }
 
-    const letters = await listLetters(session.user.id, patientId);
+    if (status) {
+      where.status = status;
+    }
 
-    return NextResponse.json({ letters });
+    if (letterType) {
+      where.letterType = letterType;
+    }
+
+    // Import prisma client
+    const { prisma } = await import('@/infrastructure/db/client');
+
+    const [letters, total] = await Promise.all([
+      prisma.letter.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.letter.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      letters,
+      total,
+      limit,
+      offset,
+      hasMore: offset + letters.length < total,
+    });
   } catch (error) {
     log.error(
       'Failed to list letters',

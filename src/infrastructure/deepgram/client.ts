@@ -10,6 +10,7 @@ import type {
   TranscriptionResult,
   ProcessedTranscript,
   TranscriptSegment,
+  TranscriptChannel,
 } from './types';
 
 // Singleton client instance
@@ -246,6 +247,41 @@ export async function transcribeSync(
     throw new Error('No transcription result');
   }
 
+  // Map SDK channels to our TranscriptChannel type
+  const channels: TranscriptChannel[] = (result.results?.channels ?? []).map((channel) => ({
+    alternatives: channel.alternatives.map((alt) => ({
+      transcript: alt.transcript,
+      confidence: alt.confidence,
+      words: alt.words.map((word) => ({
+        word: word.word,
+        start: word.start,
+        end: word.end,
+        confidence: word.confidence,
+        punctuated_word: word.punctuated_word ?? word.word,
+        speaker: word.speaker,
+      })),
+    })),
+  }));
+
+  // Map SDK utterances to our type if present
+  const utterances = result.results?.utterances?.map((utt) => ({
+    start: utt.start,
+    end: utt.end,
+    confidence: utt.confidence,
+    channel: utt.channel,
+    transcript: utt.transcript,
+    words: utt.words.map((word) => ({
+      word: word.word,
+      start: word.start,
+      end: word.end,
+      confidence: word.confidence,
+      punctuated_word: word.punctuated_word ?? word.word,
+      speaker: word.speaker,
+    })),
+    speaker: utt.speaker,
+    id: utt.id,
+  }));
+
   return {
     request_id: (result as { request_id?: string }).request_id ?? `req-${Date.now()}`,
     metadata: {
@@ -256,8 +292,8 @@ export async function transcribeSync(
       models: result.metadata?.models ?? [options.model],
     },
     results: {
-      channels: result.results?.channels ?? [],
-      utterances: result.results?.utterances,
+      channels,
+      utterances,
     },
   };
 }

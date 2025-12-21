@@ -1,9 +1,10 @@
 // src/app/api/recordings/[id]/route.ts
-// Get and delete a recording
+// Get, update, and delete a recording
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getRecording, deleteRecording } from '@/domains/recording/recording.service';
+import { getRecording, deleteRecording, updateRecording } from '@/domains/recording/recording.service';
+import { updateRecordingSchema, validateBody, formatZodErrors } from '@/lib/validation';
 import { logger } from '@/lib/logger';
 
 interface RouteParams {
@@ -42,6 +43,53 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     logger.error('Failed to get recording', {}, error instanceof Error ? error : undefined);
     return NextResponse.json(
       { error: 'Failed to get recording' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PUT /api/recordings/:id - Update a recording
+ */
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  try {
+    // Get authenticated user
+    const session = await getSession();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await params;
+    const userId = session.user.id;
+
+    // Parse and validate request body
+    const body = await request.json();
+    const validation = validateBody(updateRecordingSchema, body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: formatZodErrors(validation.errors) },
+        { status: 400 }
+      );
+    }
+
+    // Update recording
+    const recording = await updateRecording(userId, id, validation.data);
+
+    return NextResponse.json(recording);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Recording not found') {
+      return NextResponse.json(
+        { error: 'Recording not found' },
+        { status: 404 }
+      );
+    }
+
+    logger.error('Failed to update recording', {}, error instanceof Error ? error : undefined);
+    return NextResponse.json(
+      { error: 'Failed to update recording' },
       { status: 500 }
     );
   }

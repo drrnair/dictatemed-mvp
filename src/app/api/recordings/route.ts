@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
       page: searchParams.get('page'),
       limit: searchParams.get('limit'),
       status: searchParams.get('status'),
+      mode: searchParams.get('mode'),
       patientId: searchParams.get('patientId'),
     };
 
