@@ -308,7 +308,7 @@ function PreferenceRow({
         <div className="mt-2 space-y-1">
           {examples.slice(0, 2).map((example, idx) => (
             <div key={idx} className="text-sm text-gray-600 italic">
-              "{example}"
+              &quot;{example}&quot;
             </div>
           ))}
         </div>

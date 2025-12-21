@@ -4,7 +4,7 @@
 'use client';
 
 import * as React from 'react';
-import { Bell, Check, CheckCheck, AlertCircle, FileText, Mic, FileCheck } from 'lucide-react';
+import { Bell, Check, CheckCheck, AlertCircle, FileText, FileCheck } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import {
   DropdownMenu,
