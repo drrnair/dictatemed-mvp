@@ -104,6 +104,7 @@ export default function RecordPage() {
             email,
             address,
           })),
+          templateId: formData.templateId,
           letterType: formData.letterType,
           selectedLetterIds,
           selectedDocumentIds,
@@ -247,22 +248,14 @@ export default function RecordPage() {
             icon={<FolderOpen className="h-5 w-5" />}
             disabled={isRecording}
           >
-            {consultationId ? (
-              <PreviousMaterialsPanel
-                consultationId={consultationId}
-                selectedLetterIds={selectedLetterIds}
-                selectedDocumentIds={selectedDocumentIds}
-                onSelectionChange={handleMaterialsSelectionChange}
-                disabled={isRecording}
-              />
-            ) : (
-              <div className="rounded-lg border border-dashed p-6 text-center">
-                <FileText className="mx-auto h-8 w-8 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Complete the consultation context above to view previous materials.
-                </p>
-              </div>
-            )}
+            <PreviousMaterialsPanel
+              consultationId={consultationId || undefined}
+              patientId={formData.patient?.id}
+              selectedLetterIds={selectedLetterIds}
+              selectedDocumentIds={selectedDocumentIds}
+              onSelectionChange={handleMaterialsSelectionChange}
+              disabled={isRecording}
+            />
           </CollapsibleSection>
 
           {/* New Uploads */}

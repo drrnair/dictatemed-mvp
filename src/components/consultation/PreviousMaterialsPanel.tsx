@@ -13,7 +13,8 @@ import { cn } from '@/lib/utils';
 import type { MaterialItem } from '@/domains/consultation/consultation.types';
 
 interface PreviousMaterialsPanelProps {
-  consultationId: string;
+  consultationId?: string;
+  patientId?: string;
   selectedLetterIds: string[];
   selectedDocumentIds: string[];
   onSelectionChange: (letterIds: string[], documentIds: string[]) => void;
@@ -22,6 +23,7 @@ interface PreviousMaterialsPanelProps {
 
 export function PreviousMaterialsPanel({
   consultationId,
+  patientId,
   selectedLetterIds,
   selectedDocumentIds,
   onSelectionChange,
@@ -34,13 +36,22 @@ export function PreviousMaterialsPanel({
   const [expandedSection, setExpandedSection] = useState<'letters' | 'documents' | null>('letters');
 
   const fetchMaterials = useCallback(async () => {
-    if (!consultationId) return;
+    // Need either consultationId or patientId
+    if (!consultationId && !patientId) {
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`/api/consultations/${consultationId}/materials`);
+      // Use consultation endpoint if we have consultationId, otherwise use patient endpoint
+      const url = consultationId
+        ? `/api/consultations/${consultationId}/materials`
+        : `/api/patients/${patientId}/materials`;
+
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch materials');
 
       const data = await response.json();
@@ -51,7 +62,7 @@ export function PreviousMaterialsPanel({
     } finally {
       setLoading(false);
     }
-  }, [consultationId]);
+  }, [consultationId, patientId]);
 
   useEffect(() => {
     fetchMaterials();
