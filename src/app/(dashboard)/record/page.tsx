@@ -1,74 +1,146 @@
 // src/app/(dashboard)/record/page.tsx
-// Recording page with Option B design: Primary recording section with inline mode selection
+// Redesigned Record page with context-first workflow
 
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
 import {
-  RecordingControls,
-  RecordingTimer,
-  WaveformVisualizer,
-  AudioQualityIndicator,
+  AlertCircle,
+  Loader2,
+  Cloud,
+  CloudOff,
+  Upload,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb,
+  FileText,
+  FolderOpen,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+// Consultation components
+import {
+  ConsultationContextForm,
+  validateConsultationForm,
+  type ConsultationFormData,
+  PreviousMaterialsPanel,
+  NewUploadsSection,
+} from '@/components/consultation';
+
+// Recording components
+import {
   ConsentDialog,
-  type RecordingMode,
   type ConsentType,
 } from '@/components/recording';
-import { useRecording } from '@/hooks/useRecording';
+import { RecordingSection } from '@/components/recording/RecordingSection';
+
+// Hooks
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import { logger } from '@/lib/logger';
-import { AlertCircle, Loader2, Cloud, CloudOff, Upload, FileAudio, X, CheckCircle, Mic, Users, Lightbulb } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 
 const recordLogger = logger.child({ action: 'recording' });
 
 export default function RecordPage() {
-  const [selectedMode, setSelectedMode] = useState<RecordingMode>('AMBIENT');
-  const [showConsentDialog, setShowConsentDialog] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const consentTypeRef = useRef<ConsentType>('VERBAL');
+  // Consultation context state
+  const [consultationId, setConsultationId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<ConsultationFormData>({
+    ccRecipients: [],
+  });
+  const [formErrors, setFormErrors] = useState<{
+    patient?: string;
+    referrer?: string;
+    letterType?: string;
+  }>({});
 
-  const {
-    state,
-    durationSeconds,
-    audioLevel,
-    quality,
-    error,
-    start,
-    pause,
-    resume,
-    stop,
-    reset,
-  } = useRecording();
+  // Selected materials for context
+  const [selectedLetterIds, setSelectedLetterIds] = useState<string[]>([]);
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+
+  // Section expansion states
+  const [isContextExpanded, setIsContextExpanded] = useState(true);
+  const [isMaterialsExpanded, setIsMaterialsExpanded] = useState(false);
+  const [isUploadsExpanded, setIsUploadsExpanded] = useState(false);
+
+  // Recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [showConsentDialog, setShowConsentDialog] = useState(false);
+  const consentTypeRef = useRef<ConsentType>('VERBAL');
 
   const {
     pendingCount,
     syncStatus,
     isOnline,
-    queueRecording,
     syncNow,
   } = useOfflineQueue();
 
-  // Handle starting a recording
-  const handleStartClick = useCallback(() => {
-    setShowConsentDialog(true);
-  }, []);
+  // Validate form before recording
+  const validateBeforeRecording = useCallback((): boolean => {
+    const validation = validateConsultationForm(formData);
+    setFormErrors(validation.errors);
+
+    if (!validation.isValid) {
+      setIsContextExpanded(true);
+      return false;
+    }
+
+    return true;
+  }, [formData]);
+
+  // Create or get consultation
+  const ensureConsultation = useCallback(async (): Promise<string | null> => {
+    if (consultationId) return consultationId;
+
+    try {
+      const response = await fetch('/api/consultations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId: formData.patient?.id,
+          referrerId: formData.referrer?.id,
+          referrer: formData.referrer?.id ? undefined : formData.referrer,
+          ccRecipients: formData.ccRecipients.map(({ name, email, address }) => ({
+            name,
+            email,
+            address,
+          })),
+          letterType: formData.letterType,
+          selectedLetterIds,
+          selectedDocumentIds,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to create consultation');
+
+      const { consultation } = await response.json();
+      setConsultationId(consultation.id);
+      return consultation.id;
+    } catch (error) {
+      recordLogger.error('Failed to create consultation', {}, error instanceof Error ? error : new Error(String(error)));
+      return null;
+    }
+  }, [consultationId, formData, selectedLetterIds, selectedDocumentIds]);
 
   // Handle consent confirmation
   const handleConsentConfirm = useCallback(
     async (consentType: ConsentType) => {
       setShowConsentDialog(false);
       consentTypeRef.current = consentType;
-      await start({
-        mode: selectedMode,
-        consentType,
-      });
+
+      // Create consultation first
+      const consId = await ensureConsultation();
+      if (!consId) {
+        setFormErrors((prev) => ({ ...prev, patient: 'Failed to save consultation context' }));
+        return;
+      }
+
+      // Collapse the context sections once recording starts
+      setIsContextExpanded(false);
+      setIsMaterialsExpanded(false);
+      setIsUploadsExpanded(false);
+      setIsRecording(true);
     },
-    [selectedMode, start]
+    [ensureConsultation]
   );
 
   // Handle consent cancellation
@@ -76,131 +148,35 @@ export default function RecordPage() {
     setShowConsentDialog(false);
   }, []);
 
-  // Handle stopping the recording
-  const handleStop = useCallback(async () => {
-    try {
-      setIsSaving(true);
-      const result = await stop();
-
-      // Queue recording for upload (works offline)
-      await queueRecording({
-        mode: selectedMode,
-        consentType: consentTypeRef.current,
-        audioBlob: result.blob,
-        durationSeconds: result.durationSeconds,
-      });
-
-      // Reset after a short delay to show completion state
-      setTimeout(() => {
-        reset();
-        setIsSaving(false);
-      }, 1000);
-    } catch (err) {
-      recordLogger.error('Failed to save recording', {}, err instanceof Error ? err : new Error(String(err)));
-      setIsSaving(false);
-    }
-  }, [stop, reset, queueRecording, selectedMode]);
-
-  const isRecording = state === 'recording' || state === 'paused';
-
-  // Handle file selection
-  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    const validTypes = ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/m4a', 'audio/x-m4a', 'audio/mp4', 'audio/ogg', 'audio/webm'];
-    if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|m4a|ogg|webm)$/i)) {
-      setUploadError('Please upload an audio file (MP3, WAV, M4A, OGG, or WebM)');
-      return;
-    }
-
-    // Validate file size (max 100MB)
-    if (file.size > 100 * 1024 * 1024) {
-      setUploadError('File size must be less than 100MB');
-      return;
-    }
-
-    setUploadedFile(file);
-    setUploadError(null);
-    setUploadProgress('idle');
+  const handleMaterialsSelectionChange = useCallback((letterIds: string[], documentIds: string[]) => {
+    setSelectedLetterIds(letterIds);
+    setSelectedDocumentIds(documentIds);
   }, []);
 
-  // Handle file upload
-  const handleFileUpload = useCallback(async () => {
-    if (!uploadedFile) return;
-
-    try {
-      setUploadProgress('uploading');
-      setUploadError(null);
-
-      // Read file as blob
-      const audioBlob = uploadedFile;
-
-      // Get audio duration
-      const audio = new Audio();
-      const durationPromise = new Promise<number>((resolve) => {
-        audio.addEventListener('loadedmetadata', () => {
-          resolve(audio.duration);
-        });
-        audio.addEventListener('error', () => {
-          resolve(0); // Default to 0 if we can't get duration
-        });
-      });
-      audio.src = URL.createObjectURL(audioBlob);
-
-      const duration = await durationPromise;
-      URL.revokeObjectURL(audio.src);
-
-      // Queue recording for upload
-      await queueRecording({
-        mode: selectedMode,
-        consentType: 'VERBAL', // Default consent type for uploads
-        audioBlob,
-        durationSeconds: Math.round(duration),
-      });
-
-      setUploadProgress('success');
-
-      // Reset after showing success
-      setTimeout(() => {
-        setUploadedFile(null);
-        setUploadProgress('idle');
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-      }, 2000);
-    } catch (err) {
-      recordLogger.error('Failed to upload file', {}, err instanceof Error ? err : new Error(String(err)));
-      setUploadProgress('error');
-      setUploadError(err instanceof Error ? err.message : 'Failed to upload file');
-    }
-  }, [uploadedFile, queueRecording, selectedMode]);
-
-  // Clear selected file
-  const handleClearFile = useCallback(() => {
-    setUploadedFile(null);
-    setUploadError(null);
-    setUploadProgress('idle');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+  const handleDocumentUploadComplete = useCallback((documentId: string) => {
+    setSelectedDocumentIds((prev) => [...prev, documentId]);
   }, []);
+
+  const handleRecordingComplete = useCallback((recordingId: string) => {
+    recordLogger.info('Recording complete', { recordingId });
+    setIsRecording(false);
+  }, []);
+
+  const isContextComplete = formData.patient && formData.referrer && formData.letterType;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-4xl mx-auto">
       {/* Header with status */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Record</h1>
+          <h1 className="text-2xl font-bold tracking-tight">New Consultation</h1>
           <p className="text-muted-foreground">
-            Capture your consultation for automatic transcription.
+            Set up context, then record your consultation.
           </p>
         </div>
 
         {/* Network and sync status */}
         <div className="flex items-center gap-2">
-          {/* Network indicator */}
           <div
             className={cn(
               'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium',
@@ -217,7 +193,6 @@ export default function RecordPage() {
             {isOnline ? 'Online' : 'Offline'}
           </div>
 
-          {/* Pending recordings */}
           {pendingCount > 0 && (
             <button
               type="button"
@@ -241,190 +216,101 @@ export default function RecordPage() {
         </div>
       </div>
 
-      {/* PRIMARY: Live Recording Section */}
+      {/* SECTION 1: Consultation Context (Required) */}
+      <CollapsibleSection
+        title="1. Consultation Context"
+        subtitle="Patient, referrer, and letter type"
+        isExpanded={isContextExpanded}
+        onToggle={() => setIsContextExpanded(!isContextExpanded)}
+        isComplete={Boolean(isContextComplete)}
+        required
+        disabled={isRecording}
+      >
+        <ConsultationContextForm
+          value={formData}
+          onChange={setFormData}
+          errors={formErrors}
+          disabled={isRecording}
+        />
+      </CollapsibleSection>
+
+      {/* SECTION 2: Clinical Context (Optional) */}
+      {formData.patient && (
+        <>
+          {/* Previous Materials */}
+          <CollapsibleSection
+            title="2. Previous Materials"
+            subtitle="Select prior letters and documents as context"
+            isExpanded={isMaterialsExpanded}
+            onToggle={() => setIsMaterialsExpanded(!isMaterialsExpanded)}
+            isComplete={selectedLetterIds.length > 0 || selectedDocumentIds.length > 0}
+            icon={<FolderOpen className="h-5 w-5" />}
+            disabled={isRecording}
+          >
+            {consultationId ? (
+              <PreviousMaterialsPanel
+                consultationId={consultationId}
+                selectedLetterIds={selectedLetterIds}
+                selectedDocumentIds={selectedDocumentIds}
+                onSelectionChange={handleMaterialsSelectionChange}
+                disabled={isRecording}
+              />
+            ) : (
+              <div className="rounded-lg border border-dashed p-6 text-center">
+                <FileText className="mx-auto h-8 w-8 text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Complete the consultation context above to view previous materials.
+                </p>
+              </div>
+            )}
+          </CollapsibleSection>
+
+          {/* New Uploads */}
+          <CollapsibleSection
+            title="3. Upload Documents"
+            subtitle="Add referral letters, reports, or photos"
+            isExpanded={isUploadsExpanded}
+            onToggle={() => setIsUploadsExpanded(!isUploadsExpanded)}
+            icon={<Upload className="h-5 w-5" />}
+            disabled={isRecording}
+          >
+            <NewUploadsSection
+              consultationId={consultationId || undefined}
+              onUploadComplete={handleDocumentUploadComplete}
+              disabled={isRecording}
+            />
+          </CollapsibleSection>
+        </>
+      )}
+
+      {/* SECTION 3: Recording */}
       <div className="rounded-xl border-2 border-primary/20 bg-card p-6 shadow-sm">
-        {/* Inline Mode Toggle */}
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => setSelectedMode('AMBIENT')}
-            disabled={isRecording}
-            className={cn(
-              'flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all',
-              selectedMode === 'AMBIENT'
-                ? 'bg-primary text-primary-foreground shadow-md'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80',
-              isRecording && 'opacity-50 cursor-not-allowed'
-            )}
-          >
-            <Users className="h-4 w-4" />
-            Ambient
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedMode('DICTATION')}
-            disabled={isRecording}
-            className={cn(
-              'flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all',
-              selectedMode === 'DICTATION'
-                ? 'bg-primary text-primary-foreground shadow-md'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80',
-              isRecording && 'opacity-50 cursor-not-allowed'
-            )}
-          >
-            <Mic className="h-4 w-4" />
-            Dictation
-          </button>
-        </div>
+        <h2 className="text-lg font-semibold mb-4">
+          {formData.patient ? '4. Record Consultation' : 'Record Consultation'}
+        </h2>
 
-        {/* Mode description */}
-        <p className="mb-6 text-center text-sm text-muted-foreground">
-          {selectedMode === 'AMBIENT'
-            ? 'Records both patient and physician conversation'
-            : 'Records physician dictation only'}
-        </p>
-
-        {/* Waveform visualizer */}
-        <WaveformVisualizer
-          audioLevel={audioLevel}
-          isActive={state === 'recording'}
-          className="mb-6"
+        {/* Recording Section with mode selector */}
+        <RecordingSection
+          disabled={!isContextComplete}
+          consultationId={consultationId || undefined}
+          onRecordingComplete={handleRecordingComplete}
         />
 
-        {/* Timer */}
-        <div className="mb-6">
-          <RecordingTimer durationSeconds={durationSeconds} state={state} />
-        </div>
-
-        {/* Recording controls */}
-        <RecordingControls
-          state={state}
-          onStart={handleStartClick}
-          onPause={pause}
-          onResume={resume}
-          onStop={handleStop}
-          disabled={isSaving}
-        />
-
-        {/* Error message */}
-        {error && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-destructive">
+        {/* Validation message if context incomplete */}
+        {!isContextComplete && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-amber-500/10 p-3 text-amber-600">
             <AlertCircle className="h-5 w-5" />
-            <p className="text-sm">{error}</p>
-          </div>
-        )}
-
-        {/* Saving indicator */}
-        {isSaving && (
-          <div className="mt-4 flex items-center justify-center gap-2 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <p className="text-sm">Saving recording...</p>
+            <p className="text-sm">Please complete the consultation context above before recording.</p>
           </div>
         )}
       </div>
 
-      {/* Audio quality indicator (visible during recording) */}
-      {isRecording && (
-        <AudioQualityIndicator quality={quality} audioLevel={audioLevel} />
-      )}
-
-      {/* SECONDARY: Compact File Upload Section */}
-      {!isRecording && (
-        <div className="rounded-lg border border-border bg-card/50 p-4">
-          {/* Hidden file input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="audio/*,.mp3,.wav,.m4a,.ogg,.webm"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-
-          {!uploadedFile ? (
-            /* Single-line upload action */
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className={cn(
-                'w-full flex items-center justify-between gap-3 p-2 rounded-lg',
-                'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                'transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                  <FileAudio className="h-5 w-5" />
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-foreground">Upload existing audio</p>
-                  <p className="text-xs">MP3, WAV, M4A, OGG, WebM up to 100MB</p>
-                </div>
-              </div>
-              <Upload className="h-5 w-5" />
-            </button>
-          ) : (
-            /* Selected file with actions */
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <FileAudio className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium truncate max-w-[200px]">{uploadedFile.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleFileUpload}
-                    disabled={uploadProgress === 'uploading' || uploadProgress === 'success'}
-                  >
-                    {uploadProgress === 'uploading' && (
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    )}
-                    {uploadProgress === 'success' && (
-                      <CheckCircle className="mr-1 h-3 w-3" />
-                    )}
-                    {uploadProgress === 'idle' && 'Transcribe'}
-                    {uploadProgress === 'uploading' && 'Processing...'}
-                    {uploadProgress === 'success' && 'Done!'}
-                    {uploadProgress === 'error' && 'Retry'}
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={handleClearFile}
-                    className="rounded-full p-1.5 hover:bg-muted text-muted-foreground"
-                    disabled={uploadProgress === 'uploading'}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Upload error */}
-              {uploadError && (
-                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2 text-destructive text-sm">
-                  <AlertCircle className="h-4 w-4" />
-                  <p>{uploadError}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Condensed tip */}
+      {/* Tip */}
       {!isRecording && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
           <Lightbulb className="h-3.5 w-3.5" />
           <span>
-            {selectedMode === 'AMBIENT'
-              ? 'Tip: Position device between you and patient for best audio capture.'
-              : 'Tip: Speak clearly at a consistent pace for optimal transcription.'}
+            Tip: Adding context improves letter quality. Include referral letters and previous correspondence when available.
           </span>
         </div>
       )}
@@ -436,5 +322,70 @@ export default function RecordPage() {
         onCancel={handleConsentCancel}
       />
     </div>
+  );
+}
+
+// Collapsible section component
+interface CollapsibleSectionProps {
+  title: string;
+  subtitle?: string;
+  isExpanded: boolean;
+  onToggle: () => void;
+  isComplete?: boolean;
+  required?: boolean;
+  disabled?: boolean;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}
+
+function CollapsibleSection({
+  title,
+  subtitle,
+  isExpanded,
+  onToggle,
+  isComplete,
+  required,
+  disabled,
+  icon,
+  children,
+}: CollapsibleSectionProps) {
+  return (
+    <Card className={cn(disabled && 'opacity-60')}>
+      <CardHeader
+        className={cn(
+          'cursor-pointer py-4 hover:bg-muted/30 transition-colors',
+          disabled && 'cursor-not-allowed'
+        )}
+        onClick={() => !disabled && onToggle()}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {icon && <div className="text-muted-foreground">{icon}</div>}
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                {title}
+                {required && <span className="text-destructive">*</span>}
+                {isComplete && (
+                  <span className="text-xs font-normal text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full">
+                    Complete
+                  </span>
+                )}
+              </CardTitle>
+              {subtitle && (
+                <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
+              )}
+            </div>
+          </div>
+          {isExpanded ? (
+            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+          )}
+        </div>
+      </CardHeader>
+      {isExpanded && (
+        <CardContent className="pt-0 pb-6">{children}</CardContent>
+      )}
+    </Card>
   );
 }

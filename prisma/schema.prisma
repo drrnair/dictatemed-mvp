@@ -20,8 +20,9 @@ model Practice {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  users    User[]
-  patients Patient[]
+  users     User[]
+  patients  Patient[]
+  referrers Referrer[]
 
   @@map("practices")
 }
@@ -47,6 +48,7 @@ model User {
   recordings          Recording[]
   documents           Document[]
   letters             Letter[]
+  consultations       Consultation[]
   auditLogs           AuditLog[]
   notifications       Notification[]
   styleEdits          StyleEdit[]
@@ -71,9 +73,10 @@ model Patient {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  recordings Recording[]
-  documents  Document[]
-  letters    Letter[]
+  recordings    Recording[]
+  documents     Document[]
+  letters       Letter[]
+  consultations Consultation[]
 
   @@index([practiceId])
   @@map("patients")
@@ -87,6 +90,10 @@ model Recording {
   user      User      @relation(fields: [userId], references: [id])
   patientId String?
   patient   Patient?  @relation(fields: [patientId], references: [id])
+
+  // Link to consultation context
+  consultationId String?
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
 
   mode   RecordingMode
   status RecordingStatus @default(UPLOADING)
@@ -146,6 +153,10 @@ model Document {
   patientId String?
   patient   Patient? @relation(fields: [patientId], references: [id])
 
+  // Link to consultation context (for documents uploaded during a consultation)
+  consultationId String?
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
+
   filename  String
   mimeType  String
   sizeBytes Int
@@ -197,6 +208,10 @@ model Letter {
   patient     Patient?   @relation(fields: [patientId], references: [id])
   recordingId String?
   recording   Recording? @relation(fields: [recordingId], references: [id])
+
+  // Link to consultation context
+  consultationId String?
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
 
   // Template reference (optional - letters can still use basic letterType)
   templateId String?
@@ -425,6 +440,7 @@ model LetterTemplate {
   // Relations
   letters         Letter[]
   userPreferences UserTemplatePreference[]
+  consultations   Consultation[]
 
   @@index([category])
   @@index([isGeneric])
@@ -455,4 +471,94 @@ model UserTemplatePreference {
   @@unique([userId, templateId])
   @@index([userId, isFavorite])
   @@map("user_template_preferences")
+}
+
+// ============ Consultation Context ============
+
+// Referrer/GP information (reusable across consultations within a practice)
+model Referrer {
+  id           String   @id @default(uuid())
+  practiceId   String
+  practice     Practice @relation(fields: [practiceId], references: [id])
+
+  name         String   // Dr. John Smith
+  practiceName String?  // Sydney Medical Centre
+  email        String?
+  phone        String?
+  fax          String?
+  address      String?  @db.Text // Postal address
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  consultations Consultation[]
+
+  @@index([practiceId])
+  @@index([practiceId, name])
+  @@map("referrers")
+}
+
+// CC Recipients for a specific consultation
+model CCRecipient {
+  id             String       @id @default(uuid())
+  consultationId String
+  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+
+  name           String
+  email          String?
+  address        String?      @db.Text // Postal address
+
+  createdAt      DateTime     @default(now())
+
+  @@index([consultationId])
+  @@map("cc_recipients")
+}
+
+// Consultation context - bundles patient, referrer, recording, and selected materials
+model Consultation {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  // Patient for this consultation
+  patientId   String?
+  patient     Patient? @relation(fields: [patientId], references: [id])
+
+  // Referrer/GP for this consultation
+  referrerId  String?
+  referrer    Referrer? @relation(fields: [referrerId], references: [id])
+
+  // Letter type pre-selection
+  templateId  String?
+  template    LetterTemplate? @relation(fields: [templateId], references: [id])
+  letterType  LetterType?
+
+  // Selected context materials (IDs of existing letters/documents to use as context)
+  selectedLetterIds   String[] @default([])
+  selectedDocumentIds String[] @default([])
+
+  // Status tracking
+  status      ConsultationStatus @default(DRAFT)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  ccRecipients CCRecipient[]
+  recordings   Recording[]
+  documents    Document[]     // Documents uploaded during this consultation
+  letters      Letter[]       // Generated letters from this consultation
+
+  @@index([userId, createdAt])
+  @@index([patientId])
+  @@index([status])
+  @@map("consultations")
+}
+
+enum ConsultationStatus {
+  DRAFT       // Context being gathered
+  RECORDING   // Recording in progress
+  PROCESSING  // Transcription/processing in progress
+  READY       // Ready for letter generation
+  COMPLETED   // Letter generated
 }

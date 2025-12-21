@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
 
     logger.info('Patient created', { patientId: patient.id, practiceId });
 
-    return NextResponse.json(response, { status: 201 });
+    return NextResponse.json({ patient: response }, { status: 201 });
   } catch (error) {
     logger.error('Failed to create patient', {}, error instanceof Error ? error : undefined);
     return NextResponse.json(
