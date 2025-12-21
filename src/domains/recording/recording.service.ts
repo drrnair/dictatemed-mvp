@@ -26,11 +26,12 @@ export async function createRecording(
 ): Promise<CreateRecordingResult> {
   const log = logger.child({ userId, action: 'createRecording' });
 
-  // Create recording in database - handle null vs undefined for patientId
+  // Create recording in database - handle null vs undefined for patientId and consultationId
   const recording = await prisma.recording.create({
     data: {
       userId,
       patientId: input.patientId ?? null,
+      consultationId: input.consultationId ?? null,
       mode: input.mode,
       consentType: input.consentType,
       status: 'UPLOADING',

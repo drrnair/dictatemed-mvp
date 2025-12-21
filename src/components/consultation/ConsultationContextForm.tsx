@@ -10,6 +10,7 @@ import { PatientSelector } from './PatientSelector';
 import { ReferrerSelector } from './ReferrerSelector';
 import { CCRecipientsInput } from './CCRecipientsInput';
 import { LetterTypeSelector } from './LetterTypeSelector';
+import { TemplateSelector } from './TemplateSelector';
 import type { PatientSummary, ReferrerInfo, CCRecipientInfo } from '@/domains/consultation';
 import type { LetterType } from '@prisma/client';
 
@@ -18,6 +19,7 @@ export interface ConsultationFormData {
   referrer?: ReferrerInfo;
   ccRecipients: CCRecipientInfo[];
   letterType?: LetterType;
+  templateId?: string;
 }
 
 interface ConsultationContextFormProps {
@@ -61,6 +63,13 @@ export function ConsultationContextForm({
   const handleLetterTypeChange = useCallback(
     (letterType: LetterType) => {
       onChange({ ...value, letterType });
+    },
+    [value, onChange]
+  );
+
+  const handleTemplateChange = useCallback(
+    (templateId: string | undefined) => {
+      onChange({ ...value, templateId });
     },
     [value, onChange]
   );
@@ -122,6 +131,14 @@ export function ConsultationContextForm({
             </p>
           )}
         </div>
+
+        {/* Template selection (optional) */}
+        <TemplateSelector
+          value={value.templateId}
+          onChange={handleTemplateChange}
+          letterType={value.letterType}
+          disabled={disabled}
+        />
       </CardContent>
     </Card>
   );

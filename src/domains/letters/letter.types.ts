@@ -14,6 +14,7 @@ export interface Letter {
   id: string;
   userId: string;
   patientId?: string | undefined;
+  consultationId?: string | undefined;
   recordingId?: string | undefined;
   letterType: LetterType;
   status: LetterStatus;
@@ -206,6 +207,7 @@ export interface ProvenanceSource {
 export interface CreateLetterInput {
   letterType: LetterType;
   patientId?: string | undefined;
+  consultationId?: string | undefined;
   recordingId?: string | undefined;
   documentIds?: string[] | undefined;
   additionalContext?: string | undefined;

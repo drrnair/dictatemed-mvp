@@ -21,6 +21,7 @@ export const consentTypeSchema = z.enum(['VERBAL', 'WRITTEN', 'STANDING']);
 export const createRecordingSchema = z.object({
   mode: recordingModeSchema,
   patientId: uuidSchema.optional(),
+  consultationId: uuidSchema.optional(),
   consentType: consentTypeSchema,
 });
 
@@ -62,6 +63,7 @@ export const createDocumentSchema = z.object({
   mimeType: z.enum(['application/pdf', 'image/png', 'image/jpeg']),
   sizeBytes: z.number().int().min(1).max(20 * 1024 * 1024), // Max 20MB
   patientId: uuidSchema.optional(),
+  consultationId: uuidSchema.optional(),
   documentType: documentTypeSchema.optional(),
 });
 
@@ -85,6 +87,7 @@ export const letterTypeSchema = z.enum([
 export const createLetterSchema = z.object({
   letterType: letterTypeSchema,
   patientId: uuidSchema.optional(),
+  consultationId: uuidSchema.optional(),
   recordingId: uuidSchema.optional(),
   documentIds: z.array(uuidSchema).max(10).optional(),
 });

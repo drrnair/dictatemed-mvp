@@ -14,6 +14,7 @@ export interface Recording {
   id: string;
   userId: string;
   patientId?: string | undefined;
+  consultationId?: string | undefined;
   mode: RecordingMode;
   consentType: ConsentType;
   status: RecordingStatus;
@@ -28,6 +29,7 @@ export interface CreateRecordingInput {
   mode: RecordingMode;
   consentType: ConsentType;
   patientId?: string | undefined;
+  consultationId?: string | undefined;
 }
 
 export interface CreateRecordingResult {
