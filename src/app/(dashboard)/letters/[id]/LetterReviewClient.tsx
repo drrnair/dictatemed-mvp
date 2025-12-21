@@ -3,7 +3,7 @@
 // src/app/(dashboard)/letters/[id]/LetterReviewClient.tsx
 // Client component for interactive letter review
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { LetterEditor } from '@/components/letters/LetterEditor';
 import { SourcePanel } from '@/components/letters/SourcePanel';
@@ -24,8 +24,71 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+// Proper type definitions instead of `any`
+interface SourceAnchor {
+  id: string;
+  textStart: number;
+  textEnd: number;
+  sourceType: 'transcript' | 'document';
+  sourceId: string;
+  sourceLocation: string;
+  excerpt: string;
+}
+
+interface SourceData {
+  type: 'transcript' | 'document';
+  id: string;
+  name: string;
+  content: string;
+  highlightStart: number;
+  highlightEnd: number;
+  metadata?: {
+    speaker?: string;
+    timestamp?: string;
+    page?: number;
+    confidence?: number;
+  };
+}
+
+interface PatientData {
+  id: string;
+  name: string;
+}
+
+interface RecordingData {
+  id: string;
+  transcriptText?: string | null;
+}
+
+interface DocumentData {
+  id: string;
+  document: {
+    id: string;
+    name: string;
+    extractedText?: string | null;
+  };
+}
+
+interface LetterWithRelations {
+  id: string;
+  letterType: string;
+  status: 'GENERATING' | 'DRAFT' | 'IN_REVIEW' | 'APPROVED' | 'FAILED';
+  contentDraft: string | null;
+  contentFinal: string | null;
+  extractedValues: unknown[] | null;
+  hallucinationFlags: unknown[] | null;
+  sourceAnchors: { anchors: unknown[] } | null;
+  hallucinationRiskScore: number | null;
+  createdAt: string;
+  reviewStartedAt: string | null;
+  approvedAt: string | null;
+  patient: PatientData | null;
+  recording: RecordingData | null;
+  documents: DocumentData[];
+}
+
 interface LetterReviewClientProps {
-  letter: any; // Letter with all relations
+  letter: LetterWithRelations;
   currentUser: {
     id: string;
     name: string;
@@ -41,46 +104,45 @@ export function LetterReviewClient({
   const [content, setContent] = useState(letter.contentDraft || '');
   const [originalContent] = useState(letter.contentDraft || '');
   const [sourcePanelOpen, setSourcePanelOpen] = useState(false);
-  const [activeSourceAnchor, setActiveSourceAnchor] = useState<any>(null);
+  const [activeSourceAnchor, setActiveSourceAnchor] = useState<SourceAnchor | null>(null);
+  const [sourceData, setSourceData] = useState<SourceData | null>(null);
   const [showDiff, setShowDiff] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
 
+  // Immutable state for extracted values and flags - cast from unknown[]
+  const [localExtractedValues, setLocalExtractedValues] = useState<ExtractedValue[]>(
+    () => (letter.extractedValues as ExtractedValue[] | null) || []
+  );
+  const [localHallucinationFlags, setLocalHallucinationFlags] = useState<HallucinationFlag[]>(
+    () => (letter.hallucinationFlags as HallucinationFlag[] | null) || []
+  );
+
   const isReadOnly = letter.status === 'APPROVED';
   const hasChanges = content !== originalContent;
   const isModified = letter.contentFinal && letter.contentFinal !== letter.contentDraft;
 
-  // Parse extracted values and hallucination flags
-  const extractedValues: ExtractedValue[] = (letter.extractedValues as any[]) || [];
-  const hallucinationFlags: HallucinationFlag[] = (letter.hallucinationFlags as any[]) || [];
+  // Memoize source anchors to prevent unnecessary re-renders - cast from unknown[]
+  const sourceAnchors = useMemo(() => {
+    return (letter.sourceAnchors?.anchors as SourceAnchor[] | undefined) || [];
+  }, [letter.sourceAnchors]);
 
   // Calculate verification progress
-  const totalValues = extractedValues.length;
-  const verifiedCount = extractedValues.filter((v) => v.verified).length;
+  const totalValues = localExtractedValues.length;
+  const verifiedCount = localExtractedValues.filter((v) => v.verified).length;
   const verificationProgress =
     totalValues > 0 ? Math.round((verifiedCount / totalValues) * 100) : 100;
 
   // Check if all critical values are verified
-  const criticalValues = extractedValues.filter((v) => v.critical);
+  const criticalValues = localExtractedValues.filter((v) => v.critical);
   const allCriticalVerified = criticalValues.every((v) => v.verified);
 
   const canApprove = allCriticalVerified && !hasChanges;
 
-  // Auto-save draft
-  useEffect(() => {
-    if (hasChanges && !isReadOnly) {
-      const timer = setTimeout(() => {
-        void handleSaveDraft();
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [content, hasChanges, isReadOnly]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleSaveDraft = async () => {
+  // Stable save function wrapped in useCallback
+  const handleSaveDraft = useCallback(async () => {
     if (isReadOnly) return;
 
     setIsSaving(true);
@@ -96,17 +158,80 @@ export function LetterReviewClient({
       }
     } catch (error) {
       console.error('Error saving draft:', error);
-      // TODO: Show error toast
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [isReadOnly, letter.id, content]);
+
+  // Auto-save draft
+  useEffect(() => {
+    if (hasChanges && !isReadOnly) {
+      const timer = setTimeout(() => {
+        void handleSaveDraft();
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [content, hasChanges, isReadOnly, handleSaveDraft]);
+
+  // Fetch source data when active anchor changes
+  useEffect(() => {
+    if (!activeSourceAnchor) {
+      setSourceData(null);
+      return;
+    }
+
+    // Find the source data based on the anchor
+    const anchor = activeSourceAnchor;
+
+    if (anchor.sourceType === 'transcript' && letter.recording?.transcriptText) {
+      // Extract transcript excerpt around the anchor
+      const transcriptText = letter.recording.transcriptText;
+      const highlightStart = Math.max(0, parseInt(anchor.sourceLocation.split(':')[1] || '0', 10));
+      const highlightEnd = Math.min(transcriptText.length, highlightStart + anchor.excerpt.length);
+
+      setSourceData({
+        type: 'transcript',
+        id: letter.recording.id,
+        name: 'Recording Transcript',
+        content: transcriptText,
+        highlightStart,
+        highlightEnd,
+        metadata: {
+          timestamp: anchor.sourceLocation.replace('timestamp:', ''),
+          confidence: 0.95,
+        },
+      });
+    } else if (anchor.sourceType === 'document') {
+      // Find the document
+      const docEntry = letter.documents.find((d) => d.document.id === anchor.sourceId);
+      if (docEntry?.document.extractedText) {
+        const docText = docEntry.document.extractedText;
+        const locationParts = anchor.sourceLocation.split(',');
+        const page = parseInt(locationParts[0]?.replace('page:', '') || '1', 10);
+
+        setSourceData({
+          type: 'document',
+          id: docEntry.document.id,
+          name: docEntry.document.name,
+          content: docText,
+          highlightStart: 0,
+          highlightEnd: anchor.excerpt.length,
+          metadata: {
+            page,
+            confidence: 0.9,
+          },
+        });
+      }
+    }
+  }, [activeSourceAnchor, letter.recording, letter.documents]);
 
   const handlePreview = () => {
     setIsPreviewing(true);
-    // TODO: Open preview modal or new window
-    // For now, just toggle flag
-    setTimeout(() => setIsPreviewing(false), 1000);
+    // Open print preview
+    window.print();
+    setTimeout(() => setIsPreviewing(false), 500);
   };
 
   const handleApprove = async () => {
@@ -116,11 +241,11 @@ export function LetterReviewClient({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          extractedValues: extractedValues.map((v) => ({
+          extractedValues: localExtractedValues.map((v) => ({
             id: v.id,
             verified: v.verified,
           })),
-          hallucinationFlags: hallucinationFlags.map((f) => ({
+          hallucinationFlags: localHallucinationFlags.map((f) => ({
             id: f.id,
             dismissed: f.dismissed,
             dismissedReason: f.dismissedReason,
@@ -137,61 +262,72 @@ export function LetterReviewClient({
       router.refresh();
     } catch (error) {
       console.error('Error approving letter:', error);
-      // TODO: Show error toast
     } finally {
       setIsApproving(false);
       setShowApprovalDialog(false);
     }
   };
 
-  const handleValueVerify = useCallback(
-    (valueId: string) => {
-      // Toggle verification status
-      extractedValues.forEach((v) => {
-        if (v.id === valueId) {
-          v.verified = !v.verified;
-        }
-      });
-    },
-    [extractedValues]
-  );
+  // Immutable state updates for verification
+  const handleValueVerify = useCallback((valueId: string) => {
+    setLocalExtractedValues((prev) =>
+      prev.map((v) =>
+        v.id === valueId ? { ...v, verified: !v.verified } : v
+      )
+    );
+  }, []);
 
   const handleVerifyAll = useCallback(() => {
-    extractedValues.forEach((v) => {
-      v.verified = true;
-    });
-  }, [extractedValues]);
+    setLocalExtractedValues((prev) =>
+      prev.map((v) => ({ ...v, verified: true }))
+    );
+  }, []);
 
-  const handleFlagDismiss = useCallback(
-    (flagId: string, reason: string) => {
-      hallucinationFlags.forEach((f) => {
-        if (f.id === flagId) {
-          f.dismissed = true;
-          f.dismissedReason = reason;
-        }
-      });
-    },
-    [hallucinationFlags]
-  );
+  const handleFlagDismiss = useCallback((flagId: string, reason: string) => {
+    setLocalHallucinationFlags((prev) =>
+      prev.map((f) =>
+        f.id === flagId ? { ...f, dismissed: true, dismissedReason: reason } : f
+      )
+    );
+  }, []);
 
   const handleValueClick = useCallback(
     (valueId: string) => {
-      const value = extractedValues.find((v) => v.id === valueId);
+      const value = localExtractedValues.find((v) => v.id === valueId);
       if (value) {
-        setActiveSourceAnchor({
-          id: value.sourceAnchorId,
-          // Find the actual anchor data from sourceAnchors
-        });
+        // Find the full anchor data from sourceAnchors
+        const anchor = sourceAnchors.find((a) => a.id === value.sourceAnchorId);
+        if (anchor) {
+          setActiveSourceAnchor(anchor);
+          setSourcePanelOpen(true);
+        }
+      }
+    },
+    [localExtractedValues, sourceAnchors]
+  );
+
+  const handleEditorSourceClick = useCallback(
+    (anchorId: string) => {
+      const anchor = sourceAnchors.find((a) => a.id === anchorId);
+      if (anchor) {
+        setActiveSourceAnchor(anchor);
         setSourcePanelOpen(true);
       }
     },
-    [extractedValues]
+    [sourceAnchors]
   );
 
-  const handleEditorSourceClick = useCallback((anchorId: string) => {
-    setActiveSourceAnchor({ id: anchorId });
-    setSourcePanelOpen(true);
-  }, []);
+  const handleViewFullSource = useCallback(
+    (sourceId: string, sourceType: 'transcript' | 'document') => {
+      // Open in new tab/modal
+      if (sourceType === 'transcript') {
+        window.open(`/recordings/${sourceId}`, '_blank');
+      } else {
+        window.open(`/documents/${sourceId}`, '_blank');
+      }
+    },
+    []
+  );
 
   const formatLetterType = (type: string) => {
     return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (l) => l.toUpperCase());
@@ -331,7 +467,7 @@ export function LetterReviewClient({
                 size="sm"
                 onClick={() => setShowApprovalDialog(true)}
                 disabled={!canApprove}
-                className="bg-clinical-verified hover:bg-clinical-verified/90"
+                className="bg-green-600 hover:bg-green-700 text-white"
               >
                 <svg
                   className="mr-2 h-4 w-4"
@@ -350,7 +486,7 @@ export function LetterReviewClient({
               </Button>
             )}
 
-            {isReadOnly && (
+            {isReadOnly && letter.approvedAt && (
               <Badge variant="verified" className="text-sm">
                 Approved on {new Date(letter.approvedAt).toLocaleDateString()}
               </Badge>
@@ -366,13 +502,13 @@ export function LetterReviewClient({
             </span>
             <div className="h-2 flex-1 max-w-xs overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full bg-clinical-verified transition-all"
+                className="h-full bg-green-600 transition-all"
                 style={{ width: `${verificationProgress}%` }}
               />
             </div>
             <span className="text-xs font-medium">{verificationProgress}%</span>
             {!allCriticalVerified && (
-              <span className="text-xs text-clinical-warning">
+              <span className="text-xs text-amber-600">
                 Critical values need verification
               </span>
             )}
@@ -385,8 +521,8 @@ export function LetterReviewClient({
         {/* Verification Panel (left) */}
         <aside className="w-80 overflow-y-auto border-r border-border bg-card">
           <VerificationPanel
-            extractedValues={extractedValues}
-            hallucinationFlags={hallucinationFlags}
+            extractedValues={localExtractedValues}
+            hallucinationFlags={localHallucinationFlags}
             onVerifyValue={handleValueVerify}
             onVerifyAll={handleVerifyAll}
             onDismissFlag={handleFlagDismiss}
@@ -413,7 +549,7 @@ export function LetterReviewClient({
             <LetterEditor
               letterId={letter.id}
               initialContent={content}
-              sourceAnchors={((letter.sourceAnchors as any)?.anchors as any[]) || []}
+              sourceAnchors={sourceAnchors}
               readOnly={isReadOnly}
               onContentChange={setContent}
               onSourceClick={handleEditorSourceClick}
@@ -423,20 +559,16 @@ export function LetterReviewClient({
         </main>
 
         {/* Source Panel (right, slides in) */}
-        {sourcePanelOpen && activeSourceAnchor && (
-          <aside className="w-96 overflow-y-auto border-l border-border bg-card">
-            <SourcePanel
-              isOpen={sourcePanelOpen}
-              onClose={() => setSourcePanelOpen(false)}
-              activeAnchor={activeSourceAnchor}
-              sourceData={null}
-              onViewFullSource={(sourceId, sourceType) => {
-                // TODO: Open full source view
-                console.log('View full source:', sourceId, sourceType);
-              }}
-            />
-          </aside>
-        )}
+        <SourcePanel
+          isOpen={sourcePanelOpen}
+          onClose={() => {
+            setSourcePanelOpen(false);
+            setActiveSourceAnchor(null);
+          }}
+          activeAnchor={activeSourceAnchor}
+          sourceData={sourceData}
+          onViewFullSource={handleViewFullSource}
+        />
       </div>
 
       {/* Approval confirmation dialog */}
@@ -464,8 +596,8 @@ export function LetterReviewClient({
               <span
                 className={`font-semibold ${
                   allCriticalVerified
-                    ? 'text-clinical-verified'
-                    : 'text-clinical-warning'
+                    ? 'text-green-600'
+                    : 'text-amber-600'
                 }`}
               >
                 {allCriticalVerified ? 'Yes' : 'No'}
@@ -478,10 +610,10 @@ export function LetterReviewClient({
                 <span
                   className={`font-semibold ${
                     letter.hallucinationRiskScore < 30
-                      ? 'text-clinical-verified'
+                      ? 'text-green-600'
                       : letter.hallucinationRiskScore < 70
-                        ? 'text-clinical-warning'
-                        : 'text-clinical-critical'
+                        ? 'text-amber-600'
+                        : 'text-red-600'
                   }`}
                 >
                   {letter.hallucinationRiskScore}/100
@@ -500,7 +632,7 @@ export function LetterReviewClient({
             <Button
               onClick={handleApprove}
               disabled={isApproving}
-              className="bg-clinical-verified hover:bg-clinical-verified/90"
+              className="bg-green-600 hover:bg-green-700 text-white"
             >
               {isApproving ? 'Approving...' : 'Approve & Finalize'}
             </Button>

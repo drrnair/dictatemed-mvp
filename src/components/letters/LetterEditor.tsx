@@ -10,6 +10,8 @@ interface SourceAnchor {
   textEnd: number;
   sourceType: 'transcript' | 'document';
   sourceId: string;
+  sourceLocation?: string;
+  excerpt?: string;
 }
 
 interface LetterEditorProps {

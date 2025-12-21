@@ -81,12 +81,46 @@ async function getLetterForReview(letterId: string, userId: string) {
     }
   }
 
+  // Map documents to match expected interface
+  const mappedDocuments = letter.documents.map((d) => ({
+    id: d.id,
+    document: {
+      id: d.document.id,
+      name: d.document.filename,
+      extractedText: d.document.extractedText,
+    },
+  }));
+
   return {
-    ...letter,
+    id: letter.id,
+    letterType: letter.letterType,
+    status: letter.status as 'GENERATING' | 'DRAFT' | 'IN_REVIEW' | 'APPROVED' | 'FAILED',
+    contentDraft: letter.contentDraft,
+    contentFinal: letter.contentFinal,
+    extractedValues: Array.isArray(letter.extractedValues)
+      ? (letter.extractedValues as unknown[])
+      : null,
+    hallucinationFlags: Array.isArray(letter.hallucinationFlags)
+      ? (letter.hallucinationFlags as unknown[])
+      : null,
+    sourceAnchors: letter.sourceAnchors && typeof letter.sourceAnchors === 'object'
+      ? (letter.sourceAnchors as { anchors: unknown[] })
+      : null,
+    hallucinationRiskScore: letter.hallucinationRiskScore,
+    createdAt: letter.createdAt.toISOString(),
+    reviewStartedAt: letter.reviewStartedAt?.toISOString() || null,
+    approvedAt: letter.approvedAt?.toISOString() || null,
+    documents: mappedDocuments,
+    recording: letter.recording
+      ? {
+          id: letter.recording.id,
+          transcriptText: letter.recording.transcriptText,
+        }
+      : null,
     patient: letter.patient
       ? {
           id: letter.patient.id,
-          ...patientData,
+          name: patientData?.name || 'Unknown Patient',
         }
       : null,
   };
