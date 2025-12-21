@@ -4,6 +4,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { FileText, Image as ImageIcon, Eye, Download, Trash2, Loader2, ExternalLink, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -77,11 +78,13 @@ export function DocumentPreview({
             <FileText className="h-16 w-16 text-red-500" />
           </div>
         ) : document.thumbnailUrl && !imageError ? (
-          <img
+          <Image
             src={document.thumbnailUrl}
             alt={document.name}
-            className="absolute inset-0 h-full w-full object-cover"
+            fill
+            className="object-cover"
             onError={() => setImageError(true)}
+            unoptimized
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -333,10 +336,13 @@ export function DocumentViewer({ document: doc, onClose }: DocumentViewerProps) 
             title={doc.name}
           />
         ) : doc.url ? (
-          <img
+          <Image
             src={doc.url}
             alt={doc.name}
+            width={1024}
+            height={768}
             className="w-full h-auto"
+            unoptimized
           />
         ) : (
           <div className="flex items-center justify-center h-64 text-muted-foreground">

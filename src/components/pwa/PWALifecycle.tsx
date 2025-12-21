@@ -3,7 +3,10 @@
 
 import { useEffect } from 'react';
 import { registerServiceWorker } from '@/lib/pwa';
+import { logger } from '@/lib/logger';
 import { UpdateBanner, InstallPrompt } from './UpdatePrompt';
+
+const pwaLogger = logger.child({ action: 'pwa' });
 
 /**
  * PWA Lifecycle component
@@ -17,12 +20,12 @@ export function PWALifecycle() {
     const enablePWA = process.env.NEXT_PUBLIC_ENABLE_PWA === 'true';
 
     if (isProd || enablePWA) {
-      console.log('[PWA] Registering service worker...');
+      pwaLogger.info('Registering service worker');
       registerServiceWorker().catch((error) => {
-        console.error('[PWA] Registration failed:', error);
+        pwaLogger.error('Registration failed', {}, error instanceof Error ? error : new Error(String(error)));
       });
     } else {
-      console.log('[PWA] Service worker disabled in development');
+      pwaLogger.debug('Service worker disabled in development');
     }
   }, []);
 

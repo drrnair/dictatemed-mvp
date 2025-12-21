@@ -7,6 +7,7 @@ import {
   activateUpdate,
   type ServiceWorkerUpdateEvent,
 } from '@/lib/pwa';
+import { logger } from '@/lib/logger';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, X } from 'lucide-react';
+
+const pwaLogger = logger.child({ action: 'pwa' });
 
 export function UpdatePrompt() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -192,7 +195,7 @@ export function InstallPrompt() {
     // Wait for the user's response
     const { outcome } = await deferredPrompt.userChoice;
 
-    console.log(`User response to install prompt: ${outcome}`);
+    pwaLogger.info('User response to install prompt', { resourceId: outcome });
 
     // Clear the saved prompt
     setDeferredPrompt(null);

@@ -1,6 +1,10 @@
 // src/lib/pwa.ts
 // PWA utilities for service worker registration and updates
 
+import { logger } from './logger';
+
+const pwaLogger = logger.child({ action: 'pwa' });
+
 export interface ServiceWorkerUpdateEvent {
   type: 'update-available' | 'update-installed' | 'controlling' | 'error';
   registration?: ServiceWorkerRegistration;
@@ -17,7 +21,7 @@ const updateCallbacks = new Set<UpdateCallback>();
  */
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    console.log('[PWA] Service workers not supported');
+    pwaLogger.debug('Service workers not supported');
     return null;
   }
 
@@ -27,7 +31,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
       updateViaCache: 'none',
     });
 
-    console.log('[PWA] Service Worker registered:', registration.scope);
+    pwaLogger.info('Service Worker registered', { resource: registration.scope });
 
     // Check for updates immediately
     await checkForUpdates();
@@ -56,14 +60,14 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
         if (newWorker.state === 'installed') {
           if (navigator.serviceWorker.controller) {
             // New update available
-            console.log('[PWA] New update available');
+            pwaLogger.info('New update available');
             notifyCallbacks({
               type: 'update-available',
               registration: registration || undefined,
             });
           } else {
             // First install
-            console.log('[PWA] Service Worker installed');
+            pwaLogger.info('Service Worker installed');
             notifyCallbacks({
               type: 'update-installed',
               registration: registration || undefined,
@@ -78,13 +82,13 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
       const { type, version } = event.data;
 
       if (type === 'SW_ACTIVATED') {
-        console.log('[PWA] Service Worker activated, version:', version);
+        pwaLogger.info('Service Worker activated', { resourceId: version });
       }
     });
 
     return registration;
   } catch (error) {
-    console.error('[PWA] Service Worker registration failed:', error);
+    pwaLogger.error('Service Worker registration failed', {}, error instanceof Error ? error : new Error(String(error)));
     notifyCallbacks({
       type: 'error',
       error: error instanceof Error ? error : new Error(String(error)),
@@ -98,16 +102,16 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
  */
 export async function checkForUpdates(): Promise<boolean> {
   if (!registration) {
-    console.log('[PWA] No registration available');
+    pwaLogger.debug('No registration available');
     return false;
   }
 
   try {
     await registration.update();
-    console.log('[PWA] Update check complete');
+    pwaLogger.debug('Update check complete');
     return true;
   } catch (error) {
-    console.error('[PWA] Update check failed:', error);
+    pwaLogger.error('Update check failed', {}, error instanceof Error ? error : new Error(String(error)));
     return false;
   }
 }
@@ -117,11 +121,11 @@ export async function checkForUpdates(): Promise<boolean> {
  */
 export function activateUpdate(): void {
   if (!registration || !registration.waiting) {
-    console.log('[PWA] No update waiting');
+    pwaLogger.debug('No update waiting');
     return;
   }
 
-  console.log('[PWA] Activating update...');
+  pwaLogger.info('Activating update');
   registration.waiting.postMessage({ type: 'SKIP_WAITING' });
 }
 
@@ -141,7 +145,7 @@ function notifyCallbacks(event: ServiceWorkerUpdateEvent): void {
     try {
       callback(event);
     } catch (error) {
-      console.error('[PWA] Callback error:', error);
+      pwaLogger.error('Callback error', {}, error instanceof Error ? error : new Error(String(error)));
     }
   });
 }
@@ -164,10 +168,10 @@ export async function unregisterServiceWorker(): Promise<boolean> {
   try {
     const result = await registration.unregister();
     registration = null;
-    console.log('[PWA] Service Worker unregistered');
+    pwaLogger.info('Service Worker unregistered');
     return result;
   } catch (error) {
-    console.error('[PWA] Unregistration failed:', error);
+    pwaLogger.error('Unregistration failed', {}, error instanceof Error ? error : new Error(String(error)));
     return false;
   }
 }
@@ -297,7 +301,7 @@ export function storeDeferredPrompt(prompt: any): void {
 
 export async function showInstallPrompt(): Promise<boolean> {
   if (!deferredPrompt) {
-    console.log('[PWA] No install prompt available');
+    pwaLogger.debug('No install prompt available');
     return false;
   }
 
@@ -305,12 +309,12 @@ export async function showInstallPrompt(): Promise<boolean> {
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
 
-    console.log('[PWA] Install prompt outcome:', outcome);
+    pwaLogger.info('Install prompt outcome', { resourceId: outcome });
 
     deferredPrompt = null;
     return outcome === 'accepted';
   } catch (error) {
-    console.error('[PWA] Install prompt error:', error);
+    pwaLogger.error('Install prompt error', {}, error instanceof Error ? error : new Error(String(error)));
     return false;
   }
 }

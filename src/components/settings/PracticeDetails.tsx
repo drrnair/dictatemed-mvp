@@ -4,10 +4,12 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { logger } from '@/lib/logger';
 
 interface Practice {
   id: string;
@@ -45,7 +47,7 @@ export function PracticeDetails({ practice, onUpdate }: PracticeDetailsProps) {
       const { practice: updatedPractice } = await response.json();
       onUpdate(updatedPractice);
     } catch (error) {
-      console.error('Error updating practice name:', error);
+      logger.error('Error updating practice name', { action: 'practice' }, error instanceof Error ? error : new Error(String(error)));
       alert('Failed to update practice name. Please try again.');
     } finally {
       setIsUpdatingName(false);
@@ -113,7 +115,7 @@ export function PracticeDetails({ practice, onUpdate }: PracticeDetailsProps) {
       };
       reader.readAsDataURL(file);
     } catch (error) {
-      console.error('Error uploading letterhead:', error);
+      logger.error('Error uploading letterhead', { action: 'practice' }, error instanceof Error ? error : new Error(String(error)));
       alert('Failed to upload letterhead. Please try again.');
     } finally {
       setIsUploadingLetterhead(false);
@@ -143,7 +145,7 @@ export function PracticeDetails({ practice, onUpdate }: PracticeDetailsProps) {
       });
       setLetterheadPreview(null);
     } catch (error) {
-      console.error('Error deleting letterhead:', error);
+      logger.error('Error deleting letterhead', { action: 'practice' }, error instanceof Error ? error : new Error(String(error)));
       alert('Failed to delete letterhead. Please try again.');
     } finally {
       setIsDeletingLetterhead(false);
@@ -192,10 +194,13 @@ export function PracticeDetails({ practice, onUpdate }: PracticeDetailsProps) {
                 <div className="flex-1">
                   <p className="text-sm font-medium mb-2">Current Letterhead</p>
                   {letterheadPreview ? (
-                    <img
+                    <Image
                       src={letterheadPreview}
                       alt="Letterhead preview"
+                      width={400}
+                      height={128}
                       className="max-w-md max-h-32 object-contain border border-border bg-white"
+                      unoptimized
                     />
                   ) : (
                     <div className="text-sm text-muted-foreground">

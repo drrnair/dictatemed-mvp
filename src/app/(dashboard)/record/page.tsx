@@ -16,9 +16,12 @@ import {
 } from '@/components/recording';
 import { useRecording } from '@/hooks/useRecording';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
+import { logger } from '@/lib/logger';
 import { AlertCircle, Loader2, Cloud, CloudOff, Upload, FileAudio, X, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+
+const recordLogger = logger.child({ action: 'recording' });
 
 export default function RecordPage() {
   const [selectedMode, setSelectedMode] = useState<RecordingMode>('AMBIENT');
@@ -94,7 +97,7 @@ export default function RecordPage() {
         setIsSaving(false);
       }, 1000);
     } catch (err) {
-      console.error('Failed to save recording:', err);
+      recordLogger.error('Failed to save recording', {}, err instanceof Error ? err : new Error(String(err)));
       setIsSaving(false);
     }
   }, [stop, reset, queueRecording, selectedMode]);
@@ -169,7 +172,7 @@ export default function RecordPage() {
         }
       }, 2000);
     } catch (err) {
-      console.error('Failed to upload file:', err);
+      recordLogger.error('Failed to upload file', {}, err instanceof Error ? err : new Error(String(err)));
       setUploadProgress('error');
       setUploadError(err instanceof Error ? err.message : 'Failed to upload file');
     }

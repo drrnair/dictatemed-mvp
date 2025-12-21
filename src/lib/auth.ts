@@ -3,6 +3,7 @@
 
 import { getSession as getAuth0Session } from '@auth0/nextjs-auth0';
 import { prisma } from '@/infrastructure/db/client';
+import { logger } from '@/lib/logger';
 
 // Re-export getSession for API routes
 export { getSession as getAuth0RawSession } from '@auth0/nextjs-auth0';
@@ -74,7 +75,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         // Create new user and practice
         const practice = await prisma.practice.create({
           data: {
-            name: `${name}'s Practice`,
+            name: `${userName}'s Practice`,
             settings: {},
           },
         });
@@ -108,7 +109,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       practiceId: user.practiceId,
     };
   } catch (error) {
-    console.error('getCurrentUser error:', error);
+    logger.error('getCurrentUser error', { action: 'auth' }, error instanceof Error ? error : new Error(String(error)));
     return null;
   }
 }
