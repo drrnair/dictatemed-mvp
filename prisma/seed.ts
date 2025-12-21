@@ -1,5 +1,9 @@
 // prisma/seed.ts
 // Development seed data for DictateMED MVP
+//
+// NOTE: Hardcoded UUIDs (00000000-0000-0000-0000-00000000000X) are intentional.
+// They enable reproducible seeding with upsert operations, ensuring the same
+// demo data across all development environments. Do not change to random UUIDs.
 
 import { PrismaClient } from '@prisma/client';
 import { encryptPatientData } from '../src/infrastructure/db/encryption';

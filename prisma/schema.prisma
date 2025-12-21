@@ -20,7 +20,8 @@ model Practice {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  users User[]
+  users    User[]
+  patients Patient[]
 
   @@map("practices")
 }
@@ -60,6 +61,7 @@ model Patient {
   // PHI stored encrypted via AES-256-GCM, minimal data
   encryptedData String // Encrypted JSON: name, dob, medicare, etc.
   practiceId    String
+  practice      Practice @relation(fields: [practiceId], references: [id])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -67,6 +69,7 @@ model Patient {
   documents  Document[]
   letters    Letter[]
 
+  @@index([practiceId])
   @@map("patients")
 }
 
