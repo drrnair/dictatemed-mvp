@@ -51,10 +51,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       userPreference: preference
         ? {
             id: preference.id,
+            userId: preference.userId,
+            templateId: preference.templateId,
             isFavorite: preference.isFavorite,
             usageCount: preference.usageCount,
             styleOverrides: preference.styleOverrides,
             lastUsedAt: preference.lastUsedAt,
+            createdAt: preference.createdAt,
+            updatedAt: preference.updatedAt,
           }
         : null,
     });

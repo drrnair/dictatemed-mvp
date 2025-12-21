@@ -178,6 +178,11 @@ export async function getTemplatesWithPreferences(
   userId: string,
   query: TemplateListQuery = {}
 ): Promise<TemplateWithPreference[]> {
+  // Use dedicated favorites query if favoritesOnly is true
+  if (query.favoritesOnly) {
+    return getFavoriteTemplates(userId);
+  }
+
   const templates = await getTemplates(query);
 
   const preferences = await prisma.userTemplatePreference.findMany({

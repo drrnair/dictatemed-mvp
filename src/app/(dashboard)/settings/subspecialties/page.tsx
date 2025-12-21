@@ -38,6 +38,7 @@ export default function SubspecialtiesPage() {
   }, []);
 
   async function fetchSubspecialties() {
+    setError(null); // Clear any previous errors
     try {
       const response = await fetch('/api/user/subspecialties');
       if (!response.ok) throw new Error('Failed to load subspecialties');

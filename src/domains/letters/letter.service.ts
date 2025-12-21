@@ -112,6 +112,10 @@ export async function generateLetter(
     if (templateData) {
       templateContext = templateData.promptTemplate;
       log.info('Using template', { templateId: input.templateId });
+    } else {
+      log.warn('Template not found, proceeding without template context', {
+        templateId: input.templateId,
+      });
     }
   }
 

@@ -116,6 +116,7 @@ export default function TemplatesPage() {
 
   async function toggleFavorite(templateId: string) {
     setTogglingFavorite(templateId);
+    setError(null); // Clear any previous errors
 
     try {
       const response = await fetch(`/api/templates/${templateId}/favorite`, {
@@ -142,11 +143,15 @@ export default function TemplatesPage() {
         )
       );
 
-      // Refresh recommendations
-      const recommendationsRes = await fetch('/api/templates/recommendations?limit=6');
-      if (recommendationsRes.ok) {
-        const recommendationsData = await recommendationsRes.json();
-        setRecommendations(recommendationsData.recommendations);
+      // Refresh recommendations (failure is non-critical, don't show error)
+      try {
+        const recommendationsRes = await fetch('/api/templates/recommendations?limit=6');
+        if (recommendationsRes.ok) {
+          const recommendationsData = await recommendationsRes.json();
+          setRecommendations(recommendationsData.recommendations);
+        }
+      } catch {
+        // Silently ignore recommendation refresh failures
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to toggle favorite');
