@@ -2,7 +2,7 @@
 // Service Worker for DictateMED PWA
 // Enhanced implementation with comprehensive caching and offline support
 
-const CACHE_VERSION = '1.0.0';
+const CACHE_VERSION = '1.0.1';
 const CACHE_NAME = `dictatemed-static-v${CACHE_VERSION}`;
 const RUNTIME_CACHE = `dictatemed-runtime-v${CACHE_VERSION}`;
 const IMAGE_CACHE = `dictatemed-images-v${CACHE_VERSION}`;
@@ -13,13 +13,9 @@ const MAX_RUNTIME_ENTRIES = 100;
 const MAX_IMAGE_ENTRIES = 60;
 const MAX_AUDIO_ENTRIES = 20;
 
-// Static assets to cache on install
+// Static assets to cache on install (only public/static resources)
+// NOTE: Do NOT include authenticated routes here - they will return auth redirects
 const STATIC_ASSETS = [
-  '/',
-  '/dashboard',
-  '/record',
-  '/letters',
-  '/settings',
   '/offline',
 ];
 
@@ -174,7 +170,8 @@ async function staleWhileRevalidate(request) {
   const cached = await cache.match(request);
 
   const fetchPromise = fetch(request).then((response) => {
-    if (response.ok) {
+    // Only cache successful HTML responses, not redirects or errors
+    if (response.ok && response.headers.get('content-type')?.includes('text/html')) {
       cache.put(request, response.clone());
     }
     return response;
@@ -185,6 +182,11 @@ async function staleWhileRevalidate(request) {
     }
     throw error;
   });
+
+  // For navigation requests, always fetch from network first to handle auth properly
+  if (request.mode === 'navigate') {
+    return fetchPromise.catch(() => cached || caches.match('/offline'));
+  }
 
   return cached || fetchPromise;
 }
