@@ -364,6 +364,8 @@ export async function updateLetterContent(
 
 /**
  * Approve a letter for sending.
+ *
+ * @deprecated Use approveLetter from approval.service.ts for full workflow with provenance
  */
 export async function approveLetter(
   userId: string,
