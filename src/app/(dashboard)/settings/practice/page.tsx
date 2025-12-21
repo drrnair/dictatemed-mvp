@@ -1,6 +1,8 @@
 // src/app/(dashboard)/settings/practice/page.tsx
 // Practice settings page - Admin only
 
+export const dynamic = 'force-dynamic';
+
 import { redirect } from 'next/navigation';
 import { requireAuth, isPracticeAdmin } from '@/lib/auth';
 import { prisma } from '@/infrastructure/db/client';
