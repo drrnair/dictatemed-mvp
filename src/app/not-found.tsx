@@ -1,6 +1,8 @@
 // src/app/not-found.tsx
 // Custom 404 page for Next.js App Router
 
+'use client';
+
 import Link from 'next/link';
 import { FileQuestion, Home, Search, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';

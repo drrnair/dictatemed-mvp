@@ -10,6 +10,9 @@ const publicPaths = [
   '/api/auth',
   '/api/health',
   '/api/transcription/webhook',
+  '/manifest.json',
+  '/sw.js',
+  '/icons',
 ];
 
 // Check if path is public
