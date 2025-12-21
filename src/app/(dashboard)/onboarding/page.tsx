@@ -4,7 +4,6 @@
 // New user onboarding - subspecialty selection
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Check, Heart, Loader2, ArrowRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,7 +22,6 @@ interface SubspecialtyOption {
 }
 
 export default function OnboardingPage() {
-  const router = useRouter();
   const [options, setOptions] = useState<SubspecialtyOption[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +40,9 @@ export default function OnboardingPage() {
       const data = await response.json();
       setOptions(data.options);
       // If user already has subspecialties, they shouldn't be here
+      // Use full page navigation to ensure server state is refreshed
       if (data.selected && data.selected.length > 0) {
-        router.push('/dashboard');
+        window.location.href = '/dashboard';
         return;
       }
     } catch (err) {
@@ -82,8 +81,9 @@ export default function OnboardingPage() {
       // Seed templates if not already done
       await fetch('/api/templates', { method: 'POST' });
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Use full page navigation to ensure server state is refreshed
+      // This prevents the infinite loop caused by stale onboardingCompleted prop
+      window.location.href = '/dashboard';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save preferences');
       setSaving(false);
