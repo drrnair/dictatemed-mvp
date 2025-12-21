@@ -1,11 +1,10 @@
 // src/app/(dashboard)/record/page.tsx
-// Recording page with dual-mode audio capture and file upload
+// Recording page with Option B design: Primary recording section with inline mode selection
 
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
 import {
-  ModeSelector,
   RecordingControls,
   RecordingTimer,
   WaveformVisualizer,
@@ -17,7 +16,7 @@ import {
 import { useRecording } from '@/hooks/useRecording';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import { logger } from '@/lib/logger';
-import { AlertCircle, Loader2, Cloud, CloudOff, Upload, FileAudio, X, CheckCircle } from 'lucide-react';
+import { AlertCircle, Loader2, Cloud, CloudOff, Upload, FileAudio, X, CheckCircle, Mic, Users, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -189,13 +188,13 @@ export default function RecordPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header with status */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Record</h1>
           <p className="text-muted-foreground">
-            Start a new consultation recording session.
+            Capture your consultation for automatic transcription.
           </p>
         </div>
 
@@ -242,20 +241,49 @@ export default function RecordPage() {
         </div>
       </div>
 
-      {/* Mode selector */}
-      <div className="rounded-lg border border-border bg-card p-6">
-        <h2 className="mb-4 text-sm font-medium text-muted-foreground">
-          Recording Mode
-        </h2>
-        <ModeSelector
-          mode={selectedMode}
-          onModeChange={setSelectedMode}
-          disabled={isRecording}
-        />
-      </div>
+      {/* PRIMARY: Live Recording Section */}
+      <div className="rounded-xl border-2 border-primary/20 bg-card p-6 shadow-sm">
+        {/* Inline Mode Toggle */}
+        <div className="mb-6 flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSelectedMode('AMBIENT')}
+            disabled={isRecording}
+            className={cn(
+              'flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all',
+              selectedMode === 'AMBIENT'
+                ? 'bg-primary text-primary-foreground shadow-md'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80',
+              isRecording && 'opacity-50 cursor-not-allowed'
+            )}
+          >
+            <Users className="h-4 w-4" />
+            Ambient
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedMode('DICTATION')}
+            disabled={isRecording}
+            className={cn(
+              'flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all',
+              selectedMode === 'DICTATION'
+                ? 'bg-primary text-primary-foreground shadow-md'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80',
+              isRecording && 'opacity-50 cursor-not-allowed'
+            )}
+          >
+            <Mic className="h-4 w-4" />
+            Dictation
+          </button>
+        </div>
 
-      {/* Recording interface */}
-      <div className="rounded-lg border border-border bg-card p-6">
+        {/* Mode description */}
+        <p className="mb-6 text-center text-sm text-muted-foreground">
+          {selectedMode === 'AMBIENT'
+            ? 'Records both patient and physician conversation'
+            : 'Records physician dictation only'}
+        </p>
+
         {/* Waveform visualizer */}
         <WaveformVisualizer
           audioLevel={audioLevel}
@@ -300,16 +328,9 @@ export default function RecordPage() {
         <AudioQualityIndicator quality={quality} audioLevel={audioLevel} />
       )}
 
-      {/* File Upload Section */}
+      {/* SECONDARY: Compact File Upload Section */}
       {!isRecording && (
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h2 className="mb-4 text-sm font-medium text-muted-foreground">
-            Or Upload an Audio File
-          </h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Upload a pre-recorded dictation or ambient consultation recording for transcription.
-          </p>
-
+        <div className="rounded-lg border border-border bg-card/50 p-4">
           {/* Hidden file input */}
           <input
             ref={fileInputRef}
@@ -320,93 +341,91 @@ export default function RecordPage() {
           />
 
           {!uploadedFile ? (
-            /* Drop zone / Upload button */
+            /* Single-line upload action */
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className={cn(
-                'w-full cursor-pointer rounded-lg border-2 border-dashed border-border p-8',
-                'flex flex-col items-center justify-center gap-3',
-                'transition-colors hover:border-primary hover:bg-muted/50',
-                'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+                'w-full flex items-center justify-between gap-3 p-2 rounded-lg',
+                'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                'transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
               )}
             >
-              <FileAudio className="h-10 w-10 text-muted-foreground" />
-              <div className="text-center">
-                <p className="font-medium">Click to upload audio file</p>
-                <p className="text-sm text-muted-foreground">
-                  MP3, WAV, M4A, OGG, or WebM (max 100MB)
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                  <FileAudio className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-foreground">Upload existing audio</p>
+                  <p className="text-xs">MP3, WAV, M4A, OGG, WebM up to 100MB</p>
+                </div>
               </div>
+              <Upload className="h-5 w-5" />
             </button>
           ) : (
-            /* Selected file preview */
-            <div className="rounded-lg border border-border bg-muted/50 p-4">
+            /* Selected file with actions */
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <FileAudio className="h-8 w-8 text-primary" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <FileAudio className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
-                    <p className="font-medium">{uploadedFile.name}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="font-medium truncate max-w-[200px]">{uploadedFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
                       {(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={handleClearFile}
-                  className="rounded-full p-1 hover:bg-muted"
-                  disabled={uploadProgress === 'uploading'}
-                >
-                  <X className="h-5 w-5 text-muted-foreground" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleFileUpload}
+                    disabled={uploadProgress === 'uploading' || uploadProgress === 'success'}
+                  >
+                    {uploadProgress === 'uploading' && (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    )}
+                    {uploadProgress === 'success' && (
+                      <CheckCircle className="mr-1 h-3 w-3" />
+                    )}
+                    {uploadProgress === 'idle' && 'Transcribe'}
+                    {uploadProgress === 'uploading' && 'Processing...'}
+                    {uploadProgress === 'success' && 'Done!'}
+                    {uploadProgress === 'error' && 'Retry'}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={handleClearFile}
+                    className="rounded-full p-1.5 hover:bg-muted text-muted-foreground"
+                    disabled={uploadProgress === 'uploading'}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
-              {/* Upload button */}
-              <div className="mt-4 flex items-center gap-3">
-                <Button
-                  onClick={handleFileUpload}
-                  disabled={uploadProgress === 'uploading' || uploadProgress === 'success'}
-                  className="flex-1"
-                >
-                  {uploadProgress === 'uploading' && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  {uploadProgress === 'success' && (
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                  )}
-                  {uploadProgress === 'idle' && 'Upload & Transcribe'}
-                  {uploadProgress === 'uploading' && 'Uploading...'}
-                  {uploadProgress === 'success' && 'Uploaded!'}
-                  {uploadProgress === 'error' && 'Retry Upload'}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Upload error */}
-          {uploadError && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-destructive">
-              <AlertCircle className="h-5 w-5" />
-              <p className="text-sm">{uploadError}</p>
+              {/* Upload error */}
+              {uploadError && (
+                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2 text-destructive text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  <p>{uploadError}</p>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {/* Recording tips */}
+      {/* Condensed tip */}
       {!isRecording && (
-        <div className="rounded-lg border border-border bg-muted/50 p-4">
-          <h3 className="mb-2 font-medium">Recording Tips</h3>
-          <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
-            <li>Ensure you&apos;re in a quiet environment</li>
-            <li>Position the microphone 15-30cm from your mouth</li>
-            <li>Speak clearly at a consistent volume</li>
-            <li>
-              {selectedMode === 'AMBIENT'
-                ? 'Both patient and physician voices will be captured'
-                : 'Dictate clearly for optimal transcription'}
-            </li>
-          </ul>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+          <Lightbulb className="h-3.5 w-3.5" />
+          <span>
+            {selectedMode === 'AMBIENT'
+              ? 'Tip: Position device between you and patient for best audio capture.'
+              : 'Tip: Speak clearly at a consistent pace for optimal transcription.'}
+          </span>
         </div>
       )}
 
