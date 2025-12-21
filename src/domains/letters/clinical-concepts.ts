@@ -1,7 +1,7 @@
 // src/domains/letters/clinical-concepts.ts
 // Extract clinical concepts for semantic coding and search
 
-import type { ClinicalConcepts } from './letter.types';
+import type { ClinicalConcepts, ConceptItem, MedicationItem } from './letter.types';
 import { logger } from '@/lib/logger';
 
 /**
@@ -39,19 +39,13 @@ export function extractClinicalConcepts(letterText: string): ClinicalConcepts {
   return concepts;
 }
 
-interface Concept {
-  term: string;
-  normalizedTerm: string;
-  category?: string;
-  code?: string; // ICD-10, SNOMED CT, MBS, etc.
-  confidence: number;
-}
+// Using ConceptItem from letter.types.ts for type alignment
 
 /**
  * Extract diagnosis concepts.
  */
-function extractDiagnosisConcepts(text: string): Concept[] {
-  const diagnoses: Concept[] = [];
+function extractDiagnosisConcepts(text: string): ConceptItem[] {
+  const diagnoses: ConceptItem[] = [];
 
   // Major cardiac diagnoses with ICD-10 codes
   const diagnosisMapping: Array<{
@@ -140,8 +134,8 @@ function extractDiagnosisConcepts(text: string): Concept[] {
 /**
  * Extract procedure concepts.
  */
-function extractProcedureConcepts(text: string): Concept[] {
-  const procedures: Concept[] = [];
+function extractProcedureConcepts(text: string): ConceptItem[] {
+  const procedures: ConceptItem[] = [];
 
   // Cardiac procedures with MBS item numbers (simplified)
   const procedureMapping: Array<{
@@ -218,8 +212,8 @@ function extractProcedureConcepts(text: string): Concept[] {
 /**
  * Extract medication concepts.
  */
-function extractMedicationConcepts(text: string): Concept[] {
-  const medications: Concept[] = [];
+function extractMedicationConcepts(text: string): MedicationItem[] {
+  const medications: MedicationItem[] = [];
 
   // Common cardiac medications
   const medicationMapping: Array<{
@@ -256,8 +250,8 @@ function extractMedicationConcepts(text: string): Concept[] {
 /**
  * Extract clinical finding concepts.
  */
-function extractFindingConcepts(text: string): Concept[] {
-  const findings: Concept[] = [];
+function extractFindingConcepts(text: string): ConceptItem[] {
+  const findings: ConceptItem[] = [];
 
   // Clinical findings
   const findingPatterns: Array<{
@@ -291,8 +285,8 @@ function extractFindingConcepts(text: string): Concept[] {
 /**
  * Extract cardiovascular risk factors.
  */
-function extractRiskFactors(text: string): Concept[] {
-  const riskFactors: Concept[] = [];
+function extractRiskFactors(text: string): ConceptItem[] {
+  const riskFactors: ConceptItem[] = [];
 
   const riskFactorPatterns: Array<{
     pattern: RegExp;
@@ -336,7 +330,7 @@ export function generateConceptSummary(concepts: ClinicalConcepts): string {
   }
 
   if (concepts.medications.length > 0) {
-    const medCategories = [...new Set(concepts.medications.map((m) => m.category))];
+    const medCategories = Array.from(new Set(concepts.medications.map((m) => m.category).filter(Boolean)));
     parts.push(`Medications: ${medCategories.join(', ')}`);
   }
 
@@ -355,7 +349,7 @@ export function getICD10Codes(concepts: ClinicalConcepts): string[] {
     .map((d) => d.code)
     .filter((code): code is string => code !== undefined);
 
-  return [...new Set(codes)].sort();
+  return Array.from(new Set(codes)).sort();
 }
 
 /**
@@ -366,7 +360,7 @@ export function getMBSItems(concepts: ClinicalConcepts): string[] {
     .map((p) => p.code)
     .filter((code): code is string => code !== undefined);
 
-  return [...new Set(items)].sort();
+  return Array.from(new Set(items)).sort();
 }
 
 /**

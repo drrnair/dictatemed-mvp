@@ -30,7 +30,11 @@ export function parseSourceAnchors(
 } {
   const log = logger.child({ action: 'parseSourceAnchors' });
 
-  const anchorPattern = /\{\{SOURCE:([^:]+):([^}]+)\}\}/g;
+  // Pattern handles nested braces by using a more robust approach:
+  // - Match {{SOURCE: followed by source ID (no colons allowed)
+  // - Then : followed by excerpt (allow any chars including }, use negative lookahead for }})
+  // - Pattern: {{SOURCE:id:excerpt}} where excerpt can contain single } but not }}
+  const anchorPattern = /\{\{SOURCE:([^:]+):(.+?)\}\}/g;
   const anchors: SourceAnchor[] = [];
   const unverifiedAnchors: SourceAnchor[] = [];
 

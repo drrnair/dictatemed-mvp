@@ -10,7 +10,7 @@ export interface LetterSources {
   transcript?: {
     id: string;
     text: string;
-    speakers?: Array<{ speaker: string; text: string; timestamp: number }>;
+    speakers?: Array<{ speaker: string; text: string; timestamp: number }> | undefined;
     mode: 'AMBIENT' | 'DICTATION';
   } | undefined;
   documents?: Array<{
@@ -18,7 +18,7 @@ export interface LetterSources {
     type: string;
     name: string;
     extractedData: Record<string, unknown>;
-    rawText?: string;
+    rawText?: string | undefined;
   }> | undefined;
   userInput?: {
     id: string;

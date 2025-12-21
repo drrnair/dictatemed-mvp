@@ -50,8 +50,8 @@ export interface BedrockError {
   type: BedrockErrorType;
   message: string;
   retryable: boolean;
-  statusCode?: number;
-  originalError?: unknown;
+  statusCode?: number | undefined;
+  originalError?: unknown | undefined;
 }
 
 /**

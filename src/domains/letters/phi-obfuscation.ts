@@ -24,9 +24,9 @@ export interface ObfuscatedTokens {
   dobToken: string; // e.g., "DOB_001"
   medicareToken: string; // e.g., "MEDICARE_001"
   genderToken: string; // e.g., "GENDER_001"
-  addressToken?: string; // e.g., "ADDRESS_001"
-  phoneToken?: string; // e.g., "PHONE_001"
-  emailToken?: string; // e.g., "EMAIL_001"
+  addressToken?: string | undefined; // e.g., "ADDRESS_001"
+  phoneToken?: string | undefined; // e.g., "PHONE_001"
+  emailToken?: string | undefined; // e.g., "EMAIL_001"
 }
 
 /**
@@ -115,13 +115,29 @@ export function obfuscatePHI(text: string, phi: PHI, sessionId?: string): Obfusc
     }
   }
 
-  // Replace gender
+  // Replace gender (only in specific contexts to avoid false positives like "male pattern baldness")
+  // Match gender when preceded by context words or at start of "Gender:" / "Sex:" fields
   if (phi.gender) {
-    const genderRegex = new RegExp(`\\b${escapeRegex(phi.gender)}\\b`, 'gi');
-    const genderMatches = obfuscatedText.match(genderRegex);
-    if (genderMatches) {
-      obfuscatedText = obfuscatedText.replace(genderRegex, tokens.genderToken);
-      replacementCount += genderMatches.length;
+    const genderContextPatterns = [
+      // "Gender: Male" or "Sex: Female" patterns
+      new RegExp(`(gender|sex):\\s*${escapeRegex(phi.gender)}\\b`, 'gi'),
+      // "patient is male" or "the patient, a female"
+      new RegExp(`patient[^.]{0,10}\\b${escapeRegex(phi.gender)}\\b`, 'gi'),
+      // "a 65-year-old male" or "75 year old female"
+      new RegExp(`\\d+[\\s-]?year[\\s-]?old\\s+${escapeRegex(phi.gender)}\\b`, 'gi'),
+      // "[M]" or "(F)" abbreviations for male/female
+      new RegExp(`[\\(\\[]${escapeRegex(phi.gender.charAt(0))}[\\)\\]]`, 'gi'),
+    ];
+
+    for (const pattern of genderContextPatterns) {
+      const genderMatches = obfuscatedText.match(pattern);
+      if (genderMatches) {
+        // Replace only the gender word, preserving context
+        obfuscatedText = obfuscatedText.replace(pattern, (match) => {
+          return match.replace(new RegExp(escapeRegex(phi.gender ?? ''), 'gi'), tokens.genderToken);
+        });
+        replacementCount += genderMatches.length;
+      }
     }
   }
 
@@ -210,7 +226,8 @@ export function deobfuscatePHI(obfuscatedText: string, map: DeobfuscationMap): s
 
   // Replace extra mappings (if any)
   if (map.extraMappings) {
-    for (const [token, value] of map.extraMappings.entries()) {
+    const entries = Array.from(map.extraMappings.entries());
+    for (const [token, value] of entries) {
       deobfuscatedText = deobfuscatedText.replace(new RegExp(token, 'g'), value);
     }
   }
@@ -312,7 +329,7 @@ function generateDOBVariants(dob: string): string[] {
     variants.push(`${day}-${month}-${year}`); // DD-MM-YYYY
   }
 
-  return [...new Set(variants)]; // Remove duplicates
+  return Array.from(new Set(variants)); // Remove duplicates
 }
 
 // Helper: Generate phone number variants
@@ -329,5 +346,5 @@ function generatePhoneVariants(phone: string): string[] {
     variants.push(`(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2, 6)} ${digitsOnly.slice(6)}`); // (04) 1234 5678
   }
 
-  return [...new Set(variants)];
+  return Array.from(new Set(variants));
 }

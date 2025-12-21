@@ -52,13 +52,13 @@ export interface TextGenerationResponse {
 
 export interface StreamChunk {
   type: 'content_delta' | 'message_start' | 'message_stop' | 'error';
-  delta?: string;
+  delta?: string | undefined;
   usage?: {
-    inputTokens?: number;
-    outputTokens?: number;
-  };
-  stopReason?: string;
-  error?: string;
+    inputTokens?: number | undefined;
+    outputTokens?: number | undefined;
+  } | undefined;
+  stopReason?: string | undefined;
+  error?: string | undefined;
 }
 
 /**

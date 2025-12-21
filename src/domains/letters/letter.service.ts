@@ -4,6 +4,7 @@
 import { prisma } from '@/infrastructure/db/client';
 import { generateTextWithRetry, type ModelId } from '@/infrastructure/bedrock';
 import { logger } from '@/lib/logger';
+import type { Letter as PrismaLetterModel } from '@prisma/client';
 import type {
   Letter,
   LetterType,
@@ -27,7 +28,7 @@ export interface GenerateLetterInput {
   letterType: LetterType;
   sources: LetterSources;
   phi: PHI;
-  userPreference?: 'quality' | 'balanced' | 'cost';
+  userPreference?: 'quality' | 'balanced' | 'cost' | undefined;
 }
 
 export interface GenerateLetterResult {
@@ -173,24 +174,25 @@ export async function generateLetter(
     });
   }
 
-  // Step 11: Save to database
+  // Step 11: Save to database (using Prisma field names)
   const letter = await prisma.letter.create({
     data: {
       userId,
       patientId: input.patientId,
       letterType: input.letterType,
       status: 'DRAFT',
-      draftContent: letterWithoutAnchors,
+      contentDraft: letterWithoutAnchors, // Prisma uses contentDraft, not draftContent
       sourceAnchors: anchors as never[],
-      clinicalValues: clinicalValues as never[],
+      extractedValues: clinicalValues as never[], // Prisma uses extractedValues, not clinicalValues
       hallucinationFlags: hallucinationFlags as never[],
       clinicalConcepts: clinicalConcepts as never,
-      modelUsed: response.modelId,
+      primaryModel: response.modelId, // Prisma uses primaryModel, not modelUsed
       inputTokens: response.inputTokens,
       outputTokens: response.outputTokens,
       generationDurationMs: generationDuration,
       verificationRate: verificationRate.rate,
       hallucinationRiskScore: hallucinationRisk.score,
+      generatedAt: new Date(),
     },
   });
 
@@ -308,7 +310,7 @@ export async function getLetter(userId: string, letterId: string): Promise<Lette
     return null;
   }
 
-  return mapLetter(letter);
+  return mapPrismaLetter(letter);
 }
 
 /**
@@ -323,7 +325,7 @@ export async function listLetters(
     orderBy: { createdAt: 'desc' },
   });
 
-  return letters.map(mapLetter);
+  return letters.map(mapPrismaLetter);
 }
 
 /**
@@ -349,14 +351,15 @@ export async function updateLetterContent(
   const updated = await prisma.letter.update({
     where: { id: letterId },
     data: {
-      draftContent: content,
-      status: 'REVIEWING',
+      contentDraft: content, // Prisma uses contentDraft
+      status: 'IN_REVIEW',   // Prisma uses IN_REVIEW (not REVIEWING)
+      reviewStartedAt: letter.reviewStartedAt ?? new Date(), // Track first review start
     },
   });
 
   logger.info('Letter content updated', { letterId, userId });
 
-  return mapLetter(updated);
+  return mapPrismaLetter(updated);
 }
 
 /**
@@ -382,7 +385,7 @@ export async function approveLetter(
     where: { id: letterId },
     data: {
       status: 'APPROVED',
-      approvedContent: letter.draftContent,
+      contentFinal: letter.contentDraft, // Prisma uses contentFinal (not approvedContent)
       approvedAt: new Date(),
       approvedBy: userId,
     },
@@ -403,62 +406,52 @@ export async function approveLetter(
     },
   });
 
-  return mapLetter(updated);
+  return mapPrismaLetter(updated);
 }
 
-// Helper to map Prisma model to domain type
-interface PrismaLetter {
-  id: string;
-  userId: string;
-  patientId: string;
-  letterType: string;
-  status: string;
-  draftContent: string;
-  approvedContent: string | null;
-  sourceAnchors: unknown;
-  clinicalValues: unknown;
-  hallucinationFlags: unknown;
-  clinicalConcepts: unknown;
-  modelUsed: string;
-  inputTokens: number;
-  outputTokens: number;
-  generationDurationMs: number;
-  verificationRate: number;
-  hallucinationRiskScore: number;
-  createdAt: Date;
-  updatedAt: Date;
-  approvedAt: Date | null;
-  approvedBy: string | null;
-}
+/**
+ * Map Prisma model to domain type.
+ * Uses Prisma's generated types for type safety.
+ */
+function mapPrismaLetter(record: PrismaLetterModel): Letter {
+  // Cast JSON fields through unknown to avoid type mismatch with Prisma's JsonValue
+  const sourceAnchors = record.sourceAnchors as unknown as SourceAnchor[] | null;
+  const extractedValues = record.extractedValues as unknown as ClinicalValue[] | null;
+  const hallucinationFlags = record.hallucinationFlags as unknown as HallucinationFlag[] | null;
+  const clinicalConcepts = record.clinicalConcepts as unknown as ClinicalConcepts | null;
 
-function mapLetter(record: PrismaLetter): Letter {
   return {
     id: record.id,
     userId: record.userId,
-    patientId: record.patientId,
+    patientId: record.patientId ?? undefined,
+    recordingId: record.recordingId ?? undefined,
     letterType: record.letterType as LetterType,
     status: record.status as LetterStatus,
-    draftContent: record.draftContent,
-    approvedContent: record.approvedContent ?? undefined,
-    sourceAnchors: (record.sourceAnchors as SourceAnchor[]) ?? [],
-    clinicalValues: (record.clinicalValues as ClinicalValue[]) ?? [],
-    hallucinationFlags: (record.hallucinationFlags as HallucinationFlag[]) ?? [],
-    clinicalConcepts: (record.clinicalConcepts as ClinicalConcepts) ?? {
+    contentDraft: record.contentDraft ?? undefined,
+    contentFinal: record.contentFinal ?? undefined,
+    sourceAnchors: sourceAnchors ?? [],
+    extractedValues: extractedValues ?? [],
+    hallucinationFlags: hallucinationFlags ?? [],
+    clinicalConcepts: clinicalConcepts ?? {
       diagnoses: [],
       procedures: [],
       medications: [],
       findings: [],
       riskFactors: [],
     },
-    modelUsed: record.modelUsed,
-    inputTokens: record.inputTokens,
-    outputTokens: record.outputTokens,
-    generationDurationMs: record.generationDurationMs,
-    verificationRate: record.verificationRate,
-    hallucinationRiskScore: record.hallucinationRiskScore,
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
+    verificationRate: record.verificationRate ?? undefined,
+    hallucinationRiskScore: record.hallucinationRiskScore ?? undefined,
+    primaryModel: record.primaryModel ?? undefined,
+    criticModel: record.criticModel ?? undefined,
+    styleConfidence: record.styleConfidence ?? undefined,
+    inputTokens: record.inputTokens ?? undefined,
+    outputTokens: record.outputTokens ?? undefined,
+    generationDurationMs: record.generationDurationMs ?? undefined,
+    generatedAt: record.generatedAt ?? undefined,
+    reviewStartedAt: record.reviewStartedAt ?? undefined,
     approvedAt: record.approvedAt ?? undefined,
     approvedBy: record.approvedBy ?? undefined,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
   };
 }

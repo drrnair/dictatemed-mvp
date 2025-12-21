@@ -190,7 +190,9 @@ function estimateSourceTokens(sources: LetterSources): number {
   // Add prompt overhead (base prompt + letter-specific instructions)
   totalChars += 3000; // Approximate size of prompt template
 
-  return estimateTokenCount(String.fromCharCode(...new Array(totalChars).fill(65))); // Rough approximation
+  // Direct calculation: 1 token ≈ 3.5 characters for medical text
+  // This is more efficient than creating a large string just to estimate
+  return Math.ceil(totalChars / 3.5);
 }
 
 /**
@@ -224,7 +226,7 @@ export function compareCosts(input: ModelSelectionInput): {
   opus: { costUSD: number; quality: string };
   sonnet: { costUSD: number; quality: string };
   recommendation: ModelId;
-  savingsPercent?: number;
+  savingsPercent?: number | undefined;
 } {
   const estimatedInputTokens = estimateSourceTokens(input.sources);
   const estimatedOutputTokens = ESTIMATED_OUTPUT_TOKENS[input.letterType] ?? 2000;

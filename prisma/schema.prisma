@@ -193,23 +193,28 @@ model Letter {
   status     LetterStatus @default(GENERATING)
 
   // Content
-  contentDraft String? // Initial AI-generated content
-  contentFinal String? // After physician edits
+  contentDraft String? @db.Text // Initial AI-generated content
+  contentFinal String? @db.Text // After physician edits (approved content)
   contentDiff  Json?   // Diff between draft and final
 
   // Source anchoring
   sourceAnchors Json? // Map of text segments to sources
 
   // Clinical safety
-  extractedValues    Json? // LVEF, stenosis, etc.
-  verifiedValues     Json? // Which values physician confirmed
-  hallucinationFlags Json? // Critic model findings
-  clinicalConcepts   Json? // Diagnoses, meds, procedures
+  extractedValues      Json?  // LVEF, stenosis, etc. (ClinicalValue[])
+  verifiedValues       Json?  // Which values physician confirmed
+  hallucinationFlags   Json?  // Critic model findings (HallucinationFlag[])
+  clinicalConcepts     Json?  // Diagnoses, meds, procedures (ClinicalConcepts)
+  verificationRate     Float? // Percentage of values with source anchors
+  hallucinationRiskScore Int? // Risk score 0-100
 
   // Model tracking
-  primaryModel    String? // Model used for generation
-  criticModel     String? // Model used for hallucination check
-  styleConfidence Float?  // 0-1 confidence in style match
+  primaryModel       String? // Model used for generation
+  criticModel        String? // Model used for hallucination check
+  styleConfidence    Float?  // 0-1 confidence in style match
+  inputTokens        Int?    // Tokens consumed for input
+  outputTokens       Int?    // Tokens generated for output
+  generationDurationMs Int?  // Time taken for generation
 
   // Device locking for offline sync
   lockedByDeviceId String?
@@ -219,7 +224,8 @@ model Letter {
   generatedAt      DateTime?
   reviewStartedAt  DateTime?
   approvedAt       DateTime?
-  reviewDurationMs Int? // Time spent reviewing
+  approvedBy       String?   // User ID who approved
+  reviewDurationMs Int?      // Time spent reviewing
 
   // Processing
   processingError String?

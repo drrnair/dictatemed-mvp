@@ -49,7 +49,7 @@ export function detectHallucinations(
 
   // Check 2: Referring doctor names not in sources
   const referringDoctorPattern = /(?:dear|from)\s+dr\.?\s+([a-z]+)/gi;
-  let match;
+  let match: RegExpExecArray | null;
   while ((match = referringDoctorPattern.exec(letterText)) !== null) {
     const doctorName = match[1] ?? '';
     const appearsInSources = checkDoctorInSources(doctorName, sources);
@@ -73,10 +73,11 @@ export function detectHallucinations(
     const date = match[1] ?? '';
     const appearsInSources = checkTextInSources(date, sources);
 
-    if (!appearsInSources) {
+    if (!appearsInSources && match) {
       // Check if it's near a source anchor (likely consultation date)
+      const matchIndex = match.index;
       const nearAnchor = sourceAnchors.some(
-        (anchor) => Math.abs(anchor.startIndex - match.index) < 100
+        (anchor) => Math.abs(anchor.startIndex - matchIndex) < 100
       );
 
       if (!nearAnchor) {
@@ -98,11 +99,12 @@ export function detectHallucinations(
   while ((match = vesselFindingPattern.exec(letterText)) !== null) {
     const vessel = match[1] ?? '';
     const finding = match[0];
+    const matchIndex = match.index;
 
     // Check if this vessel finding has a nearby source anchor
     const hasAnchor = sourceAnchors.some(
       (anchor) =>
-        Math.abs(anchor.startIndex - match.index) < 200 &&
+        Math.abs(anchor.startIndex - matchIndex) < 200 &&
         anchor.sourceExcerpt.toLowerCase().includes(vessel.toLowerCase())
     );
 
@@ -110,8 +112,8 @@ export function detectHallucinations(
       flags.push({
         id: `hallucination-${flagIndex++}`,
         segmentText: finding,
-        startIndex: match.index,
-        endIndex: match.index + finding.length,
+        startIndex: matchIndex,
+        endIndex: matchIndex + finding.length,
         reason: `Vessel finding for ${vessel} lacks source citation`,
         severity: 'critical',
         dismissed: false,
@@ -145,20 +147,23 @@ export function detectHallucinations(
   const stentDetailPattern = /(\d+\.?\d*)\s*(?:x|×)\s*(\d+)\s*mm\s+stent/gi;
   while ((match = stentDetailPattern.exec(letterText)) !== null) {
     const stentSize = match[0];
+    const matchIndex = match.index;
+    const dimension1 = match[1] ?? '';
+    const dimension2 = match[2] ?? '';
 
     const hasAnchor = sourceAnchors.some(
       (anchor) =>
-        Math.abs(anchor.startIndex - match.index) < 200 &&
-        (anchor.sourceExcerpt.includes(match[1] ?? '') ||
-          anchor.sourceExcerpt.includes(match[2] ?? ''))
+        Math.abs(anchor.startIndex - matchIndex) < 200 &&
+        (anchor.sourceExcerpt.includes(dimension1) ||
+          anchor.sourceExcerpt.includes(dimension2))
     );
 
     if (!hasAnchor) {
       flags.push({
         id: `hallucination-${flagIndex++}`,
         segmentText: stentSize,
-        startIndex: match.index,
-        endIndex: match.index + stentSize.length,
+        startIndex: matchIndex,
+        endIndex: matchIndex + stentSize.length,
         reason: `Stent size specification lacks source citation`,
         severity: 'critical',
         dismissed: false,
@@ -170,12 +175,14 @@ export function detectHallucinations(
   const historyPattern = /(?:history of|previous|prior)\s+([^.,]{10,50})/gi;
   while ((match = historyPattern.exec(letterText)) !== null) {
     const historyDetail = match[1]?.trim() ?? '';
+    const matchIndex = match.index;
+    const matchText = match[0];
 
     // Skip if it's a common phrase or near a source anchor
     if (historyDetail.length < 15) continue;
 
     const nearAnchor = sourceAnchors.some(
-      (anchor) => Math.abs(anchor.startIndex - match.index) < 150
+      (anchor) => Math.abs(anchor.startIndex - matchIndex) < 150
     );
 
     if (!nearAnchor) {
@@ -184,9 +191,9 @@ export function detectHallucinations(
       if (!appearsInSources) {
         flags.push({
           id: `hallucination-${flagIndex++}`,
-          segmentText: match[0],
-          startIndex: match.index,
-          endIndex: match.index + match[0].length,
+          segmentText: matchText,
+          startIndex: matchIndex,
+          endIndex: matchIndex + matchText.length,
           reason: `Patient history detail lacks source citation`,
           severity: 'warning',
           dismissed: false,

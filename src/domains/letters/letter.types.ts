@@ -6,7 +6,7 @@ export type LetterType = 'NEW_PATIENT' | 'FOLLOW_UP' | 'ANGIOGRAM_PROCEDURE' | '
 export type LetterStatus =
   | 'GENERATING'
   | 'DRAFT'
-  | 'REVIEWING'
+  | 'IN_REVIEW' // Matches Prisma schema (was REVIEWING)
   | 'APPROVED'
   | 'FAILED';
 
@@ -15,11 +15,10 @@ export interface Letter {
   userId: string;
   patientId?: string | undefined;
   recordingId?: string | undefined;
-  documentIds: string[];
   letterType: LetterType;
   status: LetterStatus;
 
-  // Content
+  // Content (matches Prisma field names)
   contentDraft?: string | undefined;
   contentFinal?: string | undefined;
   contentDiff?: ContentDiff | undefined;
@@ -28,15 +27,26 @@ export interface Letter {
   sourceAnchors?: SourceAnchor[] | undefined;
 
   // Safety and quality
-  clinicalValues?: ClinicalValue[] | undefined;
+  extractedValues?: ClinicalValue[] | undefined;
+  verifiedValues?: ClinicalValue[] | undefined;
   hallucinationFlags?: HallucinationFlag[] | undefined;
   clinicalConcepts?: ClinicalConcepts | undefined;
+  verificationRate?: number | undefined;        // Percentage of values with source anchors
+  hallucinationRiskScore?: number | undefined;  // Risk score 0-100
 
-  // Metadata
-  modelUsed?: 'opus' | 'sonnet' | undefined;
+  // Model tracking
+  primaryModel?: string | undefined;         // Model used for generation (full ID)
+  criticModel?: string | undefined;          // Model used for hallucination check
+  styleConfidence?: number | undefined;
+  inputTokens?: number | undefined;
+  outputTokens?: number | undefined;
+  generationDurationMs?: number | undefined;
+
+  // Timing
   generatedAt?: Date | undefined;
-  reviewedAt?: Date | undefined;
+  reviewStartedAt?: Date | undefined;
   approvedAt?: Date | undefined;
+  approvedBy?: string | undefined;
 
   // Provenance
   provenanceHash?: string | undefined;
@@ -100,13 +110,18 @@ export interface ClinicalConcepts {
   diagnoses: ConceptItem[];
   medications: MedicationItem[];
   procedures: ConceptItem[];
-  followUp: FollowUpItem[];
+  findings: ConceptItem[];      // Clinical findings (e.g., RWMA, LV dysfunction)
+  riskFactors: ConceptItem[];   // CV risk factors (e.g., diabetes, hypertension)
+  followUp?: FollowUpItem[];    // Optional for future use
 }
 
 export interface ConceptItem {
-  name: string;
-  sourceAnchorId?: string | undefined;
+  term: string;              // Display term
+  normalizedTerm: string;    // Standardized term for search
+  category?: string | undefined;
+  code?: string | undefined; // ICD-10, SNOMED CT, MBS code
   confidence: number;
+  sourceAnchorId?: string | undefined;
 }
 
 export interface MedicationItem extends ConceptItem {
