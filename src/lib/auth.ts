@@ -21,7 +21,8 @@ export interface AuthUser {
 
 /**
  * Get the current authenticated user from Auth0 session and database.
- * Returns null if not authenticated or user not found in database.
+ * Auto-provisions new users on first login.
+ * Returns null if not authenticated.
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
   try {
@@ -32,8 +33,11 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     }
 
     const auth0Id = session.user.sub as string;
+    const email = session.user.email as string;
+    const userName = String(session.user.name || email.split('@')[0]);
 
-    const user = await prisma.user.findUnique({
+    // Try to find existing user
+    let user = await prisma.user.findUnique({
       where: { auth0Id },
       select: {
         id: true,
@@ -45,19 +49,66 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       },
     });
 
+    // Auto-provision new users on first login
     if (!user) {
-      return null;
+      // Check if user exists by email (might have been pre-created)
+      const existingByEmail = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (existingByEmail) {
+        // Link existing user to Auth0
+        user = await prisma.user.update({
+          where: { email },
+          data: { auth0Id },
+          select: {
+            id: true,
+            auth0Id: true,
+            email: true,
+            name: true,
+            role: true,
+            practiceId: true,
+          },
+        });
+      } else {
+        // Create new user and practice
+        const practice = await prisma.practice.create({
+          data: {
+            name: `${name}'s Practice`,
+            settings: {},
+          },
+        });
+
+        user = await prisma.user.create({
+          data: {
+            auth0Id,
+            email,
+            name: userName,
+            role: 'ADMIN', // First user is admin of their practice
+            practiceId: practice.id,
+          },
+          select: {
+            id: true,
+            auth0Id: true,
+            email: true,
+            name: true,
+            role: true,
+            practiceId: true,
+          },
+        });
+      }
     }
 
     return {
       id: user.id,
       auth0Id: user.auth0Id,
       email: user.email,
-      name: user.name,
+      name: user.name ?? email.split('@')[0],
       role: user.role,
       practiceId: user.practiceId,
     };
-  } catch {
+  } catch (error) {
+    console.error('getCurrentUser error:', error);
     return null;
   }
 }
