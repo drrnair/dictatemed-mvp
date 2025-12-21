@@ -105,8 +105,26 @@ export async function getAll(filters: NotificationFilters): Promise<Notification
 
 /**
  * Mark a notification as read
+ * @throws Error if notification doesn't belong to user
  */
-export async function markRead(notificationId: string): Promise<Notification> {
+export async function markRead(
+  notificationId: string,
+  userId: string
+): Promise<Notification> {
+  // Verify ownership before updating
+  const existing = await prisma.notification.findUnique({
+    where: { id: notificationId },
+    select: { userId: true },
+  });
+
+  if (!existing) {
+    throw new Error('Notification not found');
+  }
+
+  if (existing.userId !== userId) {
+    throw new Error('Unauthorized: notification belongs to another user');
+  }
+
   const notification = await prisma.notification.update({
     where: {
       id: notificationId,
@@ -124,13 +142,18 @@ export async function markRead(notificationId: string): Promise<Notification> {
 
 /**
  * Mark multiple notifications as read
+ * Only updates notifications belonging to the user
  */
-export async function markManyRead(notificationIds: string[]): Promise<number> {
+export async function markManyRead(
+  notificationIds: string[],
+  userId: string
+): Promise<number> {
   const result = await prisma.notification.updateMany({
     where: {
       id: {
         in: notificationIds,
       },
+      userId, // Only update notifications belonging to this user
     },
     data: {
       read: true,
@@ -173,8 +196,26 @@ export async function getUnreadCount(userId: string): Promise<number> {
 
 /**
  * Delete a notification
+ * @throws Error if notification doesn't belong to user
  */
-export async function deleteNotification(notificationId: string): Promise<void> {
+export async function deleteNotification(
+  notificationId: string,
+  userId: string
+): Promise<void> {
+  // Verify ownership before deleting
+  const existing = await prisma.notification.findUnique({
+    where: { id: notificationId },
+    select: { userId: true },
+  });
+
+  if (!existing) {
+    throw new Error('Notification not found');
+  }
+
+  if (existing.userId !== userId) {
+    throw new Error('Unauthorized: notification belongs to another user');
+  }
+
   await prisma.notification.delete({
     where: {
       id: notificationId,

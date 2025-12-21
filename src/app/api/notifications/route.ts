@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'markRead': {
         const { notificationId } = validated.data;
-        await markRead(notificationId);
+        await markRead(notificationId, userId);
 
         log.info('Notification marked as read', { notificationId });
 
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
 
       case 'markManyRead': {
         const { notificationIds } = validated.data;
-        const count = await markManyRead(notificationIds);
+        const count = await markManyRead(notificationIds, userId);
 
         log.info('Multiple notifications marked as read', {
           count,
