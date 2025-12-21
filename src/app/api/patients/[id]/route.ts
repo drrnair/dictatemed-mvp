@@ -249,6 +249,16 @@ export async function PUT(
 }
 
 /**
+ * PATCH /api/patients/[id] - Partially update a patient (alias for PUT)
+ */
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return PUT(request, context);
+}
+
+/**
  * DELETE /api/patients/[id] - Delete a patient
  */
 export async function DELETE(

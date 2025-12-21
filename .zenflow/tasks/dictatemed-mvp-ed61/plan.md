@@ -443,7 +443,7 @@ Link documents to letters for source traceability.
 
 ### Phase 4: Letter Generation (Weeks 9-11)
 
-#### [ ] 4.1 Letter Generation Prompts
+#### [x] 4.1 Letter Generation Prompts
 Create AI prompts for each letter type.
 
 **Tasks:**
@@ -467,7 +467,7 @@ Create AI prompts for each letter type.
 - Each prompt generates coherent letter structure
 - Style context properly influences output
 
-#### [ ] 4.2 AWS Bedrock Integration
+#### [x] 4.2 AWS Bedrock Integration
 Integrate Claude models via AWS Bedrock.
 
 **Tasks:**
@@ -486,7 +486,7 @@ Integrate Claude models via AWS Bedrock.
 - Can invoke Claude Opus model
 - Responses parsed correctly
 
-#### [ ] 4.3 Intelligent Model Selection
+#### [x] 4.3 Intelligent Model Selection
 Implement context-aware model routing.
 
 **Tasks:**
@@ -503,7 +503,7 @@ Implement context-aware model routing.
 - Follow-up letters use Sonnet
 - Selection logged for analysis
 
-#### [ ] 4.4 PHI Obfuscation Pipeline
+#### [x] 4.4 PHI Obfuscation Pipeline
 Implement PHI tokenization before LLM processing.
 
 **Tasks:**
@@ -521,7 +521,7 @@ Implement PHI tokenization before LLM processing.
 - Tokens replaced with values in output
 - No PHI visible in logs
 
-#### [ ] 4.5 Source Anchoring System
+#### [x] 4.5 Source Anchoring System
 Link generated text segments to their sources.
 
 **Tasks:**
@@ -539,7 +539,7 @@ Link generated text segments to their sources.
 - Anchors point to transcript or document
 - Orphan statements flagged
 
-#### [ ] 4.6 Clinical Value Extraction
+#### [x] 4.6 Clinical Value Extraction
 Extract and structure critical clinical values.
 
 **Tasks:**
@@ -559,7 +559,7 @@ Extract and structure critical clinical values.
 - LAD stenosis extracted from "LAD 80% stenosis"
 - Medications extracted with dosages
 
-#### [ ] 4.7 Hallucination Detection
+#### [x] 4.7 Hallucination Detection
 Implement critic model for cross-validation.
 
 **Tasks:**
@@ -577,7 +577,7 @@ Implement critic model for cross-validation.
 - Supported facts not flagged
 - Processing adds <3 seconds
 
-#### [ ] 4.8 Clinical Concept Extraction
+#### [x] 4.8 Clinical Concept Extraction
 Extract diagnoses, medications, procedures, follow-up.
 
 **Tasks:**
@@ -594,7 +594,7 @@ Extract diagnoses, medications, procedures, follow-up.
 - Medications include dose/frequency
 - Follow-up timeline captured
 
-#### [ ] 4.9 Letter API Endpoints
+#### [x] 4.9 Letter API Endpoints
 Create backend API for letter management.
 
 **Tasks:**
@@ -620,7 +620,7 @@ npm run test:integration -- letters
 
 ### Phase 5: Review Interface (Weeks 12-13)
 
-#### [ ] 5.1 Letter Editor
+#### [x] 5.1 Letter Editor
 Create rich text editor for letter review.
 
 **Tasks:**
@@ -640,7 +640,7 @@ Create rich text editor for letter review.
 - Undo/redo works
 - Edits tracked for provenance
 
-#### [ ] 5.2 Source Panel
+#### [x] 5.2 Source Panel
 Show sources on click with excerpts.
 
 **Tasks:**
@@ -658,7 +658,7 @@ Show sources on click with excerpts.
 - Source excerpt highlighted
 - Can navigate to full source
 
-#### [ ] 5.3 Verification Panel
+#### [x] 5.3 Verification Panel
 Build mandatory value confirmation UI.
 
 **Tasks:**
@@ -677,7 +677,7 @@ Build mandatory value confirmation UI.
 - Cannot approve with unverified values
 - Verification timestamps recorded
 
-#### [ ] 5.4 Hallucination Flag Display
+#### [x] 5.4 Hallucination Flag Display
 Show and manage hallucination warnings.
 
 **Tasks:**
@@ -694,7 +694,7 @@ Show and manage hallucination warnings.
 - Can dismiss with reason
 - Dismissals logged
 
-#### [ ] 5.5 Differential View
+#### [x] 5.5 Differential View
 Implement change-only viewing mode.
 
 **Tasks:**
@@ -711,7 +711,7 @@ Implement change-only viewing mode.
 - Changes-only mode collapses unchanged
 - Can switch between view modes
 
-#### [ ] 5.6 Clinical Concepts Panel
+#### [x] 5.6 Clinical Concepts Panel
 Display extracted clinical concepts.
 
 **Tasks:**
@@ -727,7 +727,7 @@ Display extracted clinical concepts.
 - All concept categories displayed
 - Each concept linked to source
 
-#### [ ] 5.7 Letter Review Page
+#### [x] 5.7 Letter Review Page
 Assemble complete review interface.
 
 **Tasks:**
@@ -747,7 +747,7 @@ Assemble complete review interface.
 - Review time tracked
 - Approval creates provenance
 
-#### [ ] 5.8 Provenance Report
+#### [x] 5.8 Provenance Report
 Generate downloadable audit trail.
 
 **Tasks:**
@@ -829,7 +829,7 @@ Build letter management with search/filter.
 - Filters work correctly
 - Pagination loads efficiently
 
-#### [ ] 6.4 Patient Management (Minimal)
+#### [x] 6.4 Patient Management (Minimal)
 Implement minimal patient tracking for letter association.
 
 **Tasks:**
@@ -870,7 +870,7 @@ Implement practice-level configuration.
 - Letterhead appears on letters
 - Usage stats visible
 
-#### [ ] 6.6 User Settings
+#### [x] 6.6 User Settings
 Build individual user preferences.
 
 **Tasks:**
@@ -933,7 +933,7 @@ Implement comprehensive error handling.
 - Failed operations can be retried
 - Errors logged for debugging
 
-#### [ ] 6.9 Performance Optimization
+#### [x] 6.9 Performance Optimization
 Optimize for <200ms UI response.
 
 **Tasks:**
@@ -949,7 +949,7 @@ Optimize for <200ms UI response.
 - Initial load <3 seconds
 - Lighthouse score >90
 
-#### [ ] 6.10 Onboarding Flow
+#### [x] 6.10 Onboarding Flow
 Create first-time user onboarding experience.
 
 **Tasks:**

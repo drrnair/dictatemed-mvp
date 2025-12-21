@@ -2,7 +2,7 @@
 // Settings page with navigation to sub-settings
 
 import Link from 'next/link';
-import { Building2, Sparkles, Heart, FileText } from 'lucide-react';
+import { Building2, Sparkles, Heart, FileText, User } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Route } from 'next';
 
@@ -12,6 +12,12 @@ const settingsLinks: Array<{
   href: Route;
   icon: typeof Building2;
 }> = [
+  {
+    title: 'Profile',
+    description: 'Your name, signature, and account settings',
+    href: '/settings/profile' as Route,
+    icon: User,
+  },
   {
     title: 'Practice',
     description: 'Manage practice details, letterhead, and team members',
