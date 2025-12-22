@@ -22,7 +22,7 @@ Output: `spec.md`
 
 ---
 
-### [ ] Step: Design Token Foundation
+### [x] Step: Design Token Foundation
 <!-- chat-id: 636c1d06-ac0d-4622-bbb8-b26835740f2e -->
 
 Update the core styling files to establish the new design token layer.
@@ -35,6 +35,24 @@ Update the core styling files to establish the new design token layer.
 - `npm run build` passes
 - Existing pages render without visual breakage
 - CSS variables available in browser dev tools
+
+**Completed:**
+- Updated `globals.css` with DictateMED design tokens:
+  - Warm white background (`40 20% 98%`) instead of pure white
+  - Medical-grade teal primary (`174 42% 40%`) instead of blue
+  - Near-black text (`220 15% 12%`) for readability
+  - Clinical status colors as CSS variables
+  - 8px-based spacing scale
+  - Subtle shadow definitions
+  - Dark mode support
+- Updated `tailwind.config.js`:
+  - Typography scale (caption, label, body, heading-1/2/3)
+  - Custom spacing utilities using CSS variables
+  - Subtle box shadows (card, focus)
+  - Clinical status colors using CSS variables
+  - Minimum hit area utilities (44px touch targets)
+  - Border radius scale
+- Verified: `npm run build` compiles successfully, `npm run lint` passes
 
 ---
 
