@@ -1,65 +1,144 @@
-# Spec and build
+# DictateMED Design System Implementation
 
 ## Configuration
-- **Artifacts Path**: {@artifacts_path} → `.zenflow/tasks/{task_id}`
-
----
-
-## Agent Instructions
-
-Ask the user questions when anything is unclear or needs their input. This includes:
-- Ambiguous or incomplete requirements
-- Technical decisions that affect architecture or user experience
-- Trade-offs that require business context
-
-Do not make assumptions on important decisions — get clarification first.
+- **Artifacts Path**: `.zenflow/tasks/apply-dictatemed-design-system-t-8ec2`
+- **Difficulty**: Medium-Hard
+- **Spec**: See `spec.md` for full technical specification
 
 ---
 
 ## Workflow Steps
 
-### [ ] Step: Technical Specification
+### [x] Step: Technical Specification
 <!-- chat-id: 5be5d3f5-f441-4fee-8b67-9e207b943d94 -->
 
-Assess the task's difficulty, as underestimating it leads to poor outcomes.
-- easy: Straightforward implementation, trivial bug fix or feature
-- medium: Moderate complexity, some edge cases or caveats to consider
-- hard: Complex logic, many caveats, architectural considerations, or high-risk changes
-
-Create a technical specification for the task that is appropriate for the complexity level:
-- Review the existing codebase architecture and identify reusable components.
-- Define the implementation approach based on established patterns in the project.
-- Identify all source code files that will be created or modified.
-- Define any necessary data model, API, or interface changes.
-- Describe verification steps using the project's test and lint commands.
-
-Save the output to `{@artifacts_path}/spec.md` with:
-- Technical context (language, dependencies)
-- Implementation approach
-- Source code structure changes
-- Data model / API / interface changes
+Created comprehensive technical specification including:
+- Design token definitions (colors, typography, spacing)
+- File-by-file change list (~18 files)
 - Verification approach
+- Risk assessment
 
-If the task is complex enough, create a detailed implementation plan based on `{@artifacts_path}/spec.md`:
-- Break down the work into concrete tasks (incrementable, testable milestones)
-- Each task should reference relevant contracts and include verification steps
-- Replace the Implementation step below with the planned tasks
-
-Rule of thumb for step size: each step should represent a coherent unit of work (e.g., implement a component, add an API endpoint, write tests for a module). Avoid steps that are too granular (single function).
-
-Save to `{@artifacts_path}/plan.md`. If the feature is trivial and doesn't warrant this breakdown, keep the Implementation step below as is.
+Output: `spec.md`
 
 ---
 
-### [ ] Step: Implementation
+### [ ] Step: Design Token Foundation
 
-Implement the task according to the technical specification and general engineering best practices.
+Update the core styling files to establish the new design token layer.
 
-1. Break the task into steps where possible.
-2. Implement the required changes in the codebase.
-3. Add and run relevant tests and linters.
-4. Perform basic manual verification if applicable.
-5. After completion, write a report to `{@artifacts_path}/report.md` describing:
-   - What was implemented
-   - How the solution was tested
-   - The biggest issues or challenges encountered
+**Files:**
+- `src/app/globals.css` - New CSS custom properties for colors, typography, spacing
+- `tailwind.config.js` - Extended theme configuration
+
+**Verification:**
+- `npm run build` passes
+- Existing pages render without visual breakage
+- CSS variables available in browser dev tools
+
+---
+
+### [ ] Step: UI Primitives
+
+Update base UI components to use new design tokens.
+
+**Files:**
+- `src/components/ui/button.tsx` - Updated variants and sizes
+- `src/components/ui/card.tsx` - Reduced shadow, updated borders
+- `src/components/ui/badge.tsx` - Softer color variants
+- `src/components/ui/input.tsx` - Larger hit areas, focus states
+- `src/components/ui/label.tsx` - Typography updates
+- `src/components/ui/dialog.tsx` - Reduced shadows, spacing
+
+**Verification:**
+- Components render correctly in isolation
+- `npm run lint` passes
+
+---
+
+### [ ] Step: Navigation Shell
+
+Update layout components for consistent navigation experience.
+
+**Files:**
+- `src/components/layout/Sidebar.tsx` - Color scheme, spacing, active states
+- `src/components/layout/Header.tsx` - Simplified styling
+- `src/app/(dashboard)/layout.tsx` - Background color updates
+
+**Verification:**
+- Navigation between pages works
+- Active states visible
+- Keyboard navigation functional
+
+---
+
+### [ ] Step: Dashboard Screen
+
+Apply design system to the main dashboard/today screen.
+
+**Files:**
+- `src/app/(dashboard)/dashboard/page.tsx` - QuickActionCard, StatCard styling
+
+**Verification:**
+- Cards display correctly
+- Hover states work
+- Typography hierarchy clear
+
+---
+
+### [ ] Step: Record Screen
+
+Apply design system to the consultation/recording screen.
+
+**Files:**
+- `src/app/(dashboard)/record/page.tsx` - CollapsibleSection, status indicators
+
+**Verification:**
+- Sections expand/collapse
+- Status badges visible
+- Form elements accessible
+
+---
+
+### [ ] Step: Letter Review Screen
+
+Apply design system to the letter review/edit interface.
+
+**Files:**
+- `src/app/(dashboard)/letters/[id]/LetterReviewClient.tsx` - Header, panels, editor
+- `src/components/letters/VerificationPanel.tsx` - Value display styling
+- `src/components/letters/SourcePanel.tsx` - Panel styling
+- `src/components/letters/LetterEditor.tsx` - Editor chrome
+
+**Verification:**
+- Two-panel layout works
+- Verification checkboxes functional
+- Source panel slides correctly
+
+---
+
+### [ ] Step: Testing & Documentation
+
+Run tests, verify accessibility, and create documentation.
+
+**Tasks:**
+1. Run `npm run test` and `npm run lint`
+2. Run `npm run build`
+3. Search for any remaining hardcoded colors
+4. Manual verification of contrast and keyboard nav
+5. Create `docs/DESIGN_NOTES.md`
+
+**Verification:**
+- All tests pass
+- Build succeeds
+- WCAG AA contrast requirements met
+- Documentation complete
+
+---
+
+### [ ] Step: Final Report
+
+Write implementation report to `report.md` describing:
+- What was implemented
+- Files changed with rationale
+- How the solution was tested
+- Tradeoffs and known limitations
