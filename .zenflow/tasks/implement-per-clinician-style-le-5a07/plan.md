@@ -804,7 +804,7 @@ npm run test:e2e
 
 ---
 
-### [ ] Step 17: Documentation
+### [x] Step 17: Documentation
 <!-- chat-id: 743cbe63-a851-4ddd-9b98-e25452eb8fab -->
 
 Update technical documentation.
@@ -822,6 +822,51 @@ Update technical documentation.
 
 **Verification:**
 Manual review
+
+**Completed:** Full technical documentation created:
+
+**docs/TECH_NOTES.md** - Comprehensive technical reference:
+- **Overview**: System architecture, key components, subspecialties
+- **Database Schema**: Full SQL for StyleProfile, StyleSeedLetter, StyleAnalyticsAggregate tables with field descriptions
+- **API Reference**: All endpoints documented with request/response examples
+  - Profile Management (7 endpoints)
+  - Seed Letter Management (3 endpoints)
+  - Updated Endpoints (4 endpoints)
+  - Admin Analytics (2 endpoints)
+- **Core Services**: Usage examples for all service modules
+  - subspecialty-profile.service.ts
+  - diff-analyzer.ts
+  - learning-pipeline.ts
+  - prompt-conditioner.ts
+- **Learning Pipeline**: Architecture diagram, edit recording flow, merge logic, thresholds
+- **Privacy & PHI Handling**: Data classification, PHI stripping patterns, aggregation thresholds, access control, audit logging
+- **Configuration & Tuning**: Environment variables, tunable constants, learning strength settings, cache configuration
+- **Troubleshooting**: Common issues and solutions for profile application, analysis triggering, cache problems
+- **Extension Points**: Adding subspecialties, section types, custom analysis models
+
+**docs/DESIGN_NOTES.md** - Architecture decisions and rationale:
+- **Problem Statement**: Why per-subspecialty vs global profiles
+- **Design Principles**: Clinician control, privacy by design, progressive enhancement, performance
+- **Key Architecture Decisions** (7 decisions with rationale):
+  1. Dedicated StyleProfile table vs JSON field
+  2. Section-level vs character-level diff
+  3. Async analysis pipeline
+  4. Weighted profile merging
+  5. Confidence-gated application
+  6. Subspecialty inference chain
+  7. Seed letters for cold start
+- **Trade-offs & Alternatives**: Real-time vs batch, profile expiry, analytics granularity, template-level profiles, ML-based detection
+- **Known Limitations**: Cold start, cross-subspecialty blending, language limitations, vocabulary conflicts, letter type variation
+- **Future Considerations**: Collaborative profiles, A/B testing, multi-language, incremental analysis, style embeddings, temporal evolution
+
+**src/domains/style/README.md** - Updated domain documentation:
+- Added reference links to new docs
+- Added overview of global vs per-subspecialty modes
+- Added component list for both systems
+- Added Quick Start code examples
+- Added fallback chain documentation
+- Added thresholds table
+- Added API endpoints table
 
 ---
 
