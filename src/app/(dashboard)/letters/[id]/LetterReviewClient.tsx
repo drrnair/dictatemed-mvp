@@ -14,6 +14,7 @@ import {
 } from '@/components/letters/VerificationPanel';
 import { DifferentialView } from '@/components/letters/DifferentialView';
 import { SendLetterDialog } from '@/components/letters/SendLetterDialog';
+import { SendHistory } from '@/components/letters/SendHistory';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -24,7 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Send } from 'lucide-react';
+import { Send, History } from 'lucide-react';
+import type { SendStatus, ContactType } from '@prisma/client';
 
 // Proper type definitions instead of `any`
 interface SourceAnchor {
@@ -87,6 +89,20 @@ interface LetterWithRelations {
   patient: PatientData | null;
   recording: RecordingData | null;
   documents: DocumentData[];
+}
+
+interface SendHistoryItem {
+  id: string;
+  recipientName: string;
+  recipientEmail: string;
+  recipientType: ContactType | null;
+  channel: string;
+  subject: string;
+  status: SendStatus;
+  queuedAt: string;
+  sentAt: string | null;
+  failedAt: string | null;
+  errorMessage: string | null;
 }
 
 interface LetterReviewClientProps {
