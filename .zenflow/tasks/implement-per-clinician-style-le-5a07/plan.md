@@ -378,7 +378,8 @@ npm run lint
 
 ---
 
-### [ ] Step 10: API Endpoints - Seed Letters
+### [x] Step 10: API Endpoints - Seed Letters
+<!-- chat-id: 006947e3-7106-498e-8e8d-9601b2f6cf55 -->
 
 Create REST API endpoints for seed letter management.
 
@@ -386,7 +387,7 @@ Create REST API endpoints for seed letter management.
 1. `POST /api/style/seed` - Upload seed letters
 2. `GET /api/style/seed` - List seed letters
 3. `DELETE /api/style/seed/:id` - Remove seed letter
-4. Integrate with `analyzeHistoricalLetters()` for subspecialty
+4. Integrate with `analyzeSeedLetters()` for subspecialty
 
 **Files:**
 - `src/app/api/style/seed/route.ts` (new)
@@ -397,6 +398,20 @@ Create REST API endpoints for seed letter management.
 npm run typecheck
 npm run lint
 ```
+
+**Completed:** All seed letter API endpoints implemented:
+- **GET /api/style/seed**: Lists seed letters for the authenticated user, with optional `?subspecialty=` query parameter filter
+- **POST /api/style/seed**: Uploads a new seed letter with Zod validation:
+  - `subspecialty`: Required, must be valid enum value
+  - `letterText`: Required, 100-50,000 characters
+  - `triggerAnalysis`: Optional, defaults to true - triggers background `analyzeSeedLetters()` after upload
+- **GET /api/style/seed/:id**: Retrieves a specific seed letter by ID
+- **DELETE /api/style/seed/:id**: Removes a seed letter
+- All endpoints use Auth0 session authentication
+- All endpoints include comprehensive error handling and logging
+- Background analysis is fire-and-forget (non-blocking) with error logging
+- TypeScript compilation passes
+- ESLint checks pass
 
 ---
 
