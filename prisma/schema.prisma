@@ -54,6 +54,10 @@ model User {
   styleEdits          StyleEdit[]
   templatePreferences UserTemplatePreference[]
 
+  // Per-subspecialty style learning
+  styleProfiles    StyleProfile[]
+  styleSeedLetters StyleSeedLetter[]
+
   @@map("users")
 }
 
@@ -217,8 +221,9 @@ model Letter {
   templateId String?
   template   LetterTemplate? @relation(fields: [templateId], references: [id])
 
-  letterType LetterType
-  status     LetterStatus @default(GENERATING)
+  letterType   LetterType
+  status       LetterStatus  @default(GENERATING)
+  subspecialty Subspecialty? // Inferred or explicit subspecialty for style learning
 
   // Content
   contentDraft String? @db.Text // Initial AI-generated content
@@ -376,11 +381,89 @@ model StyleEdit {
   characterChanges Int // Total chars added/removed
   wordChanges      Int // Total words added/removed
 
+  // Subspecialty context for per-subspecialty learning
+  subspecialty Subspecialty?
+
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([letterId])
+  @@index([userId, subspecialty])
   @@map("style_edits")
+}
+
+// Per-clinician, per-subspecialty style profile
+model StyleProfile {
+  id           String       @id @default(uuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subspecialty Subspecialty
+
+  // Section preferences
+  sectionOrder     String[] // e.g., ["History", "Examination", "Impression", "Plan"]
+  sectionInclusion Json     @default("{}") // { "Medications": 0.9, "FamilyHistory": 0.3 }
+  sectionVerbosity Json     @default("{}") // { "History": "detailed", "Plan": "brief" }
+
+  // Phrasing preferences
+  phrasingPreferences Json    @default("{}") // Common phrases per section
+  avoidedPhrases      Json    @default("{}") // Phrases consistently deleted
+  vocabularyMap       Json    @default("{}") // { "utilize": "use" }
+  terminologyLevel    String? // "specialist" | "lay" | "mixed"
+
+  // Global style indicators
+  greetingStyle      String? // "formal" | "casual" | "mixed"
+  closingStyle       String? // "formal" | "casual" | "mixed"
+  signoffTemplate    String? // Preferred sign-off text
+  formalityLevel     String? // "very-formal" | "formal" | "neutral" | "casual"
+  paragraphStructure String? // "long" | "short" | "mixed"
+
+  // Confidence & metadata
+  confidence         Json     @default("{}") // Per-preference confidence scores
+  learningStrength   Float    @default(1.0) // 0.0 = disabled, 1.0 = full effect
+  totalEditsAnalyzed Int      @default(0)
+  lastAnalyzedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, subspecialty])
+  @@index([userId])
+  @@map("style_profiles")
+}
+
+// Seed letters for bootstrapping style profiles
+model StyleSeedLetter {
+  id           String       @id @default(uuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subspecialty Subspecialty
+
+  letterText String    @db.Text
+  analyzedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, subspecialty])
+  @@map("style_seed_letters")
+}
+
+// Internal aggregated analytics (de-identified)
+model StyleAnalyticsAggregate {
+  id           String       @id @default(uuid())
+  subspecialty Subspecialty
+  period       String // e.g., "2024-W01" (weekly)
+
+  // Aggregated patterns (no PHI, no clinician IDs)
+  commonAdditions      Json // Frequently added sections/phrases
+  commonDeletions      Json // Frequently deleted content
+  sectionOrderPatterns Json // Common section arrangements
+  phrasingPatterns     Json // High-frequency phrase patterns
+  sampleSize           Int // Number of letters contributing
+
+  createdAt DateTime @default(now())
+
+  @@unique([subspecialty, period])
+  @@map("style_analytics_aggregates")
 }
 
 // ============ Letter Templates ============

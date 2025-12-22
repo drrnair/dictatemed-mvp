@@ -32,7 +32,8 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
-### [ ] Step 1: Database Schema & Migration
+### [x] Step 1: Database Schema & Migration
+<!-- chat-id: 7acd19cb-1247-4aaa-a587-545cd3c13d19 -->
 
 Create the database schema changes for per-subspecialty style profiles.
 
@@ -53,6 +54,15 @@ Create the database schema changes for per-subspecialty style profiles.
 npm run db:push
 npm run typecheck
 ```
+
+**Completed:** All schema changes implemented:
+- Added `StyleProfile` model with section/phrasing/verbosity preferences
+- Added `StyleSeedLetter` model for bootstrapping profiles from sample letters
+- Added `StyleAnalyticsAggregate` model for de-identified internal analytics
+- Added `subspecialty` field to both `StyleEdit` and `Letter` models
+- Added `styleProfiles` and `styleSeedLetters` relations to `User` model
+- Prisma client generated successfully
+- TypeScript compilation passes
 
 ---
 
