@@ -631,12 +631,252 @@ Location within ConsultationContextForm, before the patient selector:
 - Duplicate patient: Offer to link to existing
 - Invalid data: Show field-level validation errors
 
+## Clarifications & Design Decisions
+
+### 1. Referral Context Storage
+
+**Issue**: The original task mentions populating a "Reason for referral" / "Clinical context" field in the consultation, but the `Consultation` model doesn't have such a field.
+
+**Decision**: Store the referral context in two ways:
+1. **ReferralDocument.extractedData.referralContext** - Preserved for audit/reference
+2. **UI Display Only** - The reason for referral will be displayed in the consultation context form as read-only context (not stored separately on Consultation model)
+
+**Rationale**:
+- The referral context is primarily used during letter generation as source material
+- The `ReferralDocument` is linked to the consultation via `consultation.referralDocument`
+- Letter generation can access `consultation.referralDocument.extractedData.referralContext`
+- No schema change needed for `Consultation` model
+
+### 2. Referrer vs PatientContact Integration
+
+**Issue**: The system has two contact models: `Referrer` (practice-wide, for consultation.referrerId) and `PatientContact` (patient-specific, for letter sending).
+
+**Decision**: When applying referral data:
+1. **GP → Referrer model**: Create/update entry in `Referrer` table (practice-wide), set as `consultation.referrerId`
+2. **GP → PatientContact model**: Also create a `PatientContact` with `type: 'GP'` for the patient (for future letter sending)
+3. **Referrer (if different)**: Create `PatientContact` with `type: 'REFERRER'` for the patient
+
+**Mapping Logic**:
+```typescript
+// When applying referral:
+if (input.gp) {
+  // 1. Create/find Referrer for consultation context
+  const referrer = await findOrCreateReferrer(practiceId, input.gp);
+  consultation.referrerId = referrer.id;
+
+  // 2. Create PatientContact for letter sending
+  await createPatientContact(patientId, {
+    type: 'GP',
+    fullName: input.gp.fullName,
+    organisation: input.gp.practiceName,
+    ...input.gp
+  });
+}
+
+if (input.referrer) {
+  // Create separate PatientContact for the referring specialist
+  await createPatientContact(patientId, {
+    type: 'REFERRER',
+    fullName: input.referrer.fullName,
+    organisation: input.referrer.organisation,
+    role: input.referrer.specialty,
+    ...input.referrer
+  });
+}
+```
+
+### 3. PDF Text Extraction Approach
+
+**Issue**: The existing extraction.service.ts uses Claude Vision for document processing, not text-based extraction.
+
+**Decision**: Use a hybrid approach:
+1. **Primary**: Use `pdf-parse` library for text extraction from PDFs
+   - Faster and cheaper than vision
+   - Works well for typed/digital PDFs (most referral letters)
+   - Install: `npm install pdf-parse`
+2. **Fallback**: If text extraction yields very little text (<100 chars), fall back to Claude Vision
+   - Handles scanned PDFs
+   - Handles image-based PDFs
+
+**Rationale**: Most modern referral letters are digital PDFs with embedded text. Vision extraction is expensive and slow for this use case.
+
+### 4. Patient Matching Logic
+
+**Issue**: Need to handle potential duplicate patients when applying referral data.
+
+**Decision**: Implement a simple matching strategy:
+
+**Match Criteria** (in order of priority):
+1. **Exact MRN match** - If MRN provided and matches existing patient → link to existing
+2. **Exact Medicare match** - If Medicare number provided and matches → link to existing
+3. **Name + DOB match** - If name (case-insensitive) AND DOB match → link to existing
+4. **No match** - Create new patient
+
+**Conflict Resolution**:
+- If match found: Show confirmation UI "A patient with this name/DOB already exists. Link to existing?"
+- Options: "Link to existing" | "Create new anyway" | "Cancel"
+
+**Implementation**:
+```typescript
+async function findMatchingPatient(
+  practiceId: string,
+  patient: ApplyReferralInput['patient']
+): Promise<Patient | null> {
+  // 1. Try MRN match
+  if (patient.mrn) {
+    const match = await findPatientByMRN(practiceId, patient.mrn);
+    if (match) return match;
+  }
+
+  // 2. Try Medicare match
+  if (patient.medicare) {
+    const match = await findPatientByMedicare(practiceId, patient.medicare);
+    if (match) return match;
+  }
+
+  // 3. Try name + DOB match
+  const match = await findPatientByNameAndDOB(
+    practiceId,
+    patient.fullName,
+    patient.dateOfBirth
+  );
+  if (match) return match;
+
+  return null;
+}
+```
+
+### 5. Confirm Upload Step
+
+**Issue**: The existing Document pattern has a confirm upload step to verify S3 upload completed.
+
+**Decision**: Add confirm upload endpoint, matching existing pattern:
+
+**New Endpoint**: `POST /api/referrals/:id/confirm-upload`
+
+**Request**:
+```typescript
+{
+  sizeBytes: number;  // Actual uploaded size for verification
+}
+```
+
+**Response** (200):
+```typescript
+{
+  id: string;
+  status: "UPLOADED";  // Confirms ready for extraction
+}
+```
+
+**Updated Pipeline**:
+```
+Upload URL → Client uploads to S3 → Confirm Upload → Extract Text → ...
+```
+
+### 6. Audit Logging
+
+**Issue**: Existing document operations create audit logs; referral operations should too.
+
+**Decision**: Add audit logging for all referral operations:
+
+| Action | When |
+|--------|------|
+| `referral.upload` | After confirm upload |
+| `referral.extract_text` | After text extraction |
+| `referral.extract_structured` | After AI extraction |
+| `referral.apply` | After applying to consultation |
+| `referral.delete` | When referral document is deleted |
+
+**Log Format** (matches existing AuditLog model):
+```typescript
+await prisma.auditLog.create({
+  data: {
+    userId,
+    action: 'referral.apply',
+    resourceType: 'referral_document',
+    resourceId: referralId,
+    metadata: {
+      patientId,
+      referrerId,
+      consultationId,
+      fieldsApplied: ['patient', 'gp', 'referralContext']
+    }
+  }
+});
+```
+
+### 7. DOCX Support
+
+**Issue**: DOCX is listed in MIME types but implementation not specified.
+
+**Decision**: Defer DOCX support to post-MVP.
+
+**Implementation**:
+- Remove DOCX from `ALLOWED_REFERRAL_MIME_TYPES` constant
+- Add TODO comment for future implementation
+- UI will only accept PDF and TXT initially
+
+**Rationale**: DOCX parsing adds complexity (mammoth.js or similar), and most referral letters are PDFs. Can add later if needed.
+
+### 8. LLM Error Handling
+
+**Issue**: Need explicit handling for malformed LLM responses.
+
+**Decision**: Implement robust parsing with fallbacks:
+
+```typescript
+function parseReferralExtraction(jsonString: string): ReferralExtractedData {
+  // 1. Clean markdown code blocks
+  let cleaned = jsonString.trim();
+  cleaned = cleaned.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+
+  // 2. Try JSON parse
+  let data: unknown;
+  try {
+    data = JSON.parse(cleaned);
+  } catch (e) {
+    // Try to extract JSON from response
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new ExtractionError('No valid JSON found in LLM response');
+    }
+    data = JSON.parse(jsonMatch[0]);
+  }
+
+  // 3. Validate required structure
+  if (!data || typeof data !== 'object') {
+    throw new ExtractionError('LLM response is not an object');
+  }
+
+  const obj = data as Record<string, unknown>;
+
+  // 4. Parse with defaults for missing sections
+  return {
+    patient: parsePatientInfo(obj.patient) ?? { confidence: 0 },
+    gp: parseGPInfo(obj.gp) ?? { confidence: 0 },
+    referrer: obj.referrer ? parseReferrerInfo(obj.referrer) : undefined,
+    referralContext: parseReferralContext(obj.referralContext) ?? { confidence: 0 },
+    overallConfidence: typeof obj.overallConfidence === 'number'
+      ? obj.overallConfidence
+      : 0.5,
+    extractedAt: new Date().toISOString(),
+    modelUsed: 'claude-sonnet-4'
+  };
+}
+```
+
+**Error Categories**:
+- `PARSE_ERROR`: JSON parsing failed completely
+- `SCHEMA_ERROR`: JSON parsed but missing required fields
+- `LOW_CONFIDENCE`: Extracted but overall confidence < 0.3
+
 ## PHI Handling
 
 1. **Storage**: Referral documents stored encrypted in S3 (same as existing documents)
 2. **Extracted text**: Stored in database, same encryption at rest as patient data
 3. **LLM calls**: Use AWS Bedrock (data doesn't leave AWS, BAA compliant)
-4. **Audit**: Log all extraction and application events
+4. **Audit**: Log all extraction and application events (see section 6 above)
 5. **Retention**: Follow same retention policy as consultation documents
 
 ## Migration Plan

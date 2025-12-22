@@ -186,10 +186,10 @@ export interface ReferralDocumentWithUrl extends ReferralDocument {
 }
 
 // Allowed MIME types for referral uploads
+// Note: DOCX support deferred to post-MVP - most referral letters are PDFs
 export const ALLOWED_REFERRAL_MIME_TYPES = [
   'application/pdf',
   'text/plain',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
 ] as const;
 
 export type AllowedReferralMimeType = (typeof ALLOWED_REFERRAL_MIME_TYPES)[number];
