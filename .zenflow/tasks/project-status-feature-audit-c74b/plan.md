@@ -63,7 +63,8 @@ Create `docs/status/STATUS-20251222.md` with:
 
 ---
 
-### [ ] Step: Create docs/roadmap.md
+### [x] Step: Create docs/roadmap.md
+<!-- chat-id: 99b36ced-bdc1-4872-a902-651f8d7c3cae -->
 
 Create `docs/roadmap.md` with sections:
 - **MVP** - Core features
