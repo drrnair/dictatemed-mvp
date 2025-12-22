@@ -165,30 +165,35 @@ Implement LLM-powered structured data extraction from referral text.
 
 ---
 
-### [ ] Step 5: Upload UI Component
+### [x] Step 5: Upload UI Component
 <!-- chat-id: e5bd539a-b020-4c83-bc2b-b95a4b6b63e4 -->
 
 Create the referral upload component for the consultation form.
 
-**Files to create:**
-- `src/components/referral/ReferralUploader.tsx` - Upload UI
+**Files created:**
+- `src/components/referral/ReferralUploader.tsx` - Upload UI with drag-and-drop, file validation, progress tracking, and full extraction workflow
 - `src/components/referral/index.ts` - Component exports
-- `src/hooks/useReferralExtraction.ts` - Extraction workflow hook
+- `src/hooks/useReferralExtraction.ts` - Extraction workflow hook for managing state machine
+- `tests/unit/components/ReferralUploader.test.tsx` - 30 component tests
+- `tests/unit/hooks/useReferralExtraction.test.ts` - 22 hook tests
 
-**Tasks:**
-1. Create drag-and-drop upload zone (reuse patterns from DocumentUploader)
-2. Add file type validation (PDF, TXT, DOCX)
-3. Add file size validation (max 10MB)
-4. Implement upload progress tracking
-5. Implement extraction trigger after upload
-6. Create hook to manage extraction state machine
-7. Add loading and error states
+**Completed tasks:**
+1. Created drag-and-drop upload zone (reused patterns from NewUploadsSection) ✓
+2. Added file type validation (PDF, TXT - DOCX deferred as per spec) ✓
+3. Added file size validation (max 10MB) ✓
+4. Implemented upload progress tracking with visual progress bar ✓
+5. Implemented extraction trigger after upload (text extraction → structured extraction) ✓
+6. Created `useReferralExtraction` hook to manage extraction state machine ✓
+7. Added loading states (uploading, reading document, extracting details) ✓
+8. Added error states with manual entry fallback message ✓
+9. Added retry and remove functionality ✓
+10. Added keyboard accessibility (Enter/Space to trigger file dialog) ✓
+11. Wrote 52 unit tests (30 component + 22 hook) ✓
 
 **Verification:**
-- Component renders correctly
-- File validation works
-- Upload triggers extraction flow
-- Write component tests
+- `npm run lint` passes ✓
+- `npx tsc --noEmit` passes ✓
+- All 52 tests pass ✓
 
 ---
 
