@@ -98,6 +98,7 @@ Implement the core service and upload endpoint for referral documents.
 ---
 
 ### [ ] Step 3: Text Extraction
+<!-- chat-id: 85d22726-6a93-45ec-a5a7-97d96d3499d3 -->
 
 Implement PDF and text file content extraction.
 

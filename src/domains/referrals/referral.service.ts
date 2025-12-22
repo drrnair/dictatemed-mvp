@@ -6,8 +6,10 @@ import {
   getUploadUrl,
   getDownloadUrl,
   deleteObject,
+  getObjectContent,
 } from '@/infrastructure/s3/presigned-urls';
 import { logger } from '@/lib/logger';
+import pdfParse from 'pdf-parse';
 import type {
   ReferralDocument,
   ReferralDocumentStatus,
@@ -17,6 +19,7 @@ import type {
   ReferralListQuery,
   ReferralListResult,
   ReferralDocumentWithUrl,
+  TextExtractionResult,
 } from './referral.types';
 import {
   isAllowedMimeType,
