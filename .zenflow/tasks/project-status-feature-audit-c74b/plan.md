@@ -18,7 +18,8 @@ Do not make assumptions on important decisions — get clarification first.
 
 ## Workflow Steps
 
-### [ ] Step: Technical Specification
+### [x] Step: Technical Specification
+<!-- chat-id: f870b88d-e3bd-461d-b2e6-24c89e782492 -->
 
 Assess the task's difficulty, as underestimating it leads to poor outcomes.
 - easy: Straightforward implementation, trivial bug fix or feature
@@ -50,15 +51,34 @@ Save to `{@artifacts_path}/plan.md`. If the feature is trivial and doesn't warra
 
 ---
 
-### [ ] Step: Implementation
+### [ ] Step: Create STATUS-20251222.md
 
-Implement the task according to the technical specification and general engineering best practices.
+Create `docs/status/STATUS-20251222.md` with:
+- List of all routes and their purpose
+- API endpoint inventory
+- Key features implemented
+- Flows fully wired (UI + Backend + Auth0)
+- Known gaps and tech debt
 
-1. Break the task into steps where possible.
-2. Implement the required changes in the codebase.
-3. Add and run relevant tests and linters.
-4. Perform basic manual verification if applicable.
-5. After completion, write a report to `{@artifacts_path}/report.md` describing:
-   - What was implemented
-   - How the solution was tested
-   - The biggest issues or challenges encountered
+---
+
+### [ ] Step: Create docs/roadmap.md
+
+Create `docs/roadmap.md` with sections:
+- **MVP** - Core features
+- **v1.1** - Enhancements
+- **Backlog** - Future work
+
+Include subsections:
+- Done
+- In progress (open branches/PRs)
+- Not started
+
+---
+
+### [ ] Step: Commit and Create PR
+
+1. Commit `docs/status/STATUS-20251222.md` and `docs/roadmap.md`
+2. Push branch to origin
+3. Create PR into main
+4. Write report to `{@artifacts_path}/report.md`
