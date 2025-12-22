@@ -598,6 +598,7 @@ npm run lint
 ---
 
 ### [ ] Step 14: Analytics Aggregator (Internal)
+<!-- chat-id: a74bde31-b6c1-481f-bdf2-9518a5f93434 -->
 
 Implement the de-identified analytics aggregation pipeline.
 

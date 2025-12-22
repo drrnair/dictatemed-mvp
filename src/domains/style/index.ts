@@ -108,6 +108,26 @@ export {
   hasActiveHints,
 } from './prompt-conditioner';
 
+// Analytics aggregator for internal style insights
+export {
+  // Constants
+  MIN_CLINICIANS_FOR_AGGREGATION,
+  MIN_LETTERS_FOR_AGGREGATION,
+  MAX_PATTERNS_PER_CATEGORY,
+  MIN_PATTERN_FREQUENCY,
+  // PHI stripping
+  stripPHI,
+  containsPHI,
+  sanitizePhrase,
+  // Aggregation
+  aggregateStyleAnalytics,
+  // Retrieval
+  getStyleAnalytics,
+  getAnalyticsSummary,
+  // Scheduled job
+  runWeeklyAggregation,
+} from './analytics-aggregator';
+
 // Global style types (existing)
 export type {
   StyleProfile,
