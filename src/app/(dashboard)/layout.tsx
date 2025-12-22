@@ -18,7 +18,7 @@ export default async function DashboardLayout({
       {/* Skip to main content link for accessibility */}
       <a
         href="#main-content"
-        className="skip-link"
+        className="absolute -top-10 left-0 z-50 bg-primary px-4 py-2 text-primary-foreground transition-all focus:top-0"
       >
         Skip to main content
       </a>
