@@ -676,4 +676,162 @@ describe('ReferralUploader', () => {
       expect(clickSpy).toHaveBeenCalled();
     });
   });
+
+  describe('Retry logic', () => {
+    it('retries on 5xx server errors', async () => {
+      // First call: 500 error, Second call: success
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 500 }) // First attempt fails
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ id: 'ref-1', uploadUrl: 'https://s3.example.com/upload' }),
+        })
+        .mockResolvedValueOnce({ ok: true }) // S3 upload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Confirm
+        .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Text extract
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ extractedData: mockExtractedData }) });
+
+      render(<ReferralUploader {...defaultProps} />);
+
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const validFile = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+
+      Object.defineProperty(input, 'files', {
+        value: [validFile],
+        writable: false,
+      });
+
+      fireEvent.change(input);
+
+      await waitFor(() => {
+        expect(screen.getByText(/extraction complete/i)).toBeInTheDocument();
+      }, { timeout: 5000 });
+
+      // Should have called fetch at least twice for the create endpoint (retry)
+      expect(mockFetch).toHaveBeenCalledTimes(6);
+    });
+
+    it('retries on rate limit (429) errors', async () => {
+      // First call: 429 rate limit, Second call: success
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          headers: new Headers({ 'Retry-After': '1' }),
+        }) // First attempt rate limited
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ id: 'ref-1', uploadUrl: 'https://s3.example.com/upload' }),
+        })
+        .mockResolvedValueOnce({ ok: true }) // S3 upload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Confirm
+        .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Text extract
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ extractedData: mockExtractedData }) });
+
+      render(<ReferralUploader {...defaultProps} />);
+
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const validFile = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+
+      Object.defineProperty(input, 'files', {
+        value: [validFile],
+        writable: false,
+      });
+
+      fireEvent.change(input);
+
+      await waitFor(() => {
+        expect(screen.getByText(/extraction complete/i)).toBeInTheDocument();
+      }, { timeout: 5000 });
+
+      expect(mockFetch).toHaveBeenCalledTimes(6);
+    });
+
+    it('retries on network errors', async () => {
+      // First call: network error, Second call: success
+      mockFetch
+        .mockRejectedValueOnce(new Error('network error')) // First attempt network failure
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ id: 'ref-1', uploadUrl: 'https://s3.example.com/upload' }),
+        })
+        .mockResolvedValueOnce({ ok: true }) // S3 upload
+        .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Confirm
+        .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Text extract
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ extractedData: mockExtractedData }) });
+
+      render(<ReferralUploader {...defaultProps} />);
+
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const validFile = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+
+      Object.defineProperty(input, 'files', {
+        value: [validFile],
+        writable: false,
+      });
+
+      fireEvent.change(input);
+
+      await waitFor(() => {
+        expect(screen.getByText(/extraction complete/i)).toBeInTheDocument();
+      }, { timeout: 5000 });
+
+      expect(mockFetch).toHaveBeenCalledTimes(6);
+    });
+
+    it('fails after max retries exhausted', async () => {
+      // All 3 attempts fail with 500
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 500 })
+        .mockResolvedValueOnce({ ok: false, status: 500 })
+        .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'Server error' }) });
+
+      render(<ReferralUploader {...defaultProps} />);
+
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const validFile = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+
+      Object.defineProperty(input, 'files', {
+        value: [validFile],
+        writable: false,
+      });
+
+      fireEvent.change(input);
+
+      await waitFor(() => {
+        expect(screen.getByText(/server error/i)).toBeInTheDocument();
+      }, { timeout: 10000 });
+
+      // Should have made 3 attempts
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    it('does not retry on 4xx client errors', async () => {
+      // 400 error should not be retried
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: 'Bad request' }),
+      });
+
+      render(<ReferralUploader {...defaultProps} />);
+
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const validFile = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+
+      Object.defineProperty(input, 'files', {
+        value: [validFile],
+        writable: false,
+      });
+
+      fireEvent.change(input);
+
+      await waitFor(() => {
+        expect(screen.getByText(/bad request/i)).toBeInTheDocument();
+      });
+
+      // Should have only made 1 attempt (no retry for 4xx)
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
 });

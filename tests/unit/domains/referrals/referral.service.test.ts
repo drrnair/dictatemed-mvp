@@ -19,6 +19,18 @@ vi.mock('@/infrastructure/db/client', () => ({
       delete: vi.fn(),
       count: vi.fn(),
     },
+    patient: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+    },
+    referrer: {
+      create: vi.fn(),
+      findFirst: vi.fn(),
+    },
+    patientContact: {
+      create: vi.fn(),
+      findFirst: vi.fn(),
+    },
     auditLog: {
       create: vi.fn(),
     },
@@ -36,6 +48,15 @@ vi.mock('@/infrastructure/s3/presigned-urls', () => ({
 // Mock pdf-utils module
 vi.mock('@/domains/referrals/pdf-utils', () => ({
   extractPdfText: mockExtractPdfText,
+}));
+
+// Mock encryption functions
+const mockEncryptPatientData = vi.hoisted(() => vi.fn());
+const mockDecryptPatientData = vi.hoisted(() => vi.fn());
+
+vi.mock('@/infrastructure/db/encryption', () => ({
+  encryptPatientData: mockEncryptPatientData,
+  decryptPatientData: mockDecryptPatientData,
 }));
 
 // Mock logger
@@ -857,6 +878,486 @@ describe('referral.service', () => {
           }),
         }),
       });
+    });
+  });
+
+  describe('findMatchingPatient', () => {
+    beforeEach(() => {
+      mockDecryptPatientData.mockReset();
+    });
+
+    it('should return no match when no patients exist', async () => {
+      vi.mocked(prisma.patient.findMany).mockResolvedValue([]);
+
+      const result = await referralService.findMatchingPatient('practice-1', {
+        fullName: 'John Smith',
+        dateOfBirth: '1965-03-15',
+      });
+
+      expect(result.matchType).toBe('none');
+      expect(result.confidence).toBe('none');
+      expect(result.patientId).toBeUndefined();
+    });
+
+    it('should match by Medicare number (exact)', async () => {
+      const patients = [
+        { id: 'patient-1', encryptedData: 'encrypted-data-1' },
+      ];
+      mockDecryptPatientData.mockReturnValue({
+        name: 'John Smith',
+        dateOfBirth: '1965-03-15',
+        medicareNumber: '2345 6789 0 1',
+      });
+      vi.mocked(prisma.patient.findMany).mockResolvedValue(patients);
+
+      const result = await referralService.findMatchingPatient('practice-1', {
+        fullName: 'John Smith',
+        dateOfBirth: '1965-03-15',
+        medicare: '2345678901', // Without spaces
+      });
+
+      expect(result.matchType).toBe('medicare');
+      expect(result.confidence).toBe('exact');
+      expect(result.patientId).toBe('patient-1');
+      expect(result.patientName).toBe('John Smith');
+    });
+
+    it('should match by Medicare number (with spaces in input)', async () => {
+      const patients = [
+        { id: 'patient-1', encryptedData: 'encrypted-data-1' },
+      ];
+      mockDecryptPatientData.mockReturnValue({
+        name: 'John Smith',
+        dateOfBirth: '1965-03-15',
+        medicareNumber: '2345678901',
+      });
+      vi.mocked(prisma.patient.findMany).mockResolvedValue(patients);
+
+      const result = await referralService.findMatchingPatient('practice-1', {
+        medicare: '2345 6789 0 1', // With spaces
+      });
+
+      expect(result.matchType).toBe('medicare');
+      expect(result.confidence).toBe('exact');
+      expect(result.patientId).toBe('patient-1');
+    });
+
+    it('should match by name + DOB (case-insensitive)', async () => {
+      const patients = [
+        { id: 'patient-1', encryptedData: 'encrypted-data-1' },
+      ];
+      mockDecryptPatientData.mockReturnValue({
+        name: 'john smith',
+        dateOfBirth: '1965-03-15',
+      });
+      vi.mocked(prisma.patient.findMany).mockResolvedValue(patients);
+
+      const result = await referralService.findMatchingPatient('practice-1', {
+        fullName: 'JOHN SMITH',
+        dateOfBirth: '1965-03-15',
+      });
+
+      expect(result.matchType).toBe('name_dob');
+      expect(result.confidence).toBe('exact');
+      expect(result.patientId).toBe('patient-1');
+    });
+
+    it('should not match if only name matches (without DOB)', async () => {
+      const patients = [
+        { id: 'patient-1', encryptedData: 'encrypted-data-1' },
+      ];
+      mockDecryptPatientData.mockReturnValue({
+        name: 'John Smith',
+        dateOfBirth: '1965-03-15',
+      });
+      vi.mocked(prisma.patient.findMany).mockResolvedValue(patients);
+
+      const result = await referralService.findMatchingPatient('practice-1', {
+        fullName: 'John Smith',
+        // No DOB provided
+      });
+
+      expect(result.matchType).toBe('none');
+    });
+
+    it('should skip patients with decryption errors', async () => {
+      const patients = [
+        { id: 'patient-1', encryptedData: 'corrupted-data' },
+        { id: 'patient-2', encryptedData: 'valid-data' },
+      ];
+      mockDecryptPatientData
+        .mockImplementationOnce(() => { throw new Error('Decryption failed'); })
+        .mockReturnValueOnce({
+          name: 'John Smith',
+          dateOfBirth: '1965-03-15',
+        });
+      vi.mocked(prisma.patient.findMany).mockResolvedValue(patients);
+
+      const result = await referralService.findMatchingPatient('practice-1', {
+        fullName: 'John Smith',
+        dateOfBirth: '1965-03-15',
+      });
+
+      // Should still find match from second patient
+      expect(result.matchType).toBe('name_dob');
+      expect(result.patientId).toBe('patient-2');
+    });
+
+    it('should prefer Medicare match over name+DOB match for same patient', async () => {
+      // When a patient has both matching Medicare and name+DOB, Medicare match is returned
+      const patients = [
+        { id: 'patient-1', encryptedData: 'data-1' },
+      ];
+      mockDecryptPatientData.mockReturnValue({
+        name: 'John Smith',
+        dateOfBirth: '1965-03-15',
+        medicareNumber: '2345678901',
+      });
+      vi.mocked(prisma.patient.findMany).mockResolvedValue(patients);
+
+      const result = await referralService.findMatchingPatient('practice-1', {
+        fullName: 'John Smith',
+        dateOfBirth: '1965-03-15',
+        medicare: '2345678901',
+      });
+
+      // Medicare check happens before name+DOB check, so Medicare match is returned
+      expect(result.matchType).toBe('medicare');
+      expect(result.patientId).toBe('patient-1');
+    });
+
+    it('should return first matching patient (early exit)', async () => {
+      // The algorithm checks patients in order and returns the first match
+      const patients = [
+        { id: 'patient-1', encryptedData: 'data-1' },
+        { id: 'patient-2', encryptedData: 'data-2' },
+      ];
+      mockDecryptPatientData
+        .mockReturnValueOnce({
+          name: 'John Smith',
+          dateOfBirth: '1965-03-15',
+          // No Medicare - but matches by name+DOB
+        })
+        .mockReturnValueOnce({
+          name: 'John Smith',
+          dateOfBirth: '1965-03-15',
+          medicareNumber: '2345678901', // Has matching Medicare but is second
+        });
+      vi.mocked(prisma.patient.findMany).mockResolvedValue(patients);
+
+      const result = await referralService.findMatchingPatient('practice-1', {
+        fullName: 'John Smith',
+        dateOfBirth: '1965-03-15',
+        medicare: '2345678901',
+      });
+
+      // First patient matches by name+DOB, so it's returned
+      expect(result.matchType).toBe('name_dob');
+      expect(result.patientId).toBe('patient-1');
+    });
+  });
+
+  describe('applyReferralToConsultation', () => {
+    const mockExtractedDocument = {
+      ...mockReferralDocument,
+      id: 'ref-doc-extracted',
+      status: 'EXTRACTED' as ReferralDocumentStatus,
+      extractedData: { patient: {}, gp: {} },
+    };
+
+    beforeEach(() => {
+      mockEncryptPatientData.mockReset();
+      mockDecryptPatientData.mockReset();
+    });
+
+    it('should create new patient when no match found', async () => {
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.patient.findMany).mockResolvedValue([]);
+      mockEncryptPatientData.mockReturnValue('encrypted-patient-data');
+      vi.mocked(prisma.patient.create).mockResolvedValue({ id: 'new-patient-1' } as any);
+      vi.mocked(prisma.referrer.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.referrer.create).mockResolvedValue({ id: 'new-referrer-1' } as any);
+      vi.mocked(prisma.patientContact.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.patientContact.create).mockResolvedValue({ id: 'contact-1' } as any);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.applyReferralToConsultation(
+        'user-1',
+        'practice-1',
+        'ref-doc-extracted',
+        {
+          patient: {
+            fullName: 'John Smith',
+            dateOfBirth: '1965-03-15',
+          },
+          gp: {
+            fullName: 'Dr. Sarah Chen',
+            practiceName: 'Harbour Medical Centre',
+          },
+        }
+      );
+
+      expect(prisma.patient.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          practiceId: 'practice-1',
+          encryptedData: 'encrypted-patient-data',
+        }),
+      });
+      expect(result.patientId).toBe('new-patient-1');
+      expect(result.referrerId).toBe('new-referrer-1');
+      expect(result.status).toBe('APPLIED');
+    });
+
+    it('should use existing patient when match found', async () => {
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.patient.findMany).mockResolvedValue([
+        { id: 'existing-patient', encryptedData: 'data' },
+      ]);
+      mockDecryptPatientData.mockReturnValue({
+        name: 'John Smith',
+        dateOfBirth: '1965-03-15',
+        medicareNumber: '2345678901',
+      });
+      vi.mocked(prisma.referrer.findFirst).mockResolvedValue({ id: 'existing-referrer' } as any);
+      vi.mocked(prisma.patientContact.findFirst).mockResolvedValue({ id: 'existing-contact' } as any);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.applyReferralToConsultation(
+        'user-1',
+        'practice-1',
+        'ref-doc-extracted',
+        {
+          patient: {
+            fullName: 'John Smith',
+            dateOfBirth: '1965-03-15',
+            medicare: '2345678901',
+          },
+          gp: {
+            fullName: 'Dr. Sarah Chen',
+          },
+        }
+      );
+
+      expect(prisma.patient.create).not.toHaveBeenCalled();
+      expect(result.patientId).toBe('existing-patient');
+    });
+
+    it('should throw error when document not found', async () => {
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(null);
+
+      await expect(
+        referralService.applyReferralToConsultation('user-1', 'practice-1', 'non-existent', {
+          patient: { fullName: 'John Smith' },
+        })
+      ).rejects.toThrow('Referral document not found');
+    });
+
+    it('should throw error when document status is not EXTRACTED', async () => {
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
+        ...mockReferralDocument,
+        status: 'UPLOADED' as ReferralDocumentStatus,
+      });
+
+      await expect(
+        referralService.applyReferralToConsultation('user-1', 'practice-1', 'ref-doc-1', {
+          patient: { fullName: 'John Smith' },
+        })
+      ).rejects.toThrow('Cannot apply referral with status: UPLOADED');
+    });
+
+    it('should update document status to APPLIED', async () => {
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.patient.findMany).mockResolvedValue([]);
+      mockEncryptPatientData.mockReturnValue('encrypted');
+      vi.mocked(prisma.patient.create).mockResolvedValue({ id: 'patient-1' } as any);
+      vi.mocked(prisma.referrer.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.referrer.create).mockResolvedValue({ id: 'referrer-1' } as any);
+      vi.mocked(prisma.patientContact.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.patientContact.create).mockResolvedValue({ id: 'contact-1' } as any);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...mockExtractedDocument,
+        status: 'APPLIED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      await referralService.applyReferralToConsultation(
+        'user-1',
+        'practice-1',
+        'ref-doc-extracted',
+        {
+          patient: { fullName: 'John Smith' },
+          gp: { fullName: 'Dr. Chen' },
+        }
+      );
+
+      expect(prisma.referralDocument.update).toHaveBeenCalledWith({
+        where: { id: 'ref-doc-extracted' },
+        data: expect.objectContaining({
+          status: 'APPLIED',
+          patientId: 'patient-1',
+        }),
+      });
+    });
+
+    it('should create audit log with apply details', async () => {
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.patient.findMany).mockResolvedValue([]);
+      mockEncryptPatientData.mockReturnValue('encrypted');
+      vi.mocked(prisma.patient.create).mockResolvedValue({ id: 'patient-1' } as any);
+      vi.mocked(prisma.referrer.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.referrer.create).mockResolvedValue({ id: 'referrer-1' } as any);
+      vi.mocked(prisma.patientContact.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.patientContact.create).mockResolvedValue({ id: 'contact-1' } as any);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      await referralService.applyReferralToConsultation(
+        'user-1',
+        'practice-1',
+        'ref-doc-extracted',
+        {
+          patient: { fullName: 'John Smith' },
+          gp: { fullName: 'Dr. Chen' },
+        }
+      );
+
+      expect(prisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 'user-1',
+          action: 'referral.apply',
+          resourceType: 'referral_document',
+          resourceId: 'ref-doc-extracted',
+          metadata: expect.objectContaining({
+            patientId: 'patient-1',
+            referrerId: 'referrer-1',
+            patientCreated: true,
+          }),
+        }),
+      });
+    });
+
+    it('should create GP contact for patient', async () => {
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.patient.findMany).mockResolvedValue([]);
+      mockEncryptPatientData.mockReturnValue('encrypted');
+      vi.mocked(prisma.patient.create).mockResolvedValue({ id: 'patient-1' } as any);
+      vi.mocked(prisma.referrer.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.referrer.create).mockResolvedValue({ id: 'referrer-1' } as any);
+      vi.mocked(prisma.patientContact.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.patientContact.create).mockResolvedValue({ id: 'contact-1' } as any);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      await referralService.applyReferralToConsultation(
+        'user-1',
+        'practice-1',
+        'ref-doc-extracted',
+        {
+          patient: { fullName: 'John Smith' },
+          gp: {
+            fullName: 'Dr. Sarah Chen',
+            practiceName: 'Harbour Medical',
+            phone: '02 9876 5432',
+          },
+        }
+      );
+
+      expect(prisma.patientContact.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          patientId: 'patient-1',
+          type: 'GP',
+          fullName: 'Dr. Sarah Chen',
+          organisation: 'Harbour Medical',
+          phone: '02 9876 5432',
+        }),
+      });
+    });
+
+    it('should create referrer contact when provided', async () => {
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.patient.findMany).mockResolvedValue([]);
+      mockEncryptPatientData.mockReturnValue('encrypted');
+      vi.mocked(prisma.patient.create).mockResolvedValue({ id: 'patient-1' } as any);
+      vi.mocked(prisma.referrer.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.referrer.create).mockResolvedValue({ id: 'referrer-1' } as any);
+      vi.mocked(prisma.patientContact.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.patientContact.create).mockResolvedValue({ id: 'contact-1' } as any);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      await referralService.applyReferralToConsultation(
+        'user-1',
+        'practice-1',
+        'ref-doc-extracted',
+        {
+          patient: { fullName: 'John Smith' },
+          referrer: {
+            fullName: 'Dr. James Wilson',
+            specialty: 'Cardiologist',
+            organisation: 'Heart Centre',
+          },
+        }
+      );
+
+      expect(prisma.patientContact.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          patientId: 'patient-1',
+          type: 'REFERRER',
+          fullName: 'Dr. James Wilson',
+          role: 'Cardiologist',
+          organisation: 'Heart Centre',
+        }),
+      });
+    });
+
+    it('should find existing referrer by name', async () => {
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.patient.findMany).mockResolvedValue([]);
+      mockEncryptPatientData.mockReturnValue('encrypted');
+      vi.mocked(prisma.patient.create).mockResolvedValue({ id: 'patient-1' } as any);
+      vi.mocked(prisma.referrer.findFirst).mockResolvedValue({ id: 'existing-referrer' } as any);
+      vi.mocked(prisma.patientContact.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.patientContact.create).mockResolvedValue({ id: 'contact-1' } as any);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.applyReferralToConsultation(
+        'user-1',
+        'practice-1',
+        'ref-doc-extracted',
+        {
+          patient: { fullName: 'John Smith' },
+          gp: { fullName: 'Dr. Sarah Chen' },
+        }
+      );
+
+      expect(prisma.referrer.create).not.toHaveBeenCalled();
+      expect(result.referrerId).toBe('existing-referrer');
+    });
+
+    it('should not create referrer if no GP data provided', async () => {
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.patient.findMany).mockResolvedValue([]);
+      mockEncryptPatientData.mockReturnValue('encrypted');
+      vi.mocked(prisma.patient.create).mockResolvedValue({ id: 'patient-1' } as any);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockExtractedDocument);
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.applyReferralToConsultation(
+        'user-1',
+        'practice-1',
+        'ref-doc-extracted',
+        {
+          patient: { fullName: 'John Smith' },
+          // No gp data
+        }
+      );
+
+      expect(prisma.referrer.findFirst).not.toHaveBeenCalled();
+      expect(prisma.referrer.create).not.toHaveBeenCalled();
+      expect(result.referrerId).toBeUndefined();
     });
   });
 });

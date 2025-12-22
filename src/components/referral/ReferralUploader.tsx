@@ -76,23 +76,21 @@ const RETRY_CONFIG = {
   maxDelayMs: 10000,
 } as const;
 
-// Check if an error is retryable (network errors, server errors)
+// Check if an error is a retryable network-level error
+// Note: HTTP status-based retries (5xx, 429) are handled inline in fetchWithRetry
+// This function only handles exceptions thrown by fetch itself (network failures)
 function isRetryableError(error: unknown): boolean {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
-    // Network errors
-    if (message.includes('network') || message.includes('fetch failed')) {
-      return true;
-    }
-    // Server errors (5xx)
-    if (message.includes('500') || message.includes('502') ||
-        message.includes('503') || message.includes('504')) {
-      return true;
-    }
-    // Rate limiting - allow retry after delay
-    if (message.includes('rate limit')) {
-      return true;
-    }
+    // Network-level errors (connection failures, DNS issues, etc.)
+    return (
+      message.includes('network') ||
+      message.includes('fetch failed') ||
+      message.includes('failed to fetch') ||
+      message.includes('connection') ||
+      message.includes('timeout') ||
+      message.includes('aborted')
+    );
   }
   return false;
 }
@@ -121,6 +119,7 @@ export function ReferralUploader({
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Validate file before upload
   const validateFile = (file: File): string | null => {
@@ -150,13 +149,19 @@ export function ReferralUploader({
     async (
       url: string,
       options: RequestInit,
-      operationName: string
+      operationName: string,
+      signal?: AbortSignal
     ): Promise<Response> => {
       let lastError: Error | null = null;
 
       for (let attempt = 0; attempt < RETRY_CONFIG.maxRetries; attempt++) {
+        // Check if aborted before each attempt
+        if (signal?.aborted) {
+          throw new DOMException('Upload cancelled', 'AbortError');
+        }
+
         try {
-          const response = await fetch(url, options);
+          const response = await fetch(url, { ...options, signal });
 
           // Check for retryable server errors
           if (!response.ok && response.status >= 500 && attempt < RETRY_CONFIG.maxRetries - 1) {
@@ -175,6 +180,11 @@ export function ReferralUploader({
 
           return response;
         } catch (error) {
+          // Don't retry on abort
+          if (error instanceof DOMException && error.name === 'AbortError') {
+            throw error;
+          }
+
           lastError = error instanceof Error ? error : new Error('Network error');
 
           // Only retry on network errors
@@ -209,6 +219,10 @@ export function ReferralUploader({
         return;
       }
 
+      // Create AbortController for this upload session
+      abortControllerRef.current = new AbortController();
+      const { signal } = abortControllerRef.current;
+
       try {
         // Step 1: Create referral document and get upload URL
         updateState({ status: 'uploading', progress: PROGRESS.CREATE_STARTED });
@@ -224,7 +238,8 @@ export function ReferralUploader({
               sizeBytes: file.size,
             }),
           },
-          'Create document'
+          'Create document',
+          signal
         );
 
         if (!createResponse.ok) {
@@ -245,7 +260,8 @@ export function ReferralUploader({
               'Content-Type': file.type,
             },
           },
-          'Upload file'
+          'Upload file',
+          signal
         );
 
         if (!uploadResponse.ok) {
@@ -261,7 +277,8 @@ export function ReferralUploader({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sizeBytes: file.size }),
           },
-          'Confirm upload'
+          'Confirm upload',
+          signal
         );
 
         if (!confirmResponse.ok) {
@@ -275,7 +292,8 @@ export function ReferralUploader({
         const textResponse = await fetchWithRetry(
           `/api/referrals/${referralId}/extract-text`,
           { method: 'POST' },
-          'Extract text'
+          'Extract text',
+          signal
         );
 
         if (!textResponse.ok) {
@@ -292,7 +310,8 @@ export function ReferralUploader({
         const extractResponse = await fetchWithRetry(
           `/api/referrals/${referralId}/extract-structured`,
           { method: 'POST' },
-          'Extract details'
+          'Extract details',
+          signal
         );
 
         if (!extractResponse.ok) {
@@ -317,6 +336,11 @@ export function ReferralUploader({
 
         onExtractionComplete?.(referralId, extractResult.extractedData);
       } catch (error) {
+        // Silently ignore AbortError (user cancelled)
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+
         const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
         updateState({
           status: 'error',
@@ -329,6 +353,9 @@ export function ReferralUploader({
           description: `${errorMessage} You can still complete the form manually.`,
           variant: 'destructive',
         });
+      } finally {
+        // Clear the abort controller reference
+        abortControllerRef.current = null;
       }
     },
     [onExtractionComplete, fetchWithRetry]
@@ -388,6 +415,11 @@ export function ReferralUploader({
 
   // Remove file and reset state
   const handleRemove = useCallback(() => {
+    // Abort any in-flight requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     setState({ status: 'idle', progress: 0 });
     onRemove?.();
   }, [onRemove]);

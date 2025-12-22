@@ -13,19 +13,20 @@ vi.mock('@/infrastructure/bedrock', () => ({
   },
 }));
 
-vi.mock('@/lib/logger', () => ({
-  logger: {
-    child: () => ({
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-    }),
+// Create a chainable mock logger that supports nested child() calls
+const createMockLogger = () => {
+  const mockLogger: Record<string, unknown> = {
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
     debug: vi.fn(),
-  },
+  };
+  mockLogger.child = vi.fn(() => mockLogger);
+  return mockLogger;
+};
+
+vi.mock('@/lib/logger', () => ({
+  logger: createMockLogger(),
 }));
 
 beforeAll(async () => {
