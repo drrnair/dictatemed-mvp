@@ -182,8 +182,7 @@ npm run test -- subspecialty-profile
 
 ---
 
-### [ ] Step 5: Learning Pipeline Service
-<!-- chat-id: a8e4f65b-8a8b-46e9-a85a-daff43f6c365 -->
+### [x] Step 5: Learning Pipeline Service
 
 Implement the background learning pipeline that updates profiles from edits.
 
@@ -204,6 +203,19 @@ Implement the background learning pipeline that updates profiles from edits.
 ```bash
 npm run test -- learning-pipeline
 ```
+
+**Completed:** Full learning pipeline implemented in `learning-pipeline.ts`:
+- **Constants**: `MIN_EDITS_FOR_ANALYSIS` (5), `ANALYSIS_INTERVAL` (10), `MAX_EDITS_PER_ANALYSIS` (50), `MIN_CONFIDENCE_THRESHOLD` (0.5)
+- **Edit Recording**: `recordSubspecialtyEdits()` uses diff-analyzer to record section-level edits with subspecialty context
+- **Analysis Triggering**: `shouldTriggerAnalysis()` checks thresholds, `queueStyleAnalysis()` queues/runs analysis
+- **Style Analysis**: `runStyleAnalysis()` uses Claude (Sonnet) to detect patterns from edits with structured JSON output
+- **Profile Merging**: `mergeProfileAnalysis()` with weighted averaging based on edit count, confidence-based preference selection
+- **Learning Strength**: `applyLearningStrength()` scales preferences by 0.0-1.0 factor, interpolates section inclusion towards neutral
+- **Seed Letters**: `analyzeSeedLetters()` bootstraps profiles from sample letters
+- **Utility**: `getEditCountSinceLastAnalysis()` for tracking progress
+- 30 unit tests covering all functions, edge cases, mocked Claude responses
+- All functions exported from `index.ts`
+- TypeScript and ESLint checks pass
 
 ---
 
