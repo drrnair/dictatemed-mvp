@@ -13,6 +13,7 @@ import {
   type HallucinationFlag,
 } from '@/components/letters/VerificationPanel';
 import { DifferentialView } from '@/components/letters/DifferentialView';
+import { SendLetterDialog } from '@/components/letters/SendLetterDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -23,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Send } from 'lucide-react';
 
 // Proper type definitions instead of `any`
 interface SourceAnchor {
@@ -92,7 +94,9 @@ interface LetterReviewClientProps {
   currentUser: {
     id: string;
     name: string;
+    email: string;
     role: string;
+    subspecialties?: string[];
   };
 }
 
@@ -111,6 +115,7 @@ export function LetterReviewClient({
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
 
   // Immutable state for extracted values and flags - cast from unknown[]
   const [localExtractedValues, setLocalExtractedValues] = useState<ExtractedValue[]>(
