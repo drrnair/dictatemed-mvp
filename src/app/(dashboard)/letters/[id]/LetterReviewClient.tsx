@@ -132,6 +132,9 @@ export function LetterReviewClient({
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
+  const [sendHistory, setSendHistory] = useState<SendHistoryItem[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Immutable state for extracted values and flags - cast from unknown[]
   const [localExtractedValues, setLocalExtractedValues] = useState<ExtractedValue[]>(
@@ -241,6 +244,47 @@ export function LetterReviewClient({
       }
     };
   }, []);
+
+  // Fetch send history for approved letters
+  const fetchSendHistory = useCallback(async () => {
+    if (letter.status !== 'APPROVED') return;
+
+    setIsLoadingHistory(true);
+    try {
+      const response = await fetch(`/api/letters/${letter.id}/sends`);
+      if (response.ok) {
+        const data = await response.json();
+        setSendHistory(data.sends || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch send history:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [letter.id, letter.status]);
+
+  // Fetch history on mount for approved letters
+  useEffect(() => {
+    fetchSendHistory();
+  }, [fetchSendHistory]);
+
+  // Handle retry for failed sends
+  const handleRetrySend = useCallback(
+    async (sendId: string) => {
+      const response = await fetch(`/api/letters/${letter.id}/sends/${sendId}/retry`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Retry failed');
+      }
+
+      // Refresh send history after retry
+      await fetchSendHistory();
+    },
+    [letter.id, fetchSendHistory]
+  );
 
   // Fetch source data when active anchor changes
   useEffect(() => {
@@ -559,6 +603,20 @@ export function LetterReviewClient({
                   Approved on {new Date(letter.approvedAt).toLocaleDateString()}
                 </Badge>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowHistory(!showHistory)}
+                  className={showHistory ? 'bg-muted' : ''}
+                >
+                  <History className="mr-2 h-4 w-4" />
+                  {showHistory ? 'Hide History' : 'View History'}
+                  {sendHistory.length > 0 && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      {sendHistory.length}
+                    </Badge>
+                  )}
+                </Button>
+                <Button
                   size="sm"
                   onClick={() => setShowSendDialog(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -622,7 +680,7 @@ export function LetterReviewClient({
           )}
 
           {/* Letter editor */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className={`${showHistory && isReadOnly ? 'flex-[2]' : 'flex-1'} overflow-y-auto p-6`}>
             <LetterEditor
               letterId={letter.id}
               initialContent={content}
@@ -633,6 +691,23 @@ export function LetterReviewClient({
               onSave={handleSaveDraft}
             />
           </div>
+
+          {/* Send History Panel (for approved letters) */}
+          {isReadOnly && showHistory && (
+            <div className="flex-1 overflow-y-auto border-l border-border bg-muted/30 p-6">
+              {isLoadingHistory ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : (
+                <SendHistory
+                  letterId={letter.id}
+                  history={sendHistory}
+                  onRetry={handleRetrySend}
+                />
+              )}
+            </div>
+          )}
         </main>
 
         {/* Source Panel (right, slides in) */}
@@ -728,10 +803,10 @@ export function LetterReviewClient({
         subspecialty={currentUser.subspecialties?.[0]}
         userEmail={currentUser.email}
         userName={currentUser.name}
-        onSendComplete={(result) => {
-          if (result.failed === 0) {
-            router.refresh();
-          }
+        onSendComplete={() => {
+          // Refresh history and show the history panel
+          fetchSendHistory();
+          setShowHistory(true);
         }}
       />
     </div>
