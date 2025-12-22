@@ -538,9 +538,19 @@ export function LetterReviewClient({
             )}
 
             {isReadOnly && letter.approvedAt && (
-              <Badge variant="verified" className="text-sm">
-                Approved on {new Date(letter.approvedAt).toLocaleDateString()}
-              </Badge>
+              <>
+                <Badge variant="verified" className="text-sm">
+                  Approved on {new Date(letter.approvedAt).toLocaleDateString()}
+                </Badge>
+                <Button
+                  size="sm"
+                  onClick={() => setShowSendDialog(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Letter
+                </Button>
+              </>
             )}
           </div>
         </div>
