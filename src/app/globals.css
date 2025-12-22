@@ -139,8 +139,3 @@
 :focus-visible {
   @apply outline-2 outline-offset-2 outline-ring;
 }
-
-/* Skip to main content link */
-.skip-link {
-  @apply absolute -top-10 left-0 z-50 bg-primary px-4 py-2 text-primary-foreground transition-all focus:top-0;
-}
