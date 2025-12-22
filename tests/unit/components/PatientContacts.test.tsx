@@ -461,24 +461,16 @@ describe('PatientContacts', () => {
         expect(screen.getByText('Dr. Jane Smith')).toBeInTheDocument();
       });
 
-      // Find delete button (X icon)
-      const buttons = screen.getAllByRole('button');
-      const deleteButton = buttons.find(btn =>
-        btn.classList.contains('text-muted-foreground') ||
-        btn.querySelector('svg')
-      );
+      // Click delete button using aria-label
+      const deleteButton = screen.getByRole('button', { name: /delete dr\. jane smith/i });
+      fireEvent.click(deleteButton);
 
-      const lastButton = buttons[buttons.length - 1];
-      if (deleteButton && lastButton) {
-        fireEvent.click(lastButton);
-
-        await waitFor(() => {
-          expect(mockFetch).toHaveBeenCalledWith(
-            '/api/contacts/contact-1',
-            expect.objectContaining({ method: 'DELETE' })
-          );
-        });
-      }
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          '/api/contacts/contact-1',
+          expect.objectContaining({ method: 'DELETE' })
+        );
+      });
     });
 
     it('removes contact from list after successful delete', async () => {
@@ -499,9 +491,8 @@ describe('PatientContacts', () => {
         expect(screen.getByText('Dr. Jane Smith')).toBeInTheDocument();
       });
 
-      // Find and click delete button
-      const buttons = screen.getAllByRole('button');
-      const deleteButton = buttons[buttons.length - 1]!; // Last button in each row is delete
+      // Click delete button using aria-label
+      const deleteButton = screen.getByRole('button', { name: /delete dr\. jane smith/i });
       fireEvent.click(deleteButton);
 
       await waitFor(() => {
@@ -579,8 +570,8 @@ describe('PatientContacts', () => {
         expect(screen.getByText('Dr. Jane Smith')).toBeInTheDocument();
       });
 
-      const buttons = screen.getAllByRole('button');
-      const deleteButton = buttons[buttons.length - 1]!;
+      // Click delete button using aria-label
+      const deleteButton = screen.getByRole('button', { name: /delete dr\. jane smith/i });
       fireEvent.click(deleteButton);
 
       await waitFor(() => {
