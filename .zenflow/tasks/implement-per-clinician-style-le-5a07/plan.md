@@ -261,7 +261,8 @@ npm run test -- prompt-conditioner
 
 ---
 
-### [ ] Step 7: Integrate Learning with Letter Approval
+### [x] Step 7: Integrate Learning with Letter Approval
+<!-- chat-id: 51fda98d-3481-446e-9bb1-70c37aa0fd87 -->
 
 Wire the learning pipeline into the letter approval workflow.
 
@@ -281,6 +282,17 @@ Wire the learning pipeline into the letter approval workflow.
 npm run test
 npm run typecheck
 ```
+
+**Completed:** Full integration with letter approval workflow implemented:
+- **Imports Added**: `recordSubspecialtyEdits`, `shouldTriggerAnalysis`, `queueStyleAnalysis` from learning-pipeline
+- **Template Relation**: Added template include with subspecialties in letter fetch query
+- **Subspecialty Inference**: `inferSubspecialty()` helper function with fallback chain: explicit letter subspecialty → first template subspecialty → null
+- **Non-blocking Learning**: `recordSubspecialtyStyleEdits()` runs after transaction completes in fire-and-forget pattern with error logging
+- **Audit Logging**: Added `subspecialty` field to approval audit log metadata
+- **Style Service Update**: Updated `recordEdit()` in style.service.ts to accept optional subspecialty parameter
+- **Analysis Triggering**: Automatically checks threshold and queues analysis if minimum edits reached
+- All 260 tests pass
+- TypeScript compilation passes
 
 ---
 

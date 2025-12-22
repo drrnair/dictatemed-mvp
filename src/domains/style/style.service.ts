@@ -1,6 +1,7 @@
 // src/domains/style/style.service.ts
 // Service for managing physician writing style learning and application
 
+import type { Subspecialty } from '@prisma/client';
 import { prisma } from '@/infrastructure/db/client';
 import { logger } from '@/lib/logger';
 import { analyzeEditsForStyle, mergeStyleAnalysis, analyzeLettersForStyle } from './style-analyzer';
@@ -15,13 +16,21 @@ import type {
 /**
  * Record an edit made by a physician for style learning.
  * Stores the before/after text and computes metadata for analysis.
+ *
+ * This is the legacy global style recording function. For per-subspecialty
+ * style learning, use `recordSubspecialtyEdits` from `learning-pipeline.ts`
+ * which is automatically called during letter approval.
+ *
+ * The optional `subspecialty` parameter allows associating edits with a
+ * specific subspecialty for the new per-subspecialty learning system.
  */
 export async function recordEdit(
   userId: string,
   letterId: string,
   beforeText: string,
   afterText: string,
-  sectionType?: 'greeting' | 'history' | 'examination' | 'impression' | 'plan' | 'closing' | 'other'
+  sectionType?: 'greeting' | 'history' | 'examination' | 'impression' | 'plan' | 'closing' | 'other',
+  subspecialty?: Subspecialty
 ): Promise<StyleEdit> {
   const log = logger.child({ action: 'recordEdit', userId, letterId });
 
@@ -43,6 +52,7 @@ export async function recordEdit(
       sectionType: sectionType ?? 'other',
       characterChanges,
       wordChanges,
+      subspecialty: subspecialty ?? null,
     },
   });
 
@@ -51,6 +61,7 @@ export async function recordEdit(
     editType,
     characterChanges,
     wordChanges,
+    subspecialty: subspecialty ?? null,
   });
 
   // Create audit log
@@ -65,6 +76,7 @@ export async function recordEdit(
         editType,
         characterChanges,
         wordChanges,
+        subspecialty: subspecialty ?? null,
       },
     },
   });
