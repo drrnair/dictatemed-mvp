@@ -401,27 +401,53 @@ Create send history display for letter detail page.
 
 ---
 
-### [ ] Step 11: Patient Contact Management UI
-<!-- chat-id: 68b3de89-46e5-4973-bdfc-f54f89fd873a -->
+### [x] Step 11: Patient Contact Management UI
 
 Create UI for managing patient contacts.
 
-**Files to create:**
-- `src/components/consultation/PatientContacts.tsx`
-- `src/components/consultation/ContactForm.tsx`
+**Files already existed (verified and integrated):**
+- `src/components/consultation/PatientContacts.tsx` - Full CRUD implementation with:
+  - Contact list with type badges (GP, REFERRER, SPECIALIST, OTHER)
+  - Full card mode and compact mode display
+  - Inline add/edit forms
+  - Delete functionality with loading states
+  - Error handling and display
+  - Default contact indicators
+  - `onContactSelect` callback for integration with send dialog
+- `src/components/consultation/ContactForm.tsx` - Contact add/edit form with:
+  - Contact type selection (GP, Referrer, Specialist, Other)
+  - Full name, organisation, role/title fields
+  - Contact methods: email, phone, fax, address
+  - Preferred channel selection (Email, Fax, Post, Secure Messaging)
+  - Default contact checkbox
+  - Form validation (required fields, email format)
+  - Loading and error states
 
-**Files to modify:**
-- Integration point in consultation context or patient detail
+**Files modified:**
+- `src/components/consultation/ConsultationContextForm.tsx` - Added collapsible "Manage Patient Contacts" section that appears after patient is selected
+- `src/components/consultation/index.ts` - Added exports for `PatientContacts`, `ContactForm`, and `ContactFormData` type
+- `tests/setup.ts` - Added ResizeObserver, pointer capture, and scrollIntoView mocks for Radix UI components
 
-**Tasks:**
-1. Create contact list component with CRUD actions
-2. Create contact form (add/edit) with validation
-3. Add to appropriate location (consultation context form or patient view)
-4. Handle inline editing or modal form
+**Files created:**
+- `tests/unit/components/PatientContacts.test.tsx` - 27 comprehensive unit tests covering:
+  - Loading states
+  - Empty states
+  - Contact list display (full and compact modes)
+  - CRUD operations (create, update, delete)
+  - Error handling
+  - API calls verification
+- `tests/unit/components/ContactForm.test.tsx` - 30 comprehensive unit tests covering:
+  - Initial render and field display
+  - Form validation (required fields, email format, contact methods)
+  - Form submission with data trimming
+  - Initial data population
+  - Loading states
+  - Accessibility
 
 **Verification:**
-- Manual test CRUD operations
-- Verify validation errors display
+- `npm run typecheck` passes
+- `npm run lint` passes (no errors)
+- `npm run test` passes (314 tests total, 57 new component tests)
 
 ---
 
