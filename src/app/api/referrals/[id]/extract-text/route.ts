@@ -49,9 +49,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     log.info('Starting text extraction', {
       documentId: id,
       userId: session.user.id,
+      practiceId: session.user.practiceId,
     });
 
-    const result = await extractTextFromDocument(session.user.id, id);
+    const result = await extractTextFromDocument(
+      session.user.id,
+      session.user.practiceId,
+      id
+    );
 
     log.info('Text extraction complete', {
       documentId: id,

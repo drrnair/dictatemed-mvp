@@ -198,6 +198,7 @@ Create the referral upload component for the consultation form.
 ---
 
 ### [ ] Step 6: Review UI Component
+<!-- chat-id: 150b83d9-bd5a-4d7d-b18d-276609c37be1 -->
 
 Create the review/edit panel for extracted data.
 

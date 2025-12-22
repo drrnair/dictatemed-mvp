@@ -117,6 +117,7 @@ export interface TextExtractionResult {
   status: 'TEXT_EXTRACTED';
   textLength: number;
   preview: string; // First ~500 chars
+  isShortText?: boolean; // True if text length < MIN_EXTRACTED_TEXT_LENGTH (100 chars)
 }
 
 // Result from structured extraction

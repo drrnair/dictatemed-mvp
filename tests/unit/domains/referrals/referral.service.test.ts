@@ -587,7 +587,7 @@ describe('referral.service', () => {
     `;
 
     it('should extract text from PDF successfully', async () => {
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(mockReferralDocument);
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
       vi.mocked(s3.getObjectContent).mockResolvedValue({
         content: Buffer.from('fake pdf content'),
         contentType: 'application/pdf',
@@ -603,8 +603,11 @@ describe('referral.service', () => {
       });
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
-      const result = await referralService.extractTextFromDocument('user-1', 'ref-doc-1');
+      const result = await referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1');
 
+      expect(prisma.referralDocument.findFirst).toHaveBeenCalledWith({
+        where: { id: 'ref-doc-1', practiceId: 'practice-1' },
+      });
       expect(s3.getObjectContent).toHaveBeenCalledWith(mockReferralDocument.s3Key);
       expect(mockExtractPdfText).toHaveBeenCalled();
       expect(prisma.referralDocument.update).toHaveBeenCalledWith({
@@ -617,6 +620,7 @@ describe('referral.service', () => {
       expect(result.status).toBe('TEXT_EXTRACTED');
       expect(result.textLength).toBeGreaterThan(0);
       expect(result.preview).toBeDefined();
+      expect(result.isShortText).toBe(false);
     });
 
     it('should extract text from plain text file', async () => {

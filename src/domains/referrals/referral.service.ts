@@ -506,13 +506,14 @@ const MIN_EXTRACTED_TEXT_LENGTH = 100;
  */
 export async function extractTextFromDocument(
   userId: string,
+  practiceId: string,
   documentId: string
 ): Promise<TextExtractionResult> {
-  const log = logger.child({ userId, documentId, action: 'extractTextFromDocument' });
+  const log = logger.child({ userId, practiceId, documentId, action: 'extractTextFromDocument' });
 
-  // Get the document
-  const document = await prisma.referralDocument.findUnique({
-    where: { id: documentId },
+  // Get the document with practice-level authorization check
+  const document = await prisma.referralDocument.findFirst({
+    where: { id: documentId, practiceId },
   });
 
   if (!document) {
@@ -546,11 +547,12 @@ export async function extractTextFromDocument(
       throw new Error(`Unsupported MIME type for text extraction: ${document.mimeType}`);
     }
 
-    // Trim and normalize whitespace
-    extractedText = extractedText.trim().replace(/\s+/g, ' ').replace(/ +\n/g, '\n');
+    // Trim and normalize whitespace (preserve paragraph structure)
+    extractedText = extractedText.trim().replace(/[ \t]+/g, ' ').replace(/ *\n+ */g, '\n');
 
     // Check if we got meaningful text
-    if (extractedText.length < MIN_EXTRACTED_TEXT_LENGTH) {
+    const isShortText = extractedText.length < MIN_EXTRACTED_TEXT_LENGTH;
+    if (isShortText) {
       log.warn('Extracted text is very short', {
         textLength: extractedText.length,
         minRequired: MIN_EXTRACTED_TEXT_LENGTH,
@@ -581,6 +583,7 @@ export async function extractTextFromDocument(
         metadata: {
           textLength: extractedText.length,
           mimeType: document.mimeType,
+          isShortText,
         },
       },
     });
@@ -593,6 +596,7 @@ export async function extractTextFromDocument(
       status: 'TEXT_EXTRACTED',
       textLength: extractedText.length,
       preview,
+      isShortText,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown extraction error';
@@ -607,6 +611,20 @@ export async function extractTextFromDocument(
         processingError: `Text extraction failed: ${errorMessage}`,
         processedAt: new Date(),
         updatedAt: new Date(),
+      },
+    });
+
+    // Create audit log for failed extraction
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'referral.extract_text_failed',
+        resourceType: 'referral_document',
+        resourceId: documentId,
+        metadata: {
+          error: errorMessage,
+          mimeType: document.mimeType,
+        },
       },
     });
 
