@@ -128,30 +128,40 @@ Implement PDF and text file content extraction.
 
 ---
 
-### [ ] Step 4: AI Structured Extraction
+### [x] Step 4: AI Structured Extraction
+<!-- chat-id: dbec3de0-0c4d-4308-ab9e-2bff79cec30b -->
 
 Implement LLM-powered structured data extraction from referral text.
 
-**Files to create:**
-- `src/domains/referrals/extractors/referral-letter.ts` - Prompt and parser
-- `src/domains/referrals/referral-extraction.service.ts` - Extraction orchestration
-- `src/app/api/referrals/[id]/extract-structured/route.ts` - Endpoint
+**Files created:**
+- `src/domains/referrals/extractors/referral-letter.ts` - Prompt and parser with `REFERRAL_EXTRACTION_PROMPT`, `parseReferralExtraction()`, `ReferralExtractionError`, `hasLowConfidence()`, `getLowConfidenceSections()`
+- `src/domains/referrals/referral-extraction.service.ts` - Extraction orchestration with `extractStructuredData()`, `reextractStructuredData()`, `getExtractedData()`
+- `src/app/api/referrals/[id]/extract-structured/route.ts` - POST endpoint for structured extraction
+- `tests/unit/domains/referrals/referral-extraction.test.ts` - 25 unit tests
 
-**Tasks:**
-1. Design extraction prompt (see spec.md)
-2. Implement prompt template with JSON schema
-3. Implement response parser with validation
-4. Implement confidence score calculation
-5. Create extraction service calling Bedrock
-6. Create POST `/api/referrals/:id/extract-structured` endpoint
-7. Update document status to `EXTRACTED`
+**Files modified:**
+- `src/domains/referrals/index.ts` - Added exports for extraction service and extractor
+
+**Completed tasks:**
+1. Designed extraction prompt with JSON schema for patient, GP, referrer, and referral context ✓
+2. Implemented prompt template with detailed instructions and confidence scoring rules ✓
+3. Implemented response parser with robust validation:
+   - Handles markdown code blocks
+   - Extracts JSON from text with extra commentary
+   - Parses dates in multiple formats (ISO, DD/MM/YYYY, DD-MM-YYYY)
+   - Handles missing fields with defaults
+   - Clamps confidence scores to 0-1 range
+4. Implemented confidence score calculation (weighted average) ✓
+5. Created extraction service calling Bedrock with retry logic ✓
+6. Created POST `/api/referrals/:id/extract-structured` endpoint ✓
+7. Updates document status to `EXTRACTED` on success, `FAILED` on error ✓
+8. Added audit logging with token usage and confidence metrics ✓
+9. Wrote 25 unit tests for parser and service ✓
 
 **Verification:**
-- Test with synthetic referral text
-- Verify JSON output structure
-- Verify confidence scores
-- `npm run lint` passes
-- Write unit tests for parser
+- `npm run lint` passes ✓
+- `npx tsc --noEmit` passes ✓
+- All 60 unit tests pass (35 service + 25 extraction) ✓
 
 ---
 
