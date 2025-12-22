@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const query = {
-      status: searchParams.get('status') as ReferralDocumentStatus | undefined,
+      status: searchParams.get('status') ?? undefined,
       patientId: searchParams.get('patientId') ?? undefined,
       consultationId: searchParams.get('consultationId') ?? undefined,
       page: searchParams.get('page') ?? undefined,

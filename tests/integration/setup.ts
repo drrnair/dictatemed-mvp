@@ -14,20 +14,22 @@ vi.mock('@/infrastructure/bedrock', () => ({
 }));
 
 // Create a chainable mock logger that supports nested child() calls
-const createMockLogger = () => {
-  const mockLogger: Record<string, unknown> = {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
+// The mock is created inside the factory to ensure fresh mocks are created
+// after vi.clearAllMocks() is called
+vi.mock('@/lib/logger', () => {
+  const createMockLogger = (): Record<string, unknown> => {
+    const mockLogger: Record<string, unknown> = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    // child() returns a new mock logger instance that also supports chaining
+    mockLogger.child = vi.fn(() => createMockLogger());
+    return mockLogger;
   };
-  mockLogger.child = vi.fn(() => mockLogger);
-  return mockLogger;
-};
-
-vi.mock('@/lib/logger', () => ({
-  logger: createMockLogger(),
-}));
+  return { logger: createMockLogger() };
+});
 
 beforeAll(async () => {
   // Integration tests use mocked Prisma (no actual database)
