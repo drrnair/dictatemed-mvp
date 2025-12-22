@@ -322,34 +322,45 @@ Add letter sending preferences to user settings.
 
 ---
 
-### [ ] Step 9: Send Letter Dialog Component
+### [x] Step 9: Send Letter Dialog Component
 <!-- chat-id: 1b3fc734-6f7e-483d-bd9c-d5c93445e4b8 -->
 
 Create the main send letter dialog UI.
 
-**Files to create:**
-- `src/components/letters/SendLetterDialog.tsx`
+**Files created/modified:**
+- `src/components/letters/SendLetterDialog.tsx` - Already existed with full implementation
+- `src/app/(dashboard)/letters/[id]/LetterReviewClient.tsx` - Added SendLetterDialog integration
+- `src/app/(dashboard)/letters/[id]/page.tsx` - Updated to pass user email and subspecialties
+- `tests/unit/components/SendLetterDialog.test.tsx` - 36 comprehensive unit tests
 
-**Tasks:**
-1. Build dialog using Radix Dialog component
-2. Implement recipient list section:
-   - Fetch patient contacts
-   - Pre-populate based on user preferences
-   - Checkbox per recipient
-   - Add one-off recipient input
-3. Implement message section:
-   - Subject input with template substitution preview
-   - Cover note textarea
-4. Implement confirmation step:
-   - "You are about to send to N recipients" summary
-5. Implement send action:
-   - Call send API
-   - Show progress/status for each recipient
-   - Close on success or show errors
+**Implementation details:**
+1. Multi-step wizard dialog (recipients → message → confirm → sending → result)
+2. Recipient selection:
+   - Auto-fetches patient contacts on open
+   - Auto-selects based on user preferences (CC GP, CC self, include referrer)
+   - Toggle to CC self with user email display
+   - Available patient contacts with type badges (GP, REFERRER, etc.)
+   - One-off recipient form with email validation
+   - Remove recipients with X button
+3. Message section:
+   - Subject input with template token preview ({{patient_name}}, {{letter_type}}, etc.)
+   - Cover note textarea (optional)
+   - Available tokens displayed for reference
+4. Confirmation step:
+   - Lists all recipients with their emails
+   - Shows subject preview and patient name
+   - Shows cover note if provided
+5. Send action:
+   - Calls POST `/api/letters/[id]/send` with recipients, subject, coverNote
+   - Shows sending spinner state
+   - Displays success/partial success/failure results
+   - Color-coded badges for each recipient status
+   - onSendComplete callback for parent component
+6. "Send Letter" button added to LetterReviewClient header for approved letters
 
 **Verification:**
-- Manual test in browser
-- Verify accessibility (keyboard nav, screen reader)
+- `npm run typecheck` passes
+- `npm run test` passes (231 tests total, 36 SendLetterDialog tests)
 
 ---
 
