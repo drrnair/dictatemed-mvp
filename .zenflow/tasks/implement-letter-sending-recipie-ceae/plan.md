@@ -289,32 +289,36 @@ Create API endpoints for letter sending.
 
 ---
 
-### [ ] Step 8: User Settings - Letter Sending Preferences
+### [x] Step 8: User Settings - Letter Sending Preferences
 <!-- chat-id: bef5df5c-120e-4f93-9dba-b37e4f7143e1 -->
 
 Add letter sending preferences to user settings.
 
-**Files to create:**
-- `src/app/api/user/settings/letters/route.ts` - GET, PUT
-- `src/app/(dashboard)/settings/letters/page.tsx`
-- `src/components/settings/LetterSendingSettings.tsx`
+**Files created/verified:**
+- `src/app/api/user/settings/letters/route.ts` - GET, PUT endpoints
+- `src/app/(dashboard)/settings/letters/page.tsx` - Settings page
+- `src/components/settings/LetterSendingSettings.tsx` - Settings form component
+- `src/app/(dashboard)/settings/page.tsx` - Already has "Letter Sending" link
+- `tests/integration/api/letter-settings.test.ts` - 17 integration tests
 
-**Files to modify:**
-- `src/app/(dashboard)/settings/page.tsx` - Add "Letters" link
-
-**Tasks:**
-1. Define settings schema in validation file
-2. Implement GET/PUT endpoints for letter settings
-3. Create settings form component:
-   - Checkboxes for default recipients (CC GP, CC self, include referrer)
-   - Subject template input with token help text
-   - Cover note textarea
-4. Add settings page with form
-5. Add link to settings index
+**Implementation details:**
+1. API endpoints (`/api/user/settings/letters`):
+   - GET: Returns preferences merged with defaults
+   - PUT: Updates preferences with Zod validation
+   - Stores in user.settings JSON as `letterSending` object
+   - Max 500 chars for subject template, 2000 for cover note
+2. Settings form component:
+   - Checkboxes for: CC GP, CC self, include referrer
+   - Subject template input with available tokens display
+   - Cover note textarea with max length
+   - Loading, saving, success, and error states
+3. Types defined in `src/domains/letters/sending.types.ts`:
+   - `LetterSendingPreferences` interface
+   - `DEFAULT_SENDING_PREFERENCES` constant
 
 **Verification:**
-- Verify settings persist on reload
-- `npm run test` passes
+- `npm run typecheck` passes
+- `npm run test:integration` passes (48 tests, 17 for letter settings)
 
 ---
 
