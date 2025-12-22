@@ -274,8 +274,7 @@ export async function updateStyleProfile(
 
   const mapped = mapPrismaProfileToDomain(profile);
 
-  // Invalidate and update cache
-  invalidateCachedProfile(userId, subspecialty);
+  // Update cache (overwrites any existing entry)
   setCachedProfile(userId, subspecialty, mapped);
 
   // Create audit log
@@ -409,8 +408,7 @@ export async function adjustLearningStrength(
 
   const mapped = mapPrismaProfileToDomain(profile);
 
-  // Update cache
-  invalidateCachedProfile(userId, subspecialty);
+  // Update cache (overwrites any existing entry)
   setCachedProfile(userId, subspecialty, mapped);
 
   // Create audit log
@@ -615,7 +613,11 @@ export async function hasEnoughEditsForAnalysis(
 
 /**
  * Get the profile that should be used for generation.
- * Implements fallback: subspecialty → global → null
+ * Implements fallback chain: subspecialty → global → default
+ *
+ * 1. If subspecialty is provided and a subspecialty profile exists with edits analyzed, use it
+ * 2. Otherwise, check if user has a global style profile (User.styleProfile)
+ * 3. If no profiles exist, return null (default behavior)
  */
 export async function getEffectiveProfile(
   userId: string,
@@ -629,8 +631,81 @@ export async function getEffectiveProfile(
     }
   }
 
-  // No subspecialty profile available
+  // Try global profile from User.styleProfile
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { styleProfile: true },
+  });
+
+  if (user?.styleProfile) {
+    const globalProfile = user.styleProfile as Record<string, unknown>;
+
+    // Check if global profile has been analyzed (has meaningful data)
+    if (globalProfile.lastAnalyzedAt && globalProfile.totalEditsAnalyzed) {
+      // Convert global profile to SubspecialtyStyleProfile format for consistent handling
+      const convertedProfile = convertGlobalToSubspecialtyFormat(userId, globalProfile, subspecialty);
+      if (convertedProfile) {
+        return { profile: convertedProfile, source: 'global' };
+      }
+    }
+  }
+
+  // No usable profile available - use defaults
   return { profile: null, source: 'default' };
+}
+
+/**
+ * Convert a global style profile (from User.styleProfile) to the SubspecialtyStyleProfile format.
+ * This allows the prompt conditioner to handle both types uniformly.
+ */
+function convertGlobalToSubspecialtyFormat(
+  userId: string,
+  globalProfile: Record<string, unknown>,
+  subspecialty?: Subspecialty
+): SubspecialtyStyleProfile | null {
+  // Validate that the global profile has the expected structure
+  if (!globalProfile.confidence || typeof globalProfile.totalEditsAnalyzed !== 'number') {
+    return null;
+  }
+
+  const confidence = globalProfile.confidence as Record<string, number>;
+
+  return {
+    id: 'global', // Synthetic ID to indicate this is from global profile
+    userId,
+    subspecialty: subspecialty ?? ('GENERAL_CARDIOLOGY' as Subspecialty), // Use provided or default
+    sectionOrder: (globalProfile.sectionOrder as string[]) ?? [],
+    sectionInclusion: {},
+    sectionVerbosity: {},
+    phrasingPreferences: {},
+    avoidedPhrases: {},
+    vocabularyMap: (globalProfile.vocabularyPreferences as VocabularyMap) ?? {},
+    terminologyLevel: null,
+    greetingStyle: (globalProfile.greetingStyle as SubspecialtyStyleProfile['greetingStyle']) ?? null,
+    closingStyle: (globalProfile.closingStyle as SubspecialtyStyleProfile['closingStyle']) ?? null,
+    signoffTemplate: (globalProfile.closingExamples as string[])?.[0] ?? null,
+    formalityLevel: (globalProfile.formalityLevel as SubspecialtyStyleProfile['formalityLevel']) ?? null,
+    paragraphStructure: (globalProfile.paragraphStructure as SubspecialtyStyleProfile['paragraphStructure']) ?? null,
+    confidence: {
+      sectionOrder: confidence.paragraphStructure ?? 0,
+      sectionInclusion: 0,
+      sectionVerbosity: 0,
+      phrasingPreferences: 0,
+      avoidedPhrases: 0,
+      vocabularyMap: 0.5, // Assume moderate confidence if vocabulary exists
+      terminologyLevel: 0,
+      greetingStyle: confidence.greetingStyle ?? 0,
+      closingStyle: confidence.closingStyle ?? 0,
+      signoffTemplate: confidence.closingStyle ?? 0,
+      formalityLevel: confidence.formalityLevel ?? 0,
+      paragraphStructure: confidence.paragraphStructure ?? 0,
+    },
+    learningStrength: 1.0, // Full strength for global profile
+    totalEditsAnalyzed: globalProfile.totalEditsAnalyzed as number,
+    lastAnalyzedAt: globalProfile.lastAnalyzedAt ? new Date(globalProfile.lastAnalyzedAt as string) : null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
 }
 
 /**
