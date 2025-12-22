@@ -323,10 +323,24 @@ Add comprehensive error handling and polish the UX.
    - "Referral applied" toast on successful apply
 7. Error toasts added for all failure modes ✓
 
+**Additional improvements (code review feedback):**
+8. Added 5 unit tests for retry logic covering:
+   - Retry on 5xx server errors
+   - Retry on rate limit (429) with Retry-After header
+   - Retry on network errors
+   - Failure after max retries exhausted
+   - No retry on 4xx client errors
+9. Simplified `isRetryableError()` to only handle network-level errors ✓
+   - HTTP status retries (5xx, 429) handled inline in fetchWithRetry
+   - Network error detection more robust (timeout, connection, aborted)
+10. Added AbortController support for canceling in-flight retries ✓
+    - User can remove file during upload/extraction to cancel requests
+    - Prevents state inconsistencies from completed requests after cancel
+
 **Verification:**
 - `npm run lint` passes ✓
 - `npx tsc --noEmit` passes ✓
-- All 826 unit tests pass ✓
+- All 850 unit tests pass ✓ (36 ReferralUploader tests including 5 new retry tests)
 
 ---
 
@@ -383,6 +397,7 @@ Write comprehensive tests and update documentation.
 ---
 
 ### [ ] Step 10: Final Report
+<!-- chat-id: 86571cf4-cc93-4065-8c88-9f4f09e188b1 -->
 
 Write completion report to `report.md`:
 - What was implemented
