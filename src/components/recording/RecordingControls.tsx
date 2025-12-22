@@ -26,7 +26,7 @@ export function RecordingControls({
   disabled = false,
 }: RecordingControlsProps) {
   return (
-    <div className="flex items-center justify-center gap-4">
+    <div className="flex items-center justify-center gap-space-4">
       {/* Main recording button */}
       {state === 'idle' || state === 'stopped' ? (
         <button
@@ -35,14 +35,14 @@ export function RecordingControls({
           disabled={disabled}
           className={cn(
             'flex h-20 w-20 items-center justify-center rounded-full',
-            'bg-destructive text-destructive-foreground',
-            'transition-all hover:scale-105 hover:bg-destructive/90',
-            'focus:outline-none focus:ring-4 focus:ring-destructive/50',
+            'bg-clinical-critical text-white',
+            'transition-all duration-150 hover:scale-105 hover:bg-clinical-critical/90 active:scale-100',
+            'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-clinical-critical/50',
             disabled && 'cursor-not-allowed opacity-50'
           )}
           aria-label="Start recording"
         >
-          <Circle className="h-8 w-8 fill-current" />
+          <Circle className="h-8 w-8 fill-current" aria-hidden="true" />
         </button>
       ) : (
         <>
@@ -54,16 +54,16 @@ export function RecordingControls({
             className={cn(
               'flex h-14 w-14 items-center justify-center rounded-full',
               'bg-secondary text-secondary-foreground',
-              'transition-all hover:scale-105 hover:bg-secondary/80',
-              'focus:outline-none focus:ring-4 focus:ring-secondary/50',
+              'transition-all duration-150 hover:scale-105 hover:bg-secondary/80 active:scale-100',
+              'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-secondary/50',
               disabled && 'cursor-not-allowed opacity-50'
             )}
             aria-label={state === 'paused' ? 'Resume recording' : 'Pause recording'}
           >
             {state === 'paused' ? (
-              <Play className="h-6 w-6" />
+              <Play className="h-6 w-6" aria-hidden="true" />
             ) : (
-              <Pause className="h-6 w-6" />
+              <Pause className="h-6 w-6" aria-hidden="true" />
             )}
           </button>
 
@@ -74,15 +74,15 @@ export function RecordingControls({
             disabled={disabled}
             className={cn(
               'flex h-20 w-20 items-center justify-center rounded-full',
-              'bg-destructive text-destructive-foreground',
-              'transition-all hover:scale-105 hover:bg-destructive/90',
-              'focus:outline-none focus:ring-4 focus:ring-destructive/50',
+              'bg-clinical-critical text-white',
+              'transition-all duration-150 hover:scale-105 hover:bg-clinical-critical/90 active:scale-100',
+              'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-clinical-critical/50',
               state === 'recording' && 'animate-pulse',
               disabled && 'cursor-not-allowed opacity-50'
             )}
             aria-label="Stop recording"
           >
-            <Square className="h-8 w-8 fill-current" />
+            <Square className="h-8 w-8 fill-current" aria-hidden="true" />
           </button>
         </>
       )}
