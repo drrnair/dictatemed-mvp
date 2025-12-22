@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 import {
   ALLOWED_REFERRAL_MIME_TYPES,
   MAX_REFERRAL_FILE_SIZE,
@@ -68,6 +69,45 @@ const PROGRESS = {
   COMPLETE: 100,           // All done
 } as const;
 
+// Retry configuration for transient failures
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  initialDelayMs: 1000,
+  maxDelayMs: 10000,
+} as const;
+
+// Check if an error is retryable (network errors, server errors)
+function isRetryableError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    // Network errors
+    if (message.includes('network') || message.includes('fetch failed')) {
+      return true;
+    }
+    // Server errors (5xx)
+    if (message.includes('500') || message.includes('502') ||
+        message.includes('503') || message.includes('504')) {
+      return true;
+    }
+    // Rate limiting - allow retry after delay
+    if (message.includes('rate limit')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Calculate exponential backoff delay
+function getRetryDelay(attempt: number): number {
+  const delay = RETRY_CONFIG.initialDelayMs * Math.pow(2, attempt);
+  return Math.min(delay, RETRY_CONFIG.maxDelayMs);
+}
+
+// Sleep helper
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function ReferralUploader({
   onExtractionComplete,
   onRemove,
@@ -105,6 +145,54 @@ export function ReferralUploader({
     setState((prev) => ({ ...prev, ...updates }));
   };
 
+  // Fetch with retry logic for transient failures
+  const fetchWithRetry = useCallback(
+    async (
+      url: string,
+      options: RequestInit,
+      operationName: string
+    ): Promise<Response> => {
+      let lastError: Error | null = null;
+
+      for (let attempt = 0; attempt < RETRY_CONFIG.maxRetries; attempt++) {
+        try {
+          const response = await fetch(url, options);
+
+          // Check for retryable server errors
+          if (!response.ok && response.status >= 500 && attempt < RETRY_CONFIG.maxRetries - 1) {
+            const delay = getRetryDelay(attempt);
+            await sleep(delay);
+            continue;
+          }
+
+          // Check for rate limiting
+          if (response.status === 429 && attempt < RETRY_CONFIG.maxRetries - 1) {
+            const retryAfter = response.headers.get('Retry-After');
+            const delay = retryAfter ? parseInt(retryAfter, 10) * 1000 : getRetryDelay(attempt);
+            await sleep(delay);
+            continue;
+          }
+
+          return response;
+        } catch (error) {
+          lastError = error instanceof Error ? error : new Error('Network error');
+
+          // Only retry on network errors
+          if (isRetryableError(error) && attempt < RETRY_CONFIG.maxRetries - 1) {
+            const delay = getRetryDelay(attempt);
+            await sleep(delay);
+            continue;
+          }
+
+          throw lastError;
+        }
+      }
+
+      throw lastError ?? new Error(`${operationName} failed after ${RETRY_CONFIG.maxRetries} attempts`);
+    },
+    []
+  );
+
   // Handle file processing
   const processFile = useCallback(
     async (file: File) => {
@@ -113,6 +201,11 @@ export function ReferralUploader({
       const validationError = validateFile(file);
       if (validationError) {
         updateState({ status: 'error', error: validationError });
+        toast({
+          title: 'Invalid file',
+          description: validationError,
+          variant: 'destructive',
+        });
         return;
       }
 
@@ -120,73 +213,93 @@ export function ReferralUploader({
         // Step 1: Create referral document and get upload URL
         updateState({ status: 'uploading', progress: PROGRESS.CREATE_STARTED });
 
-        const createResponse = await fetch('/api/referrals', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filename: file.name,
-            mimeType: file.type,
-            sizeBytes: file.size,
-          }),
-        });
+        const createResponse = await fetchWithRetry(
+          '/api/referrals',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filename: file.name,
+              mimeType: file.type,
+              sizeBytes: file.size,
+            }),
+          },
+          'Create document'
+        );
 
         if (!createResponse.ok) {
           const errorData = await createResponse.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to create referral document');
+          throw new Error(errorData.error || 'Failed to prepare upload. Please try again.');
         }
 
         const { id: referralId, uploadUrl } = await createResponse.json();
         updateState({ referralId, progress: PROGRESS.CREATE_COMPLETE });
 
         // Step 2: Upload file to S3
-        const uploadResponse = await fetch(uploadUrl, {
-          method: 'PUT',
-          body: file,
-          headers: {
-            'Content-Type': file.type,
+        const uploadResponse = await fetchWithRetry(
+          uploadUrl,
+          {
+            method: 'PUT',
+            body: file,
+            headers: {
+              'Content-Type': file.type,
+            },
           },
-        });
+          'Upload file'
+        );
 
         if (!uploadResponse.ok) {
-          throw new Error('Failed to upload file to storage');
+          throw new Error('Failed to upload file. Please check your connection and try again.');
         }
         updateState({ progress: PROGRESS.UPLOAD_COMPLETE });
 
         // Step 3: Confirm upload
-        const confirmResponse = await fetch(`/api/referrals/${referralId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sizeBytes: file.size }),
-        });
+        const confirmResponse = await fetchWithRetry(
+          `/api/referrals/${referralId}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sizeBytes: file.size }),
+          },
+          'Confirm upload'
+        );
 
         if (!confirmResponse.ok) {
-          throw new Error('Failed to confirm upload');
+          throw new Error('Failed to confirm upload. Please try again.');
         }
         updateState({ progress: PROGRESS.CONFIRM_COMPLETE });
 
         // Step 4: Extract text from document
         updateState({ status: 'extracting_text', progress: PROGRESS.TEXT_EXTRACT_START });
 
-        const textResponse = await fetch(`/api/referrals/${referralId}/extract-text`, {
-          method: 'POST',
-        });
+        const textResponse = await fetchWithRetry(
+          `/api/referrals/${referralId}/extract-text`,
+          { method: 'POST' },
+          'Extract text'
+        );
 
         if (!textResponse.ok) {
           const errorData = await textResponse.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to extract text from document');
+          throw new Error(
+            errorData.error || 'Could not read the document. Please ensure it contains readable text.'
+          );
         }
         updateState({ progress: PROGRESS.TEXT_EXTRACT_DONE });
 
         // Step 5: AI structured extraction
         updateState({ status: 'extracting_data', progress: PROGRESS.DATA_EXTRACT_START });
 
-        const extractResponse = await fetch(`/api/referrals/${referralId}/extract-structured`, {
-          method: 'POST',
-        });
+        const extractResponse = await fetchWithRetry(
+          `/api/referrals/${referralId}/extract-structured`,
+          { method: 'POST' },
+          'Extract details'
+        );
 
         if (!extractResponse.ok) {
           const errorData = await extractResponse.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to extract structured data');
+          throw new Error(
+            errorData.error || 'Could not extract details from document. You can still enter details manually.'
+          );
         }
 
         const extractResult = await extractResponse.json();
@@ -196,15 +309,29 @@ export function ReferralUploader({
           extractedData: extractResult.extractedData,
         });
 
+        // Success toast
+        toast({
+          title: 'Details extracted',
+          description: 'Review the extracted information below.',
+        });
+
         onExtractionComplete?.(referralId, extractResult.extractedData);
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
         updateState({
           status: 'error',
-          error: error instanceof Error ? error.message : 'An unexpected error occurred',
+          error: errorMessage,
+        });
+
+        // Error toast with helpful guidance
+        toast({
+          title: 'Extraction failed',
+          description: `${errorMessage} You can still complete the form manually.`,
+          variant: 'destructive',
         });
       }
     },
-    [onExtractionComplete]
+    [onExtractionComplete, fetchWithRetry]
   );
 
   // Handle file selection

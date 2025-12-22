@@ -72,17 +72,26 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     if (message.includes('Cannot extract text from document with status')) {
-      return NextResponse.json({ error: message }, { status: 400 });
+      return NextResponse.json(
+        { error: 'This document has already been processed or is not ready for text extraction.' },
+        { status: 400 }
+      );
     }
 
     if (message.includes('Unsupported MIME type')) {
-      return NextResponse.json({ error: message }, { status: 400 });
+      return NextResponse.json(
+        { error: 'This file type is not supported. Please upload a PDF or text file.' },
+        { status: 400 }
+      );
     }
 
     log.error('Text extraction failed', {}, error instanceof Error ? error : undefined);
 
     return NextResponse.json(
-      { error: 'Text extraction failed', details: message },
+      {
+        error: 'Could not read the document. The file may be corrupted or password-protected.',
+        details: 'Try uploading a different version of the document, or enter the details manually.',
+      },
       { status: 500 }
     );
   }

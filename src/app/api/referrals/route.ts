@@ -93,7 +93,10 @@ export async function POST(request: NextRequest) {
     log.error('Failed to create referral document', {}, error instanceof Error ? error : undefined);
 
     return NextResponse.json(
-      { error: 'Failed to create referral document' },
+      {
+        error: 'Unable to prepare document upload. Please try again.',
+        details: 'If the problem persists, refresh the page and try again.',
+      },
       { status: 500 }
     );
   }
@@ -140,7 +143,7 @@ export async function GET(request: NextRequest) {
     log.error('Failed to list referral documents', {}, error instanceof Error ? error : undefined);
 
     return NextResponse.json(
-      { error: 'Failed to list referral documents' },
+      { error: 'Unable to load referral documents. Please refresh the page.' },
       { status: 500 }
     );
   }

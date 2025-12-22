@@ -18,6 +18,7 @@ import {
   ReferralUploader,
   ReferralReviewPanel,
 } from '@/components/referral';
+import { toast } from '@/hooks/use-toast';
 import type { PatientSummary, ReferrerInfo, CCRecipientInfo } from '@/domains/consultation';
 import type { LetterType } from '@prisma/client';
 import type { ReferralExtractedData, ApplyReferralInput } from '@/domains/referrals';
@@ -115,8 +116,22 @@ export function ConsultationContextForm({
         });
 
         setShowReviewPanel(false);
+
+        // Success toast
+        toast({
+          title: 'Referral applied',
+          description: 'Patient and referrer details have been added to the form.',
+        });
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to apply referral';
         console.error('Failed to apply referral:', error);
+
+        // Error toast
+        toast({
+          title: 'Could not apply referral',
+          description: `${errorMessage} Please try again or enter details manually.`,
+          variant: 'destructive',
+        });
         // Keep review panel open on error
       } finally {
         setIsApplying(false);

@@ -115,13 +115,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     if (message.includes('Cannot apply referral with status')) {
-      return NextResponse.json({ error: message }, { status: 400 });
+      return NextResponse.json(
+        { error: 'This referral data cannot be applied. It may have already been used or is still being processed.' },
+        { status: 400 }
+      );
     }
 
     log.error('Failed to apply referral', {}, error instanceof Error ? error : undefined);
 
     return NextResponse.json(
-      { error: 'Failed to apply referral data' },
+      {
+        error: 'Could not apply the referral data. Please try again.',
+        details: 'If the problem persists, you can enter the details manually.',
+      },
       { status: 500 }
     );
   }

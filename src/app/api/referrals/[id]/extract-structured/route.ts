@@ -72,15 +72,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     if (message.includes('Cannot extract structured data from document with status')) {
-      return NextResponse.json({ error: message }, { status: 400 });
+      return NextResponse.json(
+        { error: 'This document needs text extraction first, or has already been processed.' },
+        { status: 400 }
+      );
     }
 
     if (message.includes('Document has no extracted text content')) {
-      return NextResponse.json({ error: message }, { status: 400 });
+      return NextResponse.json(
+        { error: 'No readable text was found in this document. Please check the file or enter details manually.' },
+        { status: 400 }
+      );
     }
 
     if (message.includes('Document text is too long for extraction')) {
-      return NextResponse.json({ error: message }, { status: 400 });
+      return NextResponse.json(
+        { error: 'This document is too long for automatic extraction. Please enter the key details manually.' },
+        { status: 400 }
+      );
     }
 
     // Handle parsing errors
@@ -88,8 +97,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       log.error('LLM response parsing failed', {}, error instanceof Error ? error : undefined);
       return NextResponse.json(
         {
-          error: 'Failed to extract structured data from document',
-          details: 'The document could not be parsed. Try re-uploading or using manual entry.'
+          error: 'Could not extract details from this document.',
+          details: 'The document format may not be compatible. Please enter details manually.'
         },
         { status: 500 }
       );
@@ -98,7 +107,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     log.error('Structured extraction failed', {}, error instanceof Error ? error : undefined);
 
     return NextResponse.json(
-      { error: 'Structured extraction failed', details: message },
+      {
+        error: 'Could not extract details from this document.',
+        details: 'Please try again or enter the details manually.',
+      },
       { status: 500 }
     );
   }
