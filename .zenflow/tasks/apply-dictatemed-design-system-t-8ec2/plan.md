@@ -191,7 +191,7 @@ Apply design system to the main dashboard/today screen.
 
 ---
 
-### [ ] Step: Record Screen
+### [x] Step: Record Screen
 <!-- chat-id: 31a28e09-e5b0-4c6b-a132-2321e5b7ce4e -->
 
 Apply design system to the consultation/recording screen.
@@ -203,6 +203,45 @@ Apply design system to the consultation/recording screen.
 - Sections expand/collapse
 - Status badges visible
 - Form elements accessible
+
+**Completed:**
+- Updated page-level layout:
+  - Changed main container to `space-y-space-4` design token
+  - Changed header wrapper to semantic `<header>` element
+  - Used `text-heading-1` for main heading
+  - Used `text-body-sm` for subtitle with `mt-space-1` spacing
+- Updated status badges (online/offline, pending sync):
+  - Changed to `gap-space-2` and `gap-space-1` spacing tokens
+  - Used `text-caption` typography token
+  - Changed online badge to use `clinical-verified` color (green)
+  - Added `role="status"` and `aria-live="polite"` for accessibility
+  - Added `aria-hidden="true"` to decorative icons
+  - Added `min-h-touch` to sync button for 44px touch target
+  - Added `focus-visible` ring for keyboard navigation
+  - Added `aria-label` for screen readers
+- Updated `CollapsibleSection` component:
+  - Changed card to use `border-border/60` and `shadow-card`
+  - Added `transition-all duration-150` for smooth interactions
+  - Used design system spacing (`p-space-4`, `gap-space-3`, `pb-space-6`, `px-space-6`)
+  - Added `min-h-touch` for 44px touch targets
+  - Added `focus-visible` ring for keyboard navigation
+  - Added `tabIndex`, `role="button"`, `aria-expanded`, `aria-disabled` for accessibility
+  - Added keyboard support (`Enter` and `Space` keys)
+  - Used `text-heading-3` for section titles
+  - Used `text-body-sm` for subtitles
+  - Changed "Complete" badge to use `clinical-verified` color
+  - Added `aria-hidden="true"` to decorative icons
+- Updated Recording section card:
+  - Changed to semantic `<section>` element with `aria-labelledby`
+  - Used `p-space-6` spacing and `shadow-card`
+  - Used `text-heading-2` for section title
+  - Changed validation warning to use `clinical-warning` color
+  - Added `role="alert"` for accessibility
+- Updated tip section:
+  - Used `gap-space-2` and `px-space-1` spacing tokens
+  - Used `text-caption` typography token
+  - Added `aria-hidden="true"` to decorative icon
+- Verified: `npm run lint` passes, `npm run build` compiles successfully
 
 ---
 
