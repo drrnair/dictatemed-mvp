@@ -287,6 +287,7 @@ export function SubspecialtyStyleCard({
                   variant="ghost"
                   size="sm"
                   disabled={resetting}
+                  aria-label="Reset style profile"
                 >
                   {resetting ? (
                     <Loader2 className="h-3 w-3 animate-spin" />

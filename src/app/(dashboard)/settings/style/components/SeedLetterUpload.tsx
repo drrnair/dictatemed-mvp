@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import type { Subspecialty } from '@prisma/client';
 import type { StyleSeedLetter } from '@/domains/style/subspecialty-profile.types';
 import { formatSubspecialtyLabel, getAllSubspecialties } from '@/hooks/useStyleProfiles';
@@ -65,6 +65,16 @@ export function SeedLetterUpload({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const availableSubspecialties = getAllSubspecialties();
 
@@ -165,10 +175,14 @@ export function SeedLetterUpload({
       if (result) {
         setSuccess('Seed letter uploaded successfully! Style analysis has been triggered.');
         setLetterText('');
-        // Close dialog after short delay
-        setTimeout(() => {
+        // Close dialog after short delay, clearing any existing timeout first
+        if (closeTimeoutRef.current) {
+          clearTimeout(closeTimeoutRef.current);
+        }
+        closeTimeoutRef.current = setTimeout(() => {
           setIsOpen(false);
           setSuccess(null);
+          closeTimeoutRef.current = null;
         }, 2000);
       } else {
         setError('Failed to upload seed letter. Please try again.');
@@ -193,6 +207,11 @@ export function SeedLetterUpload({
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
+      // Clear any pending auto-close timeout when manually closing
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
       // Reset state when closing
       setLetterText('');
       setError(null);

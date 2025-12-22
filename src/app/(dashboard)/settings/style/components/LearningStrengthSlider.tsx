@@ -46,7 +46,7 @@ export function LearningStrengthSlider({
     setIsDragging(true);
   }, []);
 
-  const handleMouseUp = useCallback(async () => {
+  const saveValue = useCallback(async () => {
     setIsDragging(false);
     if (localValue !== value) {
       setIsSaving(true);
@@ -57,6 +57,22 @@ export function LearningStrengthSlider({
       }
     }
   }, [localValue, value, onChange]);
+
+  // Handle mouse/touch release
+  const handleMouseUp = useCallback(() => {
+    saveValue();
+  }, [saveValue]);
+
+  // Handle focus to track keyboard interaction
+  const handleFocus = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
+  // Handle blur for keyboard accessibility (arrow keys)
+  const handleBlur = useCallback(() => {
+    // Save on blur if value changed (covers keyboard navigation)
+    saveValue();
+  }, [saveValue]);
 
   // Get label based on value
   const getStrengthLabel = (val: number): string => {
@@ -93,6 +109,13 @@ export function LearningStrengthSlider({
           onMouseUp={handleMouseUp}
           onTouchStart={handleMouseDown}
           onTouchEnd={handleMouseUp}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          aria-label="Learning strength"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={displayValue}
+          aria-valuetext={`${getStrengthLabel(localValue)} (${displayValue}%)`}
           disabled={disabled || isSaving}
           className={cn(
             'w-full h-2 rounded-full appearance-none cursor-pointer',
