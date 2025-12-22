@@ -245,7 +245,8 @@ Apply design system to the consultation/recording screen.
 
 ---
 
-### [ ] Step: Letter Review Screen
+### [x] Step: Letter Review Screen
+<!-- chat-id: fc531a52-605b-4a78-aca6-53c4d3872b35 -->
 
 Apply design system to the letter review/edit interface.
 
@@ -259,6 +260,55 @@ Apply design system to the letter review/edit interface.
 - Two-panel layout works
 - Verification checkboxes functional
 - Source panel slides correctly
+
+**Completed:**
+- Updated `LetterReviewClient.tsx`:
+  - Changed header to use `border-border/60`, `shadow-card`, and design system spacing (`px-space-6`, `py-space-4`, `gap-space-4`)
+  - Used `text-heading-2` typography for patient name heading
+  - Used `text-body-sm` and `text-caption` for metadata
+  - Added 44px touch targets (`min-h-touch`) to all buttons
+  - Changed approve button to use `bg-clinical-verified` color
+  - Added progress bar with `role="progressbar"` and ARIA attributes
+  - Changed verification warning to use `text-clinical-warning`
+  - Used `bg-background-subtle` for main content area
+  - Updated approval dialog with design system spacing and clinical colors
+  - Added `role="status"` and `aria-live="polite"` to save indicator
+  - Added `aria-hidden="true"` to decorative SVG icons
+- Updated `VerificationPanel.tsx`:
+  - Changed header to use design system spacing (`p-space-4`, `mb-space-3`, `gap-space-2`)
+  - Used `text-heading-3` for panel heading
+  - Added 44px touch targets to Verify All button
+  - Added progress bar with `role="progressbar"` and ARIA attributes
+  - Used `text-body-sm` for progress text
+  - Updated hallucination flags section with design system spacing
+  - Used `text-label` for category labels
+  - Added `min-h-touch` to accordion triggers
+  - Updated ValueCard with `p-space-3`, `gap-space-3`, `text-body-sm`, `text-heading-3`
+  - Updated FlagCard with design system spacing and 44px touch targets
+  - Added `aria-hidden="true"` to decorative icons
+- Updated `SourcePanel.tsx`:
+  - Changed overlay to `bg-black/40 backdrop-blur-sm`
+  - Changed panel to use `bg-card` and `shadow-md`
+  - Used design system spacing (`p-space-4`, `p-space-6`, `gap-space-2`)
+  - Used `text-heading-2` for panel title
+  - Added 44px touch target to close button (`min-w-touch min-h-touch`)
+  - Changed confidence colors to use `clinical-verified`, `clinical-warning`, `clinical-critical`
+  - Changed highlight mark to use `bg-clinical-warning/30`
+  - Changed reference block to use `bg-primary/10`
+  - Used `text-label` and `text-body-sm` typography
+  - Added `aria-hidden="true"` to decorative icons
+- Updated `LetterEditor.tsx`:
+  - Changed toolbar to use `border-border/60`, `shadow-card`, and design system spacing
+  - Used `text-label` for button text
+  - Added 44px touch targets to all buttons
+  - Used `text-caption` for stats and indicators
+  - Changed auto-save indicator to use `bg-primary` color
+  - Changed error indicator to use `text-clinical-critical`
+  - Updated source anchor highlights to use `bg-primary/15` and `bg-clinical-verified/15`
+  - Changed read-only state to use `bg-muted/30`
+  - Added `aria-label` to editor content area
+  - Added `role="status"` and `role="alert"` to status indicators
+- Verified: `npm run lint` passes, `npm run build` compiles successfully
 
 ---
 
