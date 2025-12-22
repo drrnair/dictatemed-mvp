@@ -23,6 +23,7 @@ Output: `spec.md`
 ---
 
 ### [ ] Step: Design Token Foundation
+<!-- chat-id: 636c1d06-ac0d-4622-bbb8-b26835740f2e -->
 
 Update the core styling files to establish the new design token layer.
 
