@@ -137,7 +137,7 @@ npm run test -- diff-analyzer
 
 ---
 
-### [ ] Step 4: Subspecialty Profile Service
+### [x] Step 4: Subspecialty Profile Service
 <!-- chat-id: e9e6959c-6e74-4379-8deb-fbf83709161e -->
 
 Implement CRUD operations for per-subspecialty style profiles.
@@ -160,6 +160,18 @@ Implement CRUD operations for per-subspecialty style profiles.
 ```bash
 npm run test -- subspecialty-profile
 ```
+
+**Completed:** Full subspecialty profile service implemented in `subspecialty-profile.service.ts`:
+- **CRUD Operations**: `createStyleProfile()`, `getStyleProfile()`, `listStyleProfiles()`, `updateStyleProfile()`, `deleteStyleProfile()`
+- **Learning Strength**: `adjustLearningStrength()` with validation (0.0-1.0 range)
+- **Seed Letters**: `createSeedLetter()`, `listSeedLetters()`, `deleteSeedLetter()`, `markSeedLetterAnalyzed()`
+- **Statistics**: `getSubspecialtyEditStatistics()`, `hasEnoughEditsForAnalysis()`
+- **Profile Resolution**: `getEffectiveProfile()` with subspecialty → default fallback chain
+- **Caching**: In-memory cache with 5-minute TTL, `clearProfileCache()`, `getCacheStats()`
+- **Audit Logging**: All operations logged with appropriate action types and metadata
+- 42 unit tests covering all functions, caching behavior, edge cases
+- All functions exported from `index.ts` with aliased names (e.g., `createSubspecialtyProfile`)
+- TypeScript compilation passes
 
 ---
 
