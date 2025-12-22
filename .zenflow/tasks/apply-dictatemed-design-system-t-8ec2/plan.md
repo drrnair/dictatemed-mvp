@@ -56,7 +56,7 @@ Update the core styling files to establish the new design token layer.
 
 ---
 
-### [ ] Step: UI Primitives
+### [x] Step: UI Primitives
 <!-- chat-id: 5b1dbbb2-3923-4616-8b2a-cd3918109967 -->
 
 Update base UI components to use new design tokens.
@@ -72,6 +72,41 @@ Update base UI components to use new design tokens.
 **Verification:**
 - Components render correctly in isolation
 - `npm run lint` passes
+
+**Completed:**
+- Updated `button.tsx`:
+  - Added 44px minimum touch targets (`min-w-touch`, `h-11`)
+  - Added `gap-2` for icon+text spacing
+  - Added `transition-all duration-150` for smooth interactions
+  - Added `active:` states for tactile feedback
+  - Softened clinical variants with `/90` opacity base
+  - Used `text-label` typography token
+- Updated `card.tsx`:
+  - Changed to subtle `shadow-card` and `border-border/60`
+  - Added `transition-shadow duration-150`
+  - Updated CardTitle to use `text-heading-2` typography
+  - Updated CardDescription to use `text-body-sm`
+  - Changed padding to use `p-space-6` spacing tokens
+- Updated `badge.tsx`:
+  - Changed to softer transparent backgrounds (`bg-primary/15`)
+  - Added text color matching background variants
+  - Added `-solid` variants for high-emphasis clinical badges
+  - Used `text-caption` typography token
+- Updated `input.tsx`:
+  - Increased height to `h-11` (44px) for touch targets
+  - Added `min-h-touch` for WCAG compliance
+  - Added `focus-visible:border-ring` for visible focus
+  - Used `text-body` typography token
+- Updated `label.tsx`:
+  - Changed to `text-label` typography (13px, medium weight)
+- Updated `dialog.tsx`:
+  - Softened overlay to `bg-black/60` with `backdrop-blur-sm`
+  - Reduced shadow to `shadow-md`
+  - Used design system spacing tokens (`gap-space-4`, `p-space-6`)
+  - Added 44px touch targets to close button
+  - Updated DialogTitle to use `text-heading-2`
+  - Updated DialogDescription to use `text-body-sm`
+- Verified: `npm run lint` passes, `npm run build` compiles successfully
 
 ---
 
