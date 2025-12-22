@@ -176,6 +176,7 @@ npm run test -- subspecialty-profile
 ---
 
 ### [ ] Step 5: Learning Pipeline Service
+<!-- chat-id: 9042963c-607a-4ce5-8bab-5aad7476dbcd -->
 
 Implement the background learning pipeline that updates profiles from edits.
 
