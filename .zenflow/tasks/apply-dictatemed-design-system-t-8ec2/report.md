@@ -2,7 +2,17 @@
 
 ## Summary
 
-Successfully applied the dictatemed-design-system to DictateMED's core UI, transforming it into a calm, clinical, minimal, WCAG-compliant interface. The refactor touched 20 files across styling, UI components, layout, and screen-level pages—all without changing business logic.
+Successfully applied the dictatemed-design-system to DictateMED's core UI, transforming it into a calm, clinical, minimal, WCAG-compliant interface. The refactor touched 22 files across styling, UI components, layout, and screen-level pages—all without changing business logic.
+
+### Post-Review Fixes
+
+Based on code review feedback, three additional fixes were applied:
+
+1. **Meta theme-color updated** (`src/app/layout.tsx`): Changed hardcoded blue (`#1e40af`) to design system teal (`#3B9B8E` light, `#40B3A4` dark) in viewport themeColor and msapplication-TileColor
+
+2. **Badge focus states** (`src/components/ui/badge.tsx`): Changed `focus:` to `focus-visible:` for keyboard-only focus indicators, consistent with other components
+
+3. **Documentation accuracy** (`docs/DESIGN_NOTES.md`): Corrected typography line-height values to match actual tailwind.config.js implementation (heading-1: 1.33, heading-2: 1.4, heading-3: 1.5)
 
 ## What Was Implemented
 
@@ -64,11 +74,12 @@ Applied design system to three main screens:
 | `src/components/letters/VerificationPanel.tsx` | +111/-1 lines | ValueCard, FlagCard styling, progress bar, touch targets |
 | `src/components/letters/SourcePanel.tsx` | +71/-1 lines | Panel chrome, confidence colors, highlight styling |
 | `src/components/letters/LetterEditor.tsx` | +53/-1 lines | Toolbar styling, status indicators, source anchor highlights |
+| `src/app/layout.tsx` | +4/-3 lines | Meta theme-color updated from blue to teal primary |
 | `docs/DESIGN_NOTES.md` | +222 lines (new) | Design system documentation |
 | `.zenflow/tasks/.../spec.md` | +314 lines (new) | Technical specification |
 | `.zenflow/tasks/.../plan.md` | +199 lines (new) | Implementation plan |
 
-**Total: 20 files, ~1,200 lines added/modified**
+**Total: 22 files, ~1,210 lines added/modified**
 
 ## How the Solution Was Tested
 

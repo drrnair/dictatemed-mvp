@@ -45,9 +45,9 @@ The system uses a clear typographic hierarchy:
 
 | Class | Size | Weight | Line Height | Usage |
 |-------|------|--------|-------------|-------|
-| `text-heading-1` | 24px | 600 | 1.2 | Page titles |
-| `text-heading-2` | 20px | 600 | 1.3 | Section headings |
-| `text-heading-3` | 16px | 600 | 1.4 | Card titles |
+| `text-heading-1` | 24px | 600 | 1.33 | Page titles |
+| `text-heading-2` | 20px | 600 | 1.4 | Section headings |
+| `text-heading-3` | 16px | 600 | 1.5 | Card titles |
 | `text-body` | 15px | 400 | 1.5 | Main content |
 | `text-body-sm` | 14px | 400 | 1.5 | Secondary content |
 | `text-label` | 13px | 500 | 1.4 | Form labels, UI labels |
