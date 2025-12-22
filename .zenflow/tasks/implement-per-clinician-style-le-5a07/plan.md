@@ -220,6 +220,7 @@ npm run test -- learning-pipeline
 ---
 
 ### [ ] Step 6: Prompt Conditioner
+<!-- chat-id: d63af0f1-0b81-4c32-8d82-d8fde27c13cb -->
 
 Implement style-to-prompt transformation for generation-time conditioning.
 
