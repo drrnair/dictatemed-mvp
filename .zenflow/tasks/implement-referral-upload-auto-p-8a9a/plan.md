@@ -161,10 +161,19 @@ Implement LLM-powered structured data extraction from referral text.
 8. Added audit logging with token usage and confidence metrics ✓
 9. Wrote 25 unit tests for parser and service ✓
 
+**Additional fixes applied (code review):**
+- Added practice-level authorization check to `extractStructuredData()` ✓
+- Added practice-level authorization check to `reextractStructuredData()` ✓
+- Added practice-level authorization check to `extractWithOpus()` ✓
+- Changed `findUnique` to `findFirst` with practiceId in where clause ✓
+- Renamed `LOW_CONFIDENCE_THRESHOLD` to `EXTRACTION_LOW_CONFIDENCE_THRESHOLD` to avoid naming conflict ✓
+- Added document text length validation (max 200k chars) ✓
+- Updated tests to use 3-parameter signatures and verify authorization ✓
+
 **Verification:**
 - `npm run lint` passes ✓
 - `npx tsc --noEmit` passes ✓
-- All 60 unit tests pass (35 service + 25 extraction) ✓
+- All 62 unit tests pass (37 service + 25 extraction) ✓
 
 ---
 
@@ -236,6 +245,7 @@ Create the review/edit panel for extracted data.
 ---
 
 ### [ ] Step 7: Apply Logic & Integration
+<!-- chat-id: 9e0aeb67-c4ad-4036-a0c4-9e61684d59cd -->
 
 Implement the apply endpoint and wire up the full flow.
 
