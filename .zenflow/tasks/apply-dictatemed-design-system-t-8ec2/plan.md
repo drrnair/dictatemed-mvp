@@ -151,7 +151,7 @@ Update layout components for consistent navigation experience.
 
 ---
 
-### [ ] Step: Dashboard Screen
+### [x] Step: Dashboard Screen
 <!-- chat-id: a4e1a36a-b9c3-44d0-b3b6-e07687948322 -->
 
 Apply design system to the main dashboard/today screen.
@@ -163,6 +163,31 @@ Apply design system to the main dashboard/today screen.
 - Cards display correctly
 - Hover states work
 - Typography hierarchy clear
+
+**Completed:**
+- Updated page-level layout:
+  - Changed spacing to use `space-y-space-6` design token
+  - Changed welcome section to semantic `<header>` element
+  - Used `text-heading-1` for main heading
+  - Used `text-body` for subtitle with `mt-space-1` spacing
+  - Updated grid gaps to `gap-space-4`
+- Updated `QuickActionCard`:
+  - Changed to subtle borders (`border-border/60`)
+  - Added `shadow-card` for subtle elevation
+  - Used design system spacing (`gap-space-4`, `p-space-6`, `p-space-3`)
+  - Added `transition-all duration-150` for smooth hover
+  - Changed hover to `border-primary/40` and `shadow-md`
+  - Added focus-visible ring for keyboard navigation
+  - Added `aria-hidden="true"` to decorative icons
+  - Used `text-heading-3` for card titles
+  - Used `text-body-sm` for descriptions with `mt-space-1`
+- Updated `StatCard`:
+  - Changed to subtle borders (`border-border/60`)
+  - Added `shadow-card` for subtle elevation
+  - Used design system spacing (`p-space-6`, `mt-space-2`)
+  - Used `text-caption` for label
+  - Used `text-heading-1` for value
+- Verified: `npm run lint` passes, `npm run build` compiles successfully
 
 ---
 

@@ -7,19 +7,19 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-space-6">
       {/* Welcome section */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
+      <header>
+        <h1 className="text-heading-1 text-foreground">
           Welcome back{user?.name ? `, ${user.name}` : ''}
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-body text-muted-foreground mt-space-1">
           Create and manage your consultation letters efficiently.
         </p>
-      </div>
+      </header>
 
       {/* Quick actions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-space-4 md:grid-cols-2 lg:grid-cols-3">
         <QuickActionCard
           title="Start Recording"
           description="Record a new consultation session"
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats placeholder - will be populated with real data later */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-space-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Letters Today" value="-" />
         <StatCard title="Pending Review" value="-" />
         <StatCard title="This Week" value="-" />
@@ -109,12 +109,21 @@ function QuickActionCard({
   return (
     <a
       href={href}
-      className="group flex items-start gap-4 rounded-lg border border-border bg-card p-6 transition-colors hover:border-primary hover:bg-accent"
+      className="group flex items-start gap-space-4 rounded-lg border border-border/60 bg-card p-space-6 shadow-card transition-all duration-150 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
-      <div className="rounded-lg bg-background p-2">{icon}</div>
+      <div
+        className="flex-shrink-0 rounded-lg bg-background-subtle p-space-3"
+        aria-hidden="true"
+      >
+        {icon}
+      </div>
       <div>
-        <h3 className="font-semibold group-hover:text-primary">{title}</h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <h3 className="text-heading-3 text-foreground group-hover:text-primary transition-colors duration-150">
+          {title}
+        </h3>
+        <p className="text-body-sm text-muted-foreground mt-space-1">
+          {description}
+        </p>
       </div>
     </a>
   );
@@ -122,9 +131,9 @@ function QuickActionCard({
 
 function StatCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-6">
-      <p className="text-sm text-muted-foreground">{title}</p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
+    <div className="rounded-lg border border-border/60 bg-card p-space-6 shadow-card">
+      <p className="text-caption text-muted-foreground">{title}</p>
+      <p className="mt-space-2 text-heading-1 text-foreground">{value}</p>
     </div>
   );
 }
