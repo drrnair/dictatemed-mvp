@@ -8,6 +8,7 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getS3Client, getBucketName } from './client';
+import type { Readable } from 'stream';
 
 /**
  * Content type mappings for audio and documents
@@ -106,6 +107,44 @@ export async function deleteObject(key: string): Promise<void> {
   });
 
   await client.send(command);
+}
+
+/**
+ * Get the content of an object from S3 as a Buffer.
+ *
+ * @param key - The S3 object key (path)
+ * @returns Object content as Buffer and metadata
+ */
+export async function getObjectContent(
+  key: string
+): Promise<{ content: Buffer; contentType?: string; contentLength?: number }> {
+  const client = getS3Client();
+  const bucket = getBucketName();
+
+  const command = new GetObjectCommand({
+    Bucket: bucket,
+    Key: key,
+  });
+
+  const response = await client.send(command);
+
+  if (!response.Body) {
+    throw new Error('S3 object has no content');
+  }
+
+  // Convert the readable stream to a buffer
+  const stream = response.Body as Readable;
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of stream) {
+    chunks.push(Buffer.from(chunk));
+  }
+
+  return {
+    content: Buffer.concat(chunks),
+    contentType: response.ContentType,
+    contentLength: response.ContentLength,
+  };
 }
 
 /**
