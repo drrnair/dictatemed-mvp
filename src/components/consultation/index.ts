@@ -10,3 +10,6 @@ export { ConsultationContextForm, validateConsultationForm } from './Consultatio
 export type { ConsultationFormData } from './ConsultationContextForm';
 export { PreviousMaterialsPanel } from './PreviousMaterialsPanel';
 export { NewUploadsSection } from './NewUploadsSection';
+export { PatientContacts } from './PatientContacts';
+export { ContactForm } from './ContactForm';
+export type { ContactFormData } from './ContactForm';

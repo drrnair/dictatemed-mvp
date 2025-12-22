@@ -13,6 +13,8 @@ import {
   type HallucinationFlag,
 } from '@/components/letters/VerificationPanel';
 import { DifferentialView } from '@/components/letters/DifferentialView';
+import { SendLetterDialog } from '@/components/letters/SendLetterDialog';
+import { SendHistory } from '@/components/letters/SendHistory';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -23,6 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Send, History } from 'lucide-react';
+import type { SendStatus, ContactType } from '@prisma/client';
 
 // Proper type definitions instead of `any`
 interface SourceAnchor {
@@ -87,12 +91,28 @@ interface LetterWithRelations {
   documents: DocumentData[];
 }
 
+interface SendHistoryItem {
+  id: string;
+  recipientName: string;
+  recipientEmail: string;
+  recipientType: ContactType | null;
+  channel: string;
+  subject: string;
+  status: SendStatus;
+  queuedAt: string;
+  sentAt: string | null;
+  failedAt: string | null;
+  errorMessage: string | null;
+}
+
 interface LetterReviewClientProps {
   letter: LetterWithRelations;
   currentUser: {
     id: string;
     name: string;
+    email: string;
     role: string;
+    subspecialties?: string[];
   };
 }
 
@@ -111,6 +131,11 @@ export function LetterReviewClient({
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
+  const [sendHistory, setSendHistory] = useState<SendHistoryItem[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Immutable state for extracted values and flags - cast from unknown[]
   const [localExtractedValues, setLocalExtractedValues] = useState<ExtractedValue[]>(
@@ -220,6 +245,52 @@ export function LetterReviewClient({
       }
     };
   }, []);
+
+  // Fetch send history for approved letters
+  const fetchSendHistory = useCallback(async () => {
+    if (letter.status !== 'APPROVED') return;
+
+    setIsLoadingHistory(true);
+    setHistoryError(null);
+    try {
+      const response = await fetch(`/api/letters/${letter.id}/sends`);
+      if (response.ok) {
+        const data = await response.json();
+        setSendHistory(data.sends || []);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setHistoryError(errorData.error || 'Failed to load send history');
+      }
+    } catch (error) {
+      console.error('Failed to fetch send history:', error);
+      setHistoryError('Failed to load send history');
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [letter.id, letter.status]);
+
+  // Fetch history on mount for approved letters
+  useEffect(() => {
+    fetchSendHistory();
+  }, [fetchSendHistory]);
+
+  // Handle retry for failed sends
+  const handleRetrySend = useCallback(
+    async (sendId: string) => {
+      const response = await fetch(`/api/letters/${letter.id}/sends/${sendId}/retry`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Retry failed');
+      }
+
+      // Refresh send history after retry
+      await fetchSendHistory();
+    },
+    [letter.id, fetchSendHistory]
+  );
 
   // Fetch source data when active anchor changes
   useEffect(() => {
@@ -542,9 +613,33 @@ export function LetterReviewClient({
             )}
 
             {isReadOnly && letter.approvedAt && (
-              <Badge variant="verified" className="text-body-sm">
-                Approved on {new Date(letter.approvedAt).toLocaleDateString()}
-              </Badge>
+              <>
+                <Badge variant="verified" className="text-body-sm">
+                  Approved on {new Date(letter.approvedAt).toLocaleDateString()}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowHistory(!showHistory)}
+                  className={showHistory ? 'bg-muted' : ''}
+                >
+                  <History className="mr-2 h-4 w-4" />
+                  {showHistory ? 'Hide History' : 'View History'}
+                  {sendHistory.length > 0 && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      {sendHistory.length}
+                    </Badge>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setShowSendDialog(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Letter
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -619,6 +714,35 @@ export function LetterReviewClient({
             />
           </div>
         </main>
+
+        {/* Send History Panel (for approved letters) - right side */}
+        {isReadOnly && showHistory && (
+          <aside className="w-80 overflow-y-auto border-l border-border bg-muted/30 p-4">
+            {isLoadingHistory ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : historyError ? (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+                <p className="text-sm text-destructive">{historyError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchSendHistory}
+                  className="mt-2"
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <SendHistory
+                letterId={letter.id}
+                history={sendHistory}
+                onRetry={handleRetrySend}
+              />
+            )}
+          </aside>
+        )}
 
         {/* Source Panel (right, slides in) */}
         <SourcePanel
@@ -702,6 +826,24 @@ export function LetterReviewClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Send Letter Dialog */}
+      <SendLetterDialog
+        isOpen={showSendDialog}
+        onClose={() => setShowSendDialog(false)}
+        letterId={letter.id}
+        patientId={letter.patient?.id || null}
+        patientName={letter.patient?.name || 'Unknown Patient'}
+        letterType={letter.letterType}
+        subspecialty={currentUser.subspecialties?.[0]}
+        userEmail={currentUser.email}
+        userName={currentUser.name}
+        onSendComplete={() => {
+          // Refresh history and show the history panel
+          fetchSendHistory();
+          setShowHistory(true);
+        }}
+      />
     </div>
   );
 }

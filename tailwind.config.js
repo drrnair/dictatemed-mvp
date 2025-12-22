@@ -56,18 +56,22 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        /* Clinical status colors - semantic naming */
+        /* Clinical status colors - semantic naming (theme-aware via CSS variables) */
         clinical: {
           verified: 'hsl(var(--clinical-verified))',
+          'verified-muted': 'hsl(var(--clinical-verified-muted))',
           warning: 'hsl(var(--clinical-warning))',
+          'warning-muted': 'hsl(var(--clinical-warning-muted))',
           critical: 'hsl(var(--clinical-critical))',
+          'critical-muted': 'hsl(var(--clinical-critical-muted))',
           info: 'hsl(var(--clinical-info))',
+          'info-muted': 'hsl(var(--clinical-info-muted))',
         },
-        /* Recording status */
+        /* Recording status (theme-aware via CSS variables) */
         recording: {
-          active: 'hsl(var(--clinical-critical))',
-          paused: 'hsl(var(--clinical-warning))',
-          ready: 'hsl(var(--clinical-verified))',
+          active: 'hsl(var(--recording-active))',
+          paused: 'hsl(var(--recording-paused))',
+          ready: 'hsl(var(--recording-ready))',
         },
       },
       /* Border Radius - 8px base scale */

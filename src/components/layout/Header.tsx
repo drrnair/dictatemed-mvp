@@ -3,6 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { OfflineIndicator } from './OfflineIndicator';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 interface HeaderProps {
   userName: string | undefined;
@@ -23,6 +24,7 @@ export function Header({ userName }: HeaderProps) {
             Welcome, {userName}
           </span>
         )}
+        <ThemeToggle />
         <a
           href="/api/auth/logout"
           className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

@@ -92,7 +92,7 @@ export default function RecordError({ error, reset }: ErrorPageProps) {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md text-center">
         {/* Icon */}
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-clinical-critical/10">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-clinical-critical-muted">
           <AlertTriangle
             className="h-10 w-10 text-clinical-critical"
             aria-hidden="true"
@@ -116,8 +116,8 @@ export default function RecordError({ error, reset }: ErrorPageProps) {
           <div
             className={`mb-8 rounded-lg border p-4 ${
               recoverySuccess
-                ? 'border-clinical-verified bg-clinical-verified/10'
-                : 'border-clinical-warning bg-clinical-warning/10'
+                ? 'border-clinical-verified bg-clinical-verified-muted'
+                : 'border-clinical-warning bg-clinical-warning-muted'
             }`}
           >
             <div
@@ -148,8 +148,8 @@ export default function RecordError({ error, reset }: ErrorPageProps) {
               size="sm"
               className={`w-full ${
                 recoverySuccess
-                  ? 'border-clinical-verified text-clinical-verified hover:bg-clinical-verified/10'
-                  : 'border-clinical-warning text-clinical-warning hover:bg-clinical-warning/10'
+                  ? 'border-clinical-verified text-clinical-verified hover:bg-clinical-verified-muted'
+                  : 'border-clinical-warning text-clinical-warning hover:bg-clinical-warning-muted'
               }`}
             >
               <Download className="mr-2 h-4 w-4" />
