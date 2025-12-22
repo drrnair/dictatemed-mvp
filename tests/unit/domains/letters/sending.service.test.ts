@@ -558,9 +558,9 @@ describe('sending.service', () => {
         orderBy: { createdAt: 'desc' },
       });
       expect(result).toHaveLength(2);
-      expect(result[0].status).toBe('SENT');
-      expect(result[1].status).toBe('FAILED');
-      expect(result[1].errorMessage).toBe('Delivery failed');
+      expect(result[0]!.status).toBe('SENT');
+      expect(result[1]!.status).toBe('FAILED');
+      expect(result[1]!.errorMessage).toBe('Delivery failed');
     });
 
     it('should return empty array when no sends exist', async () => {

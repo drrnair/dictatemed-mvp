@@ -56,6 +56,14 @@ Add new Prisma models and run migration.
 
 **Completed:** Added all enums and models to `prisma/schema.prisma`. Created migration file at `prisma/migrations/20251222_add_patient_contacts_and_letter_sends/migration.sql`. Prisma generate and typecheck both pass.
 
+**Schema Refinements (per review):**
+- Added `updatedAt DateTime @updatedAt` to `LetterSend` for status transition tracking
+- Added `patientId String?` with `Patient` relation (onDelete: SetNull) for direct audit queries
+- Added `@@index([patientId])` for efficient patient-based queries
+- Updated migration SQL to include new fields
+- Updated `sending.service.ts` to populate `patientId` when creating LetterSend records
+- Fixed test files to use proper `PatientData` type (with dateOfBirth) and non-null assertions
+
 ---
 
 ### [x] Step 2: Contact Domain - Service and Validation
@@ -246,6 +254,7 @@ Create API endpoints for letter sending.
 ---
 
 ### [ ] Step 8: User Settings - Letter Sending Preferences
+<!-- chat-id: bef5df5c-120e-4f93-9dba-b37e4f7143e1 -->
 
 Add letter sending preferences to user settings.
 
