@@ -232,7 +232,18 @@ describe('ReferralFieldGroup', () => {
       expect(screen.getByRole('button', { name: /restore/i })).toBeInTheDocument();
     });
 
-    it('calls onAccept when Restore is clicked', async () => {
+    it('calls onRestore when Restore is clicked (if provided)', async () => {
+      const onRestore = vi.fn();
+      const user = userEvent.setup();
+      render(<ReferralFieldGroup {...defaultProps} isCleared onRestore={onRestore} />);
+
+      await user.click(screen.getByRole('button', { name: /restore/i }));
+
+      expect(onRestore).toHaveBeenCalled();
+      expect(defaultProps.onAccept).not.toHaveBeenCalled();
+    });
+
+    it('falls back to onAccept when Restore is clicked (if onRestore not provided)', async () => {
       const user = userEvent.setup();
       render(<ReferralFieldGroup {...defaultProps} isCleared />);
 

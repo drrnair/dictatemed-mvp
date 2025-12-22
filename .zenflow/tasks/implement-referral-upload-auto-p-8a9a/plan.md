@@ -235,12 +235,20 @@ Create the review/edit panel for extracted data.
 7. Implemented accept/clear actions per section with restore capability ✓
 8. Implemented global Apply/Cancel buttons with validation ✓
 9. Added low confidence warning banner when overall confidence < 70% ✓
-10. Wrote 102 unit tests (21 + 42 + 39) ✓
+10. Wrote 103 unit tests (21 + 43 + 39) ✓
+
+**Bug fixes from code review:**
+- Fixed `onRestore` handler to properly restore sections to 'pending' state (not 'accepted')
+- Fixed DOM nesting violation by using `asChild` on DialogDescription
+- Removed unused `key` parameter in `handleKeyDown`
+- Added icon to ReferralContextFieldGroup cleared state for visual consistency
+- Added eslint-disable comments for intentional autoFocus usage in click-to-edit pattern
 
 **Verification:**
 - `npm run lint` passes ✓
 - `npx tsc --noEmit` passes ✓ (for new components)
-- All 102 tests pass ✓
+- All 103 tests pass ✓
+- All 827 tests pass across the codebase ✓
 
 ---
 

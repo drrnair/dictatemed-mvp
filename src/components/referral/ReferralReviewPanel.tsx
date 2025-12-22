@@ -246,13 +246,15 @@ export function ReferralReviewPanel({
             <FileText className="h-5 w-5" />
             Review Extracted Details
           </DialogTitle>
-          <DialogDescription className="flex items-center gap-2">
-            Verify the extracted information before applying to the consultation.
-            <ConfidenceIndicator
-              confidence={extractedData.overallConfidence}
-              showPercentage
-              size="md"
-            />
+          <DialogDescription asChild>
+            <div className="flex items-center gap-2">
+              <span>Verify the extracted information before applying to the consultation.</span>
+              <ConfidenceIndicator
+                confidence={extractedData.overallConfidence}
+                showPercentage
+                size="md"
+              />
+            </div>
           </DialogDescription>
         </DialogHeader>
 
@@ -284,6 +286,7 @@ export function ReferralReviewPanel({
               onFieldChange={handlePatientFieldChange}
               onAccept={() => handleSectionAction('patient', 'accept')}
               onClear={() => handleSectionAction('patient', 'clear')}
+              onRestore={() => handleSectionRestore('patient')}
               isAccepted={sectionState.patient === 'accepted'}
               isCleared={sectionState.patient === 'cleared'}
             />
@@ -297,6 +300,7 @@ export function ReferralReviewPanel({
               onFieldChange={handleGpFieldChange}
               onAccept={() => handleSectionAction('gp', 'accept')}
               onClear={() => handleSectionAction('gp', 'clear')}
+              onRestore={() => handleSectionRestore('gp')}
               isAccepted={sectionState.gp === 'accepted'}
               isCleared={sectionState.gp === 'cleared'}
             />
@@ -311,6 +315,7 @@ export function ReferralReviewPanel({
                 onFieldChange={handleReferrerFieldChange}
                 onAccept={() => handleSectionAction('referrer', 'accept')}
                 onClear={() => handleSectionAction('referrer', 'clear')}
+                onRestore={() => handleSectionRestore('referrer')}
                 isAccepted={sectionState.referrer === 'accepted'}
                 isCleared={sectionState.referrer === 'cleared'}
               />
@@ -328,6 +333,7 @@ export function ReferralReviewPanel({
               onProblemsChange={handleProblemsChange}
               onAccept={() => handleSectionAction('context', 'accept')}
               onClear={() => handleSectionAction('context', 'clear')}
+              onRestore={() => handleSectionRestore('context')}
               isAccepted={sectionState.context === 'accepted'}
               isCleared={sectionState.context === 'cleared'}
             />
