@@ -4,7 +4,7 @@
 // Editable field group for extracted referral data sections
 
 import { useState, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Check, X, Edit2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, X, Edit2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +27,7 @@ export interface ReferralFieldGroupProps {
   onFieldChange: (key: string, value: string) => void;
   onAccept: () => void;
   onClear: () => void;
+  onRestore?: () => void;
   isAccepted?: boolean;
   isCleared?: boolean;
   className?: string;
@@ -40,6 +41,7 @@ export function ReferralFieldGroup({
   onFieldChange,
   onAccept,
   onClear,
+  onRestore,
   isAccepted = false,
   isCleared = false,
   className,
@@ -61,7 +63,7 @@ export function ReferralFieldGroup({
   }, []);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent, key: string) => {
+    (e: React.KeyboardEvent) => {
       if (e.key === 'Enter') {
         setEditingField(null);
       } else if (e.key === 'Escape') {
@@ -88,7 +90,7 @@ export function ReferralFieldGroup({
           <Button
             variant="ghost"
             size="sm"
-            onClick={onAccept}
+            onClick={onRestore ?? onAccept}
             className="text-xs"
           >
             Restore
@@ -150,8 +152,9 @@ export function ReferralFieldGroup({
                     value={field.value || ''}
                     onChange={(e) => onFieldChange(field.key, e.target.value)}
                     onBlur={handleFieldBlur}
-                    onKeyDown={(e) => handleKeyDown(e, field.key)}
+                    onKeyDown={handleKeyDown}
                     placeholder={field.placeholder}
+                    // eslint-disable-next-line jsx-a11y/no-autofocus -- Intentional for click-to-edit pattern; user explicitly triggered edit mode
                     autoFocus
                     className="h-9"
                   />
@@ -216,6 +219,7 @@ export interface ReferralContextFieldGroupProps {
   onProblemsChange: (problems: string[]) => void;
   onAccept: () => void;
   onClear: () => void;
+  onRestore?: () => void;
   isAccepted?: boolean;
   isCleared?: boolean;
   className?: string;
@@ -232,6 +236,7 @@ export function ReferralContextFieldGroup({
   onProblemsChange,
   onAccept,
   onClear,
+  onRestore,
   isAccepted = false,
   isCleared = false,
   className,
@@ -254,13 +259,14 @@ export function ReferralContextFieldGroup({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-muted-foreground">
+            <FileText className="h-4 w-4" />
             <span className="font-medium">Referral Context</span>
             <span className="text-sm">(cleared)</span>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            onClick={onAccept}
+            onClick={onRestore ?? onAccept}
             className="text-xs"
           >
             Restore

@@ -678,6 +678,9 @@ export async function findMatchingPatient(
   const log = logger.child({ practiceId, action: 'findMatchingPatient' });
 
   // Get all patients for the practice (we need to decrypt to search)
+  // TODO: For practices with many patients, consider implementing indexed search
+  // on non-sensitive fields (e.g., DOB hash, name hash) to reduce the number of
+  // records that need decryption. Current approach is O(n) with full decrypt.
   const patients = await prisma.patient.findMany({
     where: { practiceId },
     select: { id: true, encryptedData: true },
