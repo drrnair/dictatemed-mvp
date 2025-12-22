@@ -102,7 +102,8 @@ npm run typecheck
 
 ---
 
-### [ ] Step 3: Section-Level Diff Analyzer
+### [x] Step 3: Section-Level Diff Analyzer
+<!-- chat-id: 410cfaa6-fcdf-4e6c-a3a3-cdbb2f38c12d -->
 
 Implement the section-level diff analysis for precise style learning.
 
@@ -121,6 +122,18 @@ Implement the section-level diff analysis for precise style learning.
 ```bash
 npm run test -- diff-analyzer
 ```
+
+**Completed:** Full section-level diff analyzer implemented in `diff-analyzer.ts`:
+- **Section Detection**: `detectSectionType()` with patterns for 15+ medical letter sections (greeting, history, medications, examination, investigations, impression, plan, signoff, etc.)
+- **Section Parsing**: `parseLetterSections()` parses complete letters into structured sections with header detection
+- **Section Alignment**: `alignSections()` aligns sections between draft and final letters by type for comparison
+- **Diff Computation**: `findDetailedChanges()` and `computeSectionDiff()` compute sentence-level changes with char/word deltas
+- **Complete Analysis**: `analyzeDiff()` main entry point returns full `LetterDiffAnalysis` with overall statistics
+- **Phrase Extraction**: `extractAddedPhrases()`, `extractRemovedPhrases()`, `extractVocabularySubstitutions()` for learning pipeline
+- **Text Similarity**: `textSimilarity()` using LCS for fuzzy matching
+- 41 unit tests covering all functions, edge cases (empty letters, special characters, long content)
+- All functions exported from `index.ts`
+- TypeScript and ESLint checks pass
 
 ---
 

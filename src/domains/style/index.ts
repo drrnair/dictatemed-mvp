@@ -14,6 +14,22 @@ export {
   mergeStyleAnalysis,
 } from './style-analyzer';
 
+// Section-level diff analysis
+export {
+  detectSectionType,
+  isSectionHeader,
+  parseLetterSections,
+  alignSections,
+  countWords,
+  textSimilarity,
+  findDetailedChanges,
+  computeSectionDiff,
+  analyzeDiff,
+  extractAddedPhrases,
+  extractRemovedPhrases,
+  extractVocabularySubstitutions,
+} from './diff-analyzer';
+
 // Global style types (existing)
 export type {
   StyleProfile,
