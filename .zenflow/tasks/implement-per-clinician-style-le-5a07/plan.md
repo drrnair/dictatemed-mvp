@@ -138,6 +138,7 @@ npm run test -- diff-analyzer
 ---
 
 ### [ ] Step 4: Subspecialty Profile Service
+<!-- chat-id: e9e6959c-6e74-4379-8deb-fbf83709161e -->
 
 Implement CRUD operations for per-subspecialty style profiles.
 

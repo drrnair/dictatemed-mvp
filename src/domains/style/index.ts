@@ -30,6 +30,25 @@ export {
   extractVocabularySubstitutions,
 } from './diff-analyzer';
 
+// Per-subspecialty style profile service
+export {
+  createStyleProfile as createSubspecialtyProfile,
+  getStyleProfile as getSubspecialtyProfile,
+  listStyleProfiles as listSubspecialtyProfiles,
+  updateStyleProfile as updateSubspecialtyProfile,
+  deleteStyleProfile as deleteSubspecialtyProfile,
+  adjustLearningStrength,
+  createSeedLetter,
+  listSeedLetters,
+  deleteSeedLetter,
+  markSeedLetterAnalyzed,
+  getSubspecialtyEditStatistics,
+  hasEnoughEditsForAnalysis,
+  getEffectiveProfile,
+  clearProfileCache,
+  getCacheStats,
+} from './subspecialty-profile.service';
+
 // Global style types (existing)
 export type {
   StyleProfile,
