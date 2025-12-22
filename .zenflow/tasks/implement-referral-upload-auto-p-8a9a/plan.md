@@ -323,6 +323,7 @@ Add comprehensive error handling and polish the UX.
 ---
 
 ### [ ] Step 9: Tests & Documentation
+<!-- chat-id: fe132563-1e78-4722-ae3d-14fa3b33780f -->
 
 Write comprehensive tests and update documentation.
 
