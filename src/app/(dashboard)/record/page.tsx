@@ -281,8 +281,11 @@ export default function RecordPage() {
       )}
 
       {/* SECTION 3: Recording */}
-      <div className="rounded-xl border-2 border-primary/20 bg-card p-6 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">
+      <section
+        className="rounded-xl border-2 border-primary/20 bg-card p-space-6 shadow-card transition-shadow duration-150"
+        aria-labelledby="recording-section-title"
+      >
+        <h2 id="recording-section-title" className="text-heading-2 mb-space-4">
           {formData.patient ? '4. Record Consultation' : 'Record Consultation'}
         </h2>
 
@@ -295,17 +298,20 @@ export default function RecordPage() {
 
         {/* Validation message if context incomplete */}
         {!isContextComplete && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg bg-amber-500/10 p-3 text-amber-600">
-            <AlertCircle className="h-5 w-5" />
-            <p className="text-sm">Please complete the consultation context above before recording.</p>
+          <div
+            className="mt-space-4 flex items-center gap-space-2 rounded-lg bg-clinical-warning/10 p-space-3 text-clinical-warning"
+            role="alert"
+          >
+            <AlertCircle className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+            <p className="text-body-sm">Please complete the consultation context above before recording.</p>
           </div>
         )}
-      </div>
+      </section>
 
       {/* Tip */}
       {!isRecording && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-          <Lightbulb className="h-3.5 w-3.5" />
+        <div className="flex items-center gap-space-2 text-caption text-muted-foreground px-space-1">
+          <Lightbulb className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
           <span>
             Tip: Adding context improves letter quality. Include referral letters and previous correspondence when available.
           </span>
@@ -347,41 +353,55 @@ function CollapsibleSection({
   children,
 }: CollapsibleSectionProps) {
   return (
-    <Card className={cn(disabled && 'opacity-60')}>
+    <Card className={cn(
+      'border-border/60 shadow-card transition-all duration-150',
+      disabled && 'opacity-60'
+    )}>
       <CardHeader
         className={cn(
-          'cursor-pointer py-4 hover:bg-muted/30 transition-colors',
+          'cursor-pointer p-space-4 hover:bg-muted/30 transition-colors duration-150 min-h-touch',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           disabled && 'cursor-not-allowed'
         )}
         onClick={() => !disabled && onToggle()}
+        onKeyDown={(e) => {
+          if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+        tabIndex={disabled ? -1 : 0}
+        role="button"
+        aria-expanded={isExpanded}
+        aria-disabled={disabled}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {icon && <div className="text-muted-foreground">{icon}</div>}
+          <div className="flex items-center gap-space-3">
+            {icon && <div className="text-muted-foreground" aria-hidden="true">{icon}</div>}
             <div>
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="text-heading-3 flex items-center gap-space-2">
                 {title}
-                {required && <span className="text-destructive">*</span>}
+                {required && <span className="text-destructive" aria-label="required">*</span>}
                 {isComplete && (
-                  <span className="text-xs font-normal text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full">
+                  <span className="text-caption font-normal text-clinical-verified bg-clinical-verified/10 px-space-2 py-space-1 rounded-full">
                     Complete
                   </span>
                 )}
               </CardTitle>
               {subtitle && (
-                <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
+                <p className="text-body-sm text-muted-foreground mt-space-1">{subtitle}</p>
               )}
             </div>
           </div>
           {isExpanded ? (
-            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            <ChevronUp className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
           ) : (
-            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            <ChevronDown className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
           )}
         </div>
       </CardHeader>
       {isExpanded && (
-        <CardContent className="pt-0 pb-6">{children}</CardContent>
+        <CardContent className="pt-0 pb-space-6 px-space-6">{children}</CardContent>
       )}
     </Card>
   );
