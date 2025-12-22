@@ -1,9 +1,12 @@
 // src/app/api/style/upload/route.ts
 // API endpoint to upload historical letters for style analysis
+// Supports both global and per-subspecialty analysis
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0';
+import type { Subspecialty } from '@prisma/client';
 import { analyzeHistoricalLetters } from '@/domains/style/style.service';
+import { createSeedLetter, analyzeSeedLetters } from '@/domains/style';
 import { logger } from '@/lib/logger';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
@@ -15,10 +18,28 @@ const ALLOWED_TYPES = [
   'text/plain',
 ];
 
+const VALID_SUBSPECIALTIES = [
+  'GENERAL_CARDIOLOGY',
+  'INTERVENTIONAL',
+  'STRUCTURAL',
+  'ELECTROPHYSIOLOGY',
+  'IMAGING',
+  'HEART_FAILURE',
+  'CARDIAC_SURGERY',
+] as const;
+
 /**
  * POST /api/style/upload
  * Upload historical letters for style analysis.
  * Accepts PDF, DOC, DOCX, or TXT files.
+ *
+ * Form fields:
+ * - files: One or more files to upload
+ * - subspecialty: Optional subspecialty to associate letters with
+ * - triggerAnalysis: Optional boolean to trigger analysis after upload (default: true)
+ *
+ * If subspecialty is provided, letters are stored as seed letters for that subspecialty.
+ * Otherwise, letters are analyzed globally (legacy behavior).
  */
 export async function POST(request: NextRequest) {
   const log = logger.child({ action: 'POST /api/style/upload' });
@@ -38,6 +59,24 @@ export async function POST(request: NextRequest) {
     // Parse multipart form data
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
+    const subspecialtyParam = formData.get('subspecialty') as string | null;
+    const triggerAnalysisParam = formData.get('triggerAnalysis');
+    const triggerAnalysis = triggerAnalysisParam !== 'false';
+
+    // Validate subspecialty if provided
+    let subspecialty: Subspecialty | undefined;
+    if (subspecialtyParam) {
+      if (!VALID_SUBSPECIALTIES.includes(subspecialtyParam as typeof VALID_SUBSPECIALTIES[number])) {
+        return NextResponse.json(
+          {
+            error: 'Invalid subspecialty',
+            validValues: VALID_SUBSPECIALTIES,
+          },
+          { status: 400 }
+        );
+      }
+      subspecialty = subspecialtyParam as Subspecialty;
+    }
 
     if (!files || files.length === 0) {
       return NextResponse.json(
@@ -56,6 +95,8 @@ export async function POST(request: NextRequest) {
     log.info('Processing historical letter upload', {
       userId,
       fileCount: files.length,
+      subspecialty: subspecialty ?? 'global',
+      triggerAnalysis,
     });
 
     // Validate and extract text from files
@@ -98,7 +139,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Analyze historical letters
+    // Handle per-subspecialty uploads as seed letters
+    if (subspecialty) {
+      // Create seed letters for each extracted text
+      const seedLetterIds: string[] = [];
+      for (const letterText of letterTexts) {
+        const seedLetter = await createSeedLetter({
+          userId,
+          subspecialty,
+          letterText,
+        });
+        seedLetterIds.push(seedLetter.id);
+      }
+
+      log.info('Seed letters created', {
+        userId,
+        subspecialty,
+        seedLetterCount: seedLetterIds.length,
+      });
+
+      // Trigger analysis if requested
+      let analysisResult = null;
+      if (triggerAnalysis) {
+        try {
+          analysisResult = await analyzeSeedLetters(userId, subspecialty);
+          log.info('Seed letter analysis completed', {
+            userId,
+            subspecialty,
+            profileUpdated: !!analysisResult,
+          });
+        } catch (err) {
+          log.error(
+            'Seed letter analysis failed (non-blocking)',
+            { userId, subspecialty },
+            err instanceof Error ? err : undefined
+          );
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        lettersProcessed: letterTexts.length,
+        seedLettersCreated: seedLetterIds.length,
+        subspecialty,
+        analysisTriggered: triggerAnalysis,
+        profile: analysisResult,
+        warnings: errors.length > 0 ? errors : undefined,
+      });
+    }
+
+    // Handle global analysis (legacy behavior)
     const result = await analyzeHistoricalLetters(userId, letterTexts);
 
     log.info('Historical letter analysis completed', {
@@ -112,6 +202,7 @@ export async function POST(request: NextRequest) {
       lettersProcessed: letterTexts.length,
       profileUpdated: result.profileUpdated,
       profile: result.profile,
+      analysisType: 'global',
       warnings: errors.length > 0 ? errors : undefined,
     });
   } catch (error) {

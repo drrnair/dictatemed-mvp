@@ -415,7 +415,8 @@ npm run lint
 
 ---
 
-### [ ] Step 11: Update Existing API Endpoints
+### [x] Step 11: Update Existing API Endpoints
+<!-- chat-id: 3bf3cbb8-71cd-41f3-910e-607f719c2f88 -->
 
 Update existing endpoints to be subspecialty-aware.
 
@@ -435,6 +436,28 @@ Update existing endpoints to be subspecialty-aware.
 npm run typecheck
 npm run lint
 ```
+
+**Completed:** All existing API endpoints updated to be subspecialty-aware:
+- **POST /api/letters**: Added optional `subspecialty` field to request schema, passed to `generateLetter()` for style profile lookup
+- **POST /api/style/analyze**:
+  - Added optional `subspecialty` parameter to request schema
+  - If subspecialty provided, uses `queueStyleAnalysis()` for per-subspecialty analysis
+  - Added `forceReanalyze` option
+  - Returns `analysisType` ('subspecialty' or 'global') and `analysisStatus`
+- **GET /api/style/analyze**:
+  - Added optional `?subspecialty=` query parameter filter
+  - Returns comprehensive summary with both global and subspecialty statistics
+  - Lists all subspecialty profiles with their edit counts and learning strength
+  - Shows `canAnalyze` status for each profile
+- **POST /api/style/upload**:
+  - Added optional `subspecialty` form field
+  - If subspecialty provided, creates seed letters via `createSeedLetter()` instead of global analysis
+  - Added `triggerAnalysis` option (default: true) to control automatic `analyzeSeedLetters()` execution
+  - Returns `analysisType` and `seedLettersCreated` count
+- All endpoints validated with Zod schemas
+- TypeScript compilation passes
+- ESLint checks pass
+- All 260 tests pass
 
 ---
 

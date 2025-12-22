@@ -9,10 +9,21 @@ import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/r
 import { logger } from '@/lib/logger';
 import type { LetterType } from '@/domains/letters/letter.types';
 
+const subspecialtyEnum = z.enum([
+  'GENERAL_CARDIOLOGY',
+  'INTERVENTIONAL',
+  'STRUCTURAL',
+  'ELECTROPHYSIOLOGY',
+  'IMAGING',
+  'HEART_FAILURE',
+  'CARDIAC_SURGERY',
+]);
+
 const generateLetterSchema = z.object({
   patientId: z.string().uuid(),
   letterType: z.enum(['NEW_PATIENT', 'FOLLOW_UP', 'ANGIOGRAM_PROCEDURE', 'ECHO_REPORT']),
   templateId: z.string().uuid().optional(), // Optional template for enhanced generation
+  subspecialty: subspecialtyEnum.optional(), // Optional subspecialty for style profile lookup
   sources: z.object({
     transcript: z
       .object({
@@ -94,11 +105,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await generateLetter(userId, validated.data);
+    const result = await generateLetter(userId, {
+      ...validated.data,
+      subspecialty: validated.data.subspecialty as import('@prisma/client').Subspecialty | undefined,
+    });
 
     log.info('Letter generated', {
       letterId: result.id,
       letterType: validated.data.letterType,
+      subspecialty: validated.data.subspecialty,
       modelUsed: result.modelUsed,
       hallucinationRisk: result.hallucinationRisk,
     });
