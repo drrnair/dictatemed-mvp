@@ -451,36 +451,45 @@ Create UI for managing patient contacts.
 
 ---
 
-### [ ] Step 12: Theme System - Provider and Storage
+### [x] Step 12: Theme System - Provider and Storage
 <!-- chat-id: 548dadd0-58fb-4559-822c-93668cd79ac5 -->
 
 Implement theme preference system.
 
-**Files to create:**
-- `src/lib/theme.ts` - Theme utilities
-- `src/hooks/useTheme.ts` - Theme hook
-- `src/components/providers/ThemeProvider.tsx`
+**Files created:**
+- `src/lib/theme.ts` - Theme utilities with:
+  - `getSystemTheme()` - Detects OS preference via matchMedia
+  - `resolveTheme(preference)` - Resolves 'system' to actual theme
+  - `applyTheme(theme)` - Applies dark/light class to document
+  - `getStoredThemePreference()` / `storeThemePreference()` - LocalStorage helpers
+  - `onSystemThemeChange(callback)` - Listener for system preference changes
+  - `THEME_STORAGE_KEY`, `DEFAULT_THEME_PREFERENCE` constants
+- `src/hooks/useTheme.ts` - Custom hook wrapping next-themes with:
+  - `theme` - Current resolved theme ('light' | 'dark')
+  - `preference` - User preference ('system' | 'light' | 'dark')
+  - `setPreference(preference)` - Update theme preference
+  - `toggleTheme()` - Toggle between light/dark
+  - `isLoading` - Hydration state
+  - `systemTheme` - OS preference
+  - `isSystemPreference` - Whether using system preference
+- `tests/unit/lib/theme.test.ts` - 21 unit tests for theme utilities
+- `tests/unit/hooks/useTheme.test.tsx` - 8 unit tests for useTheme hook
 
-**Files to modify:**
-- `src/app/layout.tsx` - Wrap with ThemeProvider
+**Files modified:**
+- `src/components/providers/ThemeProvider.tsx` - Enhanced with:
+  - `ThemeSyncContext` for syncing server-side user preferences
+  - `useThemeSync()` hook exported for components to sync theme from API
+  - Custom storage key `dictatemed-theme`
+- `src/app/layout.tsx` - Already wrapped with ThemeProvider (no change needed)
 
-**Tasks:**
-1. Create theme utility functions:
-   - `getSystemTheme()` using matchMedia
-   - `applyTheme()` to set class on document
-   - `resolveTheme(preference)` to compute actual theme
-2. Create ThemeProvider:
-   - Manage theme state
-   - Sync with user settings
-   - Listen for system theme changes
-   - Apply theme on mount/change
-3. Create useTheme hook for components
-4. Wrap app with ThemeProvider
+**Already existed (leveraged):**
+- `next-themes@0.4.6` dependency
+- Dark mode CSS variables in `globals.css`
 
 **Verification:**
-- Toggle system preference, verify app follows
-- Set explicit preference, verify it overrides
-- Verify theme persists on reload
+- `npm run typecheck` passes
+- `npm run lint` passes
+- `npm run test` passes (343 tests total, 29 new theme tests)
 
 ---
 

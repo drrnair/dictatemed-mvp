@@ -178,8 +178,11 @@ describe('Theme Utilities', () => {
       onSystemThemeChange(callback);
 
       // Get the handler that was registered
-      const handler = addEventListenerMock.mock.calls[0][1];
-      handler({ matches: true } as MediaQueryListEvent);
+      const handler = addEventListenerMock.mock.calls[0]?.[1] as
+        | ((e: MediaQueryListEvent) => void)
+        | undefined;
+      expect(handler).toBeDefined();
+      handler!({ matches: true } as MediaQueryListEvent);
 
       expect(callback).toHaveBeenCalledWith('dark');
     });
@@ -188,8 +191,11 @@ describe('Theme Utilities', () => {
       const callback = vi.fn();
       onSystemThemeChange(callback);
 
-      const handler = addEventListenerMock.mock.calls[0][1];
-      handler({ matches: false } as MediaQueryListEvent);
+      const handler = addEventListenerMock.mock.calls[0]?.[1] as
+        | ((e: MediaQueryListEvent) => void)
+        | undefined;
+      expect(handler).toBeDefined();
+      handler!({ matches: false } as MediaQueryListEvent);
 
       expect(callback).toHaveBeenCalledWith('light');
     });

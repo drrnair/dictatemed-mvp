@@ -341,6 +341,7 @@ export function PatientContacts({
                         size="icon"
                         className="h-8 w-8"
                         onClick={() => setEditingContact(contact)}
+                        aria-label={`Edit ${contact.fullName}`}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -350,6 +351,7 @@ export function PatientContacts({
                         className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => handleDelete(contact.id)}
                         disabled={deletingId === contact.id}
+                        aria-label={`Delete ${contact.fullName}`}
                       >
                         {deletingId === contact.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
