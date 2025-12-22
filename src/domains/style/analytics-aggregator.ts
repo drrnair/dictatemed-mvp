@@ -11,8 +11,6 @@ import type { Subspecialty } from '@prisma/client';
 import { prisma } from '@/infrastructure/db/client';
 import { logger } from '@/lib/logger';
 import {
-  extractAddedPhrases,
-  extractRemovedPhrases,
   parseLetterSections,
 } from './diff-analyzer';
 import type {

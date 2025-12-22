@@ -36,7 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
+import type { StyleSeedLetter } from '@/domains/style/subspecialty-profile.types';
 
 interface EditStatistics {
   totalEdits: number;
@@ -82,14 +82,13 @@ export default function StyleSettingsPage() {
 
   // Style mode preference (persisted in localStorage)
   const [styleMode, setStyleMode] = useState<StyleMode>('global');
-  const [showInfoBanner, setShowInfoBanner] = useState(true);
 
   // Per-subspecialty analysis state
   const [analyzingSubspecialty, setAnalyzingSubspecialty] = useState<Subspecialty | null>(null);
   const [subspecialtyStats, setSubspecialtyStats] = useState<Map<Subspecialty, SubspecialtyEditStats>>(new Map());
 
-  // Seed letters
-  const [seedLetters, setSeedLetters] = useState<Map<Subspecialty, { id: string; letterText: string }[]>>(new Map());
+  // Seed letters for display in SeedLetterUpload
+  const [existingSeedLetters, setExistingSeedLetters] = useState<StyleSeedLetter[]>([]);
 
   // File upload state
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
