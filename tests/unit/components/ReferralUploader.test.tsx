@@ -103,7 +103,7 @@ describe('ReferralUploader', () => {
   });
 
   describe('File validation', () => {
-    it('shows error for invalid file type', async () => {
+    it('shows specific error for Word documents', async () => {
       render(<ReferralUploader {...defaultProps} />);
 
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -119,7 +119,27 @@ describe('ReferralUploader', () => {
       fireEvent.change(input);
 
       await waitFor(() => {
-        expect(screen.getByText(/invalid file type/i)).toBeInTheDocument();
+        expect(screen.getByText(/word documents.*not yet supported.*convert to pdf/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows generic error for other invalid file types', async () => {
+      render(<ReferralUploader {...defaultProps} />);
+
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const invalidFile = new File(['test'], 'test.exe', {
+        type: 'application/x-msdownload',
+      });
+
+      Object.defineProperty(input, 'files', {
+        value: [invalidFile],
+        writable: false,
+      });
+
+      fireEvent.change(input);
+
+      await waitFor(() => {
+        expect(screen.getByText(/invalid file type.*pdf or text/i)).toBeInTheDocument();
       });
     });
 

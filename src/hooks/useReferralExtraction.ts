@@ -1,5 +1,15 @@
 // src/hooks/useReferralExtraction.ts
 // Hook for managing referral extraction workflow state
+//
+// INTEGRATION PLAN:
+// - This hook manages the review/apply phase of the referral extraction workflow
+// - ReferralUploader component handles upload and extraction (Step 5)
+// - This hook receives extracted data via startExtraction() callback
+// - ReferralReviewPanel (Step 6) will use this hook to:
+//   1. Display extracted data with editability
+//   2. Allow user edits via updateEditedData()
+//   3. Apply to consultation via applyExtraction() (Step 7 will implement the apply API)
+// - The hook is intentionally separate from ReferralUploader to decouple upload from review
 
 import { useState, useCallback } from 'react';
 import type { ReferralExtractedData } from '@/domains/referrals';

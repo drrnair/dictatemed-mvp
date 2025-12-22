@@ -56,6 +56,18 @@ interface ReferralUploaderProps {
 // File extensions for display
 const ACCEPTED_EXTENSIONS = '.pdf, .txt';
 
+// Progress values for each stage of the upload/extraction workflow
+const PROGRESS = {
+  CREATE_STARTED: 10,      // Starting to create document record
+  CREATE_COMPLETE: 25,     // Document record created, have upload URL
+  UPLOAD_COMPLETE: 40,     // File uploaded to S3
+  CONFIRM_COMPLETE: 50,    // Upload confirmed with backend
+  TEXT_EXTRACT_START: 55,  // Starting text extraction
+  TEXT_EXTRACT_DONE: 70,   // Text extraction complete
+  DATA_EXTRACT_START: 75,  // Starting AI structured extraction
+  COMPLETE: 100,           // All done
+} as const;
+
 export function ReferralUploader({
   onExtractionComplete,
   onRemove,
@@ -73,7 +85,14 @@ export function ReferralUploader({
   // Validate file before upload
   const validateFile = (file: File): string | null => {
     if (!isAllowedMimeType(file.type)) {
-      return `Invalid file type. Please upload a PDF or text file.`;
+      // Check if it's a Word document and provide specific message
+      const isDocx = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                     file.name.toLowerCase().endsWith('.docx') ||
+                     file.name.toLowerCase().endsWith('.doc');
+      if (isDocx) {
+        return 'Word documents (.docx) are not yet supported. Please convert to PDF first.';
+      }
+      return 'Invalid file type. Please upload a PDF or text file.';
     }
     if (!isFileSizeValid(file.size)) {
       return `File too large. Maximum size is ${formatFileSize(MAX_REFERRAL_FILE_SIZE)}.`;
@@ -99,7 +118,7 @@ export function ReferralUploader({
 
       try {
         // Step 1: Create referral document and get upload URL
-        updateState({ status: 'uploading', progress: 10 });
+        updateState({ status: 'uploading', progress: PROGRESS.CREATE_STARTED });
 
         const createResponse = await fetch('/api/referrals', {
           method: 'POST',
@@ -117,7 +136,7 @@ export function ReferralUploader({
         }
 
         const { id: referralId, uploadUrl } = await createResponse.json();
-        updateState({ referralId, progress: 25 });
+        updateState({ referralId, progress: PROGRESS.CREATE_COMPLETE });
 
         // Step 2: Upload file to S3
         const uploadResponse = await fetch(uploadUrl, {
@@ -131,7 +150,7 @@ export function ReferralUploader({
         if (!uploadResponse.ok) {
           throw new Error('Failed to upload file to storage');
         }
-        updateState({ progress: 40 });
+        updateState({ progress: PROGRESS.UPLOAD_COMPLETE });
 
         // Step 3: Confirm upload
         const confirmResponse = await fetch(`/api/referrals/${referralId}`, {
@@ -143,10 +162,10 @@ export function ReferralUploader({
         if (!confirmResponse.ok) {
           throw new Error('Failed to confirm upload');
         }
-        updateState({ progress: 50 });
+        updateState({ progress: PROGRESS.CONFIRM_COMPLETE });
 
         // Step 4: Extract text from document
-        updateState({ status: 'extracting_text', progress: 55 });
+        updateState({ status: 'extracting_text', progress: PROGRESS.TEXT_EXTRACT_START });
 
         const textResponse = await fetch(`/api/referrals/${referralId}/extract-text`, {
           method: 'POST',
@@ -156,10 +175,10 @@ export function ReferralUploader({
           const errorData = await textResponse.json().catch(() => ({}));
           throw new Error(errorData.error || 'Failed to extract text from document');
         }
-        updateState({ progress: 70 });
+        updateState({ progress: PROGRESS.TEXT_EXTRACT_DONE });
 
         // Step 5: AI structured extraction
-        updateState({ status: 'extracting_data', progress: 75 });
+        updateState({ status: 'extracting_data', progress: PROGRESS.DATA_EXTRACT_START });
 
         const extractResponse = await fetch(`/api/referrals/${referralId}/extract-structured`, {
           method: 'POST',
@@ -173,7 +192,7 @@ export function ReferralUploader({
         const extractResult = await extractResponse.json();
         updateState({
           status: 'ready',
-          progress: 100,
+          progress: PROGRESS.COMPLETE,
           extractedData: extractResult.extractedData,
         });
 

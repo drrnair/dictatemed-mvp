@@ -3,6 +3,11 @@
 
 import { prisma } from '@/infrastructure/db/client';
 import {
+  encryptPatientData,
+  decryptPatientData,
+  type PatientData,
+} from '@/infrastructure/db/encryption';
+import {
   getUploadUrl,
   getDownloadUrl,
   deleteObject,
@@ -20,6 +25,9 @@ import type {
   ReferralListResult,
   ReferralDocumentWithUrl,
   TextExtractionResult,
+  ApplyReferralInput,
+  ApplyReferralResult,
+  PatientMatchResult,
 } from './referral.types';
 import {
   isAllowedMimeType,
@@ -653,4 +661,325 @@ async function extractTextFromPdfBuffer(
     log.error('PDF parsing failed', { error: errorMessage });
     throw new Error(`Failed to parse PDF: ${errorMessage}`);
   }
+}
+
+/**
+ * Find a matching patient by MRN, Medicare number, or name + DOB.
+ *
+ * Priority:
+ * 1. Exact MRN match
+ * 2. Exact Medicare match
+ * 3. Name + DOB match (case-insensitive)
+ */
+export async function findMatchingPatient(
+  practiceId: string,
+  input: { fullName?: string; dateOfBirth?: string; medicare?: string; mrn?: string }
+): Promise<PatientMatchResult> {
+  const log = logger.child({ practiceId, action: 'findMatchingPatient' });
+
+  // Get all patients for the practice (we need to decrypt to search)
+  const patients = await prisma.patient.findMany({
+    where: { practiceId },
+    select: { id: true, encryptedData: true },
+  });
+
+  // Decrypt and search
+  for (const patient of patients) {
+    try {
+      const data = decryptPatientData(patient.encryptedData);
+
+      // Priority 1: MRN match (if we have stored MRN - currently not in PatientData)
+      // Note: PatientData doesn't have mrn field, so we skip this for now
+
+      // Priority 2: Medicare match
+      if (input.medicare && data.medicareNumber) {
+        // Normalize: remove spaces, compare
+        const inputMedicare = input.medicare.replace(/\s+/g, '').toLowerCase();
+        const storedMedicare = data.medicareNumber.replace(/\s+/g, '').toLowerCase();
+        if (inputMedicare === storedMedicare) {
+          log.info('Patient matched by Medicare', { patientId: patient.id });
+          return {
+            matchType: 'medicare',
+            patientId: patient.id,
+            patientName: data.name,
+            confidence: 'exact',
+          };
+        }
+      }
+
+      // Priority 3: Name + DOB match
+      if (input.fullName && input.dateOfBirth && data.name && data.dateOfBirth) {
+        const inputName = input.fullName.toLowerCase().trim();
+        const storedName = data.name.toLowerCase().trim();
+        const inputDob = input.dateOfBirth;
+        const storedDob = data.dateOfBirth;
+
+        if (inputName === storedName && inputDob === storedDob) {
+          log.info('Patient matched by name + DOB', { patientId: patient.id });
+          return {
+            matchType: 'name_dob',
+            patientId: patient.id,
+            patientName: data.name,
+            confidence: 'exact',
+          };
+        }
+      }
+    } catch (error) {
+      // Skip patients we can't decrypt
+      log.warn('Failed to decrypt patient for matching', { patientId: patient.id });
+    }
+  }
+
+  log.info('No matching patient found');
+  return { matchType: 'none', confidence: 'none' };
+}
+
+/**
+ * Create or find a referrer by name within the practice.
+ */
+async function findOrCreateReferrer(
+  practiceId: string,
+  gpData: NonNullable<ApplyReferralInput['gp']>
+): Promise<string> {
+  const log = logger.child({ practiceId, action: 'findOrCreateReferrer' });
+
+  // Try to find by name (case-insensitive)
+  const existing = await prisma.referrer.findFirst({
+    where: {
+      practiceId,
+      name: { equals: gpData.fullName, mode: 'insensitive' },
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    log.info('Found existing referrer', { referrerId: existing.id });
+    return existing.id;
+  }
+
+  // Create new referrer
+  const referrer = await prisma.referrer.create({
+    data: {
+      practiceId,
+      name: gpData.fullName,
+      practiceName: gpData.practiceName,
+      address: gpData.address,
+      phone: gpData.phone,
+      fax: gpData.fax,
+      email: gpData.email,
+    },
+  });
+
+  log.info('Created new referrer', { referrerId: referrer.id });
+  return referrer.id;
+}
+
+/**
+ * Create a patient contact for the patient.
+ */
+async function createPatientContact(
+  patientId: string,
+  type: 'GP' | 'REFERRER' | 'SPECIALIST',
+  contactData: {
+    fullName: string;
+    organisation?: string;
+    role?: string;
+    address?: string;
+    phone?: string;
+    fax?: string;
+    email?: string;
+  }
+): Promise<string> {
+  const log = logger.child({ patientId, action: 'createPatientContact' });
+
+  // Check if contact with same name already exists for patient
+  const existing = await prisma.patientContact.findFirst({
+    where: {
+      patientId,
+      fullName: { equals: contactData.fullName, mode: 'insensitive' },
+      type,
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    log.info('Found existing patient contact', { contactId: existing.id });
+    return existing.id;
+  }
+
+  // Create new contact
+  const contact = await prisma.patientContact.create({
+    data: {
+      patientId,
+      type,
+      fullName: contactData.fullName,
+      organisation: contactData.organisation,
+      role: contactData.role,
+      address: contactData.address,
+      phone: contactData.phone,
+      fax: contactData.fax,
+      email: contactData.email,
+    },
+  });
+
+  log.info('Created new patient contact', { contactId: contact.id, type });
+  return contact.id;
+}
+
+/**
+ * Apply extracted referral data to create/update patient, referrer, and consultation context.
+ *
+ * This function:
+ * 1. Creates or matches patient
+ * 2. Creates referrer and patient contacts (GP, referring specialist if different)
+ * 3. Links referral document to patient and consultation
+ * 4. Returns IDs and data for form population
+ */
+export async function applyReferralToConsultation(
+  userId: string,
+  practiceId: string,
+  documentId: string,
+  input: ApplyReferralInput
+): Promise<ApplyReferralResult> {
+  const log = logger.child({ userId, practiceId, documentId, action: 'applyReferralToConsultation' });
+
+  // Verify document exists, belongs to practice, and has status EXTRACTED
+  const document = await prisma.referralDocument.findFirst({
+    where: { id: documentId, practiceId },
+  });
+
+  if (!document) {
+    throw new Error('Referral document not found');
+  }
+
+  if (document.status !== 'EXTRACTED') {
+    throw new Error(
+      `Cannot apply referral with status: ${document.status}. Expected: EXTRACTED`
+    );
+  }
+
+  log.info('Starting apply referral', {
+    hasPatient: !!input.patient,
+    hasGp: !!input.gp,
+    hasReferrer: !!input.referrer,
+    hasContext: !!input.referralContext,
+  });
+
+  let patientId: string;
+  let referrerId: string | undefined;
+  let consultationId: string | undefined = input.consultationId;
+  let patientCreated = false;
+
+  // Step 1: Find or create patient
+  const matchResult = await findMatchingPatient(practiceId, {
+    fullName: input.patient.fullName,
+    dateOfBirth: input.patient.dateOfBirth,
+    medicare: input.patient.medicare,
+    mrn: input.patient.mrn,
+  });
+
+  if (matchResult.patientId) {
+    patientId = matchResult.patientId;
+    log.info('Using existing patient', { patientId, matchType: matchResult.matchType });
+  } else {
+    // Create new patient
+    const patientData: PatientData = {
+      name: input.patient.fullName,
+      dateOfBirth: input.patient.dateOfBirth || '',
+      medicareNumber: input.patient.medicare,
+      address: input.patient.address,
+      phone: input.patient.phone,
+      email: input.patient.email,
+    };
+
+    const encryptedData = encryptPatientData(patientData);
+
+    const patient = await prisma.patient.create({
+      data: {
+        practiceId,
+        encryptedData,
+      },
+    });
+
+    patientId = patient.id;
+    patientCreated = true;
+    log.info('Created new patient', { patientId });
+  }
+
+  // Step 2: Create referrer for consultation (GP as practice-level referrer)
+  if (input.gp) {
+    referrerId = await findOrCreateReferrer(practiceId, input.gp);
+
+    // Also create patient-level GP contact
+    await createPatientContact(patientId, 'GP', {
+      fullName: input.gp.fullName,
+      organisation: input.gp.practiceName,
+      address: input.gp.address,
+      phone: input.gp.phone,
+      fax: input.gp.fax,
+      email: input.gp.email,
+    });
+  }
+
+  // Step 3: Create referring specialist contact if different from GP
+  if (input.referrer) {
+    await createPatientContact(patientId, 'REFERRER', {
+      fullName: input.referrer.fullName,
+      organisation: input.referrer.organisation,
+      role: input.referrer.specialty,
+      address: input.referrer.address,
+      phone: input.referrer.phone,
+      fax: input.referrer.fax,
+      email: input.referrer.email,
+    });
+  }
+
+  // Step 4: Update referral document status and link to patient
+  await prisma.referralDocument.update({
+    where: { id: documentId },
+    data: {
+      patientId,
+      consultationId,
+      status: 'APPLIED',
+      processedAt: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  log.info('Referral applied successfully', {
+    patientId,
+    referrerId,
+    consultationId,
+    patientCreated,
+  });
+
+  // Create audit log
+  await prisma.auditLog.create({
+    data: {
+      userId,
+      action: 'referral.apply',
+      resourceType: 'referral_document',
+      resourceId: documentId,
+      metadata: {
+        patientId,
+        referrerId,
+        consultationId,
+        patientCreated,
+        matchType: matchResult.matchType,
+        fieldsApplied: [
+          'patient',
+          input.gp ? 'gp' : null,
+          input.referrer ? 'referrer' : null,
+          input.referralContext ? 'referralContext' : null,
+        ].filter(Boolean),
+      },
+    },
+  });
+
+  return {
+    patientId,
+    referrerId,
+    consultationId,
+    status: 'APPLIED',
+  };
 }

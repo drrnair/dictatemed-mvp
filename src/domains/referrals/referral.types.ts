@@ -225,3 +225,19 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+// Input for patient matching
+export interface PatientMatchInput {
+  fullName: string;
+  dateOfBirth?: string;
+  medicare?: string;
+  mrn?: string;
+}
+
+// Result from patient matching
+export interface PatientMatchResult {
+  matchType: 'mrn' | 'medicare' | 'name_dob' | 'none';
+  patientId?: string;
+  patientName?: string;
+  confidence: 'exact' | 'partial' | 'none';
+}
