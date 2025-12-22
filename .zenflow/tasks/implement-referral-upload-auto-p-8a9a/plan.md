@@ -284,6 +284,7 @@ Implement the apply endpoint and wire up the full flow.
 ---
 
 ### [ ] Step 8: Error Handling & Polish
+<!-- chat-id: b3741504-5ffa-4e3f-839e-f0fd1cfaff22 -->
 
 Add comprehensive error handling and polish the UX.
 
