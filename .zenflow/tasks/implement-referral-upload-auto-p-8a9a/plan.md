@@ -18,47 +18,264 @@ Do not make assumptions on important decisions — get clarification first.
 
 ## Workflow Steps
 
-### [ ] Step: Technical Specification
+### [x] Step: Technical Specification
 
-Assess the task's difficulty, as underestimating it leads to poor outcomes.
-- easy: Straightforward implementation, trivial bug fix or feature
-- medium: Moderate complexity, some edge cases or caveats to consider
-- hard: Complex logic, many caveats, architectural considerations, or high-risk changes
+**Difficulty**: Hard
 
-Create a technical specification for the task that is appropriate for the complexity level:
-- Review the existing codebase architecture and identify reusable components.
-- Define the implementation approach based on established patterns in the project.
-- Identify all source code files that will be created or modified.
-- Define any necessary data model, API, or interface changes.
-- Describe verification steps using the project's test and lint commands.
-
-Save the output to `{@artifacts_path}/spec.md` with:
-- Technical context (language, dependencies)
-- Implementation approach
-- Source code structure changes
-- Data model / API / interface changes
+Technical specification created at `spec.md` including:
+- Architecture decision to create new `ReferralDocument` model
+- Processing pipeline design (upload → text extraction → AI extraction → review → apply)
+- Database model with status workflow
+- API endpoint specifications
+- LLM extraction prompt design
+- UI component specifications
 - Verification approach
-
-If the task is complex enough, create a detailed implementation plan based on `{@artifacts_path}/spec.md`:
-- Break down the work into concrete tasks (incrementable, testable milestones)
-- Each task should reference relevant contracts and include verification steps
-- Replace the Implementation step below with the planned tasks
-
-Rule of thumb for step size: each step should represent a coherent unit of work (e.g., implement a component, add an API endpoint, write tests for a module). Avoid steps that are too granular (single function).
-
-Save to `{@artifacts_path}/plan.md`. If the feature is trivial and doesn't warrant this breakdown, keep the Implementation step below as is.
 
 ---
 
-### [ ] Step: Implementation
+### [ ] Step 1: Database & Core Types
 
-Implement the task according to the technical specification and general engineering best practices.
+Create the data model and TypeScript types for the referral document feature.
 
-1. Break the task into steps where possible.
-2. Implement the required changes in the codebase.
-3. Add and run relevant tests and linters.
-4. Perform basic manual verification if applicable.
-5. After completion, write a report to `{@artifacts_path}/report.md` describing:
-   - What was implemented
-   - How the solution was tested
-   - The biggest issues or challenges encountered
+**Files to create:**
+- `src/domains/referrals/referral.types.ts` - TypeScript type definitions
+- `src/domains/referrals/index.ts` - Domain exports
+
+**Files to modify:**
+- `prisma/schema.prisma` - Add `ReferralDocument` model and `ReferralDocumentStatus` enum
+
+**Tasks:**
+1. Add `ReferralDocument` model to Prisma schema
+2. Add `ReferralDocumentStatus` enum
+3. Add relations to User, Practice, Patient, Consultation models
+4. Create TypeScript type definitions
+5. Run `npx prisma migrate dev --name add_referral_document`
+6. Run `npx prisma generate`
+
+**Verification:**
+- `npm run lint` passes
+- Migration applies successfully
+- Types compile without errors
+
+---
+
+### [ ] Step 2: Upload API & Service
+
+Implement the core service and upload endpoint for referral documents.
+
+**Files to create:**
+- `src/domains/referrals/referral.service.ts` - Business logic
+- `src/app/api/referrals/route.ts` - POST endpoint for upload
+- `src/app/api/referrals/[id]/route.ts` - GET endpoint
+
+**Tasks:**
+1. Implement `createReferralDocument()` - creates DB record, returns presigned URL
+2. Implement `getReferralDocument()` - retrieves document with download URL
+3. Implement `updateReferralStatus()` - status transitions
+4. Create POST `/api/referrals` endpoint with Zod validation
+5. Create GET `/api/referrals/:id` endpoint
+
+**Verification:**
+- API endpoints respond correctly (test with curl/Postman)
+- `npm run lint` passes
+- Write basic unit tests for service functions
+
+---
+
+### [ ] Step 3: Text Extraction
+
+Implement PDF and text file content extraction.
+
+**Files to create:**
+- `src/app/api/referrals/[id]/extract-text/route.ts` - Text extraction endpoint
+
+**Files to modify:**
+- `src/domains/referrals/referral.service.ts` - Add text extraction logic
+
+**Tasks:**
+1. Add pdf-parse dependency (or use existing PDF library)
+2. Implement `extractTextFromDocument()` function
+3. Handle PDF files using pdf-parse
+4. Handle plain text files (read directly)
+5. Handle DOCX files (optional, can defer)
+6. Update document status to `TEXT_EXTRACTED`
+7. Create POST `/api/referrals/:id/extract-text` endpoint
+
+**Verification:**
+- Test with sample PDF referral letter
+- Test with plain text file
+- `npm run lint` passes
+- Write unit tests for extraction
+
+---
+
+### [ ] Step 4: AI Structured Extraction
+
+Implement LLM-powered structured data extraction from referral text.
+
+**Files to create:**
+- `src/domains/referrals/extractors/referral-letter.ts` - Prompt and parser
+- `src/domains/referrals/referral-extraction.service.ts` - Extraction orchestration
+- `src/app/api/referrals/[id]/extract-structured/route.ts` - Endpoint
+
+**Tasks:**
+1. Design extraction prompt (see spec.md)
+2. Implement prompt template with JSON schema
+3. Implement response parser with validation
+4. Implement confidence score calculation
+5. Create extraction service calling Bedrock
+6. Create POST `/api/referrals/:id/extract-structured` endpoint
+7. Update document status to `EXTRACTED`
+
+**Verification:**
+- Test with synthetic referral text
+- Verify JSON output structure
+- Verify confidence scores
+- `npm run lint` passes
+- Write unit tests for parser
+
+---
+
+### [ ] Step 5: Upload UI Component
+
+Create the referral upload component for the consultation form.
+
+**Files to create:**
+- `src/components/referral/ReferralUploader.tsx` - Upload UI
+- `src/components/referral/index.ts` - Component exports
+- `src/hooks/useReferralExtraction.ts` - Extraction workflow hook
+
+**Tasks:**
+1. Create drag-and-drop upload zone (reuse patterns from DocumentUploader)
+2. Add file type validation (PDF, TXT, DOCX)
+3. Add file size validation (max 10MB)
+4. Implement upload progress tracking
+5. Implement extraction trigger after upload
+6. Create hook to manage extraction state machine
+7. Add loading and error states
+
+**Verification:**
+- Component renders correctly
+- File validation works
+- Upload triggers extraction flow
+- Write component tests
+
+---
+
+### [ ] Step 6: Review UI Component
+
+Create the review/edit panel for extracted data.
+
+**Files to create:**
+- `src/components/referral/ReferralReviewPanel.tsx` - Review modal
+- `src/components/referral/ReferralFieldGroup.tsx` - Editable section
+- `src/components/referral/ConfidenceIndicator.tsx` - Confidence display
+
+**Tasks:**
+1. Create modal/panel structure with sections
+2. Implement patient details section (editable fields)
+3. Implement GP details section
+4. Implement referrer details section (if different from GP)
+5. Implement referral context section
+6. Add confidence indicators per section
+7. Implement accept/clear actions per section
+8. Implement global Apply/Cancel buttons
+
+**Verification:**
+- Panel renders extracted data correctly
+- Fields are editable
+- Confidence indicators show correctly
+- Write component tests
+
+---
+
+### [ ] Step 7: Apply Logic & Integration
+
+Implement the apply endpoint and wire up the full flow.
+
+**Files to create:**
+- `src/app/api/referrals/[id]/apply/route.ts` - Apply endpoint
+
+**Files to modify:**
+- `src/domains/referrals/referral.service.ts` - Add apply logic
+- `src/components/consultation/ConsultationContextForm.tsx` - Integrate upload
+- `src/app/(dashboard)/record/page.tsx` - Wire up extraction flow
+
+**Tasks:**
+1. Implement `applyReferralToConsultation()` function
+2. Handle patient creation (new) or matching (existing)
+3. Handle GP/referrer contact creation
+4. Create POST `/api/referrals/:id/apply` endpoint
+5. Integrate ReferralUploader into ConsultationContextForm
+6. Wire up review panel to appear after extraction
+7. Populate form fields after apply
+
+**Verification:**
+- Full flow works: upload → extract → review → apply
+- Patient created correctly
+- GP contact created correctly
+- Consultation form populated
+- Manual entry still works
+
+---
+
+### [ ] Step 8: Error Handling & Polish
+
+Add comprehensive error handling and polish the UX.
+
+**Files to modify:**
+- All referral components and services
+
+**Tasks:**
+1. Add retry logic for upload failures
+2. Add retry logic for extraction failures
+3. Add graceful fallback to manual entry
+4. Add helpful error messages
+5. Add loading spinners/skeletons
+6. Add success notifications
+7. Test edge cases (large files, corrupt PDFs, low confidence)
+
+**Verification:**
+- Error states display correctly
+- Recovery paths work
+- UX is smooth
+
+---
+
+### [ ] Step 9: Tests & Documentation
+
+Write comprehensive tests and update documentation.
+
+**Files to create:**
+- `src/domains/referrals/__tests__/referral.service.test.ts`
+- `src/domains/referrals/__tests__/referral-extraction.service.test.ts`
+- `src/components/referral/__tests__/ReferralUploader.test.tsx`
+- `src/components/referral/__tests__/ReferralReviewPanel.test.tsx`
+
+**Files to modify:**
+- `docs/TECH_NOTES.md` or similar - Add pipeline documentation
+- `docs/DESIGN_NOTES.md` or similar - Add PHI handling notes
+
+**Tasks:**
+1. Write unit tests for referral.service.ts
+2. Write unit tests for extraction parser
+3. Write component tests for ReferralUploader
+4. Write component tests for ReferralReviewPanel
+5. Write integration test for full flow
+6. Document pipeline in TECH_NOTES
+7. Document PHI handling decisions
+8. Add QA instructions with sample test referral
+
+**Verification:**
+- `npm run test` passes
+- Coverage for new code is adequate
+- Documentation is clear
+
+---
+
+### [ ] Step 10: Final Report
+
+Write completion report to `report.md`:
+- What was implemented
+- How the solution was tested
+- Biggest issues or challenges encountered
