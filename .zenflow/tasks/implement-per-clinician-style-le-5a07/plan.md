@@ -296,7 +296,8 @@ npm run typecheck
 
 ---
 
-### [ ] Step 8: Integrate Conditioning with Letter Generation
+### [x] Step 8: Integrate Conditioning with Letter Generation
+<!-- chat-id: 65705bef-314f-40a9-a01d-f903369dd992 -->
 
 Wire the prompt conditioner into letter generation.
 
@@ -315,6 +316,22 @@ Wire the prompt conditioner into letter generation.
 npm run test
 npm run typecheck
 ```
+
+**Completed:** Full integration with letter generation implemented:
+- **Imports Updated**: Replaced `applyStyleHints` with `buildStyleConditionedPrompt` and `computeOverallConfidence` from prompt-conditioner
+- **Input Interface**: Added optional `subspecialty?: Subspecialty` to `GenerateLetterInput`
+- **Subspecialty Inference**: Uses fallback chain: explicit input → template subspecialty → undefined (falls back to global profile in conditioner)
+- **Template Subspecialty**: Fetches template subspecialties when templateId provided, uses first one if available
+- **Prompt Conditioning**: Replaced legacy `applyStyleHints()` with new `buildStyleConditionedPrompt()` which uses:
+  - Subspecialty profile → global profile → default fallback chain
+  - Full style hints including section order, verbosity, phrasing preferences, vocabulary, signoff, formality
+- **Style Confidence**: Computed from profile and stored on letter record
+- **Database Record**: Added `subspecialty` and `styleConfidence` fields to letter creation
+- **Logging Enhanced**: Added style source, confidence, and subspecialty to prompt and letter saved logs
+- **Audit Log**: Added subspecialty, styleSource, and styleConfidence to generation audit metadata
+- **Cleanup**: Removed unused `formatStyleHintsForPrompt()` helper function
+- All 260 tests pass
+- TypeScript and ESLint checks pass
 
 ---
 
