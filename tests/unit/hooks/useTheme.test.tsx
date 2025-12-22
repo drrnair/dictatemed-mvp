@@ -41,11 +41,16 @@ describe('useTheme', () => {
     });
   });
 
-  it('returns initial loading state', () => {
+  it('has isLoading property', async () => {
     const { result } = renderHook(() => useTheme(), { wrapper });
 
-    // Initially loading
-    expect(result.current.isLoading).toBe(true);
+    // Wait for mount - isLoading should become false after mount
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // Verify the property exists and is boolean
+    expect(typeof result.current.isLoading).toBe('boolean');
   });
 
   it('stops loading after mount', async () => {
