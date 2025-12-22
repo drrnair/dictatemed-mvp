@@ -79,6 +79,7 @@ model Patient {
   letters       Letter[]
   consultations Consultation[]
   contacts      PatientContact[]
+  letterSends   LetterSend[]
 
   @@index([practiceId])
   @@map("patients")
@@ -629,6 +630,10 @@ model LetterSend {
   letterId            String
   letter              Letter          @relation(fields: [letterId], references: [id], onDelete: Cascade)
 
+  // Denormalized patientId for direct audit queries (preserved even if letter deleted via cascade)
+  patientId           String?
+  patient             Patient?        @relation(fields: [patientId], references: [id], onDelete: SetNull)
+
   // Who sent
   senderId            String
   sender              User            @relation(fields: [senderId], references: [id])
@@ -658,8 +663,10 @@ model LetterSend {
   externalId          String?         // Provider message ID for tracking
 
   createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
   @@index([letterId])
+  @@index([patientId])
   @@index([senderId])
   @@index([status])
   @@map("letter_sends")

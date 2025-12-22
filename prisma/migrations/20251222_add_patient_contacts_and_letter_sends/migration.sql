@@ -32,6 +32,7 @@ CREATE TABLE "patient_contacts" (
 CREATE TABLE "letter_sends" (
     "id" TEXT NOT NULL,
     "letterId" TEXT NOT NULL,
+    "patientId" TEXT,
     "senderId" TEXT NOT NULL,
     "patientContactId" TEXT,
     "recipientName" TEXT NOT NULL,
@@ -47,6 +48,7 @@ CREATE TABLE "letter_sends" (
     "errorMessage" TEXT,
     "externalId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "letter_sends_pkey" PRIMARY KEY ("id")
 );
@@ -61,6 +63,9 @@ CREATE INDEX "patient_contacts_patientId_type_idx" ON "patient_contacts"("patien
 CREATE INDEX "letter_sends_letterId_idx" ON "letter_sends"("letterId");
 
 -- CreateIndex
+CREATE INDEX "letter_sends_patientId_idx" ON "letter_sends"("patientId");
+
+-- CreateIndex
 CREATE INDEX "letter_sends_senderId_idx" ON "letter_sends"("senderId");
 
 -- CreateIndex
@@ -71,6 +76,9 @@ ALTER TABLE "patient_contacts" ADD CONSTRAINT "patient_contacts_patientId_fkey" 
 
 -- AddForeignKey
 ALTER TABLE "letter_sends" ADD CONSTRAINT "letter_sends_letterId_fkey" FOREIGN KEY ("letterId") REFERENCES "letters"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "letter_sends" ADD CONSTRAINT "letter_sends_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "patients"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "letter_sends" ADD CONSTRAINT "letter_sends_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

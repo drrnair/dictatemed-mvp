@@ -349,7 +349,8 @@ Please do not hesitate to contact me if you have any questions.`,
       });
       vi.mocked(decryptPatientData).mockReturnValue({ name: 'Patient' });
 
-      // Empty string should still throw since it's not valid content
+      // Empty string is falsy in JavaScript, so should throw
+      // This is because !'' is true
       await expect(generateLetterPdf('letter-1')).rejects.toThrow(
         'Letter has no approved content'
       );
