@@ -365,6 +365,7 @@ Create the main send letter dialog UI.
 ---
 
 ### [ ] Step 10: Send History Component
+<!-- chat-id: 44092d3d-2247-4e2a-a612-308bc292722b -->
 
 Create send history display for letter detail page.
 
