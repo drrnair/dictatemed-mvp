@@ -139,3 +139,12 @@
 :focus-visible {
   @apply outline-2 outline-offset-2 outline-ring;
 }
+
+/* Skip link - hidden by default, visible on focus for keyboard users */
+.skip-link {
+  @apply absolute -top-10 left-4 z-50 bg-primary px-4 py-2 text-primary-foreground rounded-md transition-all;
+}
+
+.skip-link:focus {
+  @apply top-4;
+}
