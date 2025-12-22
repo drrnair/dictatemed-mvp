@@ -461,7 +461,8 @@ npm run lint
 
 ---
 
-### [ ] Step 12: Frontend - Subspecialty Style Components
+### [x] Step 12: Frontend - Subspecialty Style Components
+<!-- chat-id: 6daf8a9f-7e13-4d7c-9edd-1259cc86151e -->
 
 Create React components for the subspecialty style UI.
 
@@ -484,6 +485,57 @@ Create React components for the subspecialty style UI.
 npm run typecheck
 npm run lint
 ```
+
+**Completed:** All frontend components for subspecialty style management implemented:
+
+**Hook - `useStyleProfiles.ts`:**
+- Full CRUD operations: `fetchProfiles()`, `getProfile()`, `createProfile()`, `updateProfile()`, `deleteProfile()`
+- Learning strength adjustment: `adjustLearningStrength()`
+- Analysis operations: `triggerAnalysis()`, `getAnalysisStatus()`
+- Seed letter operations: `uploadSeedLetter()`, `listSeedLetters()`, `deleteSeedLetter()`
+- State management with `loading`, `error`, `profiles`
+- Utility functions: `formatSubspecialtyLabel()`, `getSubspecialtyShortLabel()`, `getSubspecialtyDescription()`, `getAllSubspecialties()`, `calculateProfileConfidence()`
+
+**SubspecialtyStyleCard Component:**
+- Displays subspecialty profile status (active/inactive)
+- Shows edit count, confidence meter (Progress bar), learning strength
+- Expandable details: last analyzed, section order, style indicators (greeting, closing, formality, terminology), vocabulary preferences, signoff template
+- Actions: Analyze/Re-analyze button, Reset with AlertDialog confirmation
+- Help text for profiles without enough edits
+- Integrates LearningStrengthSlider
+
+**LearningStrengthSlider Component:**
+- Range slider (0.0-1.0) for adjusting style adaptation level
+- Local state for immediate feedback while dragging
+- Async save on release with loading indicator
+- Labels: "Neutral" to "Personalized" with strength level (Minimal/Light/Moderate/Strong/Full)
+- Color-coded progress fill
+- Also includes `LearningStrengthPresets` component with quick preset buttons (Off/Light/Medium/Full)
+
+**SeedLetterUpload Component:**
+- Dialog-based upload with subspecialty selection
+- Text paste area with clipboard paste button
+- File upload support (TXT, PDF, DOC, DOCX)
+- Validation: min 100 chars, max 50,000 chars
+- Shows existing seed letters with delete option
+- Success/error feedback
+- Also includes `CompactSeedLetterUpload` for inline card usage
+
+**StyleModeSelector Component:**
+- Two-card selector for Global vs Per-Subspecialty modes
+- Shows pros/cons for each mode
+- Status indicators (profile active/no profile)
+- Subspecialty badge summary showing which profiles exist
+- Also includes `StyleModeInfoBanner` for explaining how style learning works
+- Also includes `StyleSummary` for showing current configuration
+
+**Index File:**
+- Barrel export from `components/index.ts`
+
+**Verification:**
+- TypeScript compilation passes
+- ESLint checks pass (fixed quote escaping in SubspecialtyStyleCard)
+- All 260 tests pass
 
 ---
 
