@@ -2,7 +2,7 @@
 // API endpoints to get, update, and delete a specific subspecialty style profile
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@auth0/nextjs-auth0';
+import { getSession } from '@/lib/auth';
 import { z } from 'zod';
 import { Subspecialty } from '@prisma/client';
 import {
@@ -67,7 +67,7 @@ export async function GET(
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     // Validate subspecialty
     const subspecialty = validateSubspecialty(subspecialtyParam);
@@ -132,7 +132,7 @@ export async function PUT(
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     // Validate subspecialty
     const subspecialty = validateSubspecialty(subspecialtyParam);
@@ -213,7 +213,7 @@ export async function DELETE(
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     // Validate subspecialty
     const subspecialty = validateSubspecialty(subspecialtyParam);

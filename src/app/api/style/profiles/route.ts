@@ -2,7 +2,7 @@
 // API endpoints to list and create subspecialty style profiles
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@auth0/nextjs-auth0';
+import { getSession } from '@/lib/auth';
 import { z } from 'zod';
 import { Subspecialty } from '@prisma/client';
 import {
@@ -49,7 +49,7 @@ export async function GET() {
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     log.info('Listing style profiles', { userId });
 
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     // Parse and validate request body
     const body = await request.json();

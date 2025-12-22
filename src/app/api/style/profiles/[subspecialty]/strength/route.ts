@@ -2,7 +2,7 @@
 // API endpoint to adjust learning strength for a subspecialty style profile
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@auth0/nextjs-auth0';
+import { getSession } from '@/lib/auth';
 import { z } from 'zod';
 import { Subspecialty } from '@prisma/client';
 import { adjustLearningStrength } from '@/domains/style';
@@ -59,7 +59,7 @@ export async function PATCH(
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     // Validate subspecialty
     const subspecialty = validateSubspecialty(subspecialtyParam);

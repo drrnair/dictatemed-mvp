@@ -152,7 +152,7 @@ export async function generateLetter(
 
   // Apply subspecialty-aware style conditioning
   // This uses the fallback chain: subspecialty profile → global profile → default
-  const { enhancedPrompt, hints: styleHints, config: styleConfig } = await buildStyleConditionedPrompt({
+  const { enhancedPrompt, config: styleConfig } = await buildStyleConditionedPrompt({
     basePrompt: prompt,
     userId,
     subspecialty: effectiveSubspecialty,
@@ -498,6 +498,7 @@ function mapPrismaLetter(record: PrismaLetterModel): Letter {
     patientId: record.patientId ?? undefined,
     recordingId: record.recordingId ?? undefined,
     letterType: record.letterType as LetterType,
+    subspecialty: record.subspecialty ?? undefined,
     status: record.status as LetterStatus,
     contentDraft: record.contentDraft ?? undefined,
     contentFinal: record.contentFinal ?? undefined,
