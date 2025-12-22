@@ -59,37 +59,44 @@ Add new Prisma models and run migration.
 ---
 
 ### [x] Step 2: Contact Domain - Service and Validation
-<!-- chat-id: 05cbacbd-3e74-413c-8e19-df7e5305caff -->
 
 Implement CRUD service for patient contacts.
 
-**Files to create:**
-- `src/domains/contacts/index.ts`
-- `src/domains/contacts/contact.service.ts`
-- `src/domains/contacts/contact.types.ts`
-- `src/domains/contacts/contact.validation.ts`
+**Files created:**
+- `src/domains/contacts/index.ts` - Barrel export
+- `src/domains/contacts/contact.service.ts` - CRUD operations
+- `src/domains/contacts/contact.types.ts` - TypeScript interfaces
+- `src/domains/contacts/contact.validation.ts` - Zod schemas
+- `tests/unit/domains/contacts/contact.service.test.ts` - 27 unit tests
+- `tests/unit/domains/contacts/contact.validation.test.ts` - 35 unit tests
 
-**Tasks:**
-1. Define TypeScript types for Contact operations
-2. Create Zod validation schemas for contact input
-3. Implement CRUD service functions:
-   - `createContact(input)` - Create patient contact
-   - `getContact(id)` - Get by ID with auth check
-   - `listContactsForPatient(patientId)` - List all contacts
-   - `updateContact(id, input)` - Update contact
-   - `deleteContact(id)` - Soft delete or hard delete
-4. Add email format validation helper
+**Tasks completed:**
+1. Defined TypeScript types: `PatientContact`, `CreateContactInput`, `UpdateContactInput`, `ContactListQuery`, `ContactListResult`
+2. Created Zod validation schemas with:
+   - GP-specific validation (must have contact method)
+   - Channel-specific validation (email required for EMAIL channel, etc.)
+   - Email/phone format validation
+   - Default values for `preferredChannel` (EMAIL) and `isDefaultForPatient` (false)
+3. Implemented CRUD service functions:
+   - `createContact(input)` - Creates contact, auto-unsets other defaults of same type
+   - `getContact(id, patientId?)` - Get by ID with optional auth check
+   - `listContactsForPatient(query)` - Paginated list with filters
+   - `updateContact(id, input, patientId?)` - Update with auth check
+   - `deleteContact(id, patientId?)` - Delete with auth check
+   - `getDefaultContactForPatient(patientId, type)` - Get default of type
+   - `getDefaultContactsForPatient(patientId)` - Get all defaults
+   - `getContactsByIds(ids)` - Batch fetch for letter sending
+   - `hasContacts(patientId)` - Check if patient has contacts
+4. Added helper functions: `isValidEmail()`, `isValidPhone()`, `normalizePhone()`
 
 **Verification:**
-- Write unit tests for validation schemas
-- Write unit tests for service functions
-- `npm run test` passes
-
-**Completed:** All service files created with full CRUD operations, Zod validation schemas with GP-specific rules, email/phone validation helpers. Unit tests in `tests/unit/domains/contacts/contact.validation.test.ts`.
+- `npm run typecheck` passes
+- `npm run test` passes (62 new tests, 139 total)
 
 ---
 
 ### [ ] Step 3: Contact API Endpoints
+<!-- chat-id: cb6361de-e562-4a17-a5c7-ca02ccdba486 -->
 
 Create REST API endpoints for contact management.
 
