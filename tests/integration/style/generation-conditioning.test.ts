@@ -46,7 +46,7 @@ vi.mock('@/lib/logger', () => ({
 import { prisma } from '@/infrastructure/db/client';
 import * as profileService from '@/domains/style/subspecialty-profile.service';
 import * as promptConditioner from '@/domains/style/prompt-conditioner';
-import type { SubspecialtyStyleProfile } from '@/domains/style/subspecialty-profile.types';
+import type { SubspecialtyStyleProfile, VerbosityLevel, LetterSectionType } from '@/domains/style/subspecialty-profile.types';
 
 // ============ Test Data ============
 
@@ -57,9 +57,9 @@ const mockSubspecialtyProfile: SubspecialtyStyleProfile = {
   id: 'profile-001',
   userId: mockUserId,
   subspecialty: mockSubspecialty,
-  sectionOrder: ['greeting', 'history', 'pmh', 'examination', 'impression', 'plan', 'signoff'],
-  sectionInclusion: { pmh: 0.95, medications: 0.85, family_history: 0.3 },
-  sectionVerbosity: { history: 'detailed', plan: 'detailed', examination: 'normal' },
+  sectionOrder: ['greeting', 'history', 'past_medical_history', 'examination', 'impression', 'plan', 'signoff'],
+  sectionInclusion: { past_medical_history: 0.95, medications: 0.85, family_history: 0.3 } as Partial<Record<LetterSectionType, number>>,
+  sectionVerbosity: { history: 'detailed' as VerbosityLevel, plan: 'detailed' as VerbosityLevel, examination: 'normal' as VerbosityLevel } as Partial<Record<LetterSectionType, VerbosityLevel>>,
   phrasingPreferences: {
     greeting: ['I was pleased to review', 'Thank you for referring'],
     impression: ['In summary', 'The impression is'],
@@ -657,15 +657,15 @@ describe('Generation-Time Style Conditioning', () => {
     });
 
     it('should build inclusion instructions', () => {
-      // Act
+      // Act - buildInclusionInstructions expects Partial<Record<LetterSectionType, number>>
       const { include, exclude } = promptConditioner.buildInclusionInstructions({
-        pmh: 0.95, // High probability → include
+        past_medical_history: 0.95, // High probability → include
         medications: 0.85, // High probability → include
         family_history: 0.15, // Low probability → exclude
       });
 
       // Assert
-      expect(include).toContain('Pmh');
+      expect(include).toContain('Past Medical History');
       expect(include).toContain('Medications');
       expect(exclude).toContain('Family History');
     });

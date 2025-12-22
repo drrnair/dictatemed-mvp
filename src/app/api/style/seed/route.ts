@@ -2,7 +2,7 @@
 // API endpoints to upload and list seed letters for bootstrapping style profiles
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@auth0/nextjs-auth0';
+import { getSession } from '@/lib/auth';
 import { z } from 'zod';
 import { Subspecialty } from '@prisma/client';
 import {
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     // Parse query params
     const { searchParams } = new URL(request.url);
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     // Parse and validate request body
     const body = await request.json();
@@ -168,32 +168,23 @@ export async function POST(request: NextRequest) {
       subspecialty,
     });
 
-    // Optionally trigger analysis
+    // Optionally trigger analysis (fire-and-forget pattern)
     let analysisTriggered = false;
     if (triggerAnalysis) {
-      try {
-        // Fire-and-forget analysis - don't block the response
-        // In production, this would be queued to a background job
-        analyzeSeedLetters(userId, subspecialty as Subspecialty).catch((analysisError) => {
-          log.error(
-            'Background seed letter analysis failed',
-            { userId, subspecialty },
-            analysisError instanceof Error ? analysisError : undefined
-          );
-        });
-        analysisTriggered = true;
-        log.info('Seed letter analysis triggered', {
-          userId,
-          subspecialty,
-        });
-      } catch (analysisError) {
-        // Don't fail the request if analysis triggering fails
-        log.warn(
-          'Failed to trigger seed letter analysis',
+      // Fire-and-forget analysis - don't block the response
+      // In production, this would be queued to a background job
+      analyzeSeedLetters(userId, subspecialty as Subspecialty).catch((analysisError) => {
+        log.error(
+          'Background seed letter analysis failed',
           { userId, subspecialty },
           analysisError instanceof Error ? analysisError : undefined
         );
-      }
+      });
+      analysisTriggered = true;
+      log.info('Seed letter analysis triggered', {
+        userId,
+        subspecialty,
+      });
     }
 
     return NextResponse.json(

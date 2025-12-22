@@ -168,13 +168,13 @@ export function createMockProfile(
     id: `profile-${userId}-${subspecialty}`,
     userId,
     subspecialty,
-    sectionOrder: ['greeting', 'history', 'pmh', 'examination', 'investigations', 'impression', 'plan', 'signoff'],
+    sectionOrder: ['greeting', 'history', 'past_medical_history', 'examination', 'investigations', 'impression', 'plan', 'signoff'],
     sectionInclusion: {
-      pmh: 0.9,
+      past_medical_history: 0.9,
       medications: 0.85,
       family_history: 0.3,
       social_history: 0.4,
-    },
+    } as Record<string, number>,
     sectionVerbosity: {
       history: 'detailed',
       examination: 'normal',

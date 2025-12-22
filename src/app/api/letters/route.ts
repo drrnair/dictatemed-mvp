@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import type { Subspecialty } from '@prisma/client';
 import { getSession } from '@/lib/auth';
 import { generateLetter, listLetters } from '@/domains/letters/letter.service';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     const result = await generateLetter(userId, {
       ...validated.data,
-      subspecialty: validated.data.subspecialty as import('@prisma/client').Subspecialty | undefined,
+      subspecialty: validated.data.subspecialty as Subspecialty | undefined,
     });
 
     log.info('Letter generated', {
