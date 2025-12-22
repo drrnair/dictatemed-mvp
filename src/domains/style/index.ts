@@ -73,6 +73,41 @@ export {
   getEditCountSinceLastAnalysis,
 } from './learning-pipeline';
 
+// Prompt conditioner for generation-time style conditioning
+export {
+  // Constants
+  MIN_CONFIDENCE_THRESHOLD as PROMPT_MIN_CONFIDENCE_THRESHOLD,
+  MAX_PHRASES_PER_SECTION,
+  MAX_AVOIDED_PHRASES_PER_SECTION,
+  MAX_VOCABULARY_SUBSTITUTIONS,
+  // Main entry points
+  buildStyleConditionedPrompt,
+  buildStyleHintsFromProfile,
+  convertToLegacyHints,
+  // Config builder
+  buildConditioningConfig,
+  // Individual instruction builders
+  buildSectionOrderInstruction,
+  buildVerbosityInstruction,
+  buildInclusionInstructions,
+  buildPhrasingInstruction,
+  buildAvoidedPhrasesInstruction,
+  buildVocabularyInstruction,
+  buildGreetingInstruction,
+  buildSignoffInstruction,
+  buildFormalityInstruction,
+  buildTerminologyInstruction,
+  buildGeneralGuidance,
+  // Prompt formatting
+  formatStyleGuidance,
+  appendStyleGuidance,
+  // Utilities
+  computeOverallConfidence,
+  formatSectionName,
+  formatSubspecialtyName,
+  hasActiveHints,
+} from './prompt-conditioner';
+
 // Global style types (existing)
 export type {
   StyleProfile,

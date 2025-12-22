@@ -219,7 +219,7 @@ npm run test -- learning-pipeline
 
 ---
 
-### [ ] Step 6: Prompt Conditioner
+### [x] Step 6: Prompt Conditioner
 <!-- chat-id: d63af0f1-0b81-4c32-8d82-d8fde27c13cb -->
 
 Implement style-to-prompt transformation for generation-time conditioning.
@@ -241,6 +241,23 @@ Implement style-to-prompt transformation for generation-time conditioning.
 ```bash
 npm run test -- prompt-conditioner
 ```
+
+**Completed:** Full prompt conditioner implemented in `prompt-conditioner.ts`:
+- **Main Entry Points**: `buildStyleConditionedPrompt()` retrieves profile and builds enhanced prompt, `buildStyleHintsFromProfile()` for direct profile conversion, `convertToLegacyHints()` for backward compatibility with existing `StyleHints` format
+- **Conditioning Config**: `buildConditioningConfig()` determines which preferences to apply based on confidence thresholds (0.5) and learning strength
+- **Section Order**: `buildSectionOrderInstruction()` formats section order as "A → B → C"
+- **Verbosity**: `buildVerbosityInstruction()` creates per-section detail level guidance (brief/normal/detailed)
+- **Section Inclusion**: `buildInclusionInstructions()` identifies sections to always include (≥0.8 probability) or omit (≤0.2)
+- **Phrasing**: `buildPhrasingInstruction()` and `buildAvoidedPhrasesInstruction()` format preferred/avoided phrases per section
+- **Vocabulary**: `buildVocabularyInstruction()` formats terminology substitutions
+- **Tone & Style**: `buildGreetingInstruction()`, `buildSignoffInstruction()`, `buildFormalityInstruction()`, `buildTerminologyInstruction()`
+- **General Guidance**: `buildGeneralGuidance()` summarizes confidence level and learning strength
+- **Prompt Formatting**: `formatStyleGuidance()` combines all hints into structured markdown, `appendStyleGuidance()` merges with base prompt
+- **Utilities**: `computeOverallConfidence()`, `formatSectionName()`, `formatSubspecialtyName()`, `hasActiveHints()`
+- **Fallback Chain**: Uses `getEffectiveProfile()` from subspecialty-profile.service for subspecialty → global → default fallback
+- 60 unit tests covering all functions, edge cases, confidence thresholds, empty profiles, learning strength scaling
+- All functions exported from `index.ts`
+- TypeScript and ESLint checks pass
 
 ---
 
