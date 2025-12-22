@@ -1,213 +1,76 @@
 // tests/unit/lib/theme.test.ts
-// Unit tests for theme utilities
+// Unit tests for theme types and constants
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
-  getSystemTheme,
-  resolveTheme,
-  applyTheme,
   THEME_STORAGE_KEY,
-  getStoredThemePreference,
-  storeThemePreference,
-  onSystemThemeChange,
   DEFAULT_THEME_PREFERENCE,
+  THEME_OPTIONS,
+  type ThemePreference,
+  type ResolvedTheme,
 } from '@/lib/theme';
 
-describe('Theme Utilities', () => {
-  describe('getSystemTheme', () => {
-    let matchMediaMock: ReturnType<typeof vi.fn>;
-
-    beforeEach(() => {
-      matchMediaMock = vi.fn();
-      Object.defineProperty(window, 'matchMedia', {
-        writable: true,
-        value: matchMediaMock,
-      });
-    });
-
-    it('returns dark when system prefers dark mode', () => {
-      matchMediaMock.mockReturnValue({ matches: true });
-      expect(getSystemTheme()).toBe('dark');
-      expect(matchMediaMock).toHaveBeenCalledWith(
-        '(prefers-color-scheme: dark)'
-      );
-    });
-
-    it('returns light when system prefers light mode', () => {
-      matchMediaMock.mockReturnValue({ matches: false });
-      expect(getSystemTheme()).toBe('light');
+describe('Theme Types and Constants', () => {
+  describe('THEME_STORAGE_KEY', () => {
+    it('has the correct storage key matching ThemeProvider', () => {
+      expect(THEME_STORAGE_KEY).toBe('dictatemed-theme');
     });
   });
 
-  describe('resolveTheme', () => {
-    let matchMediaMock: ReturnType<typeof vi.fn>;
-
-    beforeEach(() => {
-      matchMediaMock = vi.fn();
-      Object.defineProperty(window, 'matchMedia', {
-        writable: true,
-        value: matchMediaMock,
-      });
-    });
-
-    it('returns light for light preference', () => {
-      expect(resolveTheme('light')).toBe('light');
-    });
-
-    it('returns dark for dark preference', () => {
-      expect(resolveTheme('dark')).toBe('dark');
-    });
-
-    it('returns system theme for system preference', () => {
-      matchMediaMock.mockReturnValue({ matches: true });
-      expect(resolveTheme('system')).toBe('dark');
-
-      matchMediaMock.mockReturnValue({ matches: false });
-      expect(resolveTheme('system')).toBe('light');
-    });
-  });
-
-  describe('applyTheme', () => {
-    beforeEach(() => {
-      document.documentElement.classList.remove('dark');
-    });
-
-    it('adds dark class for dark theme', () => {
-      applyTheme('dark');
-      expect(document.documentElement.classList.contains('dark')).toBe(true);
-    });
-
-    it('removes dark class for light theme', () => {
-      document.documentElement.classList.add('dark');
-      applyTheme('light');
-      expect(document.documentElement.classList.contains('dark')).toBe(false);
-    });
-  });
-
-  describe('getStoredThemePreference', () => {
-    beforeEach(() => {
-      localStorage.clear();
-    });
-
-    it('returns null when no preference stored', () => {
-      expect(getStoredThemePreference()).toBe(null);
-    });
-
-    it('returns light when light is stored', () => {
-      localStorage.setItem(THEME_STORAGE_KEY, 'light');
-      expect(getStoredThemePreference()).toBe('light');
-    });
-
-    it('returns dark when dark is stored', () => {
-      localStorage.setItem(THEME_STORAGE_KEY, 'dark');
-      expect(getStoredThemePreference()).toBe('dark');
-    });
-
-    it('returns system when system is stored', () => {
-      localStorage.setItem(THEME_STORAGE_KEY, 'system');
-      expect(getStoredThemePreference()).toBe('system');
-    });
-
-    it('returns null for invalid stored value', () => {
-      localStorage.setItem(THEME_STORAGE_KEY, 'invalid');
-      expect(getStoredThemePreference()).toBe(null);
-    });
-  });
-
-  describe('storeThemePreference', () => {
-    beforeEach(() => {
-      localStorage.clear();
-    });
-
-    it('stores light preference', () => {
-      storeThemePreference('light');
-      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
-    });
-
-    it('stores dark preference', () => {
-      storeThemePreference('dark');
-      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
-    });
-
-    it('stores system preference', () => {
-      storeThemePreference('system');
-      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('system');
-    });
-  });
-
-  describe('onSystemThemeChange', () => {
-    let matchMediaMock: ReturnType<typeof vi.fn>;
-    let addEventListenerMock: ReturnType<typeof vi.fn>;
-    let removeEventListenerMock: ReturnType<typeof vi.fn>;
-
-    beforeEach(() => {
-      addEventListenerMock = vi.fn();
-      removeEventListenerMock = vi.fn();
-      matchMediaMock = vi.fn().mockReturnValue({
-        matches: false,
-        addEventListener: addEventListenerMock,
-        removeEventListener: removeEventListenerMock,
-      });
-      Object.defineProperty(window, 'matchMedia', {
-        writable: true,
-        value: matchMediaMock,
-      });
-    });
-
-    it('adds change event listener', () => {
-      const callback = vi.fn();
-      onSystemThemeChange(callback);
-      expect(addEventListenerMock).toHaveBeenCalledWith(
-        'change',
-        expect.any(Function)
-      );
-    });
-
-    it('returns cleanup function that removes listener', () => {
-      const callback = vi.fn();
-      const cleanup = onSystemThemeChange(callback);
-      cleanup();
-      expect(removeEventListenerMock).toHaveBeenCalledWith(
-        'change',
-        expect.any(Function)
-      );
-    });
-
-    it('calls callback with dark when system changes to dark', () => {
-      const callback = vi.fn();
-      onSystemThemeChange(callback);
-
-      // Get the handler that was registered
-      const handler = addEventListenerMock.mock.calls[0]?.[1] as
-        | ((e: MediaQueryListEvent) => void)
-        | undefined;
-      expect(handler).toBeDefined();
-      handler!({ matches: true } as MediaQueryListEvent);
-
-      expect(callback).toHaveBeenCalledWith('dark');
-    });
-
-    it('calls callback with light when system changes to light', () => {
-      const callback = vi.fn();
-      onSystemThemeChange(callback);
-
-      const handler = addEventListenerMock.mock.calls[0]?.[1] as
-        | ((e: MediaQueryListEvent) => void)
-        | undefined;
-      expect(handler).toBeDefined();
-      handler!({ matches: false } as MediaQueryListEvent);
-
-      expect(callback).toHaveBeenCalledWith('light');
-    });
-  });
-
-  describe('constants', () => {
-    it('has correct storage key', () => {
-      expect(THEME_STORAGE_KEY).toBe('theme');
-    });
-
-    it('has correct default preference', () => {
+  describe('DEFAULT_THEME_PREFERENCE', () => {
+    it('defaults to system preference', () => {
       expect(DEFAULT_THEME_PREFERENCE).toBe('system');
+    });
+  });
+
+  describe('THEME_OPTIONS', () => {
+    it('has three options: system, light, dark', () => {
+      expect(THEME_OPTIONS).toHaveLength(3);
+    });
+
+    it('includes system option', () => {
+      const systemOption = THEME_OPTIONS.find((o) => o.value === 'system');
+      expect(systemOption).toBeDefined();
+      expect(systemOption?.label).toBe('System');
+    });
+
+    it('includes light option', () => {
+      const lightOption = THEME_OPTIONS.find((o) => o.value === 'light');
+      expect(lightOption).toBeDefined();
+      expect(lightOption?.label).toBe('Light');
+    });
+
+    it('includes dark option', () => {
+      const darkOption = THEME_OPTIONS.find((o) => o.value === 'dark');
+      expect(darkOption).toBeDefined();
+      expect(darkOption?.label).toBe('Dark');
+    });
+
+    it('has values that match ThemePreference type', () => {
+      const validValues: ThemePreference[] = ['system', 'light', 'dark'];
+      THEME_OPTIONS.forEach((option) => {
+        expect(validValues).toContain(option.value);
+      });
+    });
+  });
+
+  describe('Type definitions', () => {
+    it('ThemePreference type accepts valid values', () => {
+      const systemPref: ThemePreference = 'system';
+      const lightPref: ThemePreference = 'light';
+      const darkPref: ThemePreference = 'dark';
+
+      expect(systemPref).toBe('system');
+      expect(lightPref).toBe('light');
+      expect(darkPref).toBe('dark');
+    });
+
+    it('ResolvedTheme type accepts valid values', () => {
+      const lightTheme: ResolvedTheme = 'light';
+      const darkTheme: ResolvedTheme = 'dark';
+
+      expect(lightTheme).toBe('light');
+      expect(darkTheme).toBe('dark');
     });
   });
 });

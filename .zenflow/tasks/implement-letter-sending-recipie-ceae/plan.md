@@ -456,14 +456,13 @@ Create UI for managing patient contacts.
 
 Implement theme preference system.
 
-**Files created:**
-- `src/lib/theme.ts` - Theme utilities with:
-  - `getSystemTheme()` - Detects OS preference via matchMedia
-  - `resolveTheme(preference)` - Resolves 'system' to actual theme
-  - `applyTheme(theme)` - Applies dark/light class to document
-  - `getStoredThemePreference()` / `storeThemePreference()` - LocalStorage helpers
-  - `onSystemThemeChange(callback)` - Listener for system preference changes
-  - `THEME_STORAGE_KEY`, `DEFAULT_THEME_PREFERENCE` constants
+**Files created/modified:**
+- `src/lib/theme.ts` - Theme types and constants:
+  - `ThemePreference` type ('system' | 'light' | 'dark')
+  - `ResolvedTheme` type ('light' | 'dark')
+  - `THEME_STORAGE_KEY` - Storage key matching ThemeProvider ('dictatemed-theme')
+  - `DEFAULT_THEME_PREFERENCE` - Default value ('system')
+  - `THEME_OPTIONS` - Array of options for UI components
 - `src/hooks/useTheme.ts` - Custom hook wrapping next-themes with:
   - `theme` - Current resolved theme ('light' | 'dark')
   - `preference` - User preference ('system' | 'light' | 'dark')
@@ -472,24 +471,21 @@ Implement theme preference system.
   - `isLoading` - Hydration state
   - `systemTheme` - OS preference
   - `isSystemPreference` - Whether using system preference
-- `tests/unit/lib/theme.test.ts` - 21 unit tests for theme utilities
+- `src/components/providers/ThemeProvider.tsx` - Simplified wrapper around next-themes:
+  - Uses `THEME_STORAGE_KEY` from theme.ts for consistency
+  - Configures class-based dark mode with system detection
+- `tests/unit/lib/theme.test.ts` - 9 unit tests for theme constants
 - `tests/unit/hooks/useTheme.test.tsx` - 8 unit tests for useTheme hook
-
-**Files modified:**
-- `src/components/providers/ThemeProvider.tsx` - Enhanced with:
-  - `ThemeSyncContext` for syncing server-side user preferences
-  - `useThemeSync()` hook exported for components to sync theme from API
-  - Custom storage key `dictatemed-theme`
-- `src/app/layout.tsx` - Already wrapped with ThemeProvider (no change needed)
 
 **Already existed (leveraged):**
 - `next-themes@0.4.6` dependency
-- Dark mode CSS variables in `globals.css`
+- Dark mode CSS variables in `globals.css` (with clinical status colors for both themes)
+- `src/app/layout.tsx` - Already wrapped with ThemeProvider
 
 **Verification:**
 - `npm run typecheck` passes
 - `npm run lint` passes
-- `npm run test` passes (343 tests total, 29 new theme tests)
+- `npm run test` passes (387 tests total)
 
 ---
 

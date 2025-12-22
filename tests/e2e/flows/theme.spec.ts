@@ -1,5 +1,29 @@
 import { test, expect } from '@playwright/test';
 
+/**
+ * E2E Tests for Theme System
+ *
+ * NOTE: Tests marked with test.skip require authentication to be set up.
+ * To enable these tests:
+ * 1. Create an auth fixture that provides authenticated session cookies
+ * 2. Use Playwright's storageState to persist auth across tests
+ * 3. See: https://playwright.dev/docs/auth
+ *
+ * Example auth fixture setup:
+ * ```
+ * // tests/e2e/fixtures/auth.ts
+ * import { test as base } from '@playwright/test';
+ * export const test = base.extend({
+ *   authenticatedPage: async ({ browser }, use) => {
+ *     const context = await browser.newContext({ storageState: 'auth.json' });
+ *     const page = await context.newPage();
+ *     await use(page);
+ *     await context.close();
+ *   },
+ * });
+ * ```
+ */
+
 test.describe('Theme System', () => {
   test('should apply system theme by default', async ({ page }) => {
     await page.goto('/');
@@ -9,7 +33,7 @@ test.describe('Theme System', () => {
     const className = await html.getAttribute('class');
 
     // Should have some theme class (from next-themes)
-    expect(className || '').toMatch(/light|dark|/);
+    expect(className || '').toMatch(/light|dark/);
   });
 
   test('should show theme toggle in appearance settings', async ({ page }) => {
