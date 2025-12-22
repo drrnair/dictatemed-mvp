@@ -1,6 +1,7 @@
 // src/app/(dashboard)/dashboard/page.tsx
 // Dashboard home page
 
+import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 
 export default async function DashboardPage() {
@@ -107,8 +108,8 @@ function QuickActionCard({
   icon: React.ReactNode;
 }) {
   return (
-    <a
-      href={href}
+    <Link
+      href={href as '/'}
       className="group flex items-start gap-space-4 rounded-lg border border-border/60 bg-card p-space-6 shadow-card transition-all duration-150 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <div
@@ -125,7 +126,7 @@ function QuickActionCard({
           {description}
         </p>
       </div>
-    </a>
+    </Link>
   );
 }
 

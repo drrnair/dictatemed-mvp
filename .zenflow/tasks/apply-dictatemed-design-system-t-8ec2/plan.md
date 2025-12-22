@@ -312,7 +312,8 @@ Apply design system to the letter review/edit interface.
 
 ---
 
-### [ ] Step: Testing & Documentation
+### [x] Step: Testing & Documentation
+<!-- chat-id: a9115758-ce1c-4100-9941-0d810562ce9f -->
 
 Run tests, verify accessibility, and create documentation.
 
@@ -328,6 +329,27 @@ Run tests, verify accessibility, and create documentation.
 - Build succeeds
 - WCAG AA contrast requirements met
 - Documentation complete
+
+**Completed:**
+- All 77 tests pass (`npm run test`)
+- No ESLint warnings or errors (`npm run lint`)
+- Build succeeds (`npm run build`)
+- Searched for hardcoded colors:
+  - Dashboard page: No hardcoded colors (fully migrated)
+  - UI components: Only toast.tsx has one hardcoded color (out of scope)
+  - Layout components: OfflineIndicator and NotificationCenter have hardcoded colors (out of scope)
+  - Other pages (settings, error, PWA) have hardcoded colors (out of scope for this refactor)
+- Created `docs/DESIGN_NOTES.md` with:
+  - Design philosophy and principles
+  - Color palette documentation with tokens and usage
+  - Typography scale reference
+  - Spacing system (8px base)
+  - Touch target requirements (44px)
+  - Component patterns (cards, buttons, badges, inputs)
+  - Accessibility guidelines (focus states, ARIA, keyboard nav)
+  - Dark mode support notes
+  - Guide for adding new screens
+  - Known limitations and future considerations
 
 ---
 
