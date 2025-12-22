@@ -38,7 +38,7 @@ Based on task requirements and brand references (Brightside, Tia, Rest Assured, 
 | `--background` | `40 20% 98%` | `#FDFCFA` | Page background, warm white |
 | `--background-subtle` | `40 15% 96%` | `#F8F7F4` | Subtle sections, alternating rows |
 | `--foreground` | `220 15% 12%` | `#1A1D23` | Primary text, near-black |
-| `--foreground-muted` | `220 10% 46%` | `#6B7280` | Secondary text |
+| `--foreground-muted` | `220 12% 38%` | `#555E6E` | Secondary text (WCAG AA: 5.2:1) |
 | `--card` | `0 0% 100%` | `#FFFFFF` | Card backgrounds |
 | `--card-foreground` | `220 15% 12%` | `#1A1D23` | Card text |
 | `--primary` | `174 42% 40%` | `#3B9B8E` | Medical-grade teal accent |
@@ -46,7 +46,7 @@ Based on task requirements and brand references (Brightside, Tia, Rest Assured, 
 | `--secondary` | `40 15% 94%` | `#F3F1ED` | Secondary buttons, subtle UI |
 | `--secondary-foreground` | `220 15% 20%` | `#2D3340` | Text on secondary |
 | `--muted` | `40 12% 92%` | `#EFECEA` | Muted backgrounds |
-| `--muted-foreground` | `220 10% 46%` | `#6B7280` | Muted text |
+| `--muted-foreground` | `220 12% 38%` | `#555E6E` | Muted text (WCAG AA: 5.2:1) |
 | `--accent` | `174 35% 95%` | `#EDF7F6` | Hover states, highlights |
 | `--accent-foreground` | `174 42% 30%` | `#2D756A` | Text on accent |
 | `--border` | `40 12% 88%` | `#E5E2DC` | Borders, dividers |
@@ -64,15 +64,23 @@ Based on task requirements and brand references (Brightside, Tia, Rest Assured, 
 | `--clinical-info` | `174 42% 40%` | Info (matches primary) |
 
 #### Dark Mode
-| Token | HSL Value | Usage |
-|-------|-----------|-------|
-| `--background` | `220 15% 10%` | `#161920` |
-| `--background-subtle` | `220 15% 13%` | `#1E2128` |
-| `--foreground` | `40 15% 95%` | `#F5F4F2` |
-| `--foreground-muted` | `220 10% 60%` | `#8B929E` |
-| `--card` | `220 15% 13%` | `#1E2128` |
-| `--primary` | `174 45% 50%` | `#40B3A4` (slightly brighter) |
-| `--border` | `220 15% 20%` | `#2D3340` |
+| Token | HSL Value | Hex | Usage |
+|-------|-----------|-----|-------|
+| `--background` | `220 15% 10%` | `#161920` | Page background |
+| `--background-subtle` | `220 15% 13%` | `#1E2128` | Subtle sections |
+| `--foreground` | `40 15% 95%` | `#F5F4F2` | Primary text |
+| `--foreground-muted` | `220 10% 60%` | `#8B929E` | Secondary text |
+| `--card` | `220 15% 13%` | `#1E2128` | Card backgrounds |
+| `--card-foreground` | `40 15% 95%` | `#F5F4F2` | Card text |
+| `--popover` | `220 15% 13%` | `#1E2128` | Popover backgrounds |
+| `--popover-foreground` | `40 15% 95%` | `#F5F4F2` | Popover text |
+| `--primary` | `174 45% 50%` | `#40B3A4` | Primary accent (brighter) |
+| `--secondary` | `220 15% 18%` | `#272D38` | Secondary UI |
+| `--muted` | `220 15% 18%` | `#272D38` | Muted backgrounds |
+| `--muted-foreground` | `220 10% 60%` | `#8B929E` | Muted text |
+| `--accent` | `174 35% 20%` | `#213D3A` | Hover states |
+| `--border` | `220 15% 20%` | `#2D3340` | Borders |
+| `--ring` | `174 45% 50%` | `#40B3A4` | Focus rings |
 
 ### 2.2 Typography
 
@@ -282,42 +290,18 @@ npm run build
 
 ## 7. Implementation Plan
 
-Given the complexity, the implementation should be broken into incremental steps:
+Given the complexity, the implementation is broken into 8 incremental steps (see `plan.md`):
 
-### Step 1: Design Token Foundation
-- Update `globals.css` with new color palette
-- Update `tailwind.config.js` with typography and spacing
-- Verify existing components still render
-
-### Step 2: UI Primitives
-- Update Button, Card, Badge, Input, Dialog components
-- Test in isolation
-
-### Step 3: Navigation Shell
-- Update Sidebar and Header
-- Update dashboard layout
-- Test navigation flows
-
-### Step 4: Dashboard Screen
-- Update QuickActionCard and StatCard
-- Verify layout and interactions
-
-### Step 5: Record Screen
-- Update CollapsibleSection styling
-- Update status indicators
-- Test recording flow (visual only)
-
-### Step 6: Letter Review Screen
-- Update LetterReviewClient header and panels
-- Update VerificationPanel styling
-- Update SourcePanel styling
-- Test editing and approval flows
-
-### Step 7: Documentation & Cleanup
-- Create DESIGN_NOTES.md
-- Search for any hardcoded colors
-- Run full test suite
-- Manual verification checklist
+| Step | Name | Files | Verification |
+|------|------|-------|--------------|
+| 1 | Design Token Foundation | `globals.css`, `tailwind.config.js` | Build passes |
+| 2 | UI Primitives | `button.tsx`, `card.tsx`, `badge.tsx`, `input.tsx`, `label.tsx`, `dialog.tsx` | Lint passes |
+| 3 | Navigation Shell | `Sidebar.tsx`, `Header.tsx`, `layout.tsx` | Navigation works |
+| 4 | Dashboard Screen | `dashboard/page.tsx` | Cards display correctly |
+| 5 | Record Screen | `record/page.tsx` | Sections expand/collapse |
+| 6 | Letter Review Screen | `LetterReviewClient.tsx`, `VerificationPanel.tsx`, `SourcePanel.tsx`, `LetterEditor.tsx` | Panels work |
+| 7 | Testing & Documentation | `DESIGN_NOTES.md` | All tests pass, WCAG verified |
+| 8 | Final Report | `report.md` | Summary of changes |
 
 ---
 
