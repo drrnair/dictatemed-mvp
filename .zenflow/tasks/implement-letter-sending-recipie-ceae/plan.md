@@ -179,6 +179,7 @@ Create service to generate letter PDFs for attachment.
 ---
 
 ### [ ] Step 6: Letter Sending Service
+<!-- chat-id: 9b01f569-b877-4fe1-81cb-8607fa2d6bfc -->
 
 Create orchestration service for sending letters.
 

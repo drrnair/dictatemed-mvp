@@ -22,6 +22,9 @@ export {
   type ApprovalResult,
 } from './approval.service';
 
+// PDF generation
+export { generateLetterPdf, generateSimplePdf } from './pdf.service';
+
 // Types
 export type {
   Letter,
