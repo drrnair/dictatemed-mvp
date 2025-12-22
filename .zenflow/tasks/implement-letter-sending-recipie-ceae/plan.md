@@ -224,7 +224,43 @@ Create orchestration service for sending letters.
 3. Implement `retrySend(sendId)` for failed sends
 4. Add AuditLog entries for sends
 
-**Completed:** Full sending service with PDF generation, email sending, status tracking, retry support, audit logging, and subject template processing.
+**Files created/modified:**
+- `src/domains/letters/sending.service.ts` - Main sending orchestration
+- `src/domains/letters/sending.types.ts` - Type definitions
+- `src/domains/letters/index.ts` - Added exports for sending functions
+- `tests/unit/domains/letters/sending.service.test.ts` - 33 unit tests
+
+**Implementation details:**
+1. `sendLetter(input)`:
+   - Validates letter is APPROVED status
+   - Verifies sender has practice-level access
+   - Generates PDF attachment via `generateLetterPdf()`
+   - Sends to each recipient sequentially:
+     - Creates LetterSend record (QUEUED)
+     - Updates to SENDING
+     - Calls email adapter
+     - Updates to SENT or FAILED with timestamps
+   - Creates audit log entry with metadata
+   - Returns aggregate result with per-recipient status
+2. `retrySend(input)`:
+   - Validates send exists and is FAILED
+   - Verifies user authorization
+   - Regenerates PDF and retries email
+   - Updates status accordingly
+3. `getSendHistory(letterId)`:
+   - Returns all send records for a letter
+4. `getSend(sendId)`:
+   - Returns single send record
+5. `processSubjectTemplate(template, data)`:
+   - Replaces tokens: `{{patient_name}}`, `{{letter_type}}`, `{{subspecialty}}`, `{{date}}`
+6. Email body includes:
+   - Optional cover note
+   - Confidentiality notice
+   - PDF attachment with sanitized filename
+
+**Verification:**
+- `npm run typecheck` passes
+- `npm run test` passes (195 tests total, 33 sending service tests)
 
 ---
 
