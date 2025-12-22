@@ -122,6 +122,7 @@ Create REST API endpoints for contact management.
 ---
 
 ### [ ] Step 4: Email Infrastructure - Adapter Pattern
+<!-- chat-id: 1089ded4-7856-4233-8467-7b2e76786364 -->
 
 Create email sending infrastructure module.
 

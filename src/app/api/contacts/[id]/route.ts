@@ -70,7 +70,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Rate limiting
     const rateLimitKey = createRateLimitKey(session.user.id, 'contacts');
-    const rateLimit = checkRateLimit(rateLimitKey, 'standard');
+    const rateLimit = checkRateLimit(rateLimitKey, 'default');
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfterMs },
@@ -147,7 +147,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // Rate limiting
     const rateLimitKey = createRateLimitKey(session.user.id, 'contacts');
-    const rateLimit = checkRateLimit(rateLimitKey, 'standard');
+    const rateLimit = checkRateLimit(rateLimitKey, 'default');
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfterMs },
