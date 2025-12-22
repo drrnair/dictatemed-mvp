@@ -405,6 +405,8 @@ export interface StyleConditioningConfig {
   applyVocabulary: boolean;
   applySignoff: boolean;
   applyFormality: boolean;
+  applyGreeting: boolean;
+  applyTerminology: boolean;
 }
 
 /**

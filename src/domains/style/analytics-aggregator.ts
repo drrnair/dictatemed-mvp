@@ -56,9 +56,15 @@ const PHI_PATTERNS: RegExp[] = [
   // Dates (various formats)
   /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g,
   /\b\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{2,4}\b/gi,
-  // Medicare/health identifiers (Australian format)
+  // Medicare/health identifiers (Australian format - 10-11 digits)
   /\b\d{10,11}\b/g,
-  // Phone numbers
+  // Phone numbers - Australian mobile format (04xx-xxx-xxx)
+  /\b04\d{2}[-.\s]?\d{3}[-.\s]?\d{3}\b/g,
+  // Phone numbers - Australian landline with area code (including parentheses)
+  /\(?0[2-9]\)?\s?\d{4}[-.\s]?\d{4}\b/g,
+  // Phone numbers - International format (+61 with various spacing)
+  /\+61\s?\d{1,3}[-.\s]?\d{3}[-.\s]?\d{3}[-.\s]?\d{0,3}\b/g,
+  // Phone numbers - US/general format
   /\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
   // Email addresses
   /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
@@ -66,8 +72,8 @@ const PHI_PATTERNS: RegExp[] = [
   /\b\d+\s+[A-Z][a-z]+\s+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Court|Ct|Lane|Ln|Boulevard|Blvd)\b/gi,
   // Hospital/clinic names with identifying info
   /\b(?:Hospital|Clinic|Medical Centre|Medical Center|Surgery)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*/gi,
-  // URN/MRN patterns
-  /\b(?:URN|MRN|ID)[:\s]?\d+\b/gi,
+  // URN/MRN patterns (more flexible)
+  /\b(?:URN|MRN|ID)\s*[:\s]?\s*\d+\b/gi,
 ];
 
 // ============ PHI Stripping ============
@@ -109,21 +115,34 @@ export function containsPHI(text: string): boolean {
  * Returns null if the phrase should be excluded (too short, contains PHI).
  */
 export function sanitizePhrase(phrase: string): string | null {
+  // Check for whitespace-only or empty phrases first
+  const trimmed = phrase.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
   // Skip very short phrases
-  if (phrase.length < 5) {
+  if (trimmed.length < 5) {
     return null;
   }
 
   // Strip PHI
-  const stripped = stripPHI(phrase);
+  const stripped = stripPHI(trimmed);
 
   // Skip if mostly redacted
   if (stripped.includes('[REDACTED]')) {
     return null;
   }
 
-  // Normalize whitespace
-  return stripped.replace(/\s+/g, ' ').trim();
+  // Normalize whitespace and check result
+  const normalized = stripped.replace(/\s+/g, ' ').trim();
+
+  // Return null if after normalization it's too short
+  if (normalized.length < 5) {
+    return null;
+  }
+
+  return normalized;
 }
 
 // ============ Aggregation Logic ============
