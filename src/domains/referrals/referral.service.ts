@@ -9,12 +9,7 @@ import {
   getObjectContent,
 } from '@/infrastructure/s3/presigned-urls';
 import { logger } from '@/lib/logger';
-// pdf-parse v1.x is a CommonJS module - using require for CJS compatibility
-/* eslint-disable */
-const pdfParse = require('pdf-parse') as (
-  dataBuffer: Buffer
-) => Promise<{ text: string; numpages: number; info: unknown }>;
-/* eslint-enable */
+import { extractPdfText } from './pdf-utils';
 import type {
   ReferralDocument,
   ReferralDocumentStatus,
@@ -544,7 +539,7 @@ export async function extractTextFromDocument(
     let extractedText: string;
 
     if (document.mimeType === 'application/pdf') {
-      extractedText = await extractTextFromPdf(content, log);
+      extractedText = await extractTextFromPdfBuffer(content, log);
     } else if (document.mimeType === 'text/plain') {
       extractedText = content.toString('utf-8');
     } else {
@@ -622,12 +617,12 @@ export async function extractTextFromDocument(
 /**
  * Extract text from a PDF buffer using pdf-parse.
  */
-async function extractTextFromPdf(
+async function extractTextFromPdfBuffer(
   pdfBuffer: Buffer,
   log: ReturnType<typeof logger.child>
 ): Promise<string> {
   try {
-    const data = await pdfParse(pdfBuffer);
+    const data = await extractPdfText(pdfBuffer);
 
     log.info('PDF parsed successfully', {
       numPages: data.numpages,

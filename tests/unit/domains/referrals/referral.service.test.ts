@@ -2,13 +2,10 @@
 // Tests for referral document service (unit tests with mocked Prisma and S3)
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as referralService from '@/domains/referrals/referral.service';
-import { prisma } from '@/infrastructure/db/client';
-import * as s3 from '@/infrastructure/s3/presigned-urls';
 import type { ReferralDocumentStatus } from '@/domains/referrals/referral.types';
 
-// Mock for pdf-parse (we mock it via vi.mock but reference it this way for tests)
-const mockPdfParse = vi.fn();
+// Hoist mock to top level so it's available for vi.mock calls
+const mockExtractPdfText = vi.hoisted(() => vi.fn());
 
 // Mock Prisma
 vi.mock('@/infrastructure/db/client', () => ({
@@ -36,20 +33,29 @@ vi.mock('@/infrastructure/s3/presigned-urls', () => ({
   getObjectContent: vi.fn(),
 }));
 
-// Mock pdf-parse (CommonJS module)
-vi.mock('pdf-parse', () => mockPdfParse);
+// Mock pdf-utils module
+vi.mock('@/domains/referrals/pdf-utils', () => ({
+  extractPdfText: mockExtractPdfText,
+}));
 
 // Mock logger
 vi.mock('@/lib/logger', () => ({
   logger: {
     child: vi.fn(() => ({
       info: vi.fn(),
+      warn: vi.fn(),
       error: vi.fn(),
     })),
     info: vi.fn(),
+    warn: vi.fn(),
     error: vi.fn(),
   },
 }));
+
+// Import after mocks are set up
+import * as referralService from '@/domains/referrals/referral.service';
+import { prisma } from '@/infrastructure/db/client';
+import * as s3 from '@/infrastructure/s3/presigned-urls';
 
 describe('referral.service', () => {
   beforeEach(() => {
@@ -586,14 +592,10 @@ describe('referral.service', () => {
         content: Buffer.from('fake pdf content'),
         contentType: 'application/pdf',
       });
-      mockPdfParse.mockResolvedValue({
+      mockExtractPdfText.mockResolvedValue({
         text: samplePdfText,
         numpages: 1,
-        numrender: 1,
-        info: {},
-        metadata: {},
-        version: '1.0',
-      } as any);
+      });
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({
         ...mockReferralDocument,
         contentText: samplePdfText,
@@ -604,7 +606,7 @@ describe('referral.service', () => {
       const result = await referralService.extractTextFromDocument('user-1', 'ref-doc-1');
 
       expect(s3.getObjectContent).toHaveBeenCalledWith(mockReferralDocument.s3Key);
-      expect(mockPdfParse).toHaveBeenCalled();
+      expect(mockExtractPdfText).toHaveBeenCalled();
       expect(prisma.referralDocument.update).toHaveBeenCalledWith({
         where: { id: 'ref-doc-1' },
         data: expect.objectContaining({
@@ -639,7 +641,7 @@ describe('referral.service', () => {
 
       const result = await referralService.extractTextFromDocument('user-1', 'ref-doc-1');
 
-      expect(mockPdfParse).not.toHaveBeenCalled(); // Should not use PDF parser
+      expect(mockExtractPdfText).not.toHaveBeenCalled(); // Should not use PDF parser
       expect(result.status).toBe('TEXT_EXTRACTED');
     });
 
@@ -692,7 +694,7 @@ describe('referral.service', () => {
         content: Buffer.from('corrupt pdf'),
         contentType: 'application/pdf',
       });
-      mockPdfParse.mockRejectedValue(new Error('Invalid PDF structure'));
+      mockExtractPdfText.mockRejectedValue(new Error('Invalid PDF structure'));
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({
         ...mockReferralDocument,
         status: 'FAILED' as ReferralDocumentStatus,
@@ -717,14 +719,10 @@ describe('referral.service', () => {
         content: Buffer.from('fake pdf'),
         contentType: 'application/pdf',
       });
-      mockPdfParse.mockResolvedValue({
+      mockExtractPdfText.mockResolvedValue({
         text: samplePdfText,
         numpages: 1,
-        numrender: 1,
-        info: {},
-        metadata: {},
-        version: '1.0',
-      } as any);
+      });
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({
         ...mockReferralDocument,
         status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
@@ -774,7 +772,7 @@ describe('referral.service', () => {
         content: Buffer.from('fake pdf'),
         contentType: 'application/pdf',
       });
-      mockPdfParse.mockResolvedValue({
+      mockExtractPdfText.mockResolvedValue({
         text: longText,
         numpages: 1,
         numrender: 1,
