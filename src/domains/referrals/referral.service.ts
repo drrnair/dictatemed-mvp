@@ -9,7 +9,12 @@ import {
   getObjectContent,
 } from '@/infrastructure/s3/presigned-urls';
 import { logger } from '@/lib/logger';
-import pdfParse from 'pdf-parse';
+// pdf-parse v1.x is a CommonJS module - using require for CJS compatibility
+/* eslint-disable */
+const pdfParse = require('pdf-parse') as (
+  dataBuffer: Buffer
+) => Promise<{ text: string; numpages: number; info: unknown }>;
+/* eslint-enable */
 import type {
   ReferralDocument,
   ReferralDocumentStatus,
@@ -187,6 +192,10 @@ export async function createReferralDocument(
 
 /**
  * Get a referral document by ID.
+ *
+ * Authorization: Practice-level access - any authenticated user within the practice
+ * can access referral documents. This allows multiple clinicians to collaborate on
+ * patient intake. The userId parameter is reserved for future audit logging.
  */
 export async function getReferralDocument(
   userId: string,
@@ -216,6 +225,9 @@ export async function getReferralDocument(
 
 /**
  * List referral documents with pagination and filters.
+ *
+ * Authorization: Practice-level access - returns all referral documents for the practice.
+ * The userId parameter is reserved for future audit logging.
  */
 export async function listReferralDocuments(
   userId: string,
@@ -266,8 +278,14 @@ export async function listReferralDocuments(
 
 /**
  * Update referral document status.
+ *
+ * @param userId - User performing the update (for audit logging)
+ * @param documentId - ID of the document to update
+ * @param status - New status
+ * @param options - Additional fields to update
  */
 export async function updateReferralStatus(
+  userId: string,
   documentId: string,
   status: ReferralDocumentStatus,
   options?: {
@@ -278,7 +296,15 @@ export async function updateReferralStatus(
     consultationId?: string;
   }
 ): Promise<ReferralDocument> {
-  const log = logger.child({ documentId, action: 'updateReferralStatus' });
+  const log = logger.child({ userId, documentId, action: 'updateReferralStatus' });
+
+  // Get current status for audit log
+  const existing = await prisma.referralDocument.findUnique({
+    where: { id: documentId },
+    select: { status: true },
+  });
+
+  const previousStatus = existing?.status;
 
   const updateData: Record<string, unknown> = {
     status,
@@ -315,7 +341,24 @@ export async function updateReferralStatus(
     data: updateData,
   });
 
-  log.info('Referral document status updated', { status });
+  log.info('Referral document status updated', { previousStatus, status });
+
+  // Create audit log for status change
+  await prisma.auditLog.create({
+    data: {
+      userId,
+      action: 'referral.status_update',
+      resourceType: 'referral_document',
+      resourceId: documentId,
+      metadata: {
+        previousStatus,
+        newStatus: status,
+        ...(options?.processingError && { error: options.processingError }),
+        ...(options?.patientId && { patientId: options.patientId }),
+        ...(options?.consultationId && { consultationId: options.consultationId }),
+      },
+    },
+  });
 
   return mapReferralDocument(document);
 }
@@ -451,4 +494,150 @@ export async function getReferralDocumentForProcessing(
   }
 
   return mapReferralDocument(document);
+}
+
+// Minimum text length to consider extraction successful
+// If less than this, we may need to fall back to vision extraction
+const MIN_EXTRACTED_TEXT_LENGTH = 100;
+
+/**
+ * Extract text from a referral document (PDF or plain text).
+ *
+ * This function:
+ * 1. Fetches the file from S3
+ * 2. Extracts text based on MIME type
+ * 3. Updates the document with extracted text
+ * 4. Returns extraction result
+ */
+export async function extractTextFromDocument(
+  userId: string,
+  documentId: string
+): Promise<TextExtractionResult> {
+  const log = logger.child({ userId, documentId, action: 'extractTextFromDocument' });
+
+  // Get the document
+  const document = await prisma.referralDocument.findUnique({
+    where: { id: documentId },
+  });
+
+  if (!document) {
+    throw new Error('Referral document not found');
+  }
+
+  // Validate status - must be UPLOADED to extract text
+  if (document.status !== 'UPLOADED') {
+    throw new Error(
+      `Cannot extract text from document with status: ${document.status}. Expected: UPLOADED`
+    );
+  }
+
+  log.info('Starting text extraction', {
+    filename: document.filename,
+    mimeType: document.mimeType,
+  });
+
+  try {
+    // Fetch file content from S3
+    const { content } = await getObjectContent(document.s3Key);
+
+    // Extract text based on MIME type
+    let extractedText: string;
+
+    if (document.mimeType === 'application/pdf') {
+      extractedText = await extractTextFromPdf(content, log);
+    } else if (document.mimeType === 'text/plain') {
+      extractedText = content.toString('utf-8');
+    } else {
+      throw new Error(`Unsupported MIME type for text extraction: ${document.mimeType}`);
+    }
+
+    // Trim and normalize whitespace
+    extractedText = extractedText.trim().replace(/\s+/g, ' ').replace(/ +\n/g, '\n');
+
+    // Check if we got meaningful text
+    if (extractedText.length < MIN_EXTRACTED_TEXT_LENGTH) {
+      log.warn('Extracted text is very short', {
+        textLength: extractedText.length,
+        minRequired: MIN_EXTRACTED_TEXT_LENGTH,
+      });
+      // We still proceed but flag this - the AI extraction step can decide
+      // whether to use vision fallback
+    }
+
+    // Update document with extracted text
+    await prisma.referralDocument.update({
+      where: { id: documentId },
+      data: {
+        contentText: extractedText,
+        status: 'TEXT_EXTRACTED',
+        updatedAt: new Date(),
+      },
+    });
+
+    log.info('Text extraction complete', { textLength: extractedText.length });
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'referral.extract_text',
+        resourceType: 'referral_document',
+        resourceId: documentId,
+        metadata: {
+          textLength: extractedText.length,
+          mimeType: document.mimeType,
+        },
+      },
+    });
+
+    // Return result with preview
+    const preview = extractedText.substring(0, 500) + (extractedText.length > 500 ? '...' : '');
+
+    return {
+      id: documentId,
+      status: 'TEXT_EXTRACTED',
+      textLength: extractedText.length,
+      preview,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown extraction error';
+
+    log.error('Text extraction failed', { error: errorMessage });
+
+    // Update document with error
+    await prisma.referralDocument.update({
+      where: { id: documentId },
+      data: {
+        status: 'FAILED',
+        processingError: `Text extraction failed: ${errorMessage}`,
+        processedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    throw error;
+  }
+}
+
+/**
+ * Extract text from a PDF buffer using pdf-parse.
+ */
+async function extractTextFromPdf(
+  pdfBuffer: Buffer,
+  log: ReturnType<typeof logger.child>
+): Promise<string> {
+  try {
+    const data = await pdfParse(pdfBuffer);
+
+    log.info('PDF parsed successfully', {
+      numPages: data.numpages,
+      textLength: data.text.length,
+    });
+
+    return data.text;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown PDF parse error';
+    log.error('PDF parsing failed', { error: errorMessage });
+    throw new Error(`Failed to parse PDF: ${errorMessage}`);
+  }
 }

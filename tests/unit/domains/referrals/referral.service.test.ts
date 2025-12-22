@@ -7,6 +7,9 @@ import { prisma } from '@/infrastructure/db/client';
 import * as s3 from '@/infrastructure/s3/presigned-urls';
 import type { ReferralDocumentStatus } from '@/domains/referrals/referral.types';
 
+// Mock for pdf-parse (we mock it via vi.mock but reference it this way for tests)
+const mockPdfParse = vi.fn();
+
 // Mock Prisma
 vi.mock('@/infrastructure/db/client', () => ({
   prisma: {
@@ -30,7 +33,11 @@ vi.mock('@/infrastructure/s3/presigned-urls', () => ({
   getUploadUrl: vi.fn(),
   getDownloadUrl: vi.fn(),
   deleteObject: vi.fn(),
+  getObjectContent: vi.fn(),
 }));
+
+// Mock pdf-parse (CommonJS module)
+vi.mock('pdf-parse', () => mockPdfParse);
 
 // Mock logger
 vi.mock('@/lib/logger', () => ({
@@ -291,9 +298,11 @@ describe('referral.service', () => {
         contentText: 'Extracted text content...',
       };
 
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue({ status: 'UPLOADED' } as any);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue(updatedDoc);
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
-      const result = await referralService.updateReferralStatus('ref-doc-1', 'TEXT_EXTRACTED', {
+      const result = await referralService.updateReferralStatus('user-1', 'ref-doc-1', 'TEXT_EXTRACTED', {
         contentText: 'Extracted text content...',
       });
 
@@ -315,9 +324,11 @@ describe('referral.service', () => {
         processedAt: new Date(),
       };
 
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue({ status: 'TEXT_EXTRACTED' } as any);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue(updatedDoc);
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
-      await referralService.updateReferralStatus('ref-doc-1', 'EXTRACTED', {
+      await referralService.updateReferralStatus('user-1', 'ref-doc-1', 'EXTRACTED', {
         extractedData: {
           patient: { confidence: 0.9 },
           gp: { confidence: 0.85 },
@@ -345,14 +356,42 @@ describe('referral.service', () => {
         processedAt: new Date(),
       };
 
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue({ status: 'UPLOADED' } as any);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue(updatedDoc);
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
-      const result = await referralService.updateReferralStatus('ref-doc-1', 'FAILED', {
+      const result = await referralService.updateReferralStatus('user-1', 'ref-doc-1', 'FAILED', {
         processingError: 'Failed to parse PDF',
       });
 
       expect(result.status).toBe('FAILED');
       expect(result.processingError).toBe('Failed to parse PDF');
+    });
+
+    it('should create audit log for status change', async () => {
+      const updatedDoc = {
+        ...mockReferralDocument,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      };
+
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue({ status: 'UPLOADED' } as any);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue(updatedDoc);
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      await referralService.updateReferralStatus('user-1', 'ref-doc-1', 'TEXT_EXTRACTED');
+
+      expect(prisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 'user-1',
+          action: 'referral.status_update',
+          resourceType: 'referral_document',
+          resourceId: 'ref-doc-1',
+          metadata: expect.objectContaining({
+            previousStatus: 'UPLOADED',
+            newStatus: 'TEXT_EXTRACTED',
+          }),
+        }),
+      });
     });
   });
 
@@ -512,6 +551,248 @@ describe('referral.service', () => {
       const result = await referralService.getReferralDocumentForProcessing('non-existent');
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('extractTextFromDocument', () => {
+    const samplePdfText = `
+      Dr. Sarah Chen
+      Harbour Medical Centre
+      45 Harbour St, Sydney NSW 2000
+      Phone: (02) 9876 5432
+
+      Dear Specialist,
+
+      Re: John Michael Smith
+      DOB: 15/03/1965
+      Medicare: 2345 67890 1
+
+      I am referring this patient for assessment of chest pain and shortness of breath on exertion.
+      Recent stress test showed ST changes.
+
+      Key problems:
+      - Chest pain
+      - Dyspnea on exertion
+      - Hypertension
+
+      Thank you for seeing this patient.
+
+      Dr. Sarah Chen
+    `;
+
+    it('should extract text from PDF successfully', async () => {
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(mockReferralDocument);
+      vi.mocked(s3.getObjectContent).mockResolvedValue({
+        content: Buffer.from('fake pdf content'),
+        contentType: 'application/pdf',
+      });
+      mockPdfParse.mockResolvedValue({
+        text: samplePdfText,
+        numpages: 1,
+        numrender: 1,
+        info: {},
+        metadata: {},
+        version: '1.0',
+      } as any);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...mockReferralDocument,
+        contentText: samplePdfText,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.extractTextFromDocument('user-1', 'ref-doc-1');
+
+      expect(s3.getObjectContent).toHaveBeenCalledWith(mockReferralDocument.s3Key);
+      expect(mockPdfParse).toHaveBeenCalled();
+      expect(prisma.referralDocument.update).toHaveBeenCalledWith({
+        where: { id: 'ref-doc-1' },
+        data: expect.objectContaining({
+          contentText: expect.any(String),
+          status: 'TEXT_EXTRACTED',
+        }),
+      });
+      expect(result.status).toBe('TEXT_EXTRACTED');
+      expect(result.textLength).toBeGreaterThan(0);
+      expect(result.preview).toBeDefined();
+    });
+
+    it('should extract text from plain text file', async () => {
+      const textContent = 'This is a plain text referral letter with patient details.';
+      const textDoc = {
+        ...mockReferralDocument,
+        mimeType: 'text/plain',
+        filename: 'referral.txt',
+      };
+
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(textDoc);
+      vi.mocked(s3.getObjectContent).mockResolvedValue({
+        content: Buffer.from(textContent + ' '.repeat(100)), // Make it long enough
+        contentType: 'text/plain',
+      });
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...textDoc,
+        contentText: textContent,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.extractTextFromDocument('user-1', 'ref-doc-1');
+
+      expect(mockPdfParse).not.toHaveBeenCalled(); // Should not use PDF parser
+      expect(result.status).toBe('TEXT_EXTRACTED');
+    });
+
+    it('should throw error when document not found', async () => {
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(null);
+
+      await expect(
+        referralService.extractTextFromDocument('user-1', 'non-existent')
+      ).rejects.toThrow('Referral document not found');
+    });
+
+    it('should throw error when document status is not UPLOADED', async () => {
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue({
+        ...mockReferralDocument,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      });
+
+      await expect(
+        referralService.extractTextFromDocument('user-1', 'ref-doc-1')
+      ).rejects.toThrow('Cannot extract text from document with status: TEXT_EXTRACTED');
+    });
+
+    it('should throw error for unsupported MIME type', async () => {
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue({
+        ...mockReferralDocument,
+        mimeType: 'image/jpeg',
+      });
+      vi.mocked(s3.getObjectContent).mockResolvedValue({
+        content: Buffer.from('fake image'),
+        contentType: 'image/jpeg',
+      });
+
+      await expect(
+        referralService.extractTextFromDocument('user-1', 'ref-doc-1')
+      ).rejects.toThrow('Unsupported MIME type for text extraction');
+
+      // Should mark as failed
+      expect(prisma.referralDocument.update).toHaveBeenCalledWith({
+        where: { id: 'ref-doc-1' },
+        data: expect.objectContaining({
+          status: 'FAILED',
+          processingError: expect.stringContaining('Unsupported MIME type'),
+        }),
+      });
+    });
+
+    it('should handle PDF parsing failure', async () => {
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(mockReferralDocument);
+      vi.mocked(s3.getObjectContent).mockResolvedValue({
+        content: Buffer.from('corrupt pdf'),
+        contentType: 'application/pdf',
+      });
+      mockPdfParse.mockRejectedValue(new Error('Invalid PDF structure'));
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...mockReferralDocument,
+        status: 'FAILED' as ReferralDocumentStatus,
+      });
+
+      await expect(
+        referralService.extractTextFromDocument('user-1', 'ref-doc-1')
+      ).rejects.toThrow('Failed to parse PDF');
+
+      expect(prisma.referralDocument.update).toHaveBeenCalledWith({
+        where: { id: 'ref-doc-1' },
+        data: expect.objectContaining({
+          status: 'FAILED',
+          processingError: expect.stringContaining('Failed to parse PDF'),
+        }),
+      });
+    });
+
+    it('should create audit log for successful extraction', async () => {
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(mockReferralDocument);
+      vi.mocked(s3.getObjectContent).mockResolvedValue({
+        content: Buffer.from('fake pdf'),
+        contentType: 'application/pdf',
+      });
+      mockPdfParse.mockResolvedValue({
+        text: samplePdfText,
+        numpages: 1,
+        numrender: 1,
+        info: {},
+        metadata: {},
+        version: '1.0',
+      } as any);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...mockReferralDocument,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      await referralService.extractTextFromDocument('user-1', 'ref-doc-1');
+
+      expect(prisma.auditLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 'user-1',
+          action: 'referral.extract_text',
+          resourceType: 'referral_document',
+          resourceId: 'ref-doc-1',
+          metadata: expect.objectContaining({
+            textLength: expect.any(Number),
+            mimeType: 'application/pdf',
+          }),
+        }),
+      });
+    });
+
+    it('should handle S3 fetch failure', async () => {
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(mockReferralDocument);
+      vi.mocked(s3.getObjectContent).mockRejectedValue(new Error('S3 access denied'));
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...mockReferralDocument,
+        status: 'FAILED' as ReferralDocumentStatus,
+      });
+
+      await expect(
+        referralService.extractTextFromDocument('user-1', 'ref-doc-1')
+      ).rejects.toThrow('S3 access denied');
+
+      expect(prisma.referralDocument.update).toHaveBeenCalledWith({
+        where: { id: 'ref-doc-1' },
+        data: expect.objectContaining({
+          status: 'FAILED',
+        }),
+      });
+    });
+
+    it('should truncate preview to 500 characters', async () => {
+      const longText = 'A'.repeat(1000);
+      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(mockReferralDocument);
+      vi.mocked(s3.getObjectContent).mockResolvedValue({
+        content: Buffer.from('fake pdf'),
+        contentType: 'application/pdf',
+      });
+      mockPdfParse.mockResolvedValue({
+        text: longText,
+        numpages: 1,
+        numrender: 1,
+        info: {},
+        metadata: {},
+        version: '1.0',
+      } as any);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...mockReferralDocument,
+        contentText: longText,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.extractTextFromDocument('user-1', 'ref-doc-1');
+
+      expect(result.preview.length).toBe(503); // 500 chars + '...'
+      expect(result.preview.endsWith('...')).toBe(true);
     });
   });
 });

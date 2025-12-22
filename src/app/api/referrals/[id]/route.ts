@@ -15,9 +15,29 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+// Validate UUID format for id parameter
+const idParamSchema = z.string().uuid();
+
 const confirmUploadSchema = z.object({
   sizeBytes: z.number().int().positive(),
 });
+
+/**
+ * Validate and extract the id parameter, returning a 400 error if invalid.
+ */
+function validateIdParam(id: string): { valid: true; id: string } | { valid: false; response: NextResponse } {
+  const result = idParamSchema.safeParse(id);
+  if (!result.success) {
+    return {
+      valid: false,
+      response: NextResponse.json(
+        { error: 'Invalid document ID format' },
+        { status: 400 }
+      ),
+    };
+  }
+  return { valid: true, id: result.data };
+}
 
 /**
  * GET /api/referrals/:id - Get a referral document by ID
@@ -31,7 +51,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = await params;
+    const { id: rawId } = await params;
+    const validation = validateIdParam(rawId);
+    if (!validation.valid) {
+      return validation.response;
+    }
+    const { id } = validation;
 
     const document = await getReferralDocument(
       session.user.id,
@@ -66,7 +91,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = await params;
+    const { id: rawId } = await params;
+    const validation = validateIdParam(rawId);
+    if (!validation.valid) {
+      return validation.response;
+    }
+    const { id } = validation;
+
     const body = await request.json();
     const validated = confirmUploadSchema.safeParse(body);
 
@@ -122,7 +153,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = await params;
+    const { id: rawId } = await params;
+    const validation = validateIdParam(rawId);
+    if (!validation.valid) {
+      return validation.response;
+    }
+    const { id } = validation;
 
     await deleteReferralDocument(
       session.user.id,
