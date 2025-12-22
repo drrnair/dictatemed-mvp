@@ -228,7 +228,7 @@ export function RecordingSection({
   const isRecording = recordingState === 'recording' || recordingState === 'paused';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-space-6">
       {/* Mode selector */}
       <RecordingModeSelector
         value={mode}
@@ -238,15 +238,18 @@ export function RecordingSection({
 
       {/* Error display */}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          <span className="text-sm">{error}</span>
+        <div
+          className="flex items-center gap-space-2 rounded-lg border border-destructive/50 bg-destructive/10 p-space-4 text-destructive"
+          role="alert"
+        >
+          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="text-body-sm">{error}</span>
         </div>
       )}
 
       {/* Recording UI (Ambient/Dictation modes) */}
       {mode !== 'UPLOAD' && (
-        <div className={cn('space-y-6', disabled && 'opacity-50 pointer-events-none')}>
+        <div className={cn('space-y-space-6', disabled && 'opacity-50 pointer-events-none')}>
           {/* Waveform visualizer */}
           <div className="flex justify-center">
             <WaveformVisualizer
@@ -286,13 +289,13 @@ export function RecordingSection({
 
       {/* Upload UI */}
       {mode === 'UPLOAD' && (
-        <div className={cn('space-y-4', disabled && 'opacity-50 pointer-events-none')}>
+        <div className={cn('space-y-space-4', disabled && 'opacity-50 pointer-events-none')}>
           {!uploadFile ? (
             // File selection
-            <div className="rounded-lg border-2 border-dashed p-8 text-center">
-              <FileAudio className="mx-auto h-10 w-10 text-muted-foreground mb-4" />
-              <p className="text-sm font-medium mb-1">Upload existing audio</p>
-              <p className="text-xs text-muted-foreground mb-4">
+            <div className="rounded-lg border-2 border-dashed border-border/60 p-space-8 text-center transition-colors duration-150 hover:border-primary/40 hover:bg-primary/5">
+              <FileAudio className="mx-auto h-10 w-10 text-muted-foreground mb-space-4" aria-hidden="true" />
+              <p className="text-label font-medium mb-space-1">Upload existing audio</p>
+              <p className="text-caption text-muted-foreground mb-space-4">
                 MP3, WAV, M4A, OGG, WebM up to 100MB
               </p>
               <Button
@@ -300,7 +303,7 @@ export function RecordingSection({
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled}
               >
-                <Upload className="h-4 w-4 mr-2" />
+                <Upload className="h-4 w-4" aria-hidden="true" />
                 Select Audio File
               </Button>
               <input
@@ -310,18 +313,19 @@ export function RecordingSection({
                 accept={AUDIO_TYPES.join(',')}
                 onChange={handleFileSelect}
                 disabled={disabled}
+                aria-label="Select audio file to upload"
               />
             </div>
           ) : (
             // File selected - show details and upload button
-            <div className="rounded-lg border p-4 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="rounded bg-muted p-2">
-                  <FileAudio className="h-5 w-5 text-muted-foreground" />
+            <div className="rounded-lg border border-border/60 p-space-4 space-y-space-4 shadow-card">
+              <div className="flex items-center gap-space-3">
+                <div className="rounded-lg bg-muted p-space-2">
+                  <FileAudio className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{uploadFile.name}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-label font-medium truncate">{uploadFile.name}</p>
+                  <p className="text-caption text-muted-foreground">
                     {(uploadFile.size / 1024 / 1024).toFixed(1)} MB
                     {audioDuration && ` • ${formatDuration(audioDuration)}`}
                   </p>
@@ -337,9 +341,9 @@ export function RecordingSection({
               </div>
 
               {uploading && (
-                <div className="space-y-1">
+                <div className="space-y-space-1" role="status" aria-live="polite">
                   <Progress value={uploadProgress} />
-                  <p className="text-xs text-muted-foreground text-center">
+                  <p className="text-caption text-muted-foreground text-center">
                     Uploading... {uploadProgress}%
                   </p>
                 </div>
@@ -352,12 +356,12 @@ export function RecordingSection({
               >
                 {uploading ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                     Uploading...
                   </>
                 ) : (
                   <>
-                    <Upload className="h-4 w-4 mr-2" />
+                    <Upload className="h-4 w-4" aria-hidden="true" />
                     Upload Audio
                   </>
                 )}
