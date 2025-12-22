@@ -49,9 +49,8 @@ export const MIN_PATTERN_FREQUENCY = 2;
  * PHI patterns that should be stripped from aggregated text.
  *
  * Known limitations:
- * - Postcodes are not detected (could identify location but are 4 digits which causes false positives)
- * - Some informal date formats may not be caught
  * - Free-text names without titles are not detected (would require NER)
+ * - Very informal abbreviations may not be caught
  */
 const PHI_PATTERNS: RegExp[] = [
   // Names (common patterns with titles)
@@ -60,7 +59,12 @@ const PHI_PATTERNS: RegExp[] = [
   /\b(?:DOB|D\.O\.B\.?|Date\s+of\s+Birth)[:\s]+\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/gi,
   // Dates (various formats)
   /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g,
+  // Date format: "22nd December 2024", "1st January", etc.
   /\b\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{2,4}\b/gi,
+  // Date format: "December 22, 2024", "Jan 1 2024", etc.
+  /\b(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+\d{1,2}(?:st|nd|rd|th)?[,\s]+\d{2,4}\b/gi,
+  // Date format: "22 Dec 2024", "1 Jan 24", etc.
+  /\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.?\s+\d{2,4}\b/gi,
   // Australian Individual Healthcare Identifier (IHI) - 16 digits starting with 800
   /\b800\d{13}\b/g,
   // Medicare number with optional IRN (10-11 digits, IRN is 1 digit at end)
@@ -75,12 +79,22 @@ const PHI_PATTERNS: RegExp[] = [
   /\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
   // Email addresses
   /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
-  // Addresses (street numbers and names)
-  /\b\d+\s+[A-Z][a-z]+\s+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Court|Ct|Lane|Ln|Boulevard|Blvd)\b/gi,
+  // Addresses (street numbers and names - more comprehensive)
+  /\b\d+[A-Za-z]?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Court|Ct|Lane|Ln|Boulevard|Blvd|Way|Crescent|Cres|Place|Pl|Close|Cl|Circuit|Cct|Parade|Pde|Terrace|Tce)\b/gi,
+  // Australian postcodes in address context (4 digits after state abbreviations)
+  /\b(?:NSW|VIC|QLD|SA|WA|TAS|NT|ACT)\s+\d{4}\b/gi,
+  // Suburb/City + State + Postcode pattern
+  /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:NSW|VIC|QLD|SA|WA|TAS|NT|ACT)\s+\d{4}\b/gi,
   // Hospital/clinic names with identifying info
   /\b(?:Hospital|Clinic|Medical Centre|Medical Center|Surgery)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*/gi,
+  // Named hospitals (e.g., "Royal Perth Hospital", "St Vincent's Hospital")
+  /\b(?:Royal|Prince|Princess|Queen|King)\s+[\w\s]+\s+(?:Hospital|Medical|Health)/gi,
+  /\bSt\.?\s+\w+[''']?s?\s+(?:Hospital|Medical|Health)/gi,
   // URN/MRN patterns (more flexible)
-  /\b(?:URN|MRN|ID)\s*[:\s]?\s*\d+\b/gi,
+  /\b(?:URN|MRN|ID|Patient\s+ID|Medical\s+Record)\s*[:\s#]?\s*[A-Z0-9]+\b/gi,
+  // Age patterns that could identify (various formats)
+  /\b(?:aged?|age[:\s])\s*\d{1,3}\s*(?:years?|y\.?o\.?|yo)?\b/gi,
+  /\b\d{1,3}\s*(?:y\.?o\.?|yo)\b/gi,
 ];
 
 // ============ PHI Stripping ============

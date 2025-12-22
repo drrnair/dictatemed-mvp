@@ -11,6 +11,11 @@ import {
   analyzeSeedLetters,
 } from '@/domains/style';
 import { logger } from '@/lib/logger';
+import {
+  checkRateLimit,
+  createRateLimitKey,
+  getRateLimitHeaders,
+} from '@/lib/rate-limit';
 
 // Valid subspecialty values
 const VALID_SUBSPECIALTIES = Object.values(Subspecialty);
@@ -128,6 +133,20 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = session.user.id;
+
+    // Check rate limit for seed uploads
+    const rateLimitKey = createRateLimitKey(userId, 'styleSeed');
+    const rateLimitResult = checkRateLimit(rateLimitKey, 'styleSeed');
+    if (!rateLimitResult.allowed) {
+      log.warn('Rate limit exceeded for seed letter upload', { userId });
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult),
+        }
+      );
+    }
 
     // Parse and validate request body
     const body = await request.json();

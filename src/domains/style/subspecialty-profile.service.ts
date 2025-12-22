@@ -28,9 +28,12 @@ import type {
 const profileCache = new Map<string, { profile: SubspecialtyStyleProfile; cachedAt: number }>();
 
 /**
- * Cache TTL in milliseconds (5 minutes).
+ * Cache TTL in milliseconds.
+ * Default: 5 minutes.
+ * Configurable via STYLE_PROFILE_CACHE_TTL_MS environment variable.
  */
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = parseInt(process.env.STYLE_PROFILE_CACHE_TTL_MS || '', 10) || DEFAULT_CACHE_TTL_MS;
 
 /**
  * Get cache key for a user + subspecialty combination.
@@ -84,6 +87,14 @@ function invalidateUserCache(userId: string): void {
     }
   });
   keysToDelete.forEach((key) => profileCache.delete(key));
+}
+
+/**
+ * Get the current cache TTL configuration.
+ * Useful for debugging and testing.
+ */
+export function getCacheTTL(): number {
+  return CACHE_TTL_MS;
 }
 
 // ============ Profile CRUD Operations ============

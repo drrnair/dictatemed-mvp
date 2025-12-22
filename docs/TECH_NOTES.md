@@ -636,9 +636,10 @@ All style operations create audit logs:
 
 ### Environment Variables
 
-No new environment variables required. Uses existing:
+Uses existing variables plus optional tuning:
 - `DATABASE_URL` - PostgreSQL connection
 - AWS Bedrock credentials for Claude calls
+- `STYLE_PROFILE_CACHE_TTL_MS` - Profile cache TTL in milliseconds (default: 300000 / 5 minutes)
 
 ### Tunable Constants
 
@@ -688,7 +689,21 @@ Clinicians can adjust their learning strength (0.0-1.0):
 Profile cache in `subspecialty-profile.service.ts`:
 
 ```typescript
-const CACHE_TTL_MS = 5 * 60 * 1000;  // 5 minutes
+// Default: 5 minutes
+// Configurable via STYLE_PROFILE_CACHE_TTL_MS environment variable
+const CACHE_TTL_MS = parseInt(process.env.STYLE_PROFILE_CACHE_TTL_MS || '', 10) || DEFAULT_CACHE_TTL_MS;
+```
+
+To adjust cache TTL:
+```bash
+# Set to 1 minute for development
+export STYLE_PROFILE_CACHE_TTL_MS=60000
+
+# Set to 10 minutes for production
+export STYLE_PROFILE_CACHE_TTL_MS=600000
+
+# Disable cache (TTL = 0)
+export STYLE_PROFILE_CACHE_TTL_MS=0
 ```
 
 ---

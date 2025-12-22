@@ -10,6 +10,7 @@ import {
   createSubspecialtyProfile,
 } from '@/domains/style';
 import { logger } from '@/lib/logger';
+import { createErrorResponse } from '@/lib/api-error';
 
 // Valid subspecialty values
 const VALID_SUBSPECIALTIES = Object.values(Subspecialty);
@@ -68,10 +69,7 @@ export async function GET() {
     log.error('Failed to list style profiles', {}, error instanceof Error ? error : undefined);
 
     return NextResponse.json(
-      {
-        error: 'Failed to list profiles',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
+      createErrorResponse(error, 'Failed to list profiles'),
       { status: 500 }
     );
   }
@@ -153,10 +151,7 @@ export async function POST(request: NextRequest) {
     log.error('Failed to create style profile', {}, error instanceof Error ? error : undefined);
 
     return NextResponse.json(
-      {
-        error: 'Failed to create profile',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
+      createErrorResponse(error, 'Failed to create profile'),
       { status: 500 }
     );
   }

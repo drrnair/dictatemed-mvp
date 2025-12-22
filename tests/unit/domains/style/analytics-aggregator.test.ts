@@ -32,6 +32,11 @@ describe('stripPHI', () => {
     expect(stripPHI('The appointment is on 12/25/2024')).toBe('The appointment is on [REDACTED]');
     expect(stripPHI('Seen on 25-12-2024')).toBe('Seen on [REDACTED]');
     expect(stripPHI('Reviewed on 25th December 2024')).toBe('Reviewed on [REDACTED]');
+    // Additional date formats
+    expect(stripPHI('Seen December 22, 2024')).toBe('Seen [REDACTED]');
+    expect(stripPHI('Follow-up Jan 1 2025')).toBe('Follow-up [REDACTED]');
+    expect(stripPHI('Appointment 22 Dec 2024')).toBe('Appointment [REDACTED]');
+    expect(stripPHI('Reviewed on 1st January 2024')).toBe('Reviewed on [REDACTED]');
   });
 
   it('should strip Medicare/health identifiers', () => {
@@ -61,6 +66,30 @@ describe('stripPHI', () => {
     const text = 'Located at 123 Main Street';
     const result = stripPHI(text);
     expect(result).toBe('Located at [REDACTED]');
+  });
+
+  it('should strip addresses with postcodes', () => {
+    expect(stripPHI('Lives in Sydney NSW 2000')).toContain('[REDACTED]');
+    expect(stripPHI('Address: Melbourne VIC 3000')).toContain('[REDACTED]');
+    expect(stripPHI('Perth WA 6000')).toContain('[REDACTED]');
+  });
+
+  it('should strip comprehensive address formats', () => {
+    expect(stripPHI('42A Smith Road')).toContain('[REDACTED]');
+    expect(stripPHI('15 Queen Parade')).toContain('[REDACTED]');
+    expect(stripPHI('7 Ocean Circuit')).toContain('[REDACTED]');
+  });
+
+  it('should strip hospital names', () => {
+    expect(stripPHI('Admitted to Royal Perth Hospital')).toContain('[REDACTED]');
+    expect(stripPHI("Referred from St Vincent's Hospital")).toContain('[REDACTED]');
+    expect(stripPHI('Seen at Prince of Wales Hospital')).toContain('[REDACTED]');
+  });
+
+  it('should strip age patterns that could identify', () => {
+    expect(stripPHI('Patient aged 67 years')).toContain('[REDACTED]');
+    expect(stripPHI('Age: 52 y.o.')).toContain('[REDACTED]');
+    expect(stripPHI('A 45yo male')).toContain('[REDACTED]');
   });
 
   it('should strip URN/MRN identifiers', () => {

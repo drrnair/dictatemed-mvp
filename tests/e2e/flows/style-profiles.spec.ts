@@ -3,6 +3,7 @@
 
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { authenticatedTest, hasValidAuthState } from '../fixtures/auth';
 
 /**
  * E2E Tests for Style Profile Management
@@ -14,11 +15,22 @@ import AxeBuilder from '@axe-core/playwright';
  * 4. Settings UI - Upload seed letters
  * 5. Letter generation with profile applied
  *
- * Note: Most tests require authentication. They are marked with .skip
- * when they need authenticated sessions that cannot be mocked in E2E.
- * The tests document the expected behavior and can be enabled with
- * proper auth setup (e.g., using storageState from authenticated session).
+ * Authentication Setup:
+ * 1. Set environment variables:
+ *    - E2E_TEST_USER_EMAIL: test user email
+ *    - E2E_TEST_USER_PASSWORD: test user password
+ *
+ * 2. Generate auth state:
+ *    npx playwright test tests/e2e/setup/auth.setup.ts --project=chromium
+ *
+ * 3. Run tests:
+ *    npx playwright test tests/e2e/flows/style-profiles.spec.ts
+ *
+ * Tests that require authentication will skip automatically if no auth state exists.
  */
+
+// Check if authentication is available for conditional test execution
+const canRunAuthenticatedTests = hasValidAuthState();
 
 test.describe('Style Profiles - API Health', () => {
   test('style profile API routes should require authentication', async ({
@@ -92,12 +104,14 @@ test.describe('Style Profiles - Settings Page Structure', () => {
 
 test.describe('Style Profiles - Authenticated UI', () => {
   // These tests require authentication and document expected behavior
-  // Enable with proper auth setup using storageState
+  // Skip if no auth state is available
+  test.skip(!canRunAuthenticatedTests, 'Requires authentication setup');
 
   test.describe.configure({ mode: 'serial' });
 
-  test.skip('should display the style settings page with mode selector', async ({
-    page,
+  // Use authenticatedTest fixture for tests that require login
+  authenticatedTest('should display the style settings page with mode selector', async ({
+    authenticatedPage: page,
   }) => {
     // Prerequisites: User is authenticated
     await page.goto('/settings/style');

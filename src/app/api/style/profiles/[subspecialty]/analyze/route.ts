@@ -11,6 +11,12 @@ import {
   MIN_EDITS_FOR_ANALYSIS,
 } from '@/domains/style';
 import { logger } from '@/lib/logger';
+import {
+  checkRateLimit,
+  createRateLimitKey,
+  getRateLimitHeaders,
+} from '@/lib/rate-limit';
+import { createErrorResponse } from '@/lib/api-error';
 
 // Valid subspecialty values
 const VALID_SUBSPECIALTIES = Object.values(Subspecialty);
@@ -64,6 +70,20 @@ export async function POST(
     }
 
     const userId = session.user.id;
+
+    // Check rate limit - analysis is expensive (uses Claude)
+    const rateLimitKey = createRateLimitKey(userId, 'styleAnalysis');
+    const rateLimitResult = checkRateLimit(rateLimitKey, 'styleAnalysis');
+    if (!rateLimitResult.allowed) {
+      log.warn('Rate limit exceeded for style analysis', { userId });
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult),
+        }
+      );
+    }
 
     // Validate subspecialty
     const subspecialty = validateSubspecialty(subspecialtyParam);
@@ -162,10 +182,7 @@ export async function POST(
     log.error('Style analysis failed', {}, error instanceof Error ? error : undefined);
 
     return NextResponse.json(
-      {
-        error: 'Style analysis failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
+      createErrorResponse(error, 'Style analysis failed'),
       { status: 500 }
     );
   }
@@ -235,10 +252,7 @@ export async function GET(
     log.error('Failed to get analysis status', {}, error instanceof Error ? error : undefined);
 
     return NextResponse.json(
-      {
-        error: 'Failed to get analysis status',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
+      createErrorResponse(error, 'Failed to get analysis status'),
       { status: 500 }
     );
   }
