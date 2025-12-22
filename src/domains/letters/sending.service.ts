@@ -14,9 +14,8 @@ import type {
   RetrySendInput,
   LetterSendHistoryItem,
   LetterSendingPreferences,
-  DEFAULT_SENDING_PREFERENCES,
 } from './sending.types';
-import type { SendStatus, ContactType, ChannelType } from '@prisma/client';
+import { DEFAULT_SENDING_PREFERENCES } from './sending.types';
 
 const log = logger.child({ module: 'sending-service' });
 

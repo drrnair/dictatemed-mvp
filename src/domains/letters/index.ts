@@ -25,6 +25,27 @@ export {
 // PDF generation
 export { generateLetterPdf, generateSimplePdf } from './pdf.service';
 
+// Letter sending
+export {
+  sendLetter,
+  retrySend,
+  getSendHistory,
+  getSend,
+  processSubjectTemplate,
+} from './sending.service';
+
+export type {
+  SendRecipient,
+  SendLetterInput,
+  SendLetterResult,
+  RecipientSendResult,
+  RetrySendInput,
+  LetterSendHistoryItem,
+  LetterSendingPreferences,
+} from './sending.types';
+
+export { DEFAULT_SENDING_PREFERENCES } from './sending.types';
+
 // Types
 export type {
   Letter,
