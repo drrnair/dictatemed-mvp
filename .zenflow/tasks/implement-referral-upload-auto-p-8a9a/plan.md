@@ -107,24 +107,27 @@ Implement PDF and text file content extraction.
 - `src/domains/referrals/pdf-utils.ts` - PDF parsing utility wrapper
 
 **Files modified:**
-- `src/domains/referrals/referral.service.ts` - Added `extractTextFromDocument()` function
+- `src/domains/referrals/referral.service.ts` - Added `extractTextFromDocument()` function with practice-level authorization
+- `src/domains/referrals/referral.types.ts` - Added `isShortText` field to `TextExtractionResult`
 - `src/infrastructure/s3/presigned-urls.ts` - Added `getObjectContent()` to fetch S3 file content
-- `tests/unit/domains/referrals/referral.service.test.ts` - Added 10 text extraction tests (now 35 total)
+- `tests/unit/domains/referrals/referral.service.test.ts` - Added 12 text extraction tests (now 37 total)
 
 **Completed tasks:**
 1. Added pdf-parse v1.1.1 dependency ✓
-2. Implemented `extractTextFromDocument()` function ✓
+2. Implemented `extractTextFromDocument(userId, practiceId, documentId)` function ✓
 3. Handle PDF files using pdf-parse (primary) ✓
 4. Handle plain text files (read directly) ✓
-5. Vision fallback not implemented (deferred - logged warning when text < 100 chars) ✓
+5. Added `isShortText` flag when text < 100 chars (for vision fallback decision in AI step) ✓
 6. Update document status to `TEXT_EXTRACTED` ✓
-7. Create POST `/api/referrals/:id/extract-text` endpoint ✓
-8. Add audit logging for text extraction ✓
+7. Create POST `/api/referrals/:id/extract-text` endpoint with rate limiting ✓
+8. Add audit logging for successful AND failed text extractions ✓
+9. Fixed practice-level authorization (security issue from review) ✓
+10. Fixed whitespace normalization to preserve paragraph structure ✓
 
 **Verification:**
 - `npm run lint` passes ✓
 - `npx tsc --noEmit` passes ✓
-- All 35 unit tests pass ✓
+- All 37 unit tests pass ✓
 
 ---
 

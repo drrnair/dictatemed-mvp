@@ -353,11 +353,12 @@ describe('ReferralReviewPanel', () => {
       render(<ReferralReviewPanel {...defaultProps} />);
 
       // Find and click Clear button in patient section
-      const patientSection = screen.getByText('Patient Details').closest('div')?.parentElement;
       const clearButtons = screen.getAllByRole('button', { name: /clear/i });
 
       // Click the first Clear button (patient section)
-      await user.click(clearButtons[0]);
+      const firstClearButton = clearButtons[0];
+      if (!firstClearButton) throw new Error('Clear button not found');
+      await user.click(firstClearButton);
 
       expect(
         screen.getByRole('button', { name: /apply to consultation/i })
@@ -369,7 +370,9 @@ describe('ReferralReviewPanel', () => {
       render(<ReferralReviewPanel {...defaultProps} />);
 
       const clearButtons = screen.getAllByRole('button', { name: /clear/i });
-      await user.click(clearButtons[0]);
+      const firstClearButton = clearButtons[0];
+      if (!firstClearButton) throw new Error('Clear button not found');
+      await user.click(firstClearButton);
 
       expect(screen.getByText('Patient data is required')).toBeInTheDocument();
     });
@@ -412,7 +415,9 @@ describe('ReferralReviewPanel', () => {
 
       // Clear GP section (second Clear button)
       const clearButtons = screen.getAllByRole('button', { name: /clear/i });
-      await user.click(clearButtons[1]);
+      const gpClearButton = clearButtons[1];
+      if (!gpClearButton) throw new Error('GP Clear button not found');
+      await user.click(gpClearButton);
 
       await user.click(
         screen.getByRole('button', { name: /apply to consultation/i })
@@ -428,7 +433,9 @@ describe('ReferralReviewPanel', () => {
 
       // Clear referrer section (third Clear button)
       const clearButtons = screen.getAllByRole('button', { name: /clear/i });
-      await user.click(clearButtons[2]);
+      const referrerClearButton = clearButtons[2];
+      if (!referrerClearButton) throw new Error('Referrer Clear button not found');
+      await user.click(referrerClearButton);
 
       await user.click(
         screen.getByRole('button', { name: /apply to consultation/i })
@@ -444,7 +451,9 @@ describe('ReferralReviewPanel', () => {
 
       // Clear context section (fourth Clear button)
       const clearButtons = screen.getAllByRole('button', { name: /clear/i });
-      await user.click(clearButtons[3]);
+      const contextClearButton = clearButtons[3];
+      if (!contextClearButton) throw new Error('Context Clear button not found');
+      await user.click(contextClearButton);
 
       await user.click(
         screen.getByRole('button', { name: /apply to consultation/i })

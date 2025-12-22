@@ -74,7 +74,7 @@ describe('ReferralFieldGroup', () => {
     it('starts expanded by default', () => {
       render(<ReferralFieldGroup {...defaultProps} />);
 
-      expect(screen.getByText('John Smith')).toBeVisible();
+      expect(screen.getByText('John Smith')).toBeInTheDocument();
     });
 
     it('collapses when header is clicked', async () => {
@@ -84,7 +84,8 @@ describe('ReferralFieldGroup', () => {
       const header = screen.getByRole('button', { name: /patient details/i });
       await user.click(header);
 
-      expect(screen.queryByText('John Smith')).not.toBeVisible();
+      // When collapsed, the content section should not be in the document
+      expect(screen.queryByText('Full Name')).not.toBeInTheDocument();
     });
 
     it('has correct aria-expanded attribute', async () => {

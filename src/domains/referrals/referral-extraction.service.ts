@@ -17,8 +17,11 @@ import type { ReferralExtractedData, StructuredExtractionResult } from './referr
 // Using Sonnet for cost efficiency - referral extraction is straightforward
 const EXTRACTION_MODEL = MODELS.SONNET;
 
-// Low confidence warning threshold
-const LOW_CONFIDENCE_THRESHOLD = 0.3;
+// Low confidence warning threshold (for logging warnings during extraction)
+const EXTRACTION_LOW_CONFIDENCE_THRESHOLD = 0.3;
+
+// Maximum text length to send to LLM (approx 50k tokens at 4 chars/token)
+const MAX_EXTRACTION_TEXT_LENGTH = 200000;
 
 /**
  * Extract structured data from a referral document's text content.
@@ -31,13 +34,14 @@ const LOW_CONFIDENCE_THRESHOLD = 0.3;
  */
 export async function extractStructuredData(
   userId: string,
+  practiceId: string,
   documentId: string
 ): Promise<StructuredExtractionResult> {
-  const log = logger.child({ userId, documentId, action: 'extractStructuredData' });
+  const log = logger.child({ userId, practiceId, documentId, action: 'extractStructuredData' });
 
-  // Get the document
-  const document = await prisma.referralDocument.findUnique({
-    where: { id: documentId },
+  // Get the document with practice-level authorization check
+  const document = await prisma.referralDocument.findFirst({
+    where: { id: documentId, practiceId },
   });
 
   if (!document) {
@@ -54,6 +58,13 @@ export async function extractStructuredData(
   // Validate content exists
   if (!document.contentText || document.contentText.trim().length === 0) {
     throw new Error('Document has no extracted text content');
+  }
+
+  // Validate text length to prevent excessive token usage
+  if (document.contentText.length > MAX_EXTRACTION_TEXT_LENGTH) {
+    throw new Error(
+      `Document text is too long for extraction (${document.contentText.length} chars). Maximum: ${MAX_EXTRACTION_TEXT_LENGTH} chars.`
+    );
   }
 
   log.info('Starting structured extraction', {
@@ -91,10 +102,10 @@ export async function extractStructuredData(
     const extractedData = parseReferralExtraction(response.content, EXTRACTION_MODEL);
 
     // Check for low confidence
-    if (hasLowConfidence(extractedData, LOW_CONFIDENCE_THRESHOLD)) {
+    if (hasLowConfidence(extractedData, EXTRACTION_LOW_CONFIDENCE_THRESHOLD)) {
       log.warn('Low confidence extraction', {
         overallConfidence: extractedData.overallConfidence,
-        threshold: LOW_CONFIDENCE_THRESHOLD,
+        threshold: EXTRACTION_LOW_CONFIDENCE_THRESHOLD,
       });
     }
 
