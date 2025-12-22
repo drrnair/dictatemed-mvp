@@ -15,6 +15,14 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-background">
+      {/* Skip to main content link for accessibility */}
+      <a
+        href="#main-content"
+        className="skip-link"
+      >
+        Skip to main content
+      </a>
+
       {/* Client-side onboarding redirect check */}
       <OnboardingRedirect onboardingCompleted={user?.onboardingCompleted ?? false} />
 
@@ -26,8 +34,13 @@ export default async function DashboardLayout({
         {/* Header */}
         <Header userName={user?.name} />
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        {/* Page content - warm white subtle background for content area */}
+        <main
+          id="main-content"
+          className="flex-1 overflow-y-auto bg-background-subtle p-space-6"
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

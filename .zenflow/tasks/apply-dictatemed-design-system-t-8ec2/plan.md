@@ -110,7 +110,8 @@ Update base UI components to use new design tokens.
 
 ---
 
-### [ ] Step: Navigation Shell
+### [x] Step: Navigation Shell
+<!-- chat-id: f1cc20b9-14ce-40fd-b8d6-4fcb755c425e -->
 
 Update layout components for consistent navigation experience.
 
@@ -123,6 +124,30 @@ Update layout components for consistent navigation experience.
 - Navigation between pages works
 - Active states visible
 - Keyboard navigation functional
+
+**Completed:**
+- Updated `Sidebar.tsx`:
+  - Changed to subtle borders (`border-border/60`)
+  - Used design system spacing tokens (`px-space-6`, `p-space-4`, `gap-space-3`)
+  - Added 44px minimum height nav items (`min-h-touch`) for WCAG touch targets
+  - Changed active state to subtle primary tint (`bg-primary/10 text-primary`) instead of solid
+  - Added `aria-current="page"` for accessibility
+  - Added `aria-label="Main"` to nav element
+  - Added `aria-hidden="true"` to decorative icons
+  - Added focus-visible outlines for keyboard navigation
+  - Used `text-label` and `text-caption` typography tokens
+  - Used `text-heading-2` for logo
+- Updated `Header.tsx`:
+  - Changed to subtle borders (`border-border/60`)
+  - Used design system spacing tokens (`px-space-6`, `gap-space-4`)
+  - Used `text-body-sm` typography token
+  - Added focus-visible outline to logout link
+- Updated `layout.tsx`:
+  - Added "Skip to main content" accessibility link
+  - Added `id="main-content"` to main element
+  - Changed main content background to `bg-background-subtle` (warm white)
+  - Used design system spacing (`p-space-6`)
+- Verified: `npm run lint` passes, `npm run build` compiles successfully
 
 ---
 
