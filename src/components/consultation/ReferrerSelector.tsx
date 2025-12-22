@@ -4,7 +4,7 @@
 // Referrer/GP selection with search and inline creation
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, Plus, Building2, Phone, Mail, Loader2, X, Check } from 'lucide-react';
+import { Search, Plus, Building2, Phone, Mail, Loader2, X, Check, Pencil } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -32,6 +32,7 @@ export function ReferrerSelector({ value, onChange, disabled }: ReferrerSelector
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -150,8 +151,19 @@ export function ReferrerSelector({ value, onChange, disabled }: ReferrerSelector
             type="button"
             variant="ghost"
             size="sm"
+            onClick={() => setShowEditDialog(true)}
+            disabled={disabled}
+            title="Edit referrer"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={handleClearSelection}
             disabled={disabled}
+            title="Clear selection"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -257,6 +269,20 @@ export function ReferrerSelector({ value, onChange, disabled }: ReferrerSelector
           loadRecentReferrers(); // Refresh recent list
         }}
       />
+
+      {/* Edit referrer dialog */}
+      {value && (
+        <EditReferrerDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          referrer={value}
+          onUpdated={(updatedReferrer) => {
+            onChange(updatedReferrer);
+            setShowEditDialog(false);
+            loadRecentReferrers(); // Refresh recent list
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -440,6 +466,200 @@ function CreateReferrerDialog({
                 <>
                   <Check className="mr-2 h-4 w-4" />
                   Add Referrer
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Edit referrer dialog
+interface EditReferrerDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  referrer: ReferrerInfo;
+  onUpdated: (referrer: ReferrerInfo) => void;
+}
+
+function EditReferrerDialog({
+  open,
+  onOpenChange,
+  referrer,
+  onUpdated,
+}: EditReferrerDialogProps) {
+  const [name, setName] = useState(referrer.name);
+  const [practiceName, setPracticeName] = useState(referrer.practiceName || '');
+  const [email, setEmail] = useState(referrer.email || '');
+  const [phone, setPhone] = useState(referrer.phone || '');
+  const [fax, setFax] = useState(referrer.fax || '');
+  const [address, setAddress] = useState(referrer.address || '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Reset form when dialog opens or referrer changes
+  useEffect(() => {
+    if (open) {
+      setName(referrer.name);
+      setPracticeName(referrer.practiceName || '');
+      setEmail(referrer.email || '');
+      setPhone(referrer.phone || '');
+      setFax(referrer.fax || '');
+      setAddress(referrer.address || '');
+      setError(null);
+    }
+  }, [open, referrer]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!name.trim()) {
+      setError('Referrer name is required');
+      return;
+    }
+
+    if (!referrer.id) {
+      setError('Cannot update referrer without ID');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/referrers/${referrer.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          practiceName: practiceName.trim() || undefined,
+          email: email.trim() || undefined,
+          phone: phone.trim() || undefined,
+          fax: fax.trim() || undefined,
+          address: address.trim() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update referrer');
+      }
+
+      const { referrer: updatedReferrer } = await response.json();
+      onUpdated(updatedReferrer);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update referrer');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Referrer</DialogTitle>
+          <DialogDescription>
+            Update the referrer&apos;s contact details.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-referrer-name">Name *</Label>
+            <Input
+              id="edit-referrer-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Dr. John Smith"
+              // eslint-disable-next-line jsx-a11y/no-autofocus
+              autoFocus
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-referrer-practice">Practice Name</Label>
+            <Input
+              id="edit-referrer-practice"
+              value={practiceName}
+              onChange={(e) => setPracticeName(e.target.value)}
+              placeholder="Smith Medical Practice"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-referrer-email">Email</Label>
+              <Input
+                id="edit-referrer-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="dr.smith@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-referrer-phone">Phone</Label>
+              <Input
+                id="edit-referrer-phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="03 9XXX XXXX"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-referrer-fax">Fax</Label>
+              <Input
+                id="edit-referrer-fax"
+                type="tel"
+                value={fax}
+                onChange={(e) => setFax(e.target.value)}
+                placeholder="03 9XXX XXXX"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-referrer-address">Address</Label>
+            <Input
+              id="edit-referrer-address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="123 Medical St, Melbourne VIC 3000"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Save Changes
                 </>
               )}
             </Button>

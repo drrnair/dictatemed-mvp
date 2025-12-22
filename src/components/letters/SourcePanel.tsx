@@ -95,7 +95,7 @@ export function SourcePanel({
       {/* Backdrop overlay */}
       <div
         className={cn(
-          'fixed inset-0 bg-black/20 transition-opacity z-40',
+          'fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity z-40',
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         )}
         onClick={onClose}
@@ -105,7 +105,7 @@ export function SourcePanel({
       {/* Side panel */}
       <div
         className={cn(
-          'fixed top-0 right-0 h-full w-full sm:w-[480px] bg-white dark:bg-gray-900 shadow-2xl z-50 transition-transform duration-300 ease-in-out',
+          'fixed top-0 right-0 h-full w-full sm:w-[480px] bg-card shadow-md z-50 transition-transform duration-300 ease-in-out',
           isOpen ? 'translate-x-0' : 'translate-x-full'
         )}
         role="dialog"
@@ -114,12 +114,12 @@ export function SourcePanel({
         data-testid="source-panel"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            <SourceIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+        <div className="flex items-center justify-between p-space-4 border-b border-border/60">
+          <div className="flex items-center gap-space-2">
+            <SourceIcon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
             <h2
               id="source-panel-title"
-              className="text-lg font-semibold text-gray-900 dark:text-gray-100"
+              className="text-heading-2"
             >
               Source Material
             </h2>
@@ -130,6 +130,7 @@ export function SourcePanel({
             onClick={onClose}
             aria-label="Close source panel"
             data-testid="close-source-panel"
+            className="min-w-touch min-h-touch"
           >
             <X className="h-5 w-5" />
           </Button>
@@ -137,25 +138,25 @@ export function SourcePanel({
 
         {/* Content */}
         <ScrollArea className="h-[calc(100%-140px)]" data-testid="source-panel-content">
-          <div className="p-6 space-y-6">
+          <div className="p-space-6 space-y-space-6">
             {/* Source metadata */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                <FileIcon className="h-4 w-4" />
+            <div className="space-y-space-3">
+              <div className="flex items-center gap-space-2 text-body-sm text-muted-foreground">
+                <FileIcon className="h-4 w-4" aria-hidden="true" />
                 <span className="font-medium">{sourceData.name}</span>
               </div>
 
               {sourceData.type === 'transcript' && (
                 <>
                   {sourceData.metadata?.speaker && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <User className="h-4 w-4" />
+                    <div className="flex items-center gap-space-2 text-body-sm text-muted-foreground">
+                      <User className="h-4 w-4" aria-hidden="true" />
                       <span>{sourceData.metadata.speaker}</span>
                     </div>
                   )}
                   {sourceData.metadata?.timestamp && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <Clock className="h-4 w-4" />
+                    <div className="flex items-center gap-space-2 text-body-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" aria-hidden="true" />
                       <span>{sourceData.metadata.timestamp}</span>
                     </div>
                   )}
@@ -163,7 +164,7 @@ export function SourcePanel({
               )}
 
               {sourceData.type === 'document' && location.type === 'page' && (
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-body-sm text-muted-foreground">
                   <span>
                     Page {location.page}
                     {location.line && `, Line ${location.line}`}
@@ -172,16 +173,16 @@ export function SourcePanel({
               )}
 
               {sourceData.metadata?.confidence !== undefined && (
-                <div className="text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Confidence: </span>
+                <div className="text-body-sm">
+                  <span className="text-muted-foreground">Confidence: </span>
                   <span
                     className={cn(
                       'font-medium',
                       sourceData.metadata.confidence >= 0.8
-                        ? 'text-green-600 dark:text-green-400'
+                        ? 'text-clinical-verified'
                         : sourceData.metadata.confidence >= 0.6
-                        ? 'text-yellow-600 dark:text-yellow-400'
-                        : 'text-red-600 dark:text-red-400'
+                        ? 'text-clinical-warning'
+                        : 'text-clinical-critical'
                     )}
                   >
                     {Math.round(sourceData.metadata.confidence * 100)}%
@@ -191,33 +192,33 @@ export function SourcePanel({
             </div>
 
             {/* Divider */}
-            <div className="border-t border-gray-200 dark:border-gray-700" />
+            <div className="border-t border-border/60" aria-hidden="true" />
 
             {/* Source excerpt with highlighting */}
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            <div className="space-y-space-2">
+              <h3 className="text-label font-semibold">
                 Relevant Excerpt
               </h3>
               <div
-                className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm leading-relaxed"
+                className="p-space-4 bg-muted/50 rounded-lg"
                 data-testid="source-excerpt"
               >
-                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                <p className="text-body-sm leading-relaxed whitespace-pre-wrap">
                   {beforeHighlight.length > 100 && (
-                    <span className="text-gray-500">... </span>
+                    <span className="text-muted-foreground">... </span>
                   )}
                   {beforeHighlight.length > 100
                     ? beforeHighlight.substring(beforeHighlight.length - 100)
                     : beforeHighlight}
                   <mark
-                    className="bg-yellow-200 dark:bg-yellow-600 text-gray-900 dark:text-gray-100 font-medium px-0.5 rounded"
+                    className="bg-clinical-warning/30 font-medium px-0.5 rounded"
                     data-testid="highlighted-text"
                   >
                     {highlightedText}
                   </mark>
                   {afterHighlight.substring(0, 100)}
                   {afterHighlight.length > 100 && (
-                    <span className="text-gray-500"> ...</span>
+                    <span className="text-muted-foreground"> ...</span>
                   )}
                 </p>
               </div>
@@ -225,12 +226,12 @@ export function SourcePanel({
 
             {/* Additional context */}
             {activeAnchor.excerpt && activeAnchor.excerpt !== highlightedText && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              <div className="space-y-space-2">
+                <h3 className="text-label font-semibold">
                   Reference
                 </h3>
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <p className="text-sm text-gray-700 dark:text-gray-300 italic">
+                <div className="p-space-4 bg-primary/10 rounded-lg">
+                  <p className="text-body-sm italic">
                     &ldquo;{activeAnchor.excerpt}&rdquo;
                   </p>
                 </div>
@@ -240,15 +241,15 @@ export function SourcePanel({
         </ScrollArea>
 
         {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <div className="absolute bottom-0 left-0 right-0 p-space-4 border-t border-border/60 bg-card">
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full min-h-touch gap-space-2"
             onClick={() => onViewFullSource(sourceData.id, sourceData.type)}
             aria-label={`View full ${sourceData.type}`}
             data-testid="view-full-source-button"
           >
-            <FileText className="h-4 w-4 mr-2" />
+            <FileText className="h-4 w-4" aria-hidden="true" />
             View Full {sourceData.type === 'transcript' ? 'Transcript' : 'Document'}
           </Button>
         </div>

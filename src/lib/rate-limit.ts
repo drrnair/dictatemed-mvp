@@ -15,6 +15,10 @@ export const RATE_LIMITS: Record<string, RateLimitConfig> = {
   documents: { requests: 20, windowMs: 60 * 1000 }, // 20/min
   letters: { requests: 10, windowMs: 60 * 1000 }, // 10/min
   approvals: { requests: 30, windowMs: 60 * 1000 }, // 30/min
+  // Style profile endpoints
+  styleProfiles: { requests: 30, windowMs: 60 * 1000 }, // 30/min - CRUD operations
+  styleAnalysis: { requests: 5, windowMs: 60 * 1000 }, // 5/min - expensive Claude calls
+  styleSeed: { requests: 10, windowMs: 60 * 1000 }, // 10/min - seed letter uploads
   default: { requests: 60, windowMs: 60 * 1000 }, // 60/min default
 };
 

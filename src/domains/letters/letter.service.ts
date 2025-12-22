@@ -4,7 +4,7 @@
 import { prisma } from '@/infrastructure/db/client';
 import { generateTextWithRetry, type ModelId } from '@/infrastructure/bedrock';
 import { logger } from '@/lib/logger';
-import type { Letter as PrismaLetterModel } from '@prisma/client';
+import type { Letter as PrismaLetterModel, Subspecialty } from '@prisma/client';
 import type {
   Letter,
   LetterType,
@@ -23,7 +23,7 @@ import { extractClinicalValues, calculateVerificationRate } from './clinical-ext
 import { detectHallucinations, calculateHallucinationRisk, recommendApproval } from './hallucination-detection';
 import { extractClinicalConcepts, getICD10Codes, getMBSItems } from './clinical-concepts';
 import { getEffectivePromptTemplate, recordTemplateUsage } from './templates/template.service';
-import { applyStyleHints } from '../style/style.service';
+import { buildStyleConditionedPrompt, computeOverallConfidence } from '../style/prompt-conditioner';
 
 export interface GenerateLetterInput {
   patientId: string;
@@ -32,6 +32,7 @@ export interface GenerateLetterInput {
   phi: PHI;
   userPreference?: 'quality' | 'balanced' | 'cost' | undefined;
   templateId?: string | undefined; // Optional template for enhanced generation
+  subspecialty?: Subspecialty | undefined; // Optional subspecialty for style conditioning
 }
 
 export interface GenerateLetterResult {
@@ -107,11 +108,20 @@ export async function generateLetter(
 
   // Get template prompt if templateId is provided
   let templateContext: string | null = null;
+  let templateSubspecialty: Subspecialty | null = null;
   if (input.templateId) {
     const templateData = await getEffectivePromptTemplate(userId, input.templateId);
     if (templateData) {
       templateContext = templateData.promptTemplate;
-      log.info('Using template', { templateId: input.templateId });
+      // Check if template has subspecialties for style profile inference
+      const template = await prisma.letterTemplate.findUnique({
+        where: { id: input.templateId },
+        select: { subspecialties: true },
+      });
+      if (template?.subspecialties && template.subspecialties.length > 0) {
+        templateSubspecialty = template.subspecialties[0] ?? null;
+      }
+      log.info('Using template', { templateId: input.templateId, templateSubspecialty });
     } else {
       log.warn('Template not found, proceeding without template context', {
         templateId: input.templateId,
@@ -119,10 +129,11 @@ export async function generateLetter(
     }
   }
 
-  // Get user's style hints
-  const { hints: styleHints } = await applyStyleHints(userId, '');
+  // Determine effective subspecialty for style conditioning
+  // Priority: explicit input → template subspecialty → null (falls back to global profile)
+  const effectiveSubspecialty = input.subspecialty ?? templateSubspecialty ?? undefined;
 
-  // Build base prompt (pass null for styleContext - we'll append our own)
+  // Build base prompt (pass null for styleContext - we'll apply style via prompt conditioner)
   let prompt = promptBuilder(
     obfuscatedSources,
     {
@@ -131,7 +142,7 @@ export async function generateLetter(
       medicareToken: obfuscatedSources.deobfuscationMap.tokens.medicareToken,
       genderToken: obfuscatedSources.deobfuscationMap.tokens.genderToken,
     },
-    null // No legacy style context - we use templates and hints instead
+    null // No legacy style context - we use subspecialty profiles and prompt conditioner
   );
 
   // Append template-specific instructions if available
@@ -139,18 +150,28 @@ export async function generateLetter(
     prompt = `${prompt}\n\n# TEMPLATE-SPECIFIC INSTRUCTIONS\n\n${templateContext}`;
   }
 
-  // Append style hints if available
-  const styleKeys = Object.keys(styleHints) as Array<keyof typeof styleHints>;
-  if (styleKeys.some((k) => styleHints[k] !== undefined)) {
-    const styleSection = formatStyleHintsForPrompt(styleHints);
-    if (styleSection) {
-      prompt = `${prompt}\n\n${styleSection}`;
-    }
-  }
+  // Apply subspecialty-aware style conditioning
+  // This uses the fallback chain: subspecialty profile → global profile → default
+  const { enhancedPrompt, config: styleConfig } = await buildStyleConditionedPrompt({
+    basePrompt: prompt,
+    userId,
+    subspecialty: effectiveSubspecialty,
+    letterType: input.letterType,
+  });
+
+  prompt = enhancedPrompt;
+
+  // Calculate style confidence from the profile used for conditioning
+  const styleConfidenceValue = styleConfig.profile
+    ? computeOverallConfidence(styleConfig.profile)
+    : undefined;
 
   log.info('Prompt built', {
     promptLength: prompt.length,
     estimatedTokens: modelSelection.estimatedInputTokens,
+    styleSource: styleConfig.source,
+    styleConfidence: styleConfidenceValue,
+    subspecialty: effectiveSubspecialty ?? null,
   });
 
   // Step 4: Generate letter via Bedrock
@@ -216,6 +237,7 @@ export async function generateLetter(
       patientId: input.patientId,
       templateId: input.templateId, // Link to template if used
       letterType: input.letterType,
+      subspecialty: effectiveSubspecialty ?? null, // Store subspecialty for style learning
       status: 'DRAFT',
       contentDraft: letterWithoutAnchors, // Prisma uses contentDraft, not draftContent
       sourceAnchors: anchors as never[],
@@ -228,6 +250,7 @@ export async function generateLetter(
       generationDurationMs: generationDuration,
       verificationRate: verificationRate.rate,
       hallucinationRiskScore: hallucinationRisk.score,
+      styleConfidence: styleConfidenceValue ?? null, // Style profile confidence used for conditioning
       generatedAt: new Date(),
     },
   });
@@ -242,6 +265,9 @@ export async function generateLetter(
     status: letter.status,
     verificationRate: verificationRate.rate,
     hallucinationRisk: hallucinationRisk.score,
+    subspecialty: effectiveSubspecialty ?? null,
+    styleSource: styleConfig.source,
+    styleConfidence: styleConfidenceValue ?? null,
   });
 
   // Create audit log
@@ -253,10 +279,13 @@ export async function generateLetter(
       resourceId: letter.id,
       metadata: {
         letterType: input.letterType,
+        subspecialty: effectiveSubspecialty ?? null,
         modelUsed: response.modelId,
         inputTokens: response.inputTokens,
         outputTokens: response.outputTokens,
         hallucinationRisk: hallucinationRisk.level,
+        styleSource: styleConfig.source,
+        styleConfidence: styleConfidenceValue ?? null,
       },
     },
   });
@@ -469,6 +498,7 @@ function mapPrismaLetter(record: PrismaLetterModel): Letter {
     patientId: record.patientId ?? undefined,
     recordingId: record.recordingId ?? undefined,
     letterType: record.letterType as LetterType,
+    subspecialty: record.subspecialty ?? undefined,
     status: record.status as LetterStatus,
     contentDraft: record.contentDraft ?? undefined,
     contentFinal: record.contentFinal ?? undefined,
@@ -497,36 +527,4 @@ function mapPrismaLetter(record: PrismaLetterModel): Letter {
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
-}
-
-/**
- * Format style hints for inclusion in the prompt.
- */
-function formatStyleHintsForPrompt(hints: {
-  greeting?: string;
-  closing?: string;
-  paragraphLength?: string;
-  medicationFormat?: string;
-  clinicalValueFormat?: string;
-  formality?: string;
-  vocabulary?: string;
-  sectionOrder?: string;
-  generalGuidance?: string;
-}): string | null {
-  const parts: string[] = [];
-
-  if (hints.greeting) parts.push(`• ${hints.greeting}`);
-  if (hints.closing) parts.push(`• ${hints.closing}`);
-  if (hints.paragraphLength) parts.push(`• ${hints.paragraphLength}`);
-  if (hints.medicationFormat) parts.push(`• ${hints.medicationFormat}`);
-  if (hints.clinicalValueFormat) parts.push(`• ${hints.clinicalValueFormat}`);
-  if (hints.formality) parts.push(`• ${hints.formality}`);
-  if (hints.vocabulary) parts.push(`• ${hints.vocabulary}`);
-  if (hints.sectionOrder) parts.push(`• ${hints.sectionOrder}`);
-
-  if (parts.length === 0) {
-    return null;
-  }
-
-  return `# PHYSICIAN STYLE PREFERENCES\n\n${parts.join('\n')}${hints.generalGuidance ? `\n\n${hints.generalGuidance}` : ''}`;
 }

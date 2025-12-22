@@ -43,8 +43,8 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#1e40af' },
-    { media: '(prefers-color-scheme: dark)', color: '#1e40af' },
+    { media: '(prefers-color-scheme: light)', color: '#3B9B8E' }, // Medical-grade teal primary
+    { media: '(prefers-color-scheme: dark)', color: '#40B3A4' }, // Brighter teal for dark mode
   ],
 };
 
@@ -64,7 +64,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="DictateMED" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="msapplication-TileColor" content="#1e40af" />
+        <meta name="msapplication-TileColor" content="#3B9B8E" />
         <meta name="msapplication-tap-highlight" content="no" />
         <link rel="shortcut icon" href="/favicon.ico" />
       </head>

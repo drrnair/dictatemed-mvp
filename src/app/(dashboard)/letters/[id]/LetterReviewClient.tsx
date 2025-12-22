@@ -472,20 +472,22 @@ export function LetterReviewClient({
   return (
     <div className="flex h-screen flex-col">
       {/* Header */}
-      <header className="border-b border-border bg-card px-6 py-4">
+      <header className="border-b border-border/60 bg-card px-space-6 py-space-4 shadow-card">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-space-4">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push('/letters')}
+              className="min-h-touch gap-space-2"
             >
               <svg
-                className="mr-2 h-4 w-4"
+                className="h-4 w-4"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -496,22 +498,22 @@ export function LetterReviewClient({
               Back to Letters
             </Button>
 
-            <div className="flex flex-col">
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl font-semibold">
+            <div className="flex flex-col gap-space-1">
+              <div className="flex items-center gap-space-3">
+                <h1 className="text-heading-2">
                   {letter.patient?.name || 'Unknown Patient'}
                 </h1>
-                <span className="text-sm text-muted-foreground">|</span>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-body-sm text-muted-foreground" aria-hidden="true">|</span>
+                <span className="text-body-sm text-muted-foreground">
                   {formatLetterType(letter.letterType)}
                 </span>
                 {getStatusBadge(letter.status)}
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-space-2 text-caption text-muted-foreground">
                 <span>Created {new Date(letter.createdAt).toLocaleDateString()}</span>
                 {letter.reviewStartedAt && (
                   <>
-                    <span>•</span>
+                    <span aria-hidden="true">•</span>
                     <span>
                       Review started {new Date(letter.reviewStartedAt).toLocaleDateString()}
                     </span>
@@ -521,10 +523,12 @@ export function LetterReviewClient({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-space-3">
             {/* Auto-save indicator */}
             {isSaving && (
-              <span className="text-xs text-muted-foreground">Saving...</span>
+              <span className="text-caption text-muted-foreground" role="status" aria-live="polite">
+                Saving...
+              </span>
             )}
 
             {/* Show diff toggle if modified */}
@@ -533,6 +537,7 @@ export function LetterReviewClient({
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDiff(!showDiff)}
+                className="min-h-touch"
               >
                 {showDiff ? 'Hide' : 'Show'} Changes
               </Button>
@@ -544,13 +549,15 @@ export function LetterReviewClient({
               size="sm"
               onClick={handlePreview}
               disabled={isPreviewing}
+              className="min-h-touch gap-space-2"
             >
               <svg
-                className="mr-2 h-4 w-4"
+                className="h-4 w-4"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -573,6 +580,7 @@ export function LetterReviewClient({
                 size="sm"
                 onClick={handleSaveDraft}
                 disabled={!hasChanges || isSaving}
+                className="min-h-touch"
               >
                 Save Draft
               </Button>
@@ -584,14 +592,15 @@ export function LetterReviewClient({
                 size="sm"
                 onClick={() => setShowApprovalDialog(true)}
                 disabled={!canApprove}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="min-h-touch gap-space-2 bg-clinical-verified hover:bg-clinical-verified/90 text-white"
               >
                 <svg
-                  className="mr-2 h-4 w-4"
+                  className="h-4 w-4"
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -605,7 +614,7 @@ export function LetterReviewClient({
 
             {isReadOnly && letter.approvedAt && (
               <>
-                <Badge variant="verified" className="text-sm">
+                <Badge variant="verified" className="text-body-sm">
                   Approved on {new Date(letter.approvedAt).toLocaleDateString()}
                 </Badge>
                 <Button
@@ -637,19 +646,26 @@ export function LetterReviewClient({
 
         {/* Verification progress */}
         {!isReadOnly && totalValues > 0 && (
-          <div className="mt-3 flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">
+          <div className="mt-space-3 flex items-center gap-space-3" role="status" aria-live="polite">
+            <span className="text-caption text-muted-foreground">
               Verification: {verifiedCount}/{totalValues} values verified
             </span>
-            <div className="h-2 flex-1 max-w-xs overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-2 flex-1 max-w-xs overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuenow={verificationProgress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Verification progress"
+            >
               <div
-                className="h-full bg-green-600 transition-all"
+                className="h-full bg-clinical-verified transition-all duration-300"
                 style={{ width: `${verificationProgress}%` }}
               />
             </div>
-            <span className="text-xs font-medium">{verificationProgress}%</span>
+            <span className="text-caption font-medium">{verificationProgress}%</span>
             {!allCriticalVerified && (
-              <span className="text-xs text-amber-600">
+              <span className="text-caption text-clinical-warning">
                 Critical values need verification
               </span>
             )}
@@ -660,7 +676,7 @@ export function LetterReviewClient({
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Verification Panel (left) */}
-        <aside className="w-80 overflow-y-auto border-r border-border bg-card">
+        <aside className="w-80 overflow-y-auto border-r border-border/60 bg-card">
           <VerificationPanel
             extractedValues={localExtractedValues}
             hallucinationFlags={localHallucinationFlags}
@@ -672,10 +688,10 @@ export function LetterReviewClient({
         </aside>
 
         {/* Center content */}
-        <main className="flex flex-1 flex-col overflow-hidden">
+        <main className="flex flex-1 flex-col overflow-hidden bg-background-subtle" id="letter-content">
           {/* Differential view (collapsible) */}
           {showDiff && isModified && (
-            <div className="border-b border-border p-4">
+            <div className="border-b border-border/60 p-space-4 bg-card">
               <DifferentialView
                 originalContent={letter.contentDraft || ''}
                 modifiedContent={letter.contentFinal || ''}
@@ -686,7 +702,7 @@ export function LetterReviewClient({
           )}
 
           {/* Letter editor */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-space-6">
             <LetterEditor
               letterId={letter.id}
               initialContent={content}
@@ -753,21 +769,21 @@ export function LetterReviewClient({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 py-4">
-            <div className="flex items-center justify-between rounded-lg bg-muted p-3">
-              <span className="text-sm">Values verified:</span>
-              <span className="font-semibold">
+          <div className="space-y-space-3 py-space-4">
+            <div className="flex items-center justify-between rounded-lg bg-muted p-space-3">
+              <span className="text-body-sm">Values verified:</span>
+              <span className="text-body-sm font-semibold">
                 {verifiedCount}/{totalValues}
               </span>
             </div>
 
-            <div className="flex items-center justify-between rounded-lg bg-muted p-3">
-              <span className="text-sm">Critical values verified:</span>
+            <div className="flex items-center justify-between rounded-lg bg-muted p-space-3">
+              <span className="text-body-sm">Critical values verified:</span>
               <span
-                className={`font-semibold ${
+                className={`text-body-sm font-semibold ${
                   allCriticalVerified
-                    ? 'text-green-600'
-                    : 'text-amber-600'
+                    ? 'text-clinical-verified'
+                    : 'text-clinical-warning'
                 }`}
               >
                 {allCriticalVerified ? 'Yes' : 'No'}
@@ -775,15 +791,15 @@ export function LetterReviewClient({
             </div>
 
             {letter.hallucinationRiskScore !== null && (
-              <div className="flex items-center justify-between rounded-lg bg-muted p-3">
-                <span className="text-sm">Hallucination risk:</span>
+              <div className="flex items-center justify-between rounded-lg bg-muted p-space-3">
+                <span className="text-body-sm">Hallucination risk:</span>
                 <span
-                  className={`font-semibold ${
+                  className={`text-body-sm font-semibold ${
                     letter.hallucinationRiskScore < 30
-                      ? 'text-green-600'
+                      ? 'text-clinical-verified'
                       : letter.hallucinationRiskScore < 70
-                        ? 'text-amber-600'
-                        : 'text-red-600'
+                        ? 'text-clinical-warning'
+                        : 'text-clinical-critical'
                   }`}
                 >
                   {letter.hallucinationRiskScore}/100
@@ -796,13 +812,14 @@ export function LetterReviewClient({
             <Button
               variant="outline"
               onClick={() => setShowApprovalDialog(false)}
+              className="min-h-touch"
             >
               Cancel
             </Button>
             <Button
               onClick={handleApprove}
               disabled={isApproving}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="min-h-touch bg-clinical-verified hover:bg-clinical-verified/90 text-white"
             >
               {isApproving ? 'Approving...' : 'Approve & Finalize'}
             </Button>
