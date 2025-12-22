@@ -335,7 +335,8 @@ npm run typecheck
 
 ---
 
-### [ ] Step 9: API Endpoints - Profile Management
+### [x] Step 9: API Endpoints - Profile Management
+<!-- chat-id: 797a33e6-9478-4941-980d-8fdcfa2e9185 -->
 
 Create REST API endpoints for style profile management.
 
@@ -359,6 +360,21 @@ Create REST API endpoints for style profile management.
 npm run typecheck
 npm run lint
 ```
+
+**Completed:** All profile management API endpoints implemented:
+- **GET /api/style/profiles**: Lists all subspecialty profiles for the authenticated user
+- **POST /api/style/profiles**: Creates a new profile (or updates existing) with full Zod validation for all profile fields
+- **GET /api/style/profiles/:subspecialty**: Retrieves a specific subspecialty profile
+- **PUT /api/style/profiles/:subspecialty**: Updates an existing profile with partial updates
+- **DELETE /api/style/profiles/:subspecialty**: Resets (deletes) a profile to defaults
+- **PATCH /api/style/profiles/:subspecialty/strength**: Adjusts learning strength (0.0-1.0)
+- **POST /api/style/profiles/:subspecialty/analyze**: Manually triggers style analysis with optional parameters
+- **GET /api/style/profiles/:subspecialty/analyze**: Gets analysis status and edit statistics
+- All endpoints use Auth0 session authentication
+- All endpoints include comprehensive error handling and logging
+- Zod schemas validate all input including subspecialty enum, verbosity levels, formality levels, learning strength ranges
+- TypeScript compilation passes
+- ESLint checks pass
 
 ---
 
