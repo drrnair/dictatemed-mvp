@@ -624,16 +624,16 @@ describe('referral.service', () => {
     });
 
     it('should extract text from plain text file', async () => {
-      const textContent = 'This is a plain text referral letter with patient details.';
+      const textContent = 'This is a plain text referral letter with patient details. Adding more content to exceed the minimum text length threshold of 100 characters.';
       const textDoc = {
         ...mockReferralDocument,
         mimeType: 'text/plain',
         filename: 'referral.txt',
       };
 
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(textDoc);
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(textDoc);
       vi.mocked(s3.getObjectContent).mockResolvedValue({
-        content: Buffer.from(textContent + ' '.repeat(100)), // Make it long enough
+        content: Buffer.from(textContent),
         contentType: 'text/plain',
       });
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({
@@ -643,28 +643,42 @@ describe('referral.service', () => {
       });
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
-      const result = await referralService.extractTextFromDocument('user-1', 'ref-doc-1');
+      const result = await referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1');
 
       expect(mockExtractPdfText).not.toHaveBeenCalled(); // Should not use PDF parser
       expect(result.status).toBe('TEXT_EXTRACTED');
+      expect(result.isShortText).toBe(false);
     });
 
     it('should throw error when document not found', async () => {
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(null);
 
       await expect(
-        referralService.extractTextFromDocument('user-1', 'non-existent')
+        referralService.extractTextFromDocument('user-1', 'practice-1', 'non-existent')
       ).rejects.toThrow('Referral document not found');
     });
 
+    it('should throw error when document belongs to different practice', async () => {
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(null);
+
+      await expect(
+        referralService.extractTextFromDocument('user-1', 'other-practice', 'ref-doc-1')
+      ).rejects.toThrow('Referral document not found');
+
+      // Verify it checked with the correct practice ID
+      expect(prisma.referralDocument.findFirst).toHaveBeenCalledWith({
+        where: { id: 'ref-doc-1', practiceId: 'other-practice' },
+      });
+    });
+
     it('should throw error when document status is not UPLOADED', async () => {
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue({
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
         ...mockReferralDocument,
         status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
       });
 
       await expect(
-        referralService.extractTextFromDocument('user-1', 'ref-doc-1')
+        referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1')
       ).rejects.toThrow('Cannot extract text from document with status: TEXT_EXTRACTED');
     });
 
