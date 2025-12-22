@@ -66,7 +66,8 @@ npm run typecheck
 
 ---
 
-### [ ] Step 2: Type Definitions & Domain Types
+### [x] Step 2: Type Definitions & Domain Types
+<!-- chat-id: 7e0673b2-7d42-4c56-90fb-6652cbfa6a7f -->
 
 Define TypeScript types for the new subspecialty style system.
 
@@ -79,12 +80,25 @@ Define TypeScript types for the new subspecialty style system.
 
 **Files:**
 - `src/domains/style/subspecialty-profile.types.ts` (new)
-- `src/domains/style/style.types.ts` (modify - add exports)
+- `src/domains/style/index.ts` (modify - add exports)
 
 **Verification:**
 ```bash
 npm run typecheck
 ```
+
+**Completed:** All type definitions implemented in `subspecialty-profile.types.ts`:
+- Primitive types: `VerbosityLevel`, `FormalityLevel`, `StyleCategory`, `ParagraphStructure`, `TerminologyLevel`, `LetterSectionType`
+- Map types: `SectionInclusionMap`, `SectionVerbosityMap`, `SectionPhrasingMap`, `VocabularyMap`
+- Profile types: `SubspecialtyStyleProfile`, `SubspecialtyConfidenceScores`, `CreateSubspecialtyProfileInput`, `UpdateSubspecialtyProfileInput`
+- Seed letter types: `StyleSeedLetter`, `CreateSeedLetterInput`
+- Diff analysis types: `ParsedSection`, `SectionChange`, `SectionDiff`, `LetterDiffAnalysis`, `AnalyzeDiffInput`
+- Learning pipeline types: `PhrasePattern`, `SectionOrderPattern`, `SubspecialtyStyleAnalysisResult`, `AnalyzeStyleInput`, `RecordSubspecialtyEditsInput`
+- Generation conditioning types: `StyleConditioningConfig`, `SubspecialtyStyleHints`, `BuildConditionedPromptInput`
+- Analytics types: `StyleAnalyticsAggregate`, `AggregatedPattern`, `AggregatedPhrasePattern`, `AggregateAnalyticsInput`
+- API types: `ListProfilesResponse`, `ProfileOperationResponse`, `AdjustLearningStrengthInput`, `SeedLetterUploadResponse`
+- All types exported from `index.ts`
+- TypeScript and ESLint checks pass
 
 ---
 

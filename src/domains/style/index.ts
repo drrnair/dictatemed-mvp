@@ -14,6 +14,7 @@ export {
   mergeStyleAnalysis,
 } from './style-analyzer';
 
+// Global style types (existing)
 export type {
   StyleProfile,
   StyleEdit,
@@ -22,3 +23,61 @@ export type {
   AnalyzeStyleRequest,
   StyleEditModel,
 } from './style.types';
+
+// Per-subspecialty style types (new)
+export type {
+  // Primitive types
+  VerbosityLevel,
+  FormalityLevel,
+  StyleCategory,
+  ParagraphStructure,
+  TerminologyLevel,
+  LetterSectionType,
+
+  // Map types
+  SectionInclusionMap,
+  SectionVerbosityMap,
+  SectionPhrasingMap,
+  VocabularyMap,
+
+  // Profile types
+  SubspecialtyConfidenceScores,
+  SubspecialtyStyleProfile,
+  CreateSubspecialtyProfileInput,
+  UpdateSubspecialtyProfileInput,
+
+  // Seed letter types
+  StyleSeedLetter,
+  CreateSeedLetterInput,
+
+  // Diff analysis types
+  ParsedSection,
+  SectionChange,
+  SectionDiff,
+  LetterDiffAnalysis,
+  AnalyzeDiffInput,
+
+  // Learning pipeline types
+  PhrasePattern,
+  SectionOrderPattern,
+  SubspecialtyStyleAnalysisResult,
+  AnalyzeStyleInput,
+  RecordSubspecialtyEditsInput,
+
+  // Generation conditioning types
+  StyleConditioningConfig,
+  SubspecialtyStyleHints,
+  BuildConditionedPromptInput,
+
+  // Analytics types
+  StyleAnalyticsAggregate,
+  AggregatedPattern,
+  AggregatedPhrasePattern,
+  AggregateAnalyticsInput,
+
+  // API types
+  ListProfilesResponse,
+  ProfileOperationResponse,
+  AdjustLearningStrengthInput,
+  SeedLetterUploadResponse,
+} from './subspecialty-profile.types';
