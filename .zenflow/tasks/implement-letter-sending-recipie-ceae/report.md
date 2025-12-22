@@ -258,38 +258,54 @@ The theme system uses `next-themes` with custom extensions for server-side persi
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Theme Utilities
+### Theme Types & Constants
+
+The theme system delegates runtime logic to `next-themes`, with custom types and constants for components:
 
 ```typescript
 // src/lib/theme.ts
 
+// User's theme preference setting
 type ThemePreference = 'system' | 'light' | 'dark';
+
+// The actual resolved theme applied to the UI
 type ResolvedTheme = 'light' | 'dark';
 
-// Detect OS preference
-function getSystemTheme(): ResolvedTheme {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'dark'
-    : 'light';
-}
+// Storage key (must match ThemeProvider config)
+const THEME_STORAGE_KEY = 'dictatemed-theme';
 
-// Resolve preference to actual theme
-function resolveTheme(preference: ThemePreference): ResolvedTheme {
-  if (preference === 'system') {
-    return getSystemTheme();
-  }
-  return preference;
-}
+// Default for new users
+const DEFAULT_THEME_PREFERENCE: ThemePreference = 'system';
 
-// Listen for OS theme changes
-function onSystemThemeChange(callback: (theme: ResolvedTheme) => void): () => void {
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  mediaQuery.addEventListener('change', (e) => {
-    callback(e.matches ? 'dark' : 'light');
-  });
-  return () => mediaQuery.removeEventListener('change', handler);
+// Available options for UI components
+const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
+```
+
+### useTheme Hook
+
+A wrapper around `next-themes` providing consistent access to theme state:
+
+```typescript
+// src/hooks/useTheme.ts
+
+function useTheme() {
+  const { theme, setTheme, systemTheme, resolvedTheme } = useNextThemes();
+
+  return {
+    theme: resolvedTheme as ResolvedTheme,     // Current actual theme
+    preference: theme as ThemePreference,       // User's preference
+    setPreference: setTheme,                    // Update preference
+    systemTheme,                                // OS preference
+    isSystemPreference: theme === 'system',    // Using system mode?
+  };
 }
 ```
+
+OS preference detection and theme application are handled internally by `next-themes` via `window.matchMedia('(prefers-color-scheme: dark)')`.
 
 ### Design Tokens
 
@@ -420,7 +436,7 @@ Integrated into consultation context form:
 | PDF Service | 23 | Generation, errors |
 | Email Validation | 24 | Format, edge cases |
 | SES Adapter | 20 | Send, errors, MIME |
-| Theme Utilities | 21 | Detection, storage |
+| Theme Utilities | 9 | Constants, types |
 | useTheme Hook | 8 | State, toggle |
 | SendLetterDialog | 36 | Steps, recipients |
 | SendHistory | 26 | Display, retry |
@@ -429,7 +445,7 @@ Integrated into consultation context form:
 | ThemeSettings | 14 | Selection, save |
 | Letter Settings | 17 | Preferences |
 | Theme Settings API | 17 | Get, update |
-| **Total** | **399 unit + 89 integration** | |
+| **Total** | **387 unit + 89 integration** | |
 
 ---
 
