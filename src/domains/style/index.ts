@@ -39,6 +39,7 @@ export {
   deleteStyleProfile as deleteSubspecialtyProfile,
   adjustLearningStrength,
   createSeedLetter,
+  getSeedLetter,
   listSeedLetters,
   deleteSeedLetter,
   markSeedLetterAnalyzed,

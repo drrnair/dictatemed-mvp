@@ -2,11 +2,11 @@
 // API endpoints for managing individual seed letters
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@auth0/nextjs-auth0';
-import { deleteSeedLetter, listSeedLetters } from '@/domains/style';
+import { getSession } from '@/lib/auth';
+import { deleteSeedLetter, getSeedLetter } from '@/domains/style';
 import { logger } from '@/lib/logger';
 
-interface RouteParams {
+interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
@@ -16,7 +16,7 @@ interface RouteParams {
  */
 export async function GET(
   _request: NextRequest,
-  { params }: RouteParams
+  { params }: RouteContext
 ) {
   const { id } = await params;
   const log = logger.child({ action: 'GET /api/style/seed/:id', seedLetterId: id });
@@ -31,14 +31,12 @@ export async function GET(
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     log.info('Fetching seed letter', { userId, seedLetterId: id });
 
-    // List all seed letters and find the one with matching ID
-    // This ensures we only return seed letters belonging to the user
-    const seedLetters = await listSeedLetters(userId);
-    const seedLetter = seedLetters.find((sl) => sl.id === id);
+    // Efficient single-record lookup that also verifies ownership
+    const seedLetter = await getSeedLetter(userId, id);
 
     if (!seedLetter) {
       return NextResponse.json(
@@ -75,7 +73,7 @@ export async function GET(
  */
 export async function DELETE(
   _request: NextRequest,
-  { params }: RouteParams
+  { params }: RouteContext
 ) {
   const { id } = await params;
   const log = logger.child({ action: 'DELETE /api/style/seed/:id', seedLetterId: id });
@@ -90,7 +88,7 @@ export async function DELETE(
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     log.info('Deleting seed letter', { userId, seedLetterId: id });
 

@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getSession } from '@auth0/nextjs-auth0';
+import { getSession } from '@/lib/auth';
 import type { Subspecialty } from '@prisma/client';
 import { analyzeStyle, getEditStatistics } from '@/domains/style/style.service';
 import {
@@ -46,14 +46,14 @@ export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
     const session = await getSession();
-    if (!session?.user) {
+    if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     // Parse and validate request body
     const body = await request.json().catch(() => ({}));
@@ -173,14 +173,14 @@ export async function GET(request: NextRequest) {
   try {
     // Get authenticated user
     const session = await getSession();
-    if (!session?.user) {
+    if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     // Check for subspecialty filter
     const { searchParams } = new URL(request.url);

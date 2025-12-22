@@ -3,7 +3,7 @@
 // Supports both global and per-subspecialty analysis
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@auth0/nextjs-auth0';
+import { getSession } from '@/lib/auth';
 import type { Subspecialty } from '@prisma/client';
 import { analyzeHistoricalLetters } from '@/domains/style/style.service';
 import { createSeedLetter, analyzeSeedLetters } from '@/domains/style';
@@ -47,14 +47,14 @@ export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
     const session = await getSession();
-    if (!session?.user) {
+    if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const userId = session.user.sub;
+    const userId = session.user.id;
 
     // Parse multipart form data
     const formData = await request.formData();

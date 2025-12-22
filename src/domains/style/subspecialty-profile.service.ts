@@ -496,6 +496,28 @@ export async function listSeedLetters(
 }
 
 /**
+ * Get a single seed letter by ID for a user.
+ * Returns null if not found or if the letter doesn't belong to the user.
+ */
+export async function getSeedLetter(
+  userId: string,
+  seedLetterId: string
+): Promise<StyleSeedLetter | null> {
+  const seedLetter = await prisma.styleSeedLetter.findFirst({
+    where: {
+      id: seedLetterId,
+      userId,
+    },
+  });
+
+  if (!seedLetter) {
+    return null;
+  }
+
+  return mapPrismaSeedLetterToDomain(seedLetter);
+}
+
+/**
  * Delete a seed letter.
  */
 export async function deleteSeedLetter(
