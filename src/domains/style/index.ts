@@ -49,6 +49,30 @@ export {
   getCacheStats,
 } from './subspecialty-profile.service';
 
+// Learning pipeline for per-subspecialty style learning
+export {
+  // Constants
+  MIN_EDITS_FOR_ANALYSIS,
+  ANALYSIS_INTERVAL,
+  MAX_EDITS_PER_ANALYSIS,
+  MIN_CONFIDENCE_THRESHOLD,
+  // Edit recording
+  recordSubspecialtyEdits,
+  // Analysis triggering
+  shouldTriggerAnalysis,
+  queueStyleAnalysis,
+  // Style analysis
+  runStyleAnalysis,
+  // Profile merging
+  mergeProfileAnalysis,
+  // Learning strength
+  applyLearningStrength,
+  // Seed letter analysis
+  analyzeSeedLetters,
+  // Utility
+  getEditCountSinceLastAnalysis,
+} from './learning-pipeline';
+
 // Global style types (existing)
 export type {
   StyleProfile,

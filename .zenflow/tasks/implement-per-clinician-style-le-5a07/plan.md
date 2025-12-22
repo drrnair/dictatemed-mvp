@@ -166,12 +166,19 @@ npm run test -- subspecialty-profile
 - **Learning Strength**: `adjustLearningStrength()` with validation (0.0-1.0 range)
 - **Seed Letters**: `createSeedLetter()`, `listSeedLetters()`, `deleteSeedLetter()`, `markSeedLetterAnalyzed()`
 - **Statistics**: `getSubspecialtyEditStatistics()`, `hasEnoughEditsForAnalysis()`
-- **Profile Resolution**: `getEffectiveProfile()` with subspecialty → default fallback chain
+- **Profile Resolution**: `getEffectiveProfile()` with full fallback chain: subspecialty → global (User.styleProfile) → default
+- **Global Profile Conversion**: `convertGlobalToSubspecialtyFormat()` maps legacy global profiles to new format
 - **Caching**: In-memory cache with 5-minute TTL, `clearProfileCache()`, `getCacheStats()`
 - **Audit Logging**: All operations logged with appropriate action types and metadata
-- 42 unit tests covering all functions, caching behavior, edge cases
+- 52 unit tests covering all functions, caching behavior, TTL expiration, global fallback, edge cases
 - All functions exported from `index.ts` with aliased names (e.g., `createSubspecialtyProfile`)
 - TypeScript compilation passes
+
+**Bug Fixes Applied (Review Feedback):**
+- Fixed `getEffectiveProfile()` to include global profile fallback per spec
+- Simplified cache invalidation pattern (removed redundant `invalidateCachedProfile` before `setCachedProfile`)
+- Added cache TTL expiration tests
+- Added comprehensive global fallback tests (8 new test cases)
 
 ---
 
