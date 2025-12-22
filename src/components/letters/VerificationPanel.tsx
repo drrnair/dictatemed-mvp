@@ -208,7 +208,7 @@ export function VerificationPanel({
         {/* Critical Values Warning */}
         {!allCriticalVerified && (
           <div
-            className="mt-3 p-2 bg-clinical-critical/10 border border-clinical-critical/30 rounded-md flex items-start gap-2"
+            className="mt-3 p-2 bg-clinical-critical-muted border border-clinical-critical rounded-md flex items-start gap-2"
             role="alert"
             aria-live="polite"
           >
@@ -385,8 +385,8 @@ function ValueCard({
       className={cn(
         'p-3 rounded-md border transition-all',
         value.verified
-          ? 'bg-clinical-verified/10 border-clinical-verified/30'
-          : 'bg-clinical-warning/10 border-clinical-warning/30 hover:border-clinical-warning'
+          ? 'bg-clinical-verified-muted border-clinical-verified'
+          : 'bg-clinical-warning-muted border-clinical-warning hover:border-clinical-warning'
       )}
       data-testid={`value-card-${value.id}`}
       data-verified={value.verified}
@@ -480,8 +480,8 @@ function FlagCard({ flag, onDismiss }: FlagCardProps) {
       className={cn(
         'p-3 rounded-md border',
         isCritical
-          ? 'bg-clinical-critical/10 border-clinical-critical/30'
-          : 'bg-clinical-warning/10 border-clinical-warning/30'
+          ? 'bg-clinical-critical-muted border-clinical-critical'
+          : 'bg-clinical-warning-muted border-clinical-warning'
       )}
       data-testid={`flag-card-${flag.id}`}
       data-severity={flag.severity}

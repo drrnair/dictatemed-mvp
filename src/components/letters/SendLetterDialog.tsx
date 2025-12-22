@@ -599,14 +599,14 @@ export function SendLetterDialog({
               className={cn(
                 'flex items-center gap-3 rounded-lg p-4',
                 sendResult.failed === 0
-                  ? 'bg-green-50 dark:bg-green-950/30'
-                  : 'bg-amber-50 dark:bg-amber-950/30'
+                  ? 'bg-clinical-verified-muted'
+                  : 'bg-clinical-warning-muted'
               )}
             >
               {sendResult.failed === 0 ? (
-                <Check className="h-6 w-6 text-green-600" />
+                <Check className="h-6 w-6 text-clinical-verified" />
               ) : (
-                <AlertCircle className="h-6 w-6 text-amber-600" />
+                <AlertCircle className="h-6 w-6 text-clinical-warning" />
               )}
               <div>
                 <p className="font-medium">

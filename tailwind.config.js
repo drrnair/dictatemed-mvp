@@ -61,11 +61,11 @@ module.exports = {
           info: 'hsl(var(--clinical-info))',
           'info-muted': 'hsl(var(--clinical-info-muted))',
         },
-        // Recording status
+        // Recording status (theme-aware via CSS variables)
         recording: {
-          active: 'hsl(0, 84%, 60%)', // Red for recording
-          paused: 'hsl(45, 93%, 47%)', // Yellow for paused
-          ready: 'hsl(142, 76%, 36%)', // Green for ready
+          active: 'hsl(var(--recording-active))',
+          paused: 'hsl(var(--recording-paused))',
+          ready: 'hsl(var(--recording-ready))',
         },
       },
       borderRadius: {

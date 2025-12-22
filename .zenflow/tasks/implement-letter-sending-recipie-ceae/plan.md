@@ -533,10 +533,19 @@ Add theme preference to settings with server persistence.
 
 Verify and enhance dark mode across all screens.
 
-**Files modified:**
-- `src/app/globals.css` - Added CSS variables for clinical status colors with dark mode variants
-- `tailwind.config.js` - Updated clinical colors to use CSS variables instead of hardcoded HSL
-- `src/components/settings/LetterSendingSettings.tsx` - Updated to use `clinical-verified-muted` for dark mode compatibility
+**Files modified (comprehensive update):**
+- `src/app/globals.css` - Added CSS variables for clinical and recording status colors with dark mode variants
+- `tailwind.config.js` - Updated clinical and recording colors to use CSS variables
+- `src/components/settings/LetterSendingSettings.tsx` - Updated to use `bg-clinical-verified-muted`
+- `src/app/error.tsx` - Updated to use `bg-clinical-critical-muted`
+- `src/components/common/ErrorFallback.tsx` - Updated `iconBgColors` and `iconColors` to use clinical variables
+- `src/components/layout/OfflineIndicator.tsx` - Updated to use clinical muted colors
+- `src/app/(dashboard)/record/error.tsx` - Updated to use clinical muted colors
+- `src/app/(dashboard)/letters/[id]/error.tsx` - Updated to use clinical muted colors
+- `src/components/recording/RecordingErrorBoundary.tsx` - Updated to use clinical muted colors
+- `src/components/letters/VerificationPanel.tsx` - Updated to use clinical muted colors
+- `src/components/letters/LetterGenerationError.tsx` - Updated to use clinical muted colors
+- `src/components/letters/SendLetterDialog.tsx` - Updated result states to use clinical muted colors
 
 **Tasks completed:**
 1. Audited all dark mode CSS variables in globals.css:
@@ -546,25 +555,31 @@ Verify and enhance dark mode across all screens.
      - `--clinical-warning` / `--clinical-warning-muted`
      - `--clinical-critical` / `--clinical-critical-muted`
      - `--clinical-info` / `--clinical-info-muted`
-2. Checked all new components for dark mode support:
-   - SendLetterDialog: Uses theme variables via `bg-muted/50`, `text-muted-foreground`, etc.
-   - SendHistory: Has explicit dark mode classes (`dark:border-red-900 dark:bg-red-950/30`)
-   - ThemeSettings: Properly styled with theme variables
-   - LetterSendingSettings: Updated success message to use muted variant
-   - PatientContacts/ContactForm: Uses theme-aware styling
-3. Verified WCAG AA contrast ratios:
+   - Added CSS variables for recording status colors:
+     - `--recording-active` (red)
+     - `--recording-paused` (yellow)
+     - `--recording-ready` (green)
+2. Updated ALL files using hardcoded opacity patterns (`clinical-*/10`, `clinical-*/5`, etc.):
+   - Replaced with theme-aware muted variants (`clinical-*-muted`)
+   - Updated 12 files with comprehensive dark mode support
+3. Made recording colors theme-aware:
+   - Light mode: High saturation for visibility
+   - Dark mode: Slightly brighter for visibility on dark backgrounds
+4. Updated SendLetterDialog result states:
+   - Success: Uses `bg-clinical-verified-muted` instead of `bg-green-50 dark:bg-green-950/30`
+   - Warning: Uses `bg-clinical-warning-muted` instead of `bg-amber-50 dark:bg-amber-950/30`
+5. Verified WCAG AA contrast ratios:
    - Dark mode text colors use sufficient contrast (muted-foreground at 65% lightness)
    - Clinical colors adjusted for dark mode (verified at 45%, warning at 50%, critical at 55%)
    - All interactive elements maintain proper focus states
-4. Fixed styling issues:
-   - Updated Tailwind config to use CSS variables for clinical colors
-   - Added muted variants for clinical colors (for background use cases)
-   - Ensured all badge variants work in both themes
-5. Verified clinical status colors work in both themes:
+6. Clinical status colors in both themes:
    - Green (verified): `hsl(142 76% 36%)` light → `hsl(142 70% 45%)` dark
    - Yellow (warning): `hsl(45 93% 47%)` light → `hsl(45 90% 50%)` dark
    - Red (critical): `hsl(0 84% 60%)` light → `hsl(0 75% 55%)` dark
    - Blue (info): `hsl(217 91% 60%)` light → `hsl(217 85% 60%)` dark
+
+**Note on test:a11y:**
+The `npm run test:a11y` command was not run due to Auth0 configuration requirements in the test environment. The WCAG AA compliance was verified by analyzing the contrast ratios of the CSS variables. For full accessibility testing, Auth0 mock configuration would need to be set up.
 
 **Verification:**
 - `npm run typecheck` passes

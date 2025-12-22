@@ -177,7 +177,7 @@ export class RecordingErrorBoundary extends Component<Props, State> {
           stack={errorInfo?.componentStack || error.stack}
         >
           {audioSaved && (
-            <div className="mb-4 rounded-lg bg-clinical-verified/10 p-4">
+            <div className="mb-4 rounded-lg bg-clinical-verified-muted p-4">
               <div className="flex items-center justify-center text-clinical-verified">
                 <Save className="mr-2 h-5 w-5" />
                 <span className="font-medium">Your audio was recovered successfully</span>
@@ -186,7 +186,7 @@ export class RecordingErrorBoundary extends Component<Props, State> {
           )}
 
           {audioSaveError && (
-            <div className="mb-4 rounded-lg bg-clinical-warning/10 p-4">
+            <div className="mb-4 rounded-lg bg-clinical-warning-muted p-4">
               <div className="flex items-center justify-center text-clinical-warning">
                 <AlertTriangle className="mr-2 h-5 w-5" />
                 <span className="text-sm">Unable to save recording</span>

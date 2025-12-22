@@ -43,6 +43,11 @@
     --clinical-critical-muted: 0 70% 95%;
     --clinical-info: 217 91% 60%;
     --clinical-info-muted: 217 80% 94%;
+
+    /* Recording status colors - light mode (high contrast for visibility) */
+    --recording-active: 0 84% 60%;
+    --recording-paused: 45 93% 47%;
+    --recording-ready: 142 76% 36%;
   }
 
   .dark {
@@ -83,6 +88,11 @@
     --clinical-critical-muted: 0 50% 15%;
     --clinical-info: 217 85% 60%;
     --clinical-info-muted: 217 50% 15%;
+
+    /* Recording status colors - dark mode (slightly brighter for visibility) */
+    --recording-active: 0 80% 55%;
+    --recording-paused: 45 88% 52%;
+    --recording-ready: 142 70% 45%;
   }
 }
 
