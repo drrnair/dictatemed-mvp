@@ -244,6 +244,37 @@ Apply design system to the consultation/recording screen.
   - Used `gap-space-2` and `px-space-1` spacing tokens
   - Used `text-caption` typography token
   - Added `aria-hidden="true"` to decorative icon
+- Updated `RecordingSection.tsx`:
+  - Changed all spacing to use design tokens (`space-y-space-6`, `gap-space-2`, `p-space-4`, etc.)
+  - Added `role="alert"` to error display for accessibility
+  - Used `text-body-sm` for error text, `text-label` and `text-caption` for upload UI
+  - Updated upload dropzone with `border-border/60` and hover state with `border-primary/40`
+  - Added transition effects (`transition-colors duration-150`)
+  - Added `aria-hidden="true"` to decorative icons
+  - Added `aria-label` to file input for screen readers
+  - Added `role="status"` and `aria-live="polite"` to upload progress
+  - Used `shadow-card` for file selection card
+- Updated `RecordingModeSelector.tsx`:
+  - Added `role="radiogroup"` and `aria-label` for accessibility
+  - Changed buttons to use `role="radio"` with `aria-checked`
+  - Used design tokens for spacing (`space-y-space-4`, `p-space-1`, `gap-space-2`, `px-space-4`)
+  - Added 44px touch targets (`min-h-touch`)
+  - Used `text-label` typography and `shadow-card` for selected state
+  - Added `focus-visible` ring for keyboard navigation
+  - Added `transition-all duration-150` for smooth interactions
+  - Added `aria-hidden="true"` to decorative icons
+  - Used `text-body-sm` for mode description
+- Updated `RecordingControls.tsx`:
+  - Changed spacing to use `gap-space-4` design token
+  - Changed recording button color from `bg-destructive` to `bg-clinical-critical` (semantic clinical color)
+  - Added `transition-all duration-150` and `active:scale-100` for tactile feedback
+  - Changed `focus:` to `focus-visible:` for keyboard-only focus indicators
+  - Added `aria-hidden="true"` to decorative icons
+- Updated `RecordingTimer`:
+  - Used `text-heading-1` typography for timer display
+  - Changed recording state color to `text-clinical-critical` (semantic)
+  - Added `role="timer"`, `aria-live="polite"`, `aria-atomic="true"` for accessibility
+  - Used `mt-space-1` spacing and `text-body-sm` for status text
 - Verified: `npm run lint` passes, `npm run build` compiles successfully
 
 ---
