@@ -20,7 +20,7 @@ export function OfflineIndicator() {
     if (!isOnline) {
       return {
         icon: WifiOff,
-        bgColor: 'bg-clinical-warning/10',
+        bgColor: 'bg-clinical-warning-muted',
         textColor: 'text-clinical-warning',
         iconColor: 'text-clinical-warning',
         message: pendingCount > 0
@@ -32,9 +32,9 @@ export function OfflineIndicator() {
     if (networkStatus === 'slow') {
       return {
         icon: Cloud,
-        bgColor: 'bg-yellow-50 dark:bg-yellow-900/10',
-        textColor: 'text-yellow-900 dark:text-yellow-200',
-        iconColor: 'text-yellow-600 dark:text-yellow-400',
+        bgColor: 'bg-clinical-warning-muted',
+        textColor: 'text-clinical-warning',
+        iconColor: 'text-clinical-warning',
         message: 'Slow connection detected',
       };
     }
@@ -43,9 +43,9 @@ export function OfflineIndicator() {
     if (pendingCount > 0) {
       return {
         icon: Loader2,
-        bgColor: 'bg-blue-50 dark:bg-blue-900/10',
-        textColor: 'text-blue-900 dark:text-blue-200',
-        iconColor: 'text-blue-600 dark:text-blue-400',
+        bgColor: 'bg-clinical-info-muted',
+        textColor: 'text-clinical-info',
+        iconColor: 'text-clinical-info',
         message: `Syncing ${pendingCount} item${pendingCount !== 1 ? 's' : ''}...`,
         animate: true,
       };
@@ -107,8 +107,8 @@ export function OfflineIndicatorCompact() {
 
   const getColor = () => {
     if (!isOnline) return 'text-clinical-warning';
-    if (pendingCount > 0) return 'text-blue-600';
-    return 'text-yellow-600';
+    if (pendingCount > 0) return 'text-clinical-info';
+    return 'text-clinical-warning';
   };
 
   const icon = getIcon();

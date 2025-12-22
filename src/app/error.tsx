@@ -28,7 +28,7 @@ export default function Error({ error, reset }: ErrorPageProps) {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md text-center">
         {/* Icon */}
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-clinical-critical/10">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-clinical-critical-muted">
           <AlertTriangle
             className="h-10 w-10 text-clinical-critical"
             aria-hidden="true"

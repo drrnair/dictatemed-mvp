@@ -232,7 +232,9 @@ describe('ThemeSettings', () => {
 
   // Note: The "saving indicator" and "disabled buttons during save" tests are
   // difficult to test reliably due to React's batching of state updates.
-  // The functionality is verified through integration tests and manual testing.
+  // The functionality is verified through:
+  // - Integration tests in tests/integration/api/theme-settings.test.ts
+  // - Manual QA testing of the UI interaction
 
   it('should call PUT API when theme is changed', async () => {
     const user = userEvent.setup();

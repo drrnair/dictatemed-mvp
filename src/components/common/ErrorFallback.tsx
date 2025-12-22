@@ -31,13 +31,13 @@ const icons = {
 const iconColors = {
   warning: 'text-clinical-warning',
   error: 'text-clinical-critical',
-  info: 'text-blue-500',
+  info: 'text-clinical-info',
 };
 
 const iconBgColors = {
-  warning: 'bg-clinical-warning/10',
-  error: 'bg-clinical-critical/10',
-  info: 'bg-blue-500/10',
+  warning: 'bg-clinical-warning-muted',
+  error: 'bg-clinical-critical-muted',
+  info: 'bg-clinical-info-muted',
 };
 
 export function ErrorFallback({

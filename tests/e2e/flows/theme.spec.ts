@@ -103,8 +103,11 @@ test.describe('Theme System', () => {
 
       await page.goto('/');
 
-      // Wait for theme to apply
-      await page.waitForTimeout(100);
+      // Wait for page to be fully loaded and theme to apply
+      await page.waitForLoadState('domcontentloaded');
+
+      // Wait for the html element to have dark class or data-theme attribute
+      await expect(page.locator('html')).toHaveAttribute('class', /.*/);
 
       // The page should have dark theme variables applied
       const backgroundColor = await page.evaluate(() => {
@@ -122,8 +125,11 @@ test.describe('Theme System', () => {
 
       await page.goto('/');
 
-      // Wait for theme to apply
-      await page.waitForTimeout(100);
+      // Wait for page to be fully loaded and theme to apply
+      await page.waitForLoadState('domcontentloaded');
+
+      // Wait for the html element to have class attribute set
+      await expect(page.locator('html')).toHaveAttribute('class', /.*/);
 
       // The page should have light theme variables applied
       const backgroundColor = await page.evaluate(() => {
