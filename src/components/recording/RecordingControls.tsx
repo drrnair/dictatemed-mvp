@@ -104,18 +104,18 @@ export function RecordingTimer({ durationSeconds, state }: RecordingTimerProps) 
   const formatNumber = (n: number) => n.toString().padStart(2, '0');
 
   return (
-    <div className="text-center">
+    <div className="text-center" role="timer" aria-live="polite" aria-atomic="true">
       <p
         className={cn(
-          'font-mono text-4xl font-bold tracking-wider',
-          state === 'recording' && 'text-destructive',
+          'font-mono text-heading-1 font-bold tracking-wider',
+          state === 'recording' && 'text-clinical-critical',
           state === 'paused' && 'text-muted-foreground'
         )}
       >
         {hours > 0 && `${formatNumber(hours)}:`}
         {formatNumber(minutes)}:{formatNumber(seconds)}
       </p>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <p className="mt-space-1 text-body-sm text-muted-foreground">
         {state === 'recording' && 'Recording...'}
         {state === 'paused' && 'Paused'}
         {state === 'idle' && 'Ready to record'}

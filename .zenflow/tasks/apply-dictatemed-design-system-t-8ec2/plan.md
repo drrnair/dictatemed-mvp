@@ -198,6 +198,9 @@ Apply design system to the consultation/recording screen.
 
 **Files:**
 - `src/app/(dashboard)/record/page.tsx` - CollapsibleSection, status indicators
+- `src/components/recording/RecordingSection.tsx` - Mode selector, upload UI
+- `src/components/recording/RecordingModeSelector.tsx` - Mode button group
+- `src/components/recording/RecordingControls.tsx` - Recording buttons, timer
 
 **Verification:**
 - Sections expand/collapse
