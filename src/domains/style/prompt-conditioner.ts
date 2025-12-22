@@ -177,6 +177,8 @@ export function buildConditioningConfig(
       applyVocabulary: false,
       applySignoff: false,
       applyFormality: false,
+      applyGreeting: false,
+      applyTerminology: false,
       ...overrides,
     };
   }
@@ -238,6 +240,18 @@ export function buildConditioningConfig(
       !!profile.formalityLevel &&
       (confidence.formalityLevel ?? 0) >= MIN_CONFIDENCE_THRESHOLD,
 
+    applyGreeting:
+      (overrides?.applyGreeting ?? true) &&
+      learningStrength > 0 &&
+      !!profile.greetingStyle &&
+      (confidence.greetingStyle ?? 0) >= MIN_CONFIDENCE_THRESHOLD,
+
+    applyTerminology:
+      (overrides?.applyTerminology ?? true) &&
+      learningStrength > 0 &&
+      !!profile.terminologyLevel &&
+      (confidence.terminologyLevel ?? 0) >= MIN_CONFIDENCE_THRESHOLD,
+
     ...overrides,
   };
 }
@@ -289,7 +303,7 @@ function buildStyleHints(
   }
 
   // Greeting style
-  if (profile.greetingStyle && (profile.confidence.greetingStyle ?? 0) >= MIN_CONFIDENCE_THRESHOLD) {
+  if (config.applyGreeting && profile.greetingStyle) {
     hints.greeting = buildGreetingInstruction(profile.greetingStyle);
   }
 
@@ -304,7 +318,7 @@ function buildStyleHints(
   }
 
   // Terminology level
-  if (profile.terminologyLevel && (profile.confidence.terminologyLevel ?? 0) >= MIN_CONFIDENCE_THRESHOLD) {
+  if (config.applyTerminology && profile.terminologyLevel) {
     hints.terminology = buildTerminologyInstruction(profile.terminologyLevel);
   }
 

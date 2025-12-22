@@ -612,6 +612,7 @@ Implement the de-identified analytics aggregation pipeline.
 **Files:**
 - `src/domains/style/analytics-aggregator.ts` (new)
 - `src/app/api/admin/style-analytics/route.ts` (new)
+- `tests/unit/domains/style/analytics-aggregator.test.ts` (new)
 
 **Verification:**
 ```bash
@@ -619,9 +620,53 @@ npm run typecheck
 npm run lint
 ```
 
+**Completed:** Full analytics aggregation pipeline implemented:
+
+**PHI Stripping (`analytics-aggregator.ts`):**
+- `stripPHI()` removes patient names (with titles like Mr., Dr.), dates (various formats), Medicare numbers, phone numbers (AU mobile, landline, international), emails, addresses, URN/MRN identifiers
+- `containsPHI()` checks if text contains identifiable information
+- `sanitizePhrase()` strips PHI and validates phrases for aggregation (min 5 chars, no redacted content)
+- PHI patterns handle Australian-specific formats (Medicare 10-11 digits, 04xx mobile, (02) landlines, +61 international)
+
+**Aggregation Functions:**
+- `aggregateStyleAnalytics()` - Main aggregation function with minimum thresholds for anonymity:
+  - `MIN_CLINICIANS_FOR_AGGREGATION = 5` (prevent re-identification)
+  - `MIN_LETTERS_FOR_AGGREGATION = 10`
+  - `MIN_PATTERN_FREQUENCY = 2` (filter noise)
+  - `MAX_PATTERNS_PER_CATEGORY = 50`
+- `aggregateAdditionPatterns()` - Extracts commonly added content across clinicians
+- `aggregateDeletionPatterns()` - Extracts commonly deleted content
+- `aggregateSectionOrderPatterns()` - Tracks section ordering preferences
+- `aggregatePhrasingPatterns()` - Captures phrase-level patterns with action type
+
+**Retrieval Functions:**
+- `getStyleAnalytics()` - Get analytics for a subspecialty with optional limit
+- `getAnalyticsSummary()` - Summary across all subspecialties (top additions, deletions per subspecialty)
+- `runWeeklyAggregation()` - Scheduled job to run aggregation for all subspecialties
+
+**Admin API Endpoint (`/api/admin/style-analytics`):**
+- `GET` - Retrieve analytics with optional `?subspecialty=` filter, `?summary=true` for summary, `?limit=N`
+- `POST` - Trigger aggregation with `subspecialty` or `runAll: true`
+- Role-based access control: Requires ADMIN role via `requireAdmin()`
+- Returns de-identified data only (no clinician IDs, no PHI)
+
+**Unit Tests (44 tests):**
+- PHI stripping tests for all identifier types
+- Edge cases (multiple PHI types, clinical terms that look like PHI, unicode, newlines)
+- Sanitize phrase tests (length, whitespace, PHI detection)
+- Constants validation
+- Aggregation function tests with mocked Prisma
+- Retrieval function tests
+
+**Verification:**
+- TypeScript compilation passes
+- ESLint checks pass
+- All 304 tests pass
+
 ---
 
 ### [ ] Step 15: Integration Tests
+<!-- chat-id: 1322a6ef-6c29-4799-b8ec-eb21d710183f -->
 
 Write integration tests for the complete learning flow.
 
