@@ -166,6 +166,7 @@ Implement LLM-powered structured data extraction from referral text.
 ---
 
 ### [ ] Step 5: Upload UI Component
+<!-- chat-id: e5bd539a-b020-4c83-bc2b-b95a4b6b63e4 -->
 
 Create the referral upload component for the consultation form.
 
