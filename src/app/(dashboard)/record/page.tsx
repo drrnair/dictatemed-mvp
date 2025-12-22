@@ -166,30 +166,32 @@ export default function RecordPage() {
   const isContextComplete = formData.patient && formData.referrer && formData.letterType;
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto">
+    <div className="space-y-space-4 max-w-4xl mx-auto">
       {/* Header with status */}
-      <div className="flex items-start justify-between">
+      <header className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">New Consultation</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-heading-1">New Consultation</h1>
+          <p className="text-body-sm text-muted-foreground mt-space-1">
             Set up context, then record your consultation.
           </p>
         </div>
 
         {/* Network and sync status */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-space-2">
           <div
             className={cn(
-              'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium',
+              'flex items-center gap-space-1 rounded-full px-space-3 py-space-1 text-caption',
               isOnline
-                ? 'bg-green-500/10 text-green-600'
+                ? 'bg-clinical-verified/10 text-clinical-verified'
                 : 'bg-destructive/10 text-destructive'
             )}
+            role="status"
+            aria-live="polite"
           >
             {isOnline ? (
-              <Cloud className="h-3.5 w-3.5" />
+              <Cloud className="h-3.5 w-3.5" aria-hidden="true" />
             ) : (
-              <CloudOff className="h-3.5 w-3.5" />
+              <CloudOff className="h-3.5 w-3.5" aria-hidden="true" />
             )}
             {isOnline ? 'Online' : 'Offline'}
           </div>
@@ -200,22 +202,24 @@ export default function RecordPage() {
               onClick={() => syncNow()}
               disabled={!isOnline || syncStatus === 'syncing'}
               className={cn(
-                'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium',
-                'bg-primary/10 text-primary',
-                'hover:bg-primary/20 transition-colors',
+                'flex items-center gap-space-1 rounded-full px-space-3 py-space-1 text-caption',
+                'bg-primary/10 text-primary min-h-touch',
+                'hover:bg-primary/20 transition-colors duration-150',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 (!isOnline || syncStatus === 'syncing') && 'opacity-50 cursor-not-allowed'
               )}
+              aria-label={`Sync ${pendingCount} pending items`}
             >
               {syncStatus === 'syncing' ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
               ) : (
-                <Upload className="h-3.5 w-3.5" />
+                <Upload className="h-3.5 w-3.5" aria-hidden="true" />
               )}
               {pendingCount} pending
             </button>
           )}
         </div>
-      </div>
+      </header>
 
       {/* SECTION 1: Consultation Context (Required) */}
       <CollapsibleSection

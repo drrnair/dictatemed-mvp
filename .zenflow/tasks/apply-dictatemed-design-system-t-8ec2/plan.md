@@ -192,6 +192,7 @@ Apply design system to the main dashboard/today screen.
 ---
 
 ### [ ] Step: Record Screen
+<!-- chat-id: 31a28e09-e5b0-4c6b-a132-2321e5b7ce4e -->
 
 Apply design system to the consultation/recording screen.
 
