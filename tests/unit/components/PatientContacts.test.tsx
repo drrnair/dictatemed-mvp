@@ -381,14 +381,14 @@ describe('PatientContacts', () => {
         expect(screen.getByText('Dr. Jane Smith')).toBeInTheDocument();
       });
 
-      // Find and click the edit button (has aria-label or icon)
-      const editButtons = screen.getAllByRole('button').filter(
-        btn => btn.querySelector('[class*="Edit"]') || btn.getAttribute('aria-label')?.includes('edit')
-      );
-      const firstEditButton = editButtons[0];
-      if (firstEditButton) {
-        fireEvent.click(firstEditButton);
-      }
+      // Click the edit button using aria-label
+      const editButton = screen.getByRole('button', { name: /edit dr\. jane smith/i });
+      fireEvent.click(editButton);
+
+      // Form should appear with pre-filled data
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Dr. Jane Smith')).toBeInTheDocument();
+      });
     });
 
     it('updates contact on form submit', async () => {
@@ -412,12 +412,33 @@ describe('PatientContacts', () => {
         expect(screen.getByText('Dr. Jane Smith')).toBeInTheDocument();
       });
 
-      // Click edit button
-      const buttons = screen.getAllByRole('button');
-      const editButton = buttons.find(btn => btn.querySelector('svg'));
-      if (editButton) {
-        fireEvent.click(editButton);
-      }
+      // Click edit button using aria-label
+      const editButton = screen.getByRole('button', { name: /edit dr\. jane smith/i });
+      fireEvent.click(editButton);
+
+      // Wait for form to appear
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Dr. Jane Smith')).toBeInTheDocument();
+      });
+
+      // Update the name
+      fireEvent.change(screen.getByDisplayValue('Dr. Jane Smith'), {
+        target: { value: 'Dr. Updated Name' },
+      });
+
+      // Submit the form
+      fireEvent.click(screen.getByRole('button', { name: /update contact/i }));
+
+      // Verify PUT request was made
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          '/api/contacts/contact-1',
+          expect.objectContaining({
+            method: 'PUT',
+            body: expect.stringContaining('Dr. Updated Name'),
+          })
+        );
+      });
     });
   });
 

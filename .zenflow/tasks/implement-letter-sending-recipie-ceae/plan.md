@@ -494,6 +494,7 @@ Implement theme preference system.
 ---
 
 ### [ ] Step 13: Theme Settings UI
+<!-- chat-id: f3b796c5-8530-4c92-b2c4-0351ed223cb0 -->
 
 Add theme preference to settings.
 
