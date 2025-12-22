@@ -119,9 +119,22 @@ export default function StyleSettingsPage() {
     fetchStyleData();
   }, []);
 
-  // Fetch subspecialty-specific stats
+  // Fetch all seed letters for the SeedLetterUpload component
+  const fetchSeedLetters = async () => {
+    try {
+      const letters = await listSeedLetters();
+      setExistingSeedLetters(letters);
+    } catch {
+      // Non-critical, just log and continue
+      console.error('Failed to fetch seed letters');
+    }
+  };
+
+  // Fetch subspecialty-specific stats and seed letters
   useEffect(() => {
     fetchSubspecialtyStats();
+    fetchSeedLetters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subspecialtyProfiles]);
 
   const fetchStyleData = async () => {
@@ -144,24 +157,28 @@ export default function StyleSettingsPage() {
   };
 
   const fetchSubspecialtyStats = async () => {
-    const stats = new Map<Subspecialty, SubspecialtyEditStats>();
     const allSubspecialties = getAllSubspecialties();
 
-    for (const sub of allSubspecialties) {
-      try {
+    // Fetch all subspecialty stats in parallel for better performance
+    const results = await Promise.allSettled(
+      allSubspecialties.map(async (sub) => {
         const response = await fetch(`/api/style/profiles/${sub}/analyze`);
-        if (response.ok) {
-          const data = await response.json();
-          stats.set(sub, {
-            subspecialty: sub,
-            editCount: data.editStats?.totalEdits ?? 0,
-            canAnalyze: data.canAnalyze ?? false,
-          });
-        }
-      } catch {
-        // Ignore errors for individual subspecialties
+        if (!response.ok) return null;
+        const data = await response.json();
+        return {
+          subspecialty: sub,
+          editCount: data.editStats?.totalEdits ?? 0,
+          canAnalyze: data.canAnalyze ?? false,
+        } as SubspecialtyEditStats;
+      })
+    );
+
+    const stats = new Map<Subspecialty, SubspecialtyEditStats>();
+    results.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value) {
+        stats.set(result.value.subspecialty, result.value);
       }
-    }
+    });
 
     setSubspecialtyStats(stats);
   };
@@ -197,9 +214,15 @@ export default function StyleSettingsPage() {
 
   const handleSubspecialtyAnalyze = async (subspecialty: Subspecialty) => {
     setAnalyzingSubspecialty(subspecialty);
+    setError(null);
     try {
-      await triggerAnalysis(subspecialty, false);
+      const success = await triggerAnalysis(subspecialty, false);
+      if (!success) {
+        setError(`Failed to analyze ${formatSubspecialtyLabel(subspecialty)} style profile. Please try again.`);
+      }
       await fetchSubspecialtyStats();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Analysis failed for ${formatSubspecialtyLabel(subspecialty)}`);
     } finally {
       setAnalyzingSubspecialty(null);
     }
@@ -222,16 +245,22 @@ export default function StyleSettingsPage() {
     });
 
     if (result) {
-      // Refresh profiles and stats
+      // Refresh profiles, stats, and seed letters list
       await fetchProfiles();
       await fetchSubspecialtyStats();
+      await fetchSeedLetters();
     }
 
     return result;
   };
 
   const handleSeedLetterDelete = async (seedLetterId: string) => {
-    return await deleteSeedLetter(seedLetterId);
+    const success = await deleteSeedLetter(seedLetterId);
+    if (success) {
+      // Refresh seed letters list after deletion
+      await fetchSeedLetters();
+    }
+    return success;
   };
 
   // Handle file selection
@@ -344,8 +373,8 @@ export default function StyleSettingsPage() {
         </p>
       </div>
 
-      {/* Info Banner */}
-      {showInfoBanner && <StyleModeInfoBanner />}
+      {/* Info Banner - StyleModeInfoBanner has its own dismiss state */}
+      <StyleModeInfoBanner />
 
       {/* Style Mode Selector */}
       <section>
@@ -694,7 +723,7 @@ export default function StyleSettingsPage() {
               <SeedLetterUpload
                 onUpload={handleSeedLetterUpload}
                 onDelete={handleSeedLetterDelete}
-                existingSeedLetters={[]}
+                existingSeedLetters={existingSeedLetters}
               />
             </CardContent>
           </Card>

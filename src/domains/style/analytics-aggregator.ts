@@ -47,14 +47,23 @@ export const MIN_PATTERN_FREQUENCY = 2;
 
 /**
  * PHI patterns that should be stripped from aggregated text.
+ *
+ * Known limitations:
+ * - Postcodes are not detected (could identify location but are 4 digits which causes false positives)
+ * - Some informal date formats may not be caught
+ * - Free-text names without titles are not detected (would require NER)
  */
 const PHI_PATTERNS: RegExp[] = [
-  // Names (common patterns)
+  // Names (common patterns with titles)
   /\b(?:Mr\.?|Mrs\.?|Ms\.?|Miss|Dr\.?|Prof\.?)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*/g,
+  // DOB patterns (explicit date of birth labels)
+  /\b(?:DOB|D\.O\.B\.?|Date\s+of\s+Birth)[:\s]+\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/gi,
   // Dates (various formats)
   /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g,
   /\b\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{2,4}\b/gi,
-  // Medicare/health identifiers (Australian format - 10-11 digits)
+  // Australian Individual Healthcare Identifier (IHI) - 16 digits starting with 800
+  /\b800\d{13}\b/g,
+  // Medicare number with optional IRN (10-11 digits, IRN is 1 digit at end)
   /\b\d{10,11}\b/g,
   // Phone numbers - Australian mobile format (04xx-xxx-xxx)
   /\b04\d{2}[-.\s]?\d{3}[-.\s]?\d{3}\b/g,
@@ -99,11 +108,13 @@ export function stripPHI(text: string): string {
  */
 export function containsPHI(text: string): boolean {
   for (const pattern of PHI_PATTERNS) {
+    // Reset lastIndex before testing (global patterns maintain state)
+    pattern.lastIndex = 0;
     if (pattern.test(text)) {
+      // Reset again before returning to leave patterns in clean state
+      pattern.lastIndex = 0;
       return true;
     }
-    // Reset lastIndex for global patterns
-    pattern.lastIndex = 0;
   }
   return false;
 }
@@ -795,7 +806,23 @@ export async function getAnalyticsSummary(): Promise<{
 
 /**
  * Run aggregation for all subspecialties for the past week.
- * Typically run as a scheduled job.
+ *
+ * Scheduling Options:
+ * 1. Manual: POST /api/admin/style-analytics with { runAll: true }
+ * 2. Cron job: Call this function from a scheduled task (e.g., Vercel Cron, AWS Lambda)
+ * 3. Queue-based: Trigger via background job (e.g., BullMQ, AWS SQS)
+ *
+ * Recommended schedule: Weekly (e.g., Sunday 2am) to minimize impact on production.
+ *
+ * Example cron job setup (in vercel.json or cron config):
+ * ```json
+ * {
+ *   "crons": [{
+ *     "path": "/api/admin/style-analytics",
+ *     "schedule": "0 2 * * 0"
+ *   }]
+ * }
+ * ```
  */
 export async function runWeeklyAggregation(): Promise<{
   processed: Subspecialty[];
