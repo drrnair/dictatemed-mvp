@@ -6,7 +6,7 @@ import { prisma } from '@/infrastructure/db/client';
 import { getSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
-import { retrySend, getSend } from '@/domains/letters/sending.service';
+import { retrySend } from '@/domains/letters/sending.service';
 
 const log = logger.child({ module: 'letter-retry-api' });
 

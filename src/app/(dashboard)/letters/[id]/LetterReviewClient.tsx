@@ -134,6 +134,7 @@ export function LetterReviewClient({
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [sendHistory, setSendHistory] = useState<SendHistoryItem[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
   // Immutable state for extracted values and flags - cast from unknown[]
@@ -250,14 +251,19 @@ export function LetterReviewClient({
     if (letter.status !== 'APPROVED') return;
 
     setIsLoadingHistory(true);
+    setHistoryError(null);
     try {
       const response = await fetch(`/api/letters/${letter.id}/sends`);
       if (response.ok) {
         const data = await response.json();
         setSendHistory(data.sends || []);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setHistoryError(errorData.error || 'Failed to load send history');
       }
     } catch (error) {
       console.error('Failed to fetch send history:', error);
+      setHistoryError('Failed to load send history');
     } finally {
       setIsLoadingHistory(false);
     }
@@ -680,7 +686,7 @@ export function LetterReviewClient({
           )}
 
           {/* Letter editor */}
-          <div className={`${showHistory && isReadOnly ? 'flex-[2]' : 'flex-1'} overflow-y-auto p-6`}>
+          <div className="flex-1 overflow-y-auto p-6">
             <LetterEditor
               letterId={letter.id}
               initialContent={content}
@@ -691,24 +697,36 @@ export function LetterReviewClient({
               onSave={handleSaveDraft}
             />
           </div>
-
-          {/* Send History Panel (for approved letters) */}
-          {isReadOnly && showHistory && (
-            <div className="flex-1 overflow-y-auto border-l border-border bg-muted/30 p-6">
-              {isLoadingHistory ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                </div>
-              ) : (
-                <SendHistory
-                  letterId={letter.id}
-                  history={sendHistory}
-                  onRetry={handleRetrySend}
-                />
-              )}
-            </div>
-          )}
         </main>
+
+        {/* Send History Panel (for approved letters) - right side */}
+        {isReadOnly && showHistory && (
+          <aside className="w-80 overflow-y-auto border-l border-border bg-muted/30 p-4">
+            {isLoadingHistory ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : historyError ? (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+                <p className="text-sm text-destructive">{historyError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchSendHistory}
+                  className="mt-2"
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <SendHistory
+                letterId={letter.id}
+                history={sendHistory}
+                onRetry={handleRetrySend}
+              />
+            )}
+          </aside>
+        )}
 
         {/* Source Panel (right, slides in) */}
         <SourcePanel
