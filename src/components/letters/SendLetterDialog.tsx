@@ -417,12 +417,20 @@ export function SendLetterDialog({
                   {availableContacts.map((contact) => (
                     <div
                       key={contact.id}
+                      role="button"
+                      tabIndex={0}
                       className={cn(
                         'flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50',
                         selectedRecipients.find((r) => r.contactId === contact.id) &&
                           'border-primary bg-primary/5'
                       )}
                       onClick={() => toggleRecipient(contact)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleRecipient(contact);
+                        }
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         <Mail className="h-4 w-4 text-muted-foreground" />

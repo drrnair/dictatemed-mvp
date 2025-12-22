@@ -700,6 +700,24 @@ export function LetterReviewClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Send Letter Dialog */}
+      <SendLetterDialog
+        isOpen={showSendDialog}
+        onClose={() => setShowSendDialog(false)}
+        letterId={letter.id}
+        patientId={letter.patient?.id || null}
+        patientName={letter.patient?.name || 'Unknown Patient'}
+        letterType={letter.letterType}
+        subspecialty={currentUser.subspecialties?.[0]}
+        userEmail={currentUser.email}
+        userName={currentUser.name}
+        onSendComplete={(result) => {
+          if (result.failed === 0) {
+            router.refresh();
+          }
+        }}
+      />
     </div>
   );
 }
