@@ -208,7 +208,7 @@ export function LetterSendingSettings() {
       )}
 
       {success && (
-        <div className="rounded-md bg-clinical-verified/10 p-3 text-sm text-clinical-verified">
+        <div className="rounded-md bg-clinical-verified-muted p-3 text-sm text-clinical-verified">
           Settings saved successfully
         </div>
       )}

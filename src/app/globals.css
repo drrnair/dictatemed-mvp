@@ -33,6 +33,16 @@
     --ring: 221.2 83% 53.3%;
 
     --radius: 0.5rem;
+
+    /* Clinical status colors - light mode */
+    --clinical-verified: 142 76% 36%;
+    --clinical-verified-muted: 142 60% 94%;
+    --clinical-warning: 45 93% 47%;
+    --clinical-warning-muted: 45 80% 92%;
+    --clinical-critical: 0 84% 60%;
+    --clinical-critical-muted: 0 70% 95%;
+    --clinical-info: 217 91% 60%;
+    --clinical-info-muted: 217 80% 94%;
   }
 
   .dark {
@@ -63,6 +73,16 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+
+    /* Clinical status colors - dark mode (adjusted for better contrast) */
+    --clinical-verified: 142 70% 45%;
+    --clinical-verified-muted: 142 40% 15%;
+    --clinical-warning: 45 90% 50%;
+    --clinical-warning-muted: 45 50% 15%;
+    --clinical-critical: 0 75% 55%;
+    --clinical-critical-muted: 0 50% 15%;
+    --clinical-info: 217 85% 60%;
+    --clinical-info-muted: 217 50% 15%;
   }
 }
 

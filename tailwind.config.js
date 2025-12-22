@@ -50,12 +50,16 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        // Clinical status colors
+        // Clinical status colors (theme-aware via CSS variables)
         clinical: {
-          verified: 'hsl(142, 76%, 36%)', // Green for verified values
-          warning: 'hsl(45, 93%, 47%)', // Yellow for warnings
-          critical: 'hsl(0, 84%, 60%)', // Red for critical flags
-          info: 'hsl(217, 91%, 60%)', // Blue for information
+          verified: 'hsl(var(--clinical-verified))',
+          'verified-muted': 'hsl(var(--clinical-verified-muted))',
+          warning: 'hsl(var(--clinical-warning))',
+          'warning-muted': 'hsl(var(--clinical-warning-muted))',
+          critical: 'hsl(var(--clinical-critical))',
+          'critical-muted': 'hsl(var(--clinical-critical-muted))',
+          info: 'hsl(var(--clinical-info))',
+          'info-muted': 'hsl(var(--clinical-info-muted))',
         },
         // Recording status
         recording: {
