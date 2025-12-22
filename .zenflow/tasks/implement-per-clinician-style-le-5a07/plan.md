@@ -665,7 +665,7 @@ npm run lint
 
 ---
 
-### [ ] Step 15: Integration Tests
+### [x] Step 15: Integration Tests
 <!-- chat-id: 1322a6ef-6c29-4799-b8ec-eb21d710183f -->
 
 Write integration tests for the complete learning flow.
@@ -685,6 +685,30 @@ Write integration tests for the complete learning flow.
 ```bash
 npm run test:integration
 ```
+
+**Completed:** Comprehensive integration tests implemented:
+- **Test Setup**: Updated `tests/integration/setup.ts` with mocks for external services (Bedrock, logger)
+- **Test Fixtures**: Created `tests/integration/style/fixtures.ts` with shared mock data
+- **learning-flow.test.ts** (17 tests):
+  - Complete Learning Cycle: record edits, identify added sections, identify modified sections, trigger analysis threshold, create profile from analysis, update existing profile with merge
+  - Profile Applied to Generation: threshold checks, re-analysis intervals
+  - Reset Profile: delete profile, handle non-existent profile
+  - Learning Strength Adjustment: scale preferences, disable at 0
+  - Graceful Fallback: default source, insufficient edits, empty edits handling
+  - Subspecialty Inference: infer from letter, record with subspecialty
+- **generation-conditioning.test.ts** (38 tests):
+  - Fallback Chain: subspecialty profile, global fallback, no profile, no subspecialty, no edits
+  - Prompt Conditioning: enhance prompt, no profile, learning strength, skip at 0, section order, verbosity, signoff, low confidence skip
+  - Build Style Hints: complete hints, section inclusion, avoided phrases
+  - Conditioning Config: enable/disable preferences, null profile, overrides
+  - Legacy Hint Conversion: convert to legacy format
+  - Utility Functions: confidence, section names, subspecialty names, active hints
+  - Instruction Builders: section order, verbosity, inclusion, phrasing, vocabulary, greeting, signoff, formality, terminology
+  - Prompt Formatting: complete guidance, append, replace existing
+- All 55 integration tests pass
+- All 307 unit tests pass
+- TypeScript compilation passes
+- ESLint checks pass
 
 ---
 
