@@ -688,7 +688,6 @@ npm run test:integration
 
 **Completed:** Comprehensive integration tests implemented:
 - **Test Setup**: Updated `tests/integration/setup.ts` with mocks for external services (Bedrock, logger)
-- **Test Fixtures**: Created `tests/integration/style/fixtures.ts` with shared mock data
 - **learning-flow.test.ts** (17 tests):
   - Complete Learning Cycle: record edits, identify added sections, identify modified sections, trigger analysis threshold, create profile from analysis, update existing profile with merge
   - Profile Applied to Generation: threshold checks, re-analysis intervals
@@ -871,6 +870,7 @@ Manual review
 ---
 
 ### [ ] Step 18: Final Verification & Cleanup
+<!-- chat-id: bd415859-3b2d-476e-bf58-59a8bf65a358 -->
 
 Run full verification suite and clean up.
 
