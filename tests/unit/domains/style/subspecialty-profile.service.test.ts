@@ -28,6 +28,9 @@ vi.mock('@/infrastructure/db/client', () => ({
       count: vi.fn(),
       findFirst: vi.fn(),
     },
+    user: {
+      findUnique: vi.fn(),
+    },
     auditLog: {
       create: vi.fn(),
     },
@@ -722,6 +725,189 @@ describe('subspecialty-profile.service', () => {
       const stats = profileService.getCacheStats();
       expect(stats.size).toBe(1);
       expect(stats.keys).toContain(`${mockUserId}:${mockSubspecialty}`);
+    });
+
+    it('should expire cached entries after TTL (5 minutes)', async () => {
+      vi.mocked(prisma.styleProfile.findUnique).mockResolvedValue(mockProfileData as never);
+
+      // First call - populates cache
+      await profileService.getStyleProfile(mockUserId, mockSubspecialty);
+      expect(prisma.styleProfile.findUnique).toHaveBeenCalledTimes(1);
+
+      // Advance time past TTL (5 minutes + 1 second)
+      vi.useFakeTimers();
+      vi.advanceTimersByTime(5 * 60 * 1000 + 1000);
+
+      // Second call - should fetch from DB again because cache is expired
+      await profileService.getStyleProfile(mockUserId, mockSubspecialty);
+      expect(prisma.styleProfile.findUnique).toHaveBeenCalledTimes(2);
+
+      vi.useRealTimers();
+    });
+
+    it('should return cached entry before TTL expires', async () => {
+      vi.mocked(prisma.styleProfile.findUnique).mockResolvedValue(mockProfileData as never);
+
+      // First call - populates cache
+      await profileService.getStyleProfile(mockUserId, mockSubspecialty);
+      expect(prisma.styleProfile.findUnique).toHaveBeenCalledTimes(1);
+
+      // Advance time but stay within TTL (4 minutes)
+      vi.useFakeTimers();
+      vi.advanceTimersByTime(4 * 60 * 1000);
+
+      // Second call - should use cache
+      await profileService.getStyleProfile(mockUserId, mockSubspecialty);
+      expect(prisma.styleProfile.findUnique).toHaveBeenCalledTimes(1); // Still 1
+
+      vi.useRealTimers();
+    });
+  });
+
+  // ============ Global Fallback Tests ============
+
+  describe('getEffectiveProfile - global fallback', () => {
+    const mockGlobalProfile = {
+      greetingStyle: 'formal',
+      closingStyle: 'casual',
+      paragraphStructure: 'short',
+      formalityLevel: 'formal',
+      vocabularyPreferences: { utilize: 'use' },
+      sectionOrder: ['history', 'exam', 'plan'],
+      confidence: {
+        greetingStyle: 0.8,
+        closingStyle: 0.7,
+        paragraphStructure: 0.6,
+        formalityLevel: 0.9,
+      },
+      totalEditsAnalyzed: 20,
+      lastAnalyzedAt: '2024-01-15T00:00:00.000Z',
+    };
+
+    it('should fall back to global profile when subspecialty profile has no edits', async () => {
+      // Subspecialty profile exists but has no edits
+      vi.mocked(prisma.styleProfile.findUnique).mockResolvedValue({
+        ...mockProfileData,
+        totalEditsAnalyzed: 0,
+      } as never);
+
+      // User has a global profile
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        id: mockUserId,
+        styleProfile: mockGlobalProfile,
+      } as never);
+
+      const result = await profileService.getEffectiveProfile(mockUserId, mockSubspecialty);
+
+      expect(result.source).toBe('global');
+      expect(result.profile).not.toBeNull();
+      expect(result.profile?.greetingStyle).toBe('formal');
+      expect(result.profile?.vocabularyMap).toEqual({ utilize: 'use' });
+    });
+
+    it('should fall back to global profile when subspecialty profile does not exist', async () => {
+      vi.mocked(prisma.styleProfile.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        id: mockUserId,
+        styleProfile: mockGlobalProfile,
+      } as never);
+
+      const result = await profileService.getEffectiveProfile(mockUserId, mockSubspecialty);
+
+      expect(result.source).toBe('global');
+      expect(result.profile).not.toBeNull();
+    });
+
+    it('should return default when global profile has no edits analyzed', async () => {
+      vi.mocked(prisma.styleProfile.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        id: mockUserId,
+        styleProfile: {
+          ...mockGlobalProfile,
+          totalEditsAnalyzed: 0,
+          lastAnalyzedAt: null,
+        },
+      } as never);
+
+      const result = await profileService.getEffectiveProfile(mockUserId, mockSubspecialty);
+
+      expect(result.source).toBe('default');
+      expect(result.profile).toBeNull();
+    });
+
+    it('should return default when global profile is missing confidence', async () => {
+      vi.mocked(prisma.styleProfile.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        id: mockUserId,
+        styleProfile: {
+          greetingStyle: 'formal',
+          totalEditsAnalyzed: 10,
+          lastAnalyzedAt: '2024-01-15',
+          // Missing 'confidence' field
+        },
+      } as never);
+
+      const result = await profileService.getEffectiveProfile(mockUserId, mockSubspecialty);
+
+      expect(result.source).toBe('default');
+      expect(result.profile).toBeNull();
+    });
+
+    it('should return default when user has no styleProfile', async () => {
+      vi.mocked(prisma.styleProfile.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        id: mockUserId,
+        styleProfile: null,
+      } as never);
+
+      const result = await profileService.getEffectiveProfile(mockUserId, mockSubspecialty);
+
+      expect(result.source).toBe('default');
+      expect(result.profile).toBeNull();
+    });
+
+    it('should return default when user does not exist', async () => {
+      vi.mocked(prisma.styleProfile.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+
+      const result = await profileService.getEffectiveProfile(mockUserId, mockSubspecialty);
+
+      expect(result.source).toBe('default');
+      expect(result.profile).toBeNull();
+    });
+
+    it('should prefer subspecialty profile over global when both exist', async () => {
+      vi.mocked(prisma.styleProfile.findUnique).mockResolvedValue(mockProfileData as never);
+      // Global profile should not be queried if subspecialty profile is found
+
+      const result = await profileService.getEffectiveProfile(mockUserId, mockSubspecialty);
+
+      expect(result.source).toBe('subspecialty');
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should correctly convert global profile to SubspecialtyStyleProfile format', async () => {
+      vi.mocked(prisma.styleProfile.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        id: mockUserId,
+        styleProfile: mockGlobalProfile,
+      } as never);
+
+      const result = await profileService.getEffectiveProfile(mockUserId, mockSubspecialty);
+
+      expect(result.profile).toMatchObject({
+        id: 'global',
+        userId: mockUserId,
+        subspecialty: mockSubspecialty,
+        greetingStyle: 'formal',
+        closingStyle: 'casual',
+        paragraphStructure: 'short',
+        formalityLevel: 'formal',
+        vocabularyMap: { utilize: 'use' },
+        sectionOrder: ['history', 'exam', 'plan'],
+        learningStrength: 1.0,
+        totalEditsAnalyzed: 20,
+      });
     });
   });
 });

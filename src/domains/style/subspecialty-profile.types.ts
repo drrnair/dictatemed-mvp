@@ -1,5 +1,29 @@
 // src/domains/style/subspecialty-profile.types.ts
 // Type definitions for per-subspecialty style learning system
+//
+// Design Notes:
+// -------------
+// 1. StyleCategory vs inline unions: We define `StyleCategory` as a named type here
+//    for reusability. The existing `StyleProfile` in style.types.ts uses inline unions
+//    for historical reasons. New code should prefer the named types from this file.
+//
+// 2. sectionOrder uses string[] instead of LetterSectionType[]: This allows clinicians
+//    to have custom section names that may not fit into the predefined categories.
+//    The learning pipeline extracts section order from actual letter content, which
+//    may include clinician-specific sections like "Cardiac Catheterization Findings".
+//
+// 3. confidence is Partial<SubspecialtyConfidenceScores>: Profiles are built incrementally
+//    as edits are analyzed. Early profiles may only have confidence scores for a few
+//    preferences. Full confidence scores are only available after significant learning.
+//
+// 4. SubspecialtyStyleHints vs StyleHints: These types serve similar purposes but have
+//    different structures. StyleHints (style.types.ts) is the legacy format used by
+//    applyStyleHints(). SubspecialtyStyleHints is the new format with richer structure
+//    for subspecialty-aware conditioning. The prompt-conditioner can convert between them.
+//
+// 5. Verbosity detection: The sectionVerbosity field is populated by Claude analysis
+//    in the learning pipeline (Step 5), not by the diff analyzer. The diff analyzer
+//    provides word/char counts that Claude uses to infer verbosity preferences.
 
 import type { Subspecialty } from '@prisma/client';
 
@@ -109,6 +133,8 @@ export interface SubspecialtyStyleProfile {
   subspecialty: Subspecialty;
 
   // Section preferences
+  // Note: Uses string[] to support custom section names beyond LetterSectionType.
+  // See Design Note #2 at file top.
   sectionOrder: string[];
   sectionInclusion: SectionInclusionMap;
   sectionVerbosity: SectionVerbosityMap;
@@ -127,6 +153,7 @@ export interface SubspecialtyStyleProfile {
   paragraphStructure: ParagraphStructure | null;
 
   // Confidence & metadata
+  // Note: Partial because profiles are built incrementally. See Design Note #3.
   confidence: Partial<SubspecialtyConfidenceScores>;
   learningStrength: number; // 0.0 = disabled, 1.0 = full effect
   totalEditsAnalyzed: number;
@@ -301,8 +328,10 @@ export interface SubspecialtyStyleAnalysisResult {
   subspecialty: Subspecialty;
 
   // Detected preferences
+  // Note: sectionOrder uses string[] to support custom section names.
   detectedSectionOrder: string[] | null;
   detectedSectionInclusion: SectionInclusionMap;
+  // Note: Verbosity is inferred by Claude from word/char counts, not the diff analyzer.
   detectedSectionVerbosity: SectionVerbosityMap;
   detectedPhrasing: SectionPhrasingMap;
   detectedAvoidedPhrases: SectionPhrasingMap;
@@ -380,7 +409,15 @@ export interface StyleConditioningConfig {
 
 /**
  * Style hints generated for prompt conditioning.
- * Extension of existing StyleHints with subspecialty awareness.
+ *
+ * This is the subspecialty-aware version of StyleHints (style.types.ts).
+ * Key differences from legacy StyleHints:
+ * - Richer section structure control (order, verbosity, include/exclude)
+ * - Explicit avoided phrases guidance
+ * - Subspecialty metadata for debugging
+ *
+ * The prompt-conditioner converts SubspecialtyStyleHints to legacy StyleHints
+ * format when needed for backward compatibility. See Design Note #4.
  */
 export interface SubspecialtyStyleHints {
   // Section structure

@@ -626,11 +626,22 @@ npm run test:e2e                 # Playwright E2E
 
 ---
 
-## Open Questions
+## Open Questions (Resolved)
 
-1. **Learning threshold**: How many edits before running analysis? (Proposed: 5 initial, then every 10)
-2. **Profile expiry**: Should old profiles decay over time? (Proposed: No, but surface "last updated" in UI)
-3. **Subspecialty inference**: If letter doesn't have explicit subspecialty, how to infer? (Proposed: From template or consultation context)
+1. **Learning threshold**: How many edits before running analysis?
+   - **Decision**: 5 edits minimum to trigger initial analysis, then reanalyze every 10 additional edits.
+   - **Rationale**: 5 edits provides enough signal for basic pattern detection; incremental analysis every 10 balances accuracy with compute cost.
+   - **Implementation**: `hasEnoughEditsForAnalysis()` uses configurable `minEdits` parameter (default: 5).
+
+2. **Profile expiry**: Should old profiles decay over time?
+   - **Decision**: No automatic decay. Profiles remain valid indefinitely but UI surfaces "last updated" timestamp.
+   - **Rationale**: Physician writing style is generally stable; forcing relearning would be disruptive. Users who want fresh profiles can reset manually.
+   - **Implementation**: `lastAnalyzedAt` displayed in UI; "Reset to defaults" action available.
+
+3. **Subspecialty inference**: If letter doesn't have explicit subspecialty, how to infer?
+   - **Decision**: Infer from template subspecialties first, then from consultation context if available.
+   - **Rationale**: Templates are already tagged with subspecialties; consultation context provides secondary signal.
+   - **Implementation**: `Letter.subspecialty` field populated from `LetterTemplate.subspecialties[0]` or `Consultation.subspecialty`.
 
 ---
 
