@@ -33,7 +33,7 @@ Technical specification created at `spec.md` including:
 
 ---
 
-### [ ] Step 1: Database & Core Types
+### [x] Step 1: Database & Core Types
 <!-- chat-id: 665fcf37-7583-4f39-9233-92d39887ddd7 -->
 
 Create the data model and TypeScript types for the referral document feature.
