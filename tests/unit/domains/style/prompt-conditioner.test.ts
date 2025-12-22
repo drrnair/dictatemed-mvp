@@ -207,6 +207,26 @@ History of heart failure with preserved ejection fraction.`;
       expect(result.config.source).toBe('global');
       expect(result.enhancedPrompt).toContain('# PHYSICIAN STYLE PREFERENCES');
     });
+
+    it('should return original prompt when totalEditsAnalyzed is 0 (boundary condition)', async () => {
+      // This tests the boundary condition where a profile exists but has
+      // no edits analyzed yet - getEffectiveProfile should return null
+      // in this case (tested in subspecialty-profile.service.test.ts)
+      vi.mocked(profileService.getEffectiveProfile).mockResolvedValue({
+        profile: null,
+        source: 'default',
+      });
+
+      const result = await promptConditioner.buildStyleConditionedPrompt({
+        basePrompt,
+        userId: mockUserId,
+        subspecialty: mockSubspecialty,
+      });
+
+      expect(result.enhancedPrompt).toBe(basePrompt);
+      expect(result.config.source).toBe('default');
+      expect(result.hints).toEqual({});
+    });
   });
 
   // ============ buildConditioningConfig Tests ============
@@ -220,6 +240,8 @@ History of heart failure with preserved ejection fraction.`;
       expect(config.effectiveLearningStrength).toBe(0);
       expect(config.applySectionOrder).toBe(false);
       expect(config.applyPhrasingPreferences).toBe(false);
+      expect(config.applyGreeting).toBe(false);
+      expect(config.applyTerminology).toBe(false);
     });
 
     it('should enable preferences that meet confidence threshold', () => {
@@ -246,6 +268,40 @@ History of heart failure with preserved ejection fraction.`;
       expect(config.applyPhrasingPreferences).toBe(false); // Low confidence
       expect(config.applyAvoidedPhrases).toBe(true);
       expect(config.applySignoff).toBe(true);
+      expect(config.applyGreeting).toBe(true);
+      expect(config.applyTerminology).toBe(true);
+    });
+
+    it('should respect learning strength for greeting and terminology', () => {
+      const profile = createMockProfile({ learningStrength: 0 });
+      const config = promptConditioner.buildConditioningConfig(profile, 'subspecialty');
+
+      expect(config.applyGreeting).toBe(false);
+      expect(config.applyTerminology).toBe(false);
+    });
+
+    it('should disable greeting and terminology when confidence is low', () => {
+      const profile = createMockProfile({
+        confidence: {
+          sectionOrder: 0.8,
+          sectionInclusion: 0.7,
+          sectionVerbosity: 0.6,
+          phrasingPreferences: 0.7,
+          avoidedPhrases: 0.6,
+          vocabularyMap: 0.6,
+          terminologyLevel: 0.3, // Below threshold
+          greetingStyle: 0.3, // Below threshold
+          closingStyle: 0.8,
+          signoffTemplate: 0.9,
+          formalityLevel: 0.7,
+          paragraphStructure: 0.6,
+        },
+      });
+
+      const config = promptConditioner.buildConditioningConfig(profile, 'subspecialty');
+
+      expect(config.applyGreeting).toBe(false);
+      expect(config.applyTerminology).toBe(false);
     });
 
     it('should respect learning strength of 0', () => {

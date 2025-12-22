@@ -81,7 +81,10 @@ export async function buildStyleConditionedPrompt(
   // Build conditioning config
   const config = buildConditioningConfig(profile, source);
 
-  // If no profile or learning disabled, return original prompt
+  // If no profile or learning disabled, return original prompt unchanged.
+  // Note: letterType is intentionally not captured here since there's no profile
+  // to associate it with. The base prompt should already contain any letter type
+  // context needed for generation.
   if (!profile || config.effectiveLearningStrength === 0) {
     return {
       enhancedPrompt: basePrompt,
