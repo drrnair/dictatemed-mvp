@@ -402,6 +402,7 @@ Create send history display for letter detail page.
 ---
 
 ### [ ] Step 11: Patient Contact Management UI
+<!-- chat-id: 68b3de89-46e5-4973-bdfc-f54f89fd873a -->
 
 Create UI for managing patient contacts.
 

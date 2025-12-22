@@ -73,7 +73,6 @@ Please do not hesitate to contact me if you have any questions.`,
       name: 'Dr. Jane Cardiologist',
       practice: {
         name: 'Sydney Heart Clinic',
-        letterhead: null,
       },
     },
   };
@@ -363,7 +362,6 @@ Please do not hesitate to contact me if you have any questions.`,
               practice: {
                 select: {
                   name: true,
-                  letterhead: true,
                 },
               },
             },

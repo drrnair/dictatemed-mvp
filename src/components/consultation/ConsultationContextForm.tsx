@@ -3,14 +3,16 @@
 // src/components/consultation/ConsultationContextForm.tsx
 // Main form combining patient, referrer, CC recipients, and letter type selection
 
-import { useCallback } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { AlertCircle, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { PatientSelector } from './PatientSelector';
 import { ReferrerSelector } from './ReferrerSelector';
 import { CCRecipientsInput } from './CCRecipientsInput';
 import { LetterTypeSelector } from './LetterTypeSelector';
 import { TemplateSelector } from './TemplateSelector';
+import { PatientContacts } from './PatientContacts';
 import type { PatientSummary, ReferrerInfo, CCRecipientInfo } from '@/domains/consultation';
 import type { LetterType } from '@prisma/client';
 
@@ -39,6 +41,8 @@ export function ConsultationContextForm({
   disabled,
   errors,
 }: ConsultationContextFormProps) {
+  const [showContacts, setShowContacts] = useState(false);
+
   const handlePatientChange = useCallback(
     (patient: PatientSummary | undefined) => {
       onChange({ ...value, patient });
@@ -94,6 +98,37 @@ export function ConsultationContextForm({
             </p>
           )}
         </div>
+
+        {/* Patient Contacts - show when patient is selected */}
+        {value.patient && (
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <Button
+              type="button"
+              variant="ghost"
+              className="-m-2 w-full justify-between p-2 hover:bg-transparent"
+              onClick={() => setShowContacts(!showContacts)}
+              disabled={disabled}
+            >
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <Users className="h-4 w-4" />
+                Manage Patient Contacts
+              </span>
+              {showContacts ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
+            {showContacts && (
+              <div className="mt-4">
+                <PatientContacts
+                  patientId={value.patient.id}
+                  compact={false}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Referrer selection */}
         <div>

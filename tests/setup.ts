@@ -1,6 +1,22 @@
 import '@testing-library/jest-dom';
 import { vi, beforeEach } from 'vitest';
 
+// Mock ResizeObserver for Radix UI components
+class ResizeObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+global.ResizeObserver = ResizeObserverMock;
+
+// Mock pointer capture methods for Radix UI Select
+Element.prototype.hasPointerCapture = vi.fn().mockReturnValue(false);
+Element.prototype.setPointerCapture = vi.fn();
+Element.prototype.releasePointerCapture = vi.fn();
+
+// Mock scrollIntoView for JSDOM
+Element.prototype.scrollIntoView = vi.fn();
+
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
   useRouter: () => ({

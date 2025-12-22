@@ -31,6 +31,10 @@ const FONTS = {
 
 /**
  * Letter data needed for PDF generation
+ *
+ * Note: pdf-lib's StandardFonts only support WinAnsi encoding (basic ASCII + extended Latin).
+ * Non-ASCII characters (e.g., ≥, ≤, certain accents) may cause encoding errors.
+ * Consider character sanitization for robustness with international names.
  */
 interface LetterPdfData {
   id: string;
@@ -45,7 +49,6 @@ interface LetterPdfData {
     name: string;
     practice: {
       name: string;
-      letterhead: string | null;
     };
   };
 }
@@ -76,7 +79,6 @@ export async function generateLetterPdf(letterId: string): Promise<Buffer> {
           practice: {
             select: {
               name: true,
-              letterhead: true,
             },
           },
         },
@@ -115,7 +117,6 @@ export async function generateLetterPdf(letterId: string): Promise<Buffer> {
       name: letter.user.name,
       practice: {
         name: letter.user.practice.name,
-        letterhead: letter.user.practice.letterhead,
       },
     },
   };
@@ -163,7 +164,7 @@ async function addContent(
   let y = PAGE.HEIGHT - PAGE.MARGIN_TOP;
 
   // Draw header
-  y = drawHeader(page, data, boldFont, regularFont, y, contentWidth);
+  y = drawHeader(page, data, boldFont, y);
   y -= 20; // Space after header
 
   // Draw date
@@ -261,9 +262,7 @@ function drawHeader(
   page: PDFPage,
   data: LetterPdfData,
   boldFont: PDFFont,
-  regularFont: PDFFont,
-  y: number,
-  _contentWidth: number
+  y: number
 ): number {
   // Practice name as header
   page.drawText(data.user.practice.name, {
