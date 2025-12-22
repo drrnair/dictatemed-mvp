@@ -121,10 +121,13 @@ describe('ReferralFieldGroup', () => {
       await user.click(fieldButton);
 
       const input = screen.getByDisplayValue('John Smith');
-      await user.clear(input);
-      await user.type(input, 'Jane Doe');
+      // Type a character to verify onChange is called
+      await user.type(input, 'X');
 
-      expect(defaultProps.onFieldChange).toHaveBeenCalledWith('fullName', 'Jane Doe');
+      // onFieldChange is called for each keystroke
+      expect(defaultProps.onFieldChange).toHaveBeenCalled();
+      // The last call should have the appended character
+      expect(defaultProps.onFieldChange).toHaveBeenLastCalledWith('fullName', 'John SmithX');
     });
 
     it('exits edit mode on blur', async () => {
@@ -186,7 +189,9 @@ describe('ReferralFieldGroup', () => {
     it('shows Accepted label when isAccepted is true', () => {
       render(<ReferralFieldGroup {...defaultProps} isAccepted />);
 
-      expect(screen.getByText('Accepted')).toBeInTheDocument();
+      // There will be "Accepted" in header and in button text
+      const acceptedTexts = screen.getAllByText('Accepted');
+      expect(acceptedTexts.length).toBeGreaterThanOrEqual(1);
     });
 
     it('applies accepted styling when isAccepted is true', () => {
@@ -366,10 +371,14 @@ describe('ReferralContextFieldGroup', () => {
       await user.click(reasonText);
 
       const textarea = screen.getByRole('textbox');
-      await user.clear(textarea);
-      await user.type(textarea, 'New reason');
+      // Type a single character to verify onChange is called
+      await user.type(textarea, 'X');
 
-      expect(defaultProps.onReasonChange).toHaveBeenCalledWith('New reason');
+      // onReasonChange should be called with original value + new character
+      expect(defaultProps.onReasonChange).toHaveBeenCalled();
+      // The last call should include the new character appended
+      const lastCall = defaultProps.onReasonChange.mock.calls[defaultProps.onReasonChange.mock.calls.length - 1];
+      expect(lastCall?.[0]).toContain('X');
     });
   });
 

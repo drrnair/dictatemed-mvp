@@ -49,9 +49,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     log.info('Starting structured extraction', {
       documentId: id,
       userId: session.user.id,
+      practiceId: session.user.practiceId,
     });
 
-    const result = await extractStructuredData(session.user.id, id);
+    const result = await extractStructuredData(
+      session.user.id,
+      session.user.practiceId,
+      id
+    );
 
     log.info('Structured extraction complete', {
       documentId: id,
@@ -71,6 +76,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     if (message.includes('Document has no extracted text content')) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
+    if (message.includes('Document text is too long for extraction')) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
 

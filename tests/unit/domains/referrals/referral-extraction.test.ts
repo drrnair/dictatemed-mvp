@@ -8,6 +8,7 @@ import type { ReferralDocumentStatus } from '@/domains/referrals/referral.types'
 vi.mock('@/infrastructure/db/client', () => ({
   prisma: {
     referralDocument: {
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
     },
@@ -404,7 +405,7 @@ describe('referral-extraction.service', () => {
 
   describe('extractStructuredData', () => {
     it('should extract structured data successfully', async () => {
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(mockReferralDocument);
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
       vi.mocked(generateTextWithRetry).mockResolvedValue(mockLLMResponse);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({
         ...mockReferralDocument,
@@ -412,7 +413,7 @@ describe('referral-extraction.service', () => {
       });
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
-      const result = await extractStructuredData('user-1', 'ref-doc-1');
+      const result = await extractStructuredData('user-1', 'practice-1', 'ref-doc-1');
 
       expect(result.status).toBe('EXTRACTED');
       expect(result.extractedData.patient.fullName).toBe('John Michael Smith');
@@ -421,7 +422,7 @@ describe('referral-extraction.service', () => {
     });
 
     it('should call LLM with correct parameters', async () => {
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(mockReferralDocument);
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
       vi.mocked(generateTextWithRetry).mockResolvedValue(mockLLMResponse);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({
         ...mockReferralDocument,
@@ -429,7 +430,7 @@ describe('referral-extraction.service', () => {
       });
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
-      await extractStructuredData('user-1', 'ref-doc-1');
+      await extractStructuredData('user-1', 'practice-1', 'ref-doc-1');
 
       expect(generateTextWithRetry).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -446,34 +447,34 @@ describe('referral-extraction.service', () => {
     });
 
     it('should throw error when document not found', async () => {
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(null);
 
-      await expect(extractStructuredData('user-1', 'non-existent'))
+      await expect(extractStructuredData('user-1', 'practice-1', 'non-existent'))
         .rejects.toThrow('Referral document not found');
     });
 
     it('should throw error when document status is not TEXT_EXTRACTED', async () => {
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue({
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
         ...mockReferralDocument,
         status: 'UPLOADED' as ReferralDocumentStatus,
       });
 
-      await expect(extractStructuredData('user-1', 'ref-doc-1'))
+      await expect(extractStructuredData('user-1', 'practice-1', 'ref-doc-1'))
         .rejects.toThrow('Cannot extract structured data from document with status: UPLOADED');
     });
 
     it('should throw error when document has no text content', async () => {
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue({
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
         ...mockReferralDocument,
         contentText: '',
       });
 
-      await expect(extractStructuredData('user-1', 'ref-doc-1'))
+      await expect(extractStructuredData('user-1', 'practice-1', 'ref-doc-1'))
         .rejects.toThrow('Document has no extracted text content');
     });
 
     it('should update document status to EXTRACTED on success', async () => {
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(mockReferralDocument);
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
       vi.mocked(generateTextWithRetry).mockResolvedValue(mockLLMResponse);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({
         ...mockReferralDocument,
@@ -481,7 +482,7 @@ describe('referral-extraction.service', () => {
       });
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
-      await extractStructuredData('user-1', 'ref-doc-1');
+      await extractStructuredData('user-1', 'practice-1', 'ref-doc-1');
 
       expect(prisma.referralDocument.update).toHaveBeenCalledWith({
         where: { id: 'ref-doc-1' },
@@ -494,14 +495,14 @@ describe('referral-extraction.service', () => {
     });
 
     it('should update document status to FAILED on error', async () => {
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(mockReferralDocument);
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
       vi.mocked(generateTextWithRetry).mockRejectedValue(new Error('LLM timeout'));
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({
         ...mockReferralDocument,
         status: 'FAILED' as ReferralDocumentStatus,
       });
 
-      await expect(extractStructuredData('user-1', 'ref-doc-1'))
+      await expect(extractStructuredData('user-1', 'practice-1', 'ref-doc-1'))
         .rejects.toThrow('LLM timeout');
 
       expect(prisma.referralDocument.update).toHaveBeenCalledWith({
@@ -514,7 +515,7 @@ describe('referral-extraction.service', () => {
     });
 
     it('should create audit log on success', async () => {
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(mockReferralDocument);
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
       vi.mocked(generateTextWithRetry).mockResolvedValue(mockLLMResponse);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({
         ...mockReferralDocument,
@@ -522,7 +523,7 @@ describe('referral-extraction.service', () => {
       });
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
-      await extractStructuredData('user-1', 'ref-doc-1');
+      await extractStructuredData('user-1', 'practice-1', 'ref-doc-1');
 
       expect(prisma.auditLog.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -541,7 +542,7 @@ describe('referral-extraction.service', () => {
     });
 
     it('should handle malformed LLM response', async () => {
-      vi.mocked(prisma.referralDocument.findUnique).mockResolvedValue(mockReferralDocument);
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
       vi.mocked(generateTextWithRetry).mockResolvedValue({
         ...mockLLMResponse,
         content: 'This is not valid JSON response',
@@ -551,7 +552,7 @@ describe('referral-extraction.service', () => {
         status: 'FAILED' as ReferralDocumentStatus,
       });
 
-      await expect(extractStructuredData('user-1', 'ref-doc-1'))
+      await expect(extractStructuredData('user-1', 'practice-1', 'ref-doc-1'))
         .rejects.toThrow('No valid JSON found in LLM response');
 
       expect(prisma.referralDocument.update).toHaveBeenCalledWith({

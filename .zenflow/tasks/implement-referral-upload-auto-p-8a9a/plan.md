@@ -200,31 +200,38 @@ Create the referral upload component for the consultation form.
 
 ---
 
-### [ ] Step 6: Review UI Component
+### [x] Step 6: Review UI Component
 <!-- chat-id: 150b83d9-bd5a-4d7d-b18d-276609c37be1 -->
 
 Create the review/edit panel for extracted data.
 
-**Files to create:**
-- `src/components/referral/ReferralReviewPanel.tsx` - Review modal
-- `src/components/referral/ReferralFieldGroup.tsx` - Editable section
-- `src/components/referral/ConfidenceIndicator.tsx` - Confidence display
+**Files created:**
+- `src/components/referral/ReferralReviewPanel.tsx` - Review modal with patient, GP, referrer, and context sections
+- `src/components/referral/ReferralFieldGroup.tsx` - Editable section component with expand/collapse, accept/clear actions
+- `src/components/referral/ConfidenceIndicator.tsx` - Confidence score display with color-coded badges and tooltips
+- `tests/unit/components/ConfidenceIndicator.test.tsx` - 21 unit tests
+- `tests/unit/components/ReferralFieldGroup.test.tsx` - 42 unit tests
+- `tests/unit/components/ReferralReviewPanel.test.tsx` - 39 unit tests
 
-**Tasks:**
-1. Create modal/panel structure with sections
-2. Implement patient details section (editable fields)
-3. Implement GP details section
-4. Implement referrer details section (if different from GP)
-5. Implement referral context section
-6. Add confidence indicators per section
-7. Implement accept/clear actions per section
-8. Implement global Apply/Cancel buttons
+**Files modified:**
+- `src/components/referral/index.ts` - Added exports for new components
+
+**Completed tasks:**
+1. Created modal/panel structure with sections ✓
+2. Implemented patient details section (editable fields) ✓
+3. Implemented GP details section ✓
+4. Implemented referrer details section (if different from GP) ✓
+5. Implemented referral context section with reason, key problems, investigations, medications ✓
+6. Added confidence indicators per section with color-coded badges (green/amber/red) ✓
+7. Implemented accept/clear actions per section with restore capability ✓
+8. Implemented global Apply/Cancel buttons with validation ✓
+9. Added low confidence warning banner when overall confidence < 70% ✓
+10. Wrote 102 unit tests (21 + 42 + 39) ✓
 
 **Verification:**
-- Panel renders extracted data correctly
-- Fields are editable
-- Confidence indicators show correctly
-- Write component tests
+- `npm run lint` passes ✓
+- `npx tsc --noEmit` passes ✓ (for new components)
+- All 102 tests pass ✓
 
 ---
 

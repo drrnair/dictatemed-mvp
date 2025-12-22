@@ -193,12 +193,22 @@ ${documentText}`;
  */
 export async function reextractStructuredData(
   userId: string,
+  practiceId: string,
   documentId: string,
   options?: {
     useOpus?: boolean;
   }
 ): Promise<StructuredExtractionResult> {
-  const log = logger.child({ userId, documentId, action: 'reextractStructuredData' });
+  const log = logger.child({ userId, practiceId, documentId, action: 'reextractStructuredData' });
+
+  // Verify document exists and belongs to practice
+  const existing = await prisma.referralDocument.findFirst({
+    where: { id: documentId, practiceId },
+  });
+
+  if (!existing) {
+    throw new Error('Referral document not found');
+  }
 
   // Reset status to TEXT_EXTRACTED to allow re-extraction
   await prisma.referralDocument.update({
@@ -218,10 +228,10 @@ export async function reextractStructuredData(
 
   // If using Opus, we need a modified extraction flow
   if (options?.useOpus) {
-    return extractWithOpus(userId, documentId);
+    return extractWithOpus(userId, practiceId, documentId);
   }
 
-  return extractStructuredData(userId, documentId);
+  return extractStructuredData(userId, practiceId, documentId);
 }
 
 /**
@@ -230,12 +240,14 @@ export async function reextractStructuredData(
  */
 async function extractWithOpus(
   userId: string,
+  practiceId: string,
   documentId: string
 ): Promise<StructuredExtractionResult> {
-  const log = logger.child({ userId, documentId, action: 'extractWithOpus' });
+  const log = logger.child({ userId, practiceId, documentId, action: 'extractWithOpus' });
 
-  const document = await prisma.referralDocument.findUnique({
-    where: { id: documentId },
+  // Note: Authorization already checked in reextractStructuredData
+  const document = await prisma.referralDocument.findFirst({
+    where: { id: documentId, practiceId },
   });
 
   if (!document || !document.contentText) {
