@@ -86,11 +86,11 @@ Successfully implemented a complete referral upload feature that enables special
 
 ## Testing
 
-### Unit Tests (832 passing)
+### Unit Tests (850 passing)
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
-| `referral.service.test.ts` | 37 | Service functions, status transitions, authorization |
+| `referral.service.test.ts` | 55 | Service functions, status transitions, authorization |
 | `referral-extraction.test.ts` | 25 | Prompt parsing, confidence calculation, error handling |
 | `ReferralUploader.test.tsx` | 36 | Upload states, validation, progress, retry |
 | `ReferralReviewPanel.test.tsx` | 39 | Section editing, accept/clear, apply flow |
@@ -244,8 +244,12 @@ tests/integration/api/
 The referral upload feature is fully implemented with:
 - Complete backend pipeline (upload → text extraction → AI extraction → apply)
 - User-friendly UI with drag-and-drop, progress tracking, and review panel
-- Comprehensive test coverage (223 tests specific to this feature)
+- Comprehensive test coverage (241 tests specific to this feature)
 - Robust error handling with manual entry fallback
 - Full documentation for QA and future maintenance
 
 The feature is ready for QA testing and production deployment.
+
+---
+
+*Total referral-specific tests: 241 (55 service + 25 extraction + 36 uploader + 39 review panel + 21 confidence indicator + 43 field group + 22 hook)*

@@ -206,8 +206,13 @@ export type AllowedReferralMimeType = (typeof ALLOWED_REFERRAL_MIME_TYPES)[numbe
 // Max file size in bytes (10 MB)
 export const MAX_REFERRAL_FILE_SIZE = 10 * 1024 * 1024;
 
-// Confidence threshold below which to show warnings
-export const LOW_CONFIDENCE_THRESHOLD = 0.7;
+// Confidence thresholds for extraction quality indicators
+// HIGH: 85%+ - Information clearly stated
+// MEDIUM: 70-84% - Needs verification
+// LOW: Below 70% - May be inaccurate
+export const HIGH_CONFIDENCE_THRESHOLD = 0.85;
+export const MEDIUM_CONFIDENCE_THRESHOLD = 0.7;
+export const LOW_CONFIDENCE_THRESHOLD = 0.7; // Alias for backwards compatibility
 
 // Helper to check if a MIME type is allowed
 export function isAllowedMimeType(mimeType: string): mimeType is AllowedReferralMimeType {

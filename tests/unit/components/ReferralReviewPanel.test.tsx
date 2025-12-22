@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ReferralReviewPanel } from '@/components/referral/ReferralReviewPanel';
 import type { ReferralExtractedData, ApplyReferralInput } from '@/domains/referrals';
@@ -22,7 +22,7 @@ vi.mock('@/components/ui/dialog', () => ({
     <h2 data-testid="dialog-title">{children}</h2>
   ),
   DialogDescription: ({ children }: { children: React.ReactNode }) => (
-    <p data-testid="dialog-description">{children}</p>
+    <div data-testid="dialog-description">{children}</div>
   ),
   DialogFooter: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="dialog-footer">{children}</div>
@@ -392,8 +392,10 @@ describe('ReferralReviewPanel', () => {
       await user.clear(input);
       await user.type(input, 'Jane Doe');
 
-      // Blur to exit edit mode
-      input.blur();
+      // Blur to exit edit mode - wrap in act to handle state update
+      await act(async () => {
+        input.blur();
+      });
 
       // Click Apply and verify the updated name is used
       await user.click(

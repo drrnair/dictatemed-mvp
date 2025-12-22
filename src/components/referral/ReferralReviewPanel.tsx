@@ -22,13 +22,14 @@ import {
   type FieldConfig,
 } from './ReferralFieldGroup';
 import { ConfidenceIndicator } from './ConfidenceIndicator';
-import type {
-  ReferralExtractedData,
-  ExtractedPatientInfo,
-  ExtractedGPInfo,
-  ExtractedReferrerInfo,
-  ExtractedReferralContext,
-  ApplyReferralInput,
+import {
+  MEDIUM_CONFIDENCE_THRESHOLD,
+  type ReferralExtractedData,
+  type ExtractedPatientInfo,
+  type ExtractedGPInfo,
+  type ExtractedReferrerInfo,
+  type ExtractedReferralContext,
+  type ApplyReferralInput,
 } from '@/domains/referrals';
 
 // Section acceptance state
@@ -236,7 +237,7 @@ export function ReferralReviewPanel({
   }, []);
 
   // Check for low confidence warning
-  const hasLowConfidence = extractedData.overallConfidence < 0.7;
+  const hasLowConfidence = extractedData.overallConfidence < MEDIUM_CONFIDENCE_THRESHOLD;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

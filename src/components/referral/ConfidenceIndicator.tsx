@@ -11,6 +11,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  HIGH_CONFIDENCE_THRESHOLD,
+  MEDIUM_CONFIDENCE_THRESHOLD,
+} from '@/domains/referrals';
 
 export interface ConfidenceIndicatorProps {
   confidence: number; // 0-1
@@ -18,10 +22,6 @@ export interface ConfidenceIndicatorProps {
   size?: 'sm' | 'md';
   className?: string;
 }
-
-// Confidence thresholds
-const HIGH_CONFIDENCE = 0.85;
-const MEDIUM_CONFIDENCE = 0.7;
 
 export function ConfidenceIndicator({
   confidence,
@@ -33,8 +33,8 @@ export function ConfidenceIndicator({
   const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
 
   const getConfidenceLevel = () => {
-    if (confidence >= HIGH_CONFIDENCE) return 'high';
-    if (confidence >= MEDIUM_CONFIDENCE) return 'medium';
+    if (confidence >= HIGH_CONFIDENCE_THRESHOLD) return 'high';
+    if (confidence >= MEDIUM_CONFIDENCE_THRESHOLD) return 'medium';
     return 'low';
   };
 
@@ -107,8 +107,8 @@ export function ConfidenceIndicatorInline({
   const percentage = Math.round(confidence * 100);
 
   const getColor = () => {
-    if (confidence >= HIGH_CONFIDENCE) return 'text-green-600';
-    if (confidence >= MEDIUM_CONFIDENCE) return 'text-amber-600';
+    if (confidence >= HIGH_CONFIDENCE_THRESHOLD) return 'text-green-600';
+    if (confidence >= MEDIUM_CONFIDENCE_THRESHOLD) return 'text-amber-600';
     return 'text-red-600';
   };
 
