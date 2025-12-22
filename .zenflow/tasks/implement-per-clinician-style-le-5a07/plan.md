@@ -713,6 +713,7 @@ npm run test:integration
 ---
 
 ### [ ] Step 16: E2E Tests
+<!-- chat-id: b5f45621-8c90-4fe2-adc9-b7a552c4e884 -->
 
 Write end-to-end tests for the UI workflows.
 
