@@ -323,6 +323,7 @@ Add letter sending preferences to user settings.
 ---
 
 ### [ ] Step 9: Send Letter Dialog Component
+<!-- chat-id: 1b3fc734-6f7e-483d-bd9c-d5c93445e4b8 -->
 
 Create the main send letter dialog UI.
 
