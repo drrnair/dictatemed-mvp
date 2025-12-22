@@ -1,80 +1,77 @@
 // src/domains/referrals/referral.types.ts
 // Referral document domain type definitions
 
-// Status enum matching Prisma
-export type ReferralDocumentStatus =
-  | 'UPLOADED'
-  | 'TEXT_EXTRACTED'
-  | 'EXTRACTED'
-  | 'APPLIED'
-  | 'FAILED';
+import type { ReferralDocumentStatus as PrismaReferralDocumentStatus } from '@prisma/client';
+
+// Re-export status type from Prisma for type safety
+export type ReferralDocumentStatus = PrismaReferralDocumentStatus;
 
 // Core referral document model
 export interface ReferralDocument {
   id: string;
   userId: string;
   practiceId: string;
-  patientId?: string | undefined;
-  consultationId?: string | undefined;
+  patientId?: string;
+  consultationId?: string;
   filename: string;
   mimeType: string;
   sizeBytes: number;
   s3Key: string;
   status: ReferralDocumentStatus;
-  contentText?: string | undefined;
-  extractedData?: ReferralExtractedData | undefined;
-  processingError?: string | undefined;
-  processedAt?: Date | undefined;
+  contentText?: string;
+  extractedData?: ReferralExtractedData;
+  processingError?: string;
+  processedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
 // Patient info extracted from referral
 export interface ExtractedPatientInfo {
-  fullName?: string | undefined;
-  dateOfBirth?: string | undefined; // ISO date string YYYY-MM-DD
-  sex?: 'male' | 'female' | 'other' | undefined;
-  medicare?: string | undefined;
-  mrn?: string | undefined;
-  urn?: string | undefined;
-  address?: string | undefined;
-  phone?: string | undefined;
-  email?: string | undefined;
+  fullName?: string;
+  dateOfBirth?: string; // ISO date string YYYY-MM-DD
+  sex?: 'male' | 'female' | 'other';
+  medicare?: string;
+  mrn?: string;
+  urn?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
   confidence: number; // 0-1
 }
 
 // GP info extracted from referral
 export interface ExtractedGPInfo {
-  fullName?: string | undefined;
-  practiceName?: string | undefined;
-  address?: string | undefined;
-  phone?: string | undefined;
-  fax?: string | undefined;
-  email?: string | undefined;
-  providerNumber?: string | undefined;
+  fullName?: string;
+  practiceName?: string;
+  address?: string;
+  phone?: string;
+  fax?: string;
+  email?: string;
+  providerNumber?: string;
   confidence: number; // 0-1
 }
 
 // Referrer info (when different from GP)
 export interface ExtractedReferrerInfo {
-  fullName?: string | undefined;
-  specialty?: string | undefined;
-  organisation?: string | undefined;
-  address?: string | undefined;
-  phone?: string | undefined;
-  fax?: string | undefined;
-  email?: string | undefined;
+  fullName?: string;
+  specialty?: string;
+  organisation?: string;
+  address?: string;
+  phone?: string;
+  fax?: string;
+  email?: string;
   confidence: number; // 0-1
 }
 
 // Referral clinical context
 export interface ExtractedReferralContext {
-  reasonForReferral?: string | undefined;
-  keyProblems?: string[] | undefined;
-  investigationsMentioned?: string[] | undefined;
-  medicationsMentioned?: string[] | undefined;
-  urgency?: 'routine' | 'urgent' | 'emergency' | undefined;
-  referralDate?: string | undefined; // ISO date string
+  reasonForReferral?: string;
+  keyProblems?: string[];
+  investigationsMentioned?: string[];
+  medicationsMentioned?: string[];
+  urgency?: 'routine' | 'urgent' | 'emergency';
+  referralDate?: string; // ISO date string
   confidence: number; // 0-1
 }
 
@@ -82,7 +79,7 @@ export interface ExtractedReferralContext {
 export interface ReferralExtractedData {
   patient: ExtractedPatientInfo;
   gp: ExtractedGPInfo;
-  referrer?: ExtractedReferrerInfo | undefined;
+  referrer?: ExtractedReferrerInfo;
   referralContext: ExtractedReferralContext;
   overallConfidence: number; // 0-1
   extractedAt: string; // ISO timestamp
@@ -103,6 +100,17 @@ export interface CreateReferralResult {
   expiresAt: Date;
 }
 
+// Input for confirming a referral upload
+export interface ConfirmReferralUploadInput {
+  sizeBytes: number;
+}
+
+// Result from confirming a referral upload
+export interface ConfirmReferralUploadResult {
+  id: string;
+  status: 'UPLOADED';
+}
+
 // Result from text extraction
 export interface TextExtractionResult {
   id: string;
@@ -120,55 +128,55 @@ export interface StructuredExtractionResult {
 
 // Input for applying referral data to consultation
 export interface ApplyReferralInput {
-  consultationId?: string | undefined;
+  consultationId?: string;
   patient: {
     fullName: string;
-    dateOfBirth?: string | undefined;
-    sex?: 'male' | 'female' | 'other' | undefined;
-    medicare?: string | undefined;
-    mrn?: string | undefined;
-    address?: string | undefined;
-    phone?: string | undefined;
-    email?: string | undefined;
+    dateOfBirth?: string;
+    sex?: 'male' | 'female' | 'other';
+    medicare?: string;
+    mrn?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
   };
   gp?: {
     fullName: string;
-    practiceName?: string | undefined;
-    address?: string | undefined;
-    phone?: string | undefined;
-    fax?: string | undefined;
-    email?: string | undefined;
-  } | undefined;
+    practiceName?: string;
+    address?: string;
+    phone?: string;
+    fax?: string;
+    email?: string;
+  };
   referrer?: {
     fullName: string;
-    specialty?: string | undefined;
-    organisation?: string | undefined;
-    address?: string | undefined;
-    phone?: string | undefined;
-    fax?: string | undefined;
-    email?: string | undefined;
-  } | undefined;
+    specialty?: string;
+    organisation?: string;
+    address?: string;
+    phone?: string;
+    fax?: string;
+    email?: string;
+  };
   referralContext?: {
-    reasonForReferral?: string | undefined;
-    keyProblems?: string[] | undefined;
-  } | undefined;
+    reasonForReferral?: string;
+    keyProblems?: string[];
+  };
 }
 
 // Result from applying referral to consultation
 export interface ApplyReferralResult {
   patientId: string;
-  referrerId?: string | undefined;
-  consultationId?: string | undefined;
+  referrerId?: string;
+  consultationId?: string;
   status: 'APPLIED';
 }
 
 // Query for listing referral documents
 export interface ReferralListQuery {
-  status?: ReferralDocumentStatus | undefined;
-  patientId?: string | undefined;
-  consultationId?: string | undefined;
-  page?: number | undefined;
-  limit?: number | undefined;
+  status?: ReferralDocumentStatus;
+  patientId?: string;
+  consultationId?: string;
+  page?: number;
+  limit?: number;
 }
 
 // Result from listing referral documents
@@ -182,7 +190,7 @@ export interface ReferralListResult {
 
 // Referral document with download URL for API responses
 export interface ReferralDocumentWithUrl extends ReferralDocument {
-  downloadUrl?: string | undefined;
+  downloadUrl?: string;
 }
 
 // Allowed MIME types for referral uploads

@@ -69,13 +69,17 @@ Implement the core service and upload endpoint for referral documents.
 - `src/domains/referrals/referral.service.ts` - Business logic
 - `src/app/api/referrals/route.ts` - POST endpoint for upload
 - `src/app/api/referrals/[id]/route.ts` - GET endpoint
+- `src/app/api/referrals/[id]/confirm-upload/route.ts` - Confirm upload endpoint
 
 **Tasks:**
 1. Implement `createReferralDocument()` - creates DB record, returns presigned URL
-2. Implement `getReferralDocument()` - retrieves document with download URL
-3. Implement `updateReferralStatus()` - status transitions
-4. Create POST `/api/referrals` endpoint with Zod validation
-5. Create GET `/api/referrals/:id` endpoint
+2. Implement `confirmReferralUpload()` - confirms S3 upload, updates status
+3. Implement `getReferralDocument()` - retrieves document with download URL
+4. Implement `updateReferralStatus()` - status transitions
+5. Create POST `/api/referrals` endpoint with Zod validation
+6. Create POST `/api/referrals/:id/confirm-upload` endpoint
+7. Create GET `/api/referrals/:id` endpoint
+8. Add audit logging for upload confirmation
 
 **Verification:**
 - API endpoints respond correctly (test with curl/Postman)
@@ -97,11 +101,12 @@ Implement PDF and text file content extraction.
 **Tasks:**
 1. Add pdf-parse dependency (or use existing PDF library)
 2. Implement `extractTextFromDocument()` function
-3. Handle PDF files using pdf-parse
+3. Handle PDF files using pdf-parse (primary)
 4. Handle plain text files (read directly)
-5. Handle DOCX files (optional, can defer)
+5. Add fallback to Claude Vision for scanned/image-based PDFs (<100 chars extracted)
 6. Update document status to `TEXT_EXTRACTED`
 7. Create POST `/api/referrals/:id/extract-text` endpoint
+8. Add audit logging for text extraction
 
 **Verification:**
 - Test with sample PDF referral letter

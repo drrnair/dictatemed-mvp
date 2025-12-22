@@ -724,6 +724,7 @@ model ReferralDocument {
 
   @@index([userId, createdAt])
   @@index([practiceId])
+  @@index([patientId])
   @@index([status])
   @@map("referral_documents")
 }

@@ -33,6 +33,9 @@ CREATE INDEX "referral_documents_userId_createdAt_idx" ON "referral_documents"("
 CREATE INDEX "referral_documents_practiceId_idx" ON "referral_documents"("practiceId");
 
 -- CreateIndex
+CREATE INDEX "referral_documents_patientId_idx" ON "referral_documents"("patientId");
+
+-- CreateIndex
 CREATE INDEX "referral_documents_status_idx" ON "referral_documents"("status");
 
 -- AddForeignKey
