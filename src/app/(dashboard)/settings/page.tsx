@@ -2,7 +2,7 @@
 // Settings page with navigation to sub-settings
 
 import Link from 'next/link';
-import { Building2, Sparkles, Heart, FileText, User } from 'lucide-react';
+import { Building2, Sparkles, Heart, FileText, User, Send } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Route } from 'next';
 
@@ -41,6 +41,12 @@ const settingsLinks: Array<{
     description: 'Browse and manage your favorite letter templates',
     href: '/settings/templates' as Route,
     icon: FileText,
+  },
+  {
+    title: 'Letter Sending',
+    description: 'Configure default recipients and email templates for sending letters',
+    href: '/settings/letters' as Route,
+    icon: Send,
   },
 ];
 

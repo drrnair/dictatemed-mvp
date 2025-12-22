@@ -97,6 +97,7 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
     const letterSend = await prisma.letterSend.create({
       data: {
         letterId,
+        patientId: letter.patient?.id || null,
         senderId,
         patientContactId: recipient.contactId || null,
         recipientName: recipient.name,
