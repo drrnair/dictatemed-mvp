@@ -539,7 +539,8 @@ npm run lint
 
 ---
 
-### [ ] Step 13: Frontend - Settings Page Integration
+### [x] Step 13: Frontend - Settings Page Integration
+<!-- chat-id: ab9052eb-a6ec-491d-bc00-41815a74acf6 -->
 
 Integrate new components into the settings style page.
 
@@ -553,12 +554,46 @@ Integrate new components into the settings style page.
 
 **Files:**
 - `src/app/(dashboard)/settings/style/page.tsx` (modify)
+- `src/components/ui/tabs.tsx` (new - radix tabs component)
+- `src/components/ui/separator.tsx` (new - radix separator component)
 
 **Verification:**
 ```bash
 npm run typecheck
 npm run lint
 ```
+
+**Completed:** Full settings page integration implemented:
+- **Style Mode Selector**: Integrated at top of page, allows switching between Global and Per-Subspecialty modes
+- **Mode Persistence**: Style mode preference saved to localStorage and restored on page load
+- **Tabbed Interface**: Added Tabs component with Global Style and Per-Subspecialty tabs
+- **Global Style Tab**:
+  - Historical letter upload section (multi-file, PDF/DOC/DOCX/TXT support)
+  - Edit statistics display (total, 7-day, 30-day, last edit)
+  - Run Style Analysis button with threshold check
+  - Collapsible detected style profile display
+  - PreferenceRow component with confidence meters
+  - Vocabulary preferences and section order display
+- **Per-Subspecialty Tab**:
+  - StyleSummary showing active profiles with badge counts
+  - SeedLetterUpload dialog for bootstrapping profiles
+  - Grid of SubspecialtyStyleCard components for all 7 subspecialties
+  - Each card shows: edit count, confidence, learning strength slider
+  - Analyze/Re-analyze and Reset actions per subspecialty
+  - Expandable details (section order, greeting/closing, vocabulary, signoff)
+  - How It Works info card
+- **API Integration**:
+  - Uses `useStyleProfiles` hook for all subspecialty operations
+  - Fetches subspecialty stats via `/api/style/profiles/:subspecialty/analyze`
+  - All CRUD operations wired to profile/seed endpoints
+- **New UI Components Created**:
+  - `src/components/ui/tabs.tsx` - Radix UI Tabs component
+  - `src/components/ui/separator.tsx` - Radix UI Separator component
+  - Installed `@radix-ui/react-tabs` and `@radix-ui/react-separator` packages
+- **Verification**:
+  - TypeScript compilation passes
+  - ESLint checks pass
+  - All 260 tests pass
 
 ---
 
