@@ -493,30 +493,42 @@ Implement theme preference system.
 
 ---
 
-### [ ] Step 13: Theme Settings UI
-<!-- chat-id: f3b796c5-8530-4c92-b2c4-0351ed223cb0 -->
+### [x] Step 13: Theme Settings UI
 
-Add theme preference to settings.
+Add theme preference to settings with server persistence.
 
-**Files to create:**
-- `src/app/api/user/settings/theme/route.ts` - GET, PUT
-- `src/components/settings/ThemeSettings.tsx`
+**Files created:**
+- `src/app/api/user/settings/theme/route.ts` - GET, PUT API endpoints
+- `src/components/settings/ThemeSettings.tsx` - Theme settings component
+- `tests/integration/api/theme-settings.test.ts` - 17 integration tests
+- `tests/unit/components/ThemeSettings.test.tsx` - 14 unit tests
 
-**Files to modify:**
-- `src/app/(dashboard)/settings/profile/page.tsx` - Add theme section
-  OR create new appearance page
+**Files modified:**
+- `src/app/(dashboard)/settings/appearance/page.tsx` - Updated to use ThemeSettings component
 
-**Tasks:**
-1. Implement theme settings API endpoints
-2. Create ThemeSettings component:
-   - Radio group: System / Light / Dark
-   - Preview area (optional)
-3. Add to settings page
-4. Connect to ThemeProvider
+**Implementation details:**
+1. API endpoints (`/api/user/settings/theme`):
+   - GET: Returns stored preference or default ('system')
+   - PUT: Validates and stores preference in user.settings JSON
+   - Validates theme is one of: 'system', 'light', 'dark'
+2. ThemeSettings component:
+   - Visual card-based selector (Light, Dark, System options)
+   - Icons and descriptions for each option
+   - Shows "Currently showing: X" when in system mode
+   - Fetches preference from server on mount
+   - Syncs to server on change
+   - Shows saving indicator during save
+   - Displays error messages on failure
+   - Immediate local theme update for responsiveness
+3. Integration:
+   - Component integrated into existing appearance settings page
+   - Preview section shows sample letter in current theme
 
 **Verification:**
-- Toggle settings, verify immediate theme change
-- Verify persists across sessions
+- `npm run typecheck` passes
+- `npm run lint` passes
+- `npm run test:integration` passes (17 theme settings tests)
+- `npm run test` passes (14 ThemeSettings component tests)
 
 ---
 
