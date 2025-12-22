@@ -152,6 +152,7 @@ Update layout components for consistent navigation experience.
 ---
 
 ### [ ] Step: Dashboard Screen
+<!-- chat-id: a4e1a36a-b9c3-44d0-b3b6-e07687948322 -->
 
 Apply design system to the main dashboard/today screen.
 
