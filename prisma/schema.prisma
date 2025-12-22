@@ -53,6 +53,7 @@ model User {
   notifications       Notification[]
   styleEdits          StyleEdit[]
   templatePreferences UserTemplatePreference[]
+  letterSends         LetterSend[]
 
   @@map("users")
 }
@@ -77,6 +78,7 @@ model Patient {
   documents     Document[]
   letters       Letter[]
   consultations Consultation[]
+  contacts      PatientContact[]
 
   @@index([practiceId])
   @@map("patients")
@@ -264,6 +266,7 @@ model Letter {
   documents  LetterDocument[]
   provenance Provenance?
   styleEdits StyleEdit[]
+  sends      LetterSend[]
 
   @@index([userId, createdAt])
   @@index([status])
@@ -561,4 +564,103 @@ enum ConsultationStatus {
   PROCESSING  // Transcription/processing in progress
   READY       // Ready for letter generation
   COMPLETED   // Letter generated
+}
+
+// ============ Patient Contacts & Letter Sending ============
+
+enum ContactType {
+  GP
+  REFERRER
+  SPECIALIST
+  OTHER
+}
+
+enum ChannelType {
+  EMAIL
+  SECURE_MESSAGING
+  FAX
+  POST
+}
+
+enum SendStatus {
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+  BOUNCED
+}
+
+// Patient-linked contacts (GP, referrer, specialists, etc.)
+model PatientContact {
+  id                  String      @id @default(uuid())
+  patientId           String
+  patient             Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  type                ContactType // GP, REFERRER, SPECIALIST, OTHER
+  fullName            String
+  organisation        String?     // Practice name
+  role                String?     // Specialty/role (free text)
+
+  // Communication channels
+  email               String?
+  phone               String?
+  fax                 String?
+  address             String?     @db.Text
+  secureMessagingId   String?     // Future: HealthLink/FHIR
+  preferredChannel    ChannelType @default(EMAIL)
+
+  // Defaults
+  isDefaultForPatient Boolean     @default(false)
+
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  // Relations
+  letterSends         LetterSend[]
+
+  @@index([patientId])
+  @@index([patientId, type])
+  @@map("patient_contacts")
+}
+
+// Audit log for letter sends
+model LetterSend {
+  id                  String          @id @default(uuid())
+  letterId            String
+  letter              Letter          @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  // Who sent
+  senderId            String
+  sender              User            @relation(fields: [senderId], references: [id])
+
+  // Recipient info
+  patientContactId    String?         // Nullable for one-off recipients
+  patientContact      PatientContact? @relation(fields: [patientContactId], references: [id])
+
+  // Denormalized recipient info (for audit even if contact deleted)
+  recipientName       String
+  recipientEmail      String
+  recipientType       ContactType?
+
+  // Send details
+  channel             ChannelType     @default(EMAIL)
+  subject             String
+  coverNote           String?         @db.Text
+
+  // Status tracking
+  status              SendStatus      @default(QUEUED)
+  queuedAt            DateTime        @default(now())
+  sentAt              DateTime?
+  failedAt            DateTime?
+  errorMessage        String?
+
+  // Email provider reference
+  externalId          String?         // Provider message ID for tracking
+
+  createdAt           DateTime        @default(now())
+
+  @@index([letterId])
+  @@index([senderId])
+  @@index([status])
+  @@map("letter_sends")
 }

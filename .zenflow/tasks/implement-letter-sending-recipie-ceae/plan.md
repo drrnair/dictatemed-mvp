@@ -33,7 +33,8 @@ Created comprehensive technical specification in `spec.md` covering:
 
 ---
 
-### [ ] Step 1: Database Schema - Contact and Send Models
+### [x] Step 1: Database Schema - Contact and Send Models
+<!-- chat-id: c6bbf1a4-566f-43b9-a540-8f7c33c1f0ea -->
 
 Add new Prisma models and run migration.
 
@@ -52,6 +53,8 @@ Add new Prisma models and run migration.
 **Verification:**
 - `npm run db:generate` completes without errors
 - `npm run typecheck` passes
+
+**Completed:** Added all enums and models to `prisma/schema.prisma`. Created migration file at `prisma/migrations/20251222_add_patient_contacts_and_letter_sends/migration.sql`. Prisma generate and typecheck both pass.
 
 ---
 
