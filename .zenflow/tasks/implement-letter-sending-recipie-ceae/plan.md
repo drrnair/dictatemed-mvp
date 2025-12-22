@@ -58,7 +58,8 @@ Add new Prisma models and run migration.
 
 ---
 
-### [ ] Step 2: Contact Domain - Service and Validation
+### [x] Step 2: Contact Domain - Service and Validation
+<!-- chat-id: 05cbacbd-3e74-413c-8e19-df7e5305caff -->
 
 Implement CRUD service for patient contacts.
 
@@ -83,6 +84,8 @@ Implement CRUD service for patient contacts.
 - Write unit tests for validation schemas
 - Write unit tests for service functions
 - `npm run test` passes
+
+**Completed:** All service files created with full CRUD operations, Zod validation schemas with GP-specific rules, email/phone validation helpers. Unit tests in `tests/unit/domains/contacts/contact.validation.test.ts`.
 
 ---
 
