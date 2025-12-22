@@ -493,8 +493,8 @@ describe('Generation-Time Style Conditioning', () => {
       // Act
       const hints = promptConditioner.buildStyleHintsFromProfile(mockSubspecialtyProfile);
 
-      // Assert: pmh has high probability (0.95), should be included
-      expect(hints.includeSections).toContain('Pmh');
+      // Assert: past_medical_history has high probability (0.95), should be included
+      expect(hints.includeSections).toContain('Past Medical History');
     });
 
     it('should include avoided phrases instructions', () => {
