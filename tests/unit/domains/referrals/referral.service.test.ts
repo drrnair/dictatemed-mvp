@@ -902,7 +902,7 @@ describe('referral.service', () => {
     it('should match by Medicare number (exact)', async () => {
       const patients = [
         { id: 'patient-1', encryptedData: 'encrypted-data-1' },
-      ];
+      ] as never;
       mockDecryptPatientData.mockReturnValue({
         name: 'John Smith',
         dateOfBirth: '1965-03-15',
@@ -925,7 +925,7 @@ describe('referral.service', () => {
     it('should match by Medicare number (with spaces in input)', async () => {
       const patients = [
         { id: 'patient-1', encryptedData: 'encrypted-data-1' },
-      ];
+      ] as never;
       mockDecryptPatientData.mockReturnValue({
         name: 'John Smith',
         dateOfBirth: '1965-03-15',
@@ -945,7 +945,7 @@ describe('referral.service', () => {
     it('should match by name + DOB (case-insensitive)', async () => {
       const patients = [
         { id: 'patient-1', encryptedData: 'encrypted-data-1' },
-      ];
+      ] as never;
       mockDecryptPatientData.mockReturnValue({
         name: 'john smith',
         dateOfBirth: '1965-03-15',
@@ -965,7 +965,7 @@ describe('referral.service', () => {
     it('should not match if only name matches (without DOB)', async () => {
       const patients = [
         { id: 'patient-1', encryptedData: 'encrypted-data-1' },
-      ];
+      ] as never;
       mockDecryptPatientData.mockReturnValue({
         name: 'John Smith',
         dateOfBirth: '1965-03-15',
@@ -984,7 +984,7 @@ describe('referral.service', () => {
       const patients = [
         { id: 'patient-1', encryptedData: 'corrupted-data' },
         { id: 'patient-2', encryptedData: 'valid-data' },
-      ];
+      ] as never;
       mockDecryptPatientData
         .mockImplementationOnce(() => { throw new Error('Decryption failed'); })
         .mockReturnValueOnce({
@@ -1007,7 +1007,7 @@ describe('referral.service', () => {
       // When a patient has both matching Medicare and name+DOB, Medicare match is returned
       const patients = [
         { id: 'patient-1', encryptedData: 'data-1' },
-      ];
+      ] as never;
       mockDecryptPatientData.mockReturnValue({
         name: 'John Smith',
         dateOfBirth: '1965-03-15',
@@ -1031,7 +1031,7 @@ describe('referral.service', () => {
       const patients = [
         { id: 'patient-1', encryptedData: 'data-1' },
         { id: 'patient-2', encryptedData: 'data-2' },
-      ];
+      ] as never;
       mockDecryptPatientData
         .mockReturnValueOnce({
           name: 'John Smith',
@@ -1113,7 +1113,7 @@ describe('referral.service', () => {
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockExtractedDocument);
       vi.mocked(prisma.patient.findMany).mockResolvedValue([
         { id: 'existing-patient', encryptedData: 'data' },
-      ]);
+      ] as never);
       mockDecryptPatientData.mockReturnValue({
         name: 'John Smith',
         dateOfBirth: '1965-03-15',

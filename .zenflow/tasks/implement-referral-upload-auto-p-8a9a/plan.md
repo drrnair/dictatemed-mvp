@@ -284,14 +284,19 @@ Implement the apply endpoint and wire up the full flow.
 9. Added referral context display when applied ✓
 10. Added audit logging for apply operation ✓
 
+**Tests added:**
+- 8 unit tests for `findMatchingPatient()` (Medicare match, name+DOB match, decryption errors, early exit)
+- 13 unit tests for `applyReferralToConsultation()` (patient creation, existing match, status validation, contact creation, audit logging)
+- 4 integration tests for `/api/referrals/:id/apply` endpoint (success, 404, 400, optional fields)
+
 **Verification:**
 - `npm run lint` passes ✓
 - `npx tsc --noEmit` passes ✓
-- All 826 unit tests pass ✓
+- All 850 unit tests pass ✓
 
 ---
 
-### [x] Step 8: Error Handling & Polish
+### [ ] Step 8: Error Handling & Polish
 <!-- chat-id: b3741504-5ffa-4e3f-839e-f0fd1cfaff22 -->
 
 Add comprehensive error handling and polish the UX.

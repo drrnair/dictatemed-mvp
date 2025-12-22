@@ -27,6 +27,7 @@ import type {
   TextExtractionResult,
   ApplyReferralInput,
   ApplyReferralResult,
+  PatientMatchInput,
   PatientMatchResult,
 } from './referral.types';
 import {
@@ -675,7 +676,7 @@ async function extractTextFromPdfBuffer(
  */
 export async function findMatchingPatient(
   practiceId: string,
-  input: { fullName?: string; dateOfBirth?: string; medicare?: string; mrn?: string }
+  input: Partial<PatientMatchInput>
 ): Promise<PatientMatchResult> {
   const log = logger.child({ practiceId, action: 'findMatchingPatient' });
 
