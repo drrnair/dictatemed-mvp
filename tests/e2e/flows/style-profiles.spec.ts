@@ -1,7 +1,8 @@
 // tests/e2e/flows/style-profiles.spec.ts
 // E2E tests for the per-subspecialty style profile UI workflows
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 /**
  * E2E Tests for Style Profile Management
@@ -200,11 +201,11 @@ test.describe('Style Profiles - Learning Strength Slider', () => {
     await page.goto('/settings/style');
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
 
-    // Find a profile card with an active profile (has "Active" label)
-    const activeCard = page.locator('.card:has-text("Active")').first();
+    // Find a profile card with an active profile using data-testid
+    const activeCard = page.locator('[data-has-profile="true"]').first();
     if (await activeCard.count() > 0) {
-      // Slider should be visible
-      await expect(activeCard.getByRole('slider')).toBeVisible();
+      // Slider should be visible (using aria-label added in LearningStrengthSlider)
+      await expect(activeCard.getByRole('slider', { name: 'Learning strength' })).toBeVisible();
 
       // Labels should be present
       await expect(activeCard.getByText('Neutral')).toBeVisible();
@@ -219,9 +220,9 @@ test.describe('Style Profiles - Learning Strength Slider', () => {
     await page.goto('/settings/style');
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
 
-    const activeCard = page.locator('.card:has-text("Active")').first();
+    const activeCard = page.locator('[data-has-profile="true"]').first();
     if (await activeCard.count() > 0) {
-      const slider = activeCard.getByRole('slider');
+      const slider = activeCard.getByRole('slider', { name: 'Learning strength' });
 
       // Get initial value
       const initialValue = await slider.getAttribute('value');

@@ -218,7 +218,7 @@ Each preference has a confidence score (0-1):
 - **0.3-0.5**: Weak pattern, significant variation
 - **0.0-0.3**: No clear pattern detected
 
-Only preferences with confidence >= 0.6 are applied to prompts.
+Only preferences with confidence >= 0.5 are applied to prompts.
 
 ## Example Analysis Flow
 

@@ -341,5 +341,5 @@ Track how style changes over time:
 
 ---
 
-*Last updated: 2025-01-15*
+*Last updated: 2025-12-22*
 *Authors: DictateMED Engineering*

@@ -91,10 +91,15 @@ export function SubspecialtyStyleCard({
   };
 
   return (
-    <Card className={cn(
-      'transition-all',
-      hasProfile ? 'border-primary/30 bg-primary/5' : 'border-border'
-    )}>
+    <Card
+      data-testid={`subspecialty-card-${subspecialty}`}
+      data-subspecialty={subspecialty}
+      data-has-profile={hasProfile}
+      className={cn(
+        'transition-all',
+        hasProfile ? 'border-primary/30 bg-primary/5' : 'border-border'
+      )}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -110,7 +115,7 @@ export function SubspecialtyStyleCard({
             </div>
           </div>
           {hasProfile && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" data-testid="profile-active-badge">
               <CheckCircle className="h-4 w-4 text-green-500" />
               <span className="text-xs text-muted-foreground">Active</span>
             </div>
