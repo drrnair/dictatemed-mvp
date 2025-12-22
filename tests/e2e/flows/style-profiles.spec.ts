@@ -247,11 +247,11 @@ test.describe('Style Profiles - Reset Profile', () => {
     await page.goto('/settings/style');
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
 
-    // Find a profile card with an active profile
-    const activeCard = page.locator('.card:has-text("Active")').first();
+    // Find a profile card with an active profile using data attribute
+    const activeCard = page.locator('[data-has-profile="true"]').first();
     if (await activeCard.count() > 0) {
-      // Click reset button (RotateCcw icon)
-      await activeCard.getByRole('button').filter({ hasNot: page.getByText('Analyze') }).last().click();
+      // Click reset button using aria-label
+      await activeCard.getByRole('button', { name: 'Reset style profile' }).click();
 
       // Dialog should appear
       await expect(page.getByRole('alertdialog')).toBeVisible();
@@ -269,9 +269,9 @@ test.describe('Style Profiles - Reset Profile', () => {
     await page.goto('/settings/style');
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
 
-    const activeCard = page.locator('.card:has-text("Active")').first();
+    const activeCard = page.locator('[data-has-profile="true"]').first();
     if (await activeCard.count() > 0) {
-      await activeCard.getByRole('button').filter({ hasNot: page.getByText('Analyze') }).last().click();
+      await activeCard.getByRole('button', { name: 'Reset style profile' }).click();
 
       // Click Cancel
       await page.getByRole('button', { name: 'Cancel' }).click();
@@ -285,11 +285,11 @@ test.describe('Style Profiles - Reset Profile', () => {
     await page.goto('/settings/style');
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
 
-    const cardTitle = 'Heart Failure';
-    const card = page.locator(`.card:has-text("${cardTitle}")`).first();
+    // Use data-testid for specific subspecialty card
+    const card = page.locator('[data-testid="subspecialty-card-HEART_FAILURE"]');
 
-    if (await card.locator('text=Active').count() > 0) {
-      await card.getByRole('button').filter({ hasNot: page.getByText('Analyze') }).last().click();
+    if (await card.getAttribute('data-has-profile') === 'true') {
+      await card.getByRole('button', { name: 'Reset style profile' }).click();
 
       // Click Reset Profile
       await page.getByRole('button', { name: 'Reset Profile' }).click();
@@ -298,7 +298,7 @@ test.describe('Style Profiles - Reset Profile', () => {
       await expect(page.getByRole('alertdialog')).not.toBeVisible();
 
       // Card should no longer show "Active" status
-      await expect(card.locator('text=Active')).not.toBeVisible({ timeout: 3000 });
+      await expect(card.getByTestId('profile-active-badge')).not.toBeVisible({ timeout: 3000 });
     }
   });
 });
@@ -441,7 +441,8 @@ test.describe('Style Profiles - Profile Details', () => {
     await page.goto('/settings/style');
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
 
-    const activeCard = page.locator('.card:has-text("Active")').first();
+    // Find a profile card with an active profile using data attribute
+    const activeCard = page.locator('[data-has-profile="true"]').first();
     if (await activeCard.count() > 0) {
       // Click "Show details" button
       await activeCard.getByRole('button', { name: /Show details/ }).click();
@@ -458,7 +459,7 @@ test.describe('Style Profiles - Profile Details', () => {
     await page.goto('/settings/style');
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
 
-    const activeCard = page.locator('.card:has-text("Active")').first();
+    const activeCard = page.locator('[data-has-profile="true"]').first();
     if (await activeCard.count() > 0) {
       // Expand details first
       await activeCard.getByRole('button', { name: /Show details/ }).click();
@@ -476,7 +477,7 @@ test.describe('Style Profiles - Profile Details', () => {
     await page.goto('/settings/style');
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
 
-    const activeCard = page.locator('.card:has-text("Active")').first();
+    const activeCard = page.locator('[data-has-profile="true"]').first();
     if (await activeCard.count() > 0) {
       // Confidence label should be visible
       await expect(activeCard.getByText('Profile confidence:')).toBeVisible();
@@ -497,8 +498,8 @@ test.describe('Style Profiles - Analyze Profiles', () => {
     await page.goto('/settings/style');
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
 
-    // Find any card - it should have an Analyze or Re-analyze button
-    const card = page.locator('.card').first();
+    // Find any subspecialty card using data-testid pattern
+    const card = page.locator('[data-testid^="subspecialty-card-"]').first();
     const analyzeButton = card.getByRole('button', { name: /Analyze|Re-analyze/ });
     await expect(analyzeButton).toBeVisible();
   });
@@ -509,8 +510,8 @@ test.describe('Style Profiles - Analyze Profiles', () => {
     await page.goto('/settings/style');
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
 
-    // Find a card without active profile
-    const inactiveCard = page.locator('.card').filter({ hasNot: page.getByText('Active') }).first();
+    // Find a card without active profile using data attribute
+    const inactiveCard = page.locator('[data-has-profile="false"]').first();
     if (await inactiveCard.count() > 0) {
       const analyzeButton = inactiveCard.getByRole('button', { name: /Analyze/ });
 
@@ -526,7 +527,7 @@ test.describe('Style Profiles - Analyze Profiles', () => {
     await page.goto('/settings/style');
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
 
-    const card = page.locator('.card').first();
+    const card = page.locator('[data-testid^="subspecialty-card-"]').first();
     const analyzeButton = card.getByRole('button', { name: /Analyze|Re-analyze/ });
 
     if (await analyzeButton.isEnabled()) {
@@ -623,7 +624,7 @@ test.describe('Style Profiles - Letter Generation Integration', () => {
   });
 });
 
-test.describe('Style Profiles - Accessibility', () => {
+test.describe('Style Profiles - Accessibility @a11y', () => {
   test('settings style page should be accessible when redirected to login', async ({
     page,
   }) => {
@@ -635,6 +636,101 @@ test.describe('Style Profiles - Accessibility', () => {
     // Page should have some content
     const content = await page.content();
     expect(content.length).toBeGreaterThan(0);
+  });
+
+  test.skip('style settings page should have no critical accessibility violations', async ({
+    page,
+  }) => {
+    // Prerequisites: User is authenticated
+    await page.goto('/settings/style');
+
+    // Run axe accessibility scan
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .analyze();
+
+    // Filter to only critical and serious violations
+    const criticalViolations = accessibilityScanResults.violations.filter(
+      (v) => v.impact === 'critical' || v.impact === 'serious'
+    );
+
+    expect(criticalViolations).toEqual([]);
+  });
+
+  test.skip('per-subspecialty tab should have no critical accessibility violations', async ({
+    page,
+  }) => {
+    // Prerequisites: User is authenticated
+    await page.goto('/settings/style');
+    await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
+
+    // Wait for content to load
+    await page.waitForSelector('[data-testid^="subspecialty-card-"]');
+
+    // Run axe accessibility scan
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .analyze();
+
+    // Filter to only critical and serious violations
+    const criticalViolations = accessibilityScanResults.violations.filter(
+      (v) => v.impact === 'critical' || v.impact === 'serious'
+    );
+
+    expect(criticalViolations).toEqual([]);
+  });
+
+  test.skip('seed letter upload dialog should have no critical accessibility violations', async ({
+    page,
+  }) => {
+    // Prerequisites: User is authenticated
+    await page.goto('/settings/style');
+    await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
+
+    // Open dialog
+    await page.getByRole('button', { name: 'Upload Sample Letter' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+
+    // Run axe accessibility scan on dialog
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .include('[role="dialog"]')
+      .withTags(['wcag2a', 'wcag2aa'])
+      .analyze();
+
+    // Filter to only critical and serious violations
+    const criticalViolations = accessibilityScanResults.violations.filter(
+      (v) => v.impact === 'critical' || v.impact === 'serious'
+    );
+
+    expect(criticalViolations).toEqual([]);
+  });
+
+  test.skip('reset profile dialog should have no critical accessibility violations', async ({
+    page,
+  }) => {
+    // Prerequisites: User is authenticated and has an active profile
+    await page.goto('/settings/style');
+    await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
+
+    const activeCard = page.locator('[data-has-profile="true"]').first();
+    if (await activeCard.count() > 0) {
+      // Open reset dialog
+      await activeCard.getByRole('button', { name: 'Reset style profile' }).click();
+      await expect(page.getByRole('alertdialog')).toBeVisible();
+
+      // Run axe accessibility scan on dialog
+      const accessibilityScanResults = await new AxeBuilder({ page })
+        .include('[role="alertdialog"]')
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+
+      // Filter to only critical and serious violations
+      const criticalViolations = accessibilityScanResults.violations.filter(
+        (v) => v.impact === 'critical' || v.impact === 'serious'
+      );
+
+      expect(criticalViolations).toEqual([]);
+    }
   });
 });
 
