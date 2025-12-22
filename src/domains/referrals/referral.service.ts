@@ -40,6 +40,8 @@ const REFERRAL_BUCKET_PATH = 'referrals';
 
 /**
  * Get file extension from MIME type.
+ * Note: Includes docx for future support even though it's not currently
+ * in ALLOWED_REFERRAL_MIME_TYPES.
  */
 function getExtensionFromMimeType(mimeType: string): string {
   switch (mimeType) {
