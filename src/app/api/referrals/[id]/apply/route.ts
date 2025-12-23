@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSession } from '@/lib/auth';
-import { applyReferralToConsultation } from '@/domains/referrals';
+import { applyReferralToConsultation } from '@/domains/referrals/referral.service';
 import { logger } from '@/lib/logger';
 
 interface RouteParams {

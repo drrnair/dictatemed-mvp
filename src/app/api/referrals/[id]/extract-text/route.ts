@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSession } from '@/lib/auth';
-import { extractTextFromDocument } from '@/domains/referrals';
+import { extractTextFromDocument } from '@/domains/referrals/referral.service';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, createRateLimitKey } from '@/lib/rate-limit';
 

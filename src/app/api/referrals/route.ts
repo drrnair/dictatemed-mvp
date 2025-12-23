@@ -7,7 +7,7 @@ import { getSession } from '@/lib/auth';
 import {
   createReferralDocument,
   listReferralDocuments,
-} from '@/domains/referrals';
+} from '@/domains/referrals/referral.service';
 import {
   ALLOWED_REFERRAL_MIME_TYPES,
   MAX_REFERRAL_FILE_SIZE,

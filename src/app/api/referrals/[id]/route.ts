@@ -8,7 +8,7 @@ import {
   getReferralDocument,
   confirmReferralUpload,
   deleteReferralDocument,
-} from '@/domains/referrals';
+} from '@/domains/referrals/referral.service';
 import { logger } from '@/lib/logger';
 
 interface RouteParams {
