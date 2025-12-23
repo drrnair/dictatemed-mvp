@@ -5,11 +5,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { VerificationPanel } from './VerificationPanel';
-import type { ExtractedValue, HallucinationFlag } from './VerificationPanel';
+import { VerificationPanel } from '@/components/letters/VerificationPanel';
+import type { ExtractedValue, HallucinationFlag } from '@/components/letters/VerificationPanel';
 
 describe('VerificationPanel', () => {
   // Mock data
@@ -75,83 +75,95 @@ describe('VerificationPanel', () => {
   });
 
   describe('Rendering', () => {
-    it('renders the verification panel', () => {
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+    it('renders the verification panel', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       expect(screen.getByTestId('verification-panel')).toBeInTheDocument();
       expect(screen.getByText('Clinical Verification')).toBeInTheDocument();
     });
 
-    it('displays progress indicator correctly', () => {
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+    it('displays progress indicator correctly', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       // 1 of 3 values verified (val-3)
       expect(screen.getByText(/1 of 3 verified/i)).toBeInTheDocument();
       expect(screen.getByText('33%')).toBeInTheDocument();
     });
 
-    it('shows critical values warning when unverified', () => {
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+    it('shows critical values warning when unverified', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       expect(
         screen.getByText(/2 critical values? require verification/i)
       ).toBeInTheDocument();
     });
 
-    it('displays hallucination flags', () => {
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+    it('displays hallucination flags', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       expect(screen.getByText('Complete symptom resolution')).toBeInTheDocument();
       expect(screen.getByText('Previous MI in 2015')).toBeInTheDocument();
       expect(screen.getByText(/AI Hallucination Flags \(2\)/i)).toBeInTheDocument();
     });
 
-    it('groups values by category', () => {
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+    it('groups values by category', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       expect(screen.getByText('Cardiac Function')).toBeInTheDocument();
       expect(screen.getByText('Coronary Disease')).toBeInTheDocument();
       expect(screen.getByText('Medications')).toBeInTheDocument();
     });
 
-    it('marks critical values with asterisk', () => {
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+    it('marks critical values with asterisk', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       const lvefCard = screen.getByTestId('value-card-val-1');
       expect(within(lvefCard).getByTitle('Critical value - must be verified')).toBeInTheDocument();
@@ -162,16 +174,20 @@ describe('VerificationPanel', () => {
     it('calls onVerifyValue when checkbox is clicked', async () => {
       const user = userEvent.setup();
 
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       const checkbox = screen.getByTestId('verify-checkbox-val-1');
-      await user.click(checkbox);
+      await act(async () => {
+        await user.click(checkbox);
+      });
 
       expect(mockHandlers.onVerifyValue).toHaveBeenCalledWith('val-1');
     });
@@ -179,30 +195,36 @@ describe('VerificationPanel', () => {
     it('calls onVerifyAll when verify all button is clicked', async () => {
       const user = userEvent.setup();
 
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       const verifyAllButton = screen.getByTestId('verify-all-button');
-      await user.click(verifyAllButton);
+      await act(async () => {
+        await user.click(verifyAllButton);
+      });
 
       expect(mockHandlers.onVerifyAll).toHaveBeenCalled();
     });
 
-    it('disables verify all button when all verified', () => {
+    it('disables verify all button when all verified', async () => {
       const allVerifiedValues = mockValues.map((v) => ({ ...v, verified: true }));
 
-      render(
-        <VerificationPanel
-          extractedValues={allVerifiedValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={allVerifiedValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       const verifyAllButton = screen.getByTestId('verify-all-button');
       expect(verifyAllButton).toBeDisabled();
@@ -212,28 +234,34 @@ describe('VerificationPanel', () => {
     it('calls onValueClick when view source is clicked', async () => {
       const user = userEvent.setup();
 
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       const viewSourceButton = screen.getByTestId('view-source-val-1');
-      await user.click(viewSourceButton);
+      await act(async () => {
+        await user.click(viewSourceButton);
+      });
 
       expect(mockHandlers.onValueClick).toHaveBeenCalledWith('val-1');
     });
 
-    it('displays verified state correctly', () => {
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+    it('displays verified state correctly', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       const verifiedCard = screen.getByTestId('value-card-val-3');
       expect(verifiedCard).toHaveAttribute('data-verified', 'true');
@@ -244,16 +272,20 @@ describe('VerificationPanel', () => {
     it('opens dismiss dialog when dismiss button clicked', async () => {
       const user = userEvent.setup();
 
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       const dismissButton = screen.getByTestId('dismiss-flag-flag-1');
-      await user.click(dismissButton);
+      await act(async () => {
+        await user.click(dismissButton);
+      });
 
       expect(screen.getByTestId('dismiss-flag-dialog')).toBeInTheDocument();
       expect(screen.getByText('Dismiss Hallucination Flag')).toBeInTheDocument();
@@ -262,17 +294,21 @@ describe('VerificationPanel', () => {
     it('requires reason to dismiss flag', async () => {
       const user = userEvent.setup();
 
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       // Open dialog
       const dismissButton = screen.getByTestId('dismiss-flag-flag-1');
-      await user.click(dismissButton);
+      await act(async () => {
+        await user.click(dismissButton);
+      });
 
       // Confirm button should be disabled without reason
       const confirmButton = screen.getByTestId('confirm-dismiss-button');
@@ -280,7 +316,9 @@ describe('VerificationPanel', () => {
 
       // Type reason
       const reasonInput = screen.getByTestId('dismiss-reason-input');
-      await user.type(reasonInput, 'Verified with patient records');
+      await act(async () => {
+        await user.type(reasonInput, 'Verified with patient records');
+      });
 
       // Now confirm should be enabled
       expect(confirmButton).toBeEnabled();
@@ -289,24 +327,32 @@ describe('VerificationPanel', () => {
     it('calls onDismissFlag with reason', async () => {
       const user = userEvent.setup();
 
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       // Open dialog
-      await user.click(screen.getByTestId('dismiss-flag-flag-1'));
+      await act(async () => {
+        await user.click(screen.getByTestId('dismiss-flag-flag-1'));
+      });
 
       // Enter reason
       const reasonInput = screen.getByTestId('dismiss-reason-input');
-      await user.type(reasonInput, 'Confirmed accurate');
+      await act(async () => {
+        await user.type(reasonInput, 'Confirmed accurate');
+      });
 
       // Confirm
       const confirmButton = screen.getByTestId('confirm-dismiss-button');
-      await user.click(confirmButton);
+      await act(async () => {
+        await user.click(confirmButton);
+      });
 
       expect(mockHandlers.onDismissFlag).toHaveBeenCalledWith(
         'flag-1',
@@ -314,14 +360,16 @@ describe('VerificationPanel', () => {
       );
     });
 
-    it('displays critical and warning flags differently', () => {
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+    it('displays critical and warning flags differently', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       const criticalFlag = screen.getByTestId('flag-card-flag-1');
       const warningFlag = screen.getByTestId('flag-card-flag-2');
@@ -330,7 +378,7 @@ describe('VerificationPanel', () => {
       expect(warningFlag).toHaveAttribute('data-severity', 'warning');
     });
 
-    it('hides dismissed flags', () => {
+    it('hides dismissed flags', async () => {
       const flagsWithDismissed = [
         ...mockFlags,
         {
@@ -343,13 +391,15 @@ describe('VerificationPanel', () => {
         },
       ];
 
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={flagsWithDismissed}
-          {...mockHandlers}
-        />
-      );
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={flagsWithDismissed}
+            {...mockHandlers}
+          />
+        );
+      });
 
       expect(screen.queryByText('Dismissed flag')).not.toBeInTheDocument();
       // Should only show 2 active flags
@@ -358,14 +408,16 @@ describe('VerificationPanel', () => {
   });
 
   describe('Accessibility', () => {
-    it('has proper ARIA labels', () => {
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+    it('has proper ARIA labels', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       expect(screen.getByLabelText('Verify LVEF')).toBeInTheDocument();
       expect(screen.getByLabelText('View source for LVEF')).toBeInTheDocument();
@@ -375,31 +427,37 @@ describe('VerificationPanel', () => {
     it('supports keyboard navigation', async () => {
       const user = userEvent.setup();
 
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       const viewSourceButton = screen.getByTestId('view-source-val-1');
 
       // Focus and activate with keyboard
-      viewSourceButton.focus();
-      await user.keyboard('{Enter}');
+      await act(async () => {
+        viewSourceButton.focus();
+        await user.keyboard('{Enter}');
+      });
 
       expect(mockHandlers.onValueClick).toHaveBeenCalledWith('val-1');
     });
 
-    it('has proper role for alert', () => {
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+    it('has proper role for alert', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       const alert = screen.getByRole('alert');
       expect(alert).toHaveAttribute('aria-live', 'polite');
@@ -407,47 +465,53 @@ describe('VerificationPanel', () => {
   });
 
   describe('Edge Cases', () => {
-    it('handles empty values array', () => {
-      render(
-        <VerificationPanel
-          extractedValues={[]}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+    it('handles empty values array', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={[]}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       expect(screen.getByText('No clinical values extracted yet')).toBeInTheDocument();
-      expect(screen.getByText('0 of 0 verified')).toBeInTheDocument();
+      expect(screen.getByText(/0\s+of\s+0\s+verified/i)).toBeInTheDocument();
     });
 
-    it('handles no flags', () => {
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={[]}
-          {...mockHandlers}
-        />
-      );
+    it('handles no flags', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={[]}
+            {...mockHandlers}
+          />
+        );
+      });
 
       expect(screen.queryByText(/AI Hallucination Flags/i)).not.toBeInTheDocument();
     });
 
-    it('shows 100% when all values verified', () => {
+    it('shows 100% when all values verified', async () => {
       const allVerified = mockValues.map((v) => ({ ...v, verified: true }));
 
-      render(
-        <VerificationPanel
-          extractedValues={allVerified}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={allVerified}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       expect(screen.getByText('100%')).toBeInTheDocument();
-      expect(screen.getByText('3 of 3 verified')).toBeInTheDocument();
+      expect(screen.getByText(/3\s+of\s+3\s+verified/i)).toBeInTheDocument();
     });
 
-    it('handles values without units', () => {
+    it('handles values without units', async () => {
       const valueWithoutUnit: ExtractedValue = {
         id: 'val-4',
         category: 'procedural',
@@ -458,13 +522,15 @@ describe('VerificationPanel', () => {
         critical: false,
       };
 
-      render(
-        <VerificationPanel
-          extractedValues={[valueWithoutUnit]}
-          hallucinationFlags={[]}
-          {...mockHandlers}
-        />
-      );
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={[valueWithoutUnit]}
+            hallucinationFlags={[]}
+            {...mockHandlers}
+          />
+        );
+      });
 
       const card = screen.getByTestId('value-card-val-4');
       expect(within(card).getByText('PCI')).toBeInTheDocument();
@@ -472,14 +538,16 @@ describe('VerificationPanel', () => {
   });
 
   describe('Category Badges', () => {
-    it('shows correct verification count per category', () => {
-      render(
-        <VerificationPanel
-          extractedValues={mockValues}
-          hallucinationFlags={mockFlags}
-          {...mockHandlers}
-        />
-      );
+    it('shows correct verification count per category', async () => {
+      await act(async () => {
+        render(
+          <VerificationPanel
+            extractedValues={mockValues}
+            hallucinationFlags={mockFlags}
+            {...mockHandlers}
+          />
+        );
+      });
 
       // Cardiac Function: 0/1 verified
       // Coronary Disease: 0/1 verified
