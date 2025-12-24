@@ -40,19 +40,21 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-border/60 bg-card">
+    <aside className="flex h-full w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       {/* Logo */}
-      <div className="flex h-16 items-center border-b border-border/60 px-space-6">
+      <div className="flex h-16 items-center border-b border-slate-200 px-6 dark:border-slate-800">
         <Link
           href={'/dashboard' as Route}
-          className="flex items-center gap-space-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="flex items-center gap-2 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
         >
-          <span className="text-heading-2 text-primary">DictateMED</span>
+          <span className="text-xl font-semibold tracking-tight text-teal-600 dark:text-teal-400">
+            DictateMED
+          </span>
         </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-space-1 p-space-4" role="navigation" aria-label="Main">
+      <nav className="flex-1 space-y-1 p-4" role="navigation" aria-label="Main">
         {navigation.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -65,18 +67,24 @@ export function Sidebar() {
               aria-current={isActive ? 'page' : undefined}
               className={cn(
                 // Base styles - 44px min height for touch targets
-                'flex items-center gap-space-3 rounded-lg px-space-3 min-h-touch',
-                'text-label transition-all duration-150',
+                'flex items-center gap-3 rounded-xl px-3 py-2.5 min-h-[44px]',
+                'text-sm font-medium transition-all duration-200',
                 // Focus visible for keyboard navigation
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500',
                 isActive
-                  ? // Active: subtle primary background, primary text
-                    'bg-primary/10 text-primary font-medium'
-                  : // Inactive: muted text, hover state
-                    'text-muted-foreground hover:bg-accent hover:text-accent-foreground active:bg-accent/80'
+                  ? // Active: teal highlight with left border accent
+                    'bg-teal-50 text-teal-700 border-l-2 border-teal-500 dark:bg-teal-950 dark:text-teal-300'
+                  : // Inactive: slate text with hover lift effect
+                    'text-slate-600 hover:bg-slate-100 hover:text-slate-800 hover:-translate-y-0.5 hover:shadow-sm dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
               )}
             >
-              <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+              <Icon
+                className={cn(
+                  'h-5 w-5 shrink-0 transition-colors duration-200',
+                  isActive ? 'text-teal-600 dark:text-teal-400' : ''
+                )}
+                aria-hidden="true"
+              />
               {item.name}
             </Link>
           );
@@ -84,11 +92,11 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-border/60 p-space-4">
-        <p className="text-caption text-muted-foreground">
+      <div className="border-t border-slate-200 p-4 dark:border-slate-800">
+        <p className="text-xs text-slate-400 dark:text-slate-500">
           DictateMED v0.1.0
           <br />
-          Clinical documentation assistant
+          <span className="text-slate-500 dark:text-slate-400">Clinical documentation assistant</span>
         </p>
       </div>
     </aside>

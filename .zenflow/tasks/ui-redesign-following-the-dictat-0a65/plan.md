@@ -99,7 +99,8 @@ Update base UI component styling:
 
 ---
 
-### [ ] Step 3: Navigation Shell
+### [x] Step 3: Navigation Shell
+<!-- chat-id: fec8968e-bf40-40d7-b3cf-9215c97982b1 -->
 
 Update navigation components:
 
@@ -113,6 +114,21 @@ Update navigation components:
    - Update button variants if needed
 
 **Verification**: Navigation renders, active states work correctly
+
+**Completed Changes**:
+- **Sidebar.tsx**: Updated to new design system with:
+  - Active nav items: `bg-teal-50 text-teal-700 border-l-2 border-teal-500` with dark mode support
+  - Inactive items: slate colors with hover lift effect (`hover:-translate-y-0.5 hover:shadow-sm`)
+  - Logo: teal-600 color with tracking-tight typography
+  - Borders: slate-200/800 for light/dark modes
+  - Focus states: teal-500 outline
+  - Icon coloring: teal-600 when active
+- **Header.tsx**: Updated to consistent styling with:
+  - slate-200/800 borders for light/dark modes
+  - White/slate-900 backgrounds for light/dark modes
+  - User greeting with emphasized name (font-medium text-slate-700)
+  - Rounded-xl focus rings with teal-500 outline
+- Both `npm run lint` and `npm run build` pass successfully
 
 ---
 
