@@ -563,5 +563,363 @@ Track how style changes over time:
 
 ---
 
-*Last updated: 2025-12-22*
+---
+
+# Design Notes: Referral Upload & Auto-Populate Feature
+
+This document captures the architectural decisions, trade-offs, and rationale behind the referral upload and auto-populate feature.
+
+---
+
+## Table of Contents
+
+1. [Problem Statement](#problem-statement-1)
+2. [Design Principles](#design-principles-1)
+3. [Key Architecture Decisions](#key-architecture-decisions-1)
+4. [PHI Handling Decisions](#phi-handling-decisions)
+5. [Trade-offs & Alternatives Considered](#trade-offs--alternatives-considered-1)
+6. [Known Limitations](#known-limitations-1)
+7. [Future Considerations](#future-considerations-1)
+
+---
+
+## Problem Statement
+
+### The Challenge
+
+Specialists receive referral letters from GPs and other clinicians. Manually transcribing patient and referrer details into the consultation form is:
+- Time-consuming
+- Error-prone
+- Repetitive
+
+### Goals
+
+1. **Reduce data entry** - Auto-extract patient and referrer details from uploaded letters
+2. **Maintain accuracy** - Human review before applying extracted data
+3. **Privacy-safe processing** - Handle PHI appropriately at all stages
+4. **Graceful degradation** - Manual entry always available as fallback
+5. **Non-blocking** - Extraction failures shouldn't prevent consultation creation
+
+---
+
+## Design Principles
+
+### 1. Human-in-the-Loop
+
+AI extraction is never directly applied to clinical records. The clinician must:
+- Review all extracted data
+- Edit any incorrect fields
+- Explicitly click "Apply" to confirm
+
+This ensures clinical accuracy while benefiting from AI assistance.
+
+### 2. Privacy by Design
+
+- Referral documents contain PHI (patient names, DOBs, Medicare numbers)
+- All processing happens within the secure infrastructure
+- No PHI is sent to external services (except our contracted AI provider)
+- Documents are encrypted at rest and in transit
+- Audit logging captures all access
+
+### 3. Progressive Enhancement
+
+The feature enhances but doesn't replace manual entry:
+1. User can always skip upload and enter manually
+2. Extraction errors show helpful fallback messaging
+3. Low confidence scores trigger review warnings
+
+### 4. Fail-Safe Defaults
+
+- Upload errors don't block the consultation
+- Parsing failures mark document as FAILED but don't crash
+- Missing fields get empty values, not hallucinated data
+
+---
+
+## Key Architecture Decisions
+
+### Decision 1: Status-Based Processing Pipeline
+
+**Chosen: Explicit status transitions with validation at each step**
+
+```
+UPLOADED → TEXT_EXTRACTED → EXTRACTED → APPLIED
+```
+
+**Rationale:**
+- Each step can fail independently
+- Status provides clear audit trail
+- Enables retry from any step
+- Prevents re-processing of completed steps
+
+**Alternative considered:** Single "process" endpoint that does everything. Rejected because:
+- Harder to debug failures
+- No granular retry capability
+- Longer request timeout needed
+
+### Decision 2: Client-Side S3 Upload with Presigned URLs
+
+**Chosen: Server generates presigned URL, client uploads directly to S3**
+
+**Rationale:**
+- Reduces server load (no proxying large files)
+- Faster upload for user (direct to storage)
+- Standard pattern for document upload
+
+**Flow:**
+```
+Client → POST /api/referrals → Get presigned URL
+Client → PUT to S3 directly → Upload file
+Client → PATCH /api/referrals/:id → Confirm upload
+```
+
+### Decision 3: pdf-parse for Text Extraction
+
+**Chosen: Server-side pdf-parse library**
+
+**Rationale:**
+- Pure JavaScript, works in Node.js
+- No external service dependencies
+- Fast for typical referral letters
+- Well-maintained library
+
+**Limitation:** Scanned PDFs (images) won't extract text. Future enhancement could use vision API fallback for `isShortText` cases.
+
+### Decision 4: Claude Sonnet for Structured Extraction
+
+**Chosen: Claude Sonnet with JSON schema prompt**
+
+**Rationale:**
+- Strong medical document understanding
+- Reliable JSON output
+- Good balance of quality and cost
+- Already used for letter generation
+
+**Prompt Design:**
+- Explicit JSON schema in prompt
+- Instructions for handling missing data (use null, not guesses)
+- Confidence score guidelines (0.9+ for explicit mentions, 0.7+ for inferred)
+
+### Decision 5: Practice-Level Document Access
+
+**Chosen: Any authenticated user in a practice can access referral documents**
+
+**Rationale:**
+- Multiple clinicians may collaborate on patient intake
+- Consistent with existing practice-level patient access
+- Simpler authorization model
+- Still audit logged with individual userId
+
+**Alternative considered:** User-level access (only uploader can see). Rejected because:
+- Breaks workflow when different clinician sees patient
+- Adds complexity for handoffs
+
+### Decision 6: Editable Review Before Apply
+
+**Chosen: Full editing capability in review panel**
+
+**Rationale:**
+- AI extraction isn't perfect
+- Clinician may have additional context
+- Typo correction before saving
+- Builds trust in the system
+
+**UX:**
+- Click any field to edit inline
+- Clear section button for incorrect sections
+- Restore original value if editing was wrong
+
+---
+
+## PHI Handling Decisions
+
+### Principle: Minimize PHI Exposure While Enabling Function
+
+### Decision 1: Store Extracted Text and Data
+
+**Chosen: Store contentText and extractedData in database**
+
+**Rationale:**
+- Enables re-review without re-processing
+- Supports future search/analytics
+- Part of clinical record
+
+**Security measures:**
+- Database-level encryption
+- Access control at practice level
+- Audit logging
+
+**Alternative considered:** Process but don't store. Rejected because:
+- Would need to re-extract from S3 on each view
+- Loses the "review before apply" capability
+- More S3 operations = more cost
+
+### Decision 2: Send Full Text to AI Provider
+
+**Chosen: Send entire extracted text to Claude for processing**
+
+**Rationale:**
+- Context is necessary for accurate extraction
+- AI provider (Anthropic) has appropriate DPA
+- Alternative (local models) not viable for quality
+
+**Mitigations:**
+- Data processed under Business Associate Agreement
+- No additional data retention by AI provider
+- Audit logged when sent
+
+### Decision 3: Patient Matching Uses Encrypted Field Comparison
+
+**Chosen: Decrypt patients to compare for matches**
+
+**Rationale:**
+- Can't search encrypted fields directly
+- Medicare number matching prevents duplicates
+- Name+DOB matching catches common patterns
+
+**Privacy measure:**
+- Comparison happens in memory
+- Only matching patient ID returned
+- Full patient data not exposed
+
+### Decision 4: Audit All Operations
+
+**Chosen: Comprehensive audit logging for all referral operations**
+
+**Logged events:**
+- Document create
+- Upload confirm
+- Text extraction (success/fail)
+- Structured extraction with token counts
+- Apply with field summary
+- Delete
+
+**Purpose:**
+- Compliance with medical record requirements
+- Debug capability
+- Usage analytics (de-identified)
+
+---
+
+## Trade-offs & Alternatives Considered
+
+### Trade-off: Immediate vs. Background Processing
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| Immediate (synchronous) | Simpler, user sees result immediately | Blocks UI during processing |
+| Background (async) | Non-blocking, handles long PDFs | Complex polling, state management |
+
+**Decision:** Immediate with UI progress indicators. Typical referral letters process in 2-5 seconds, which is acceptable with good progress feedback.
+
+### Trade-off: Confidence Thresholds
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| Hard threshold (reject low confidence) | Prevents bad data | May reject valid extractions |
+| Soft threshold (warn only) | Allows clinician judgment | May be ignored |
+
+**Decision:** Soft threshold (70% for overall warning). Clinician always reviews, threshold just highlights areas needing attention.
+
+### Trade-off: DOCX Support
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| Support DOCX | More file types accepted | Additional dependency, complexity |
+| PDF/TXT only | Simpler, most letters are PDF | Some users have DOCX |
+
+**Decision:** PDF/TXT only for MVP. DOCX can be added later with mammoth.js or similar.
+
+### Alternative: OCR for Scanned PDFs
+
+**Considered:** Adding Tesseract or cloud OCR for scanned documents.
+
+**Deferred because:**
+- Adds significant complexity
+- Most modern referrals are digital PDFs
+- Vision API fallback could handle this better
+- Can be added based on user feedback
+
+---
+
+## Known Limitations
+
+### 1. Scanned PDFs
+
+PDFs that are scanned images won't have extractable text. The `isShortText` flag identifies these cases.
+
+**Mitigation:** Clear error message, manual entry fallback.
+
+**Future:** Vision API fallback for scanned documents.
+
+### 2. Non-English Letters
+
+Extraction prompt is English-focused. Other languages may have:
+- Different date formats
+- Different name patterns
+- Medical terminology variations
+
+**Mitigation:** Parser handles AU date formats (DD/MM/YYYY).
+
+**Future:** Language detection and localized prompts.
+
+### 3. Complex Letter Formats
+
+Unusual letter layouts may confuse extraction:
+- Multi-column layouts
+- Heavily formatted tables
+- Handwritten notes
+
+**Mitigation:** Confidence scores flag uncertain extractions.
+
+### 4. Large Files
+
+Files approaching 10MB limit may take longer to process.
+
+**Mitigation:** Progress indicators, timeout handling.
+
+---
+
+## Future Considerations
+
+### 1. Vision API Fallback
+
+For scanned PDFs or low text extraction:
+- Send PDF as image to vision model
+- Extract text and structure visually
+- Higher cost but handles edge cases
+
+### 2. Batch Upload
+
+Allow uploading multiple referral letters at once:
+- Queue for processing
+- Status dashboard
+- Bulk apply capability
+
+### 3. Template Recognition
+
+Recognize common referral templates:
+- GP practice letterheads
+- Hospital discharge summaries
+- Specialist referral forms
+
+Pre-trained extraction patterns for known formats.
+
+### 4. Integration with Practice Management Systems
+
+Pull referrals directly from integrated systems:
+- HealthLink messages
+- Practice management inbox
+- Hospital portals
+
+### 5. Referral Prioritization
+
+After extraction, suggest urgency:
+- Flag urgent referrals
+- Categorize by condition type
+- Suggest appointment timeframes
+
+---
+
+*Last updated: 2025-12-23*
 *Authors: DictateMED Engineering*

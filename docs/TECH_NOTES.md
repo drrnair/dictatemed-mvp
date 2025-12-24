@@ -1140,5 +1140,531 @@ const response = await generateTextWithRetry({
 
 ---
 
+---
+
+# Technical Notes: Referral Upload & Auto-Populate Feature
+
+This document provides technical documentation for the referral letter upload and auto-population feature in DictateMED.
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview-1)
+2. [Processing Pipeline](#processing-pipeline)
+3. [Database Schema](#database-schema-1)
+4. [API Reference](#api-reference-1)
+5. [PHI Handling](#phi-handling)
+6. [Error Handling](#error-handling-1)
+7. [QA Testing Guide](#qa-testing-guide)
+
+---
+
+## Overview
+
+The referral upload feature allows specialists to upload a referral letter (PDF or text) and automatically extract patient and referrer details to pre-fill the consultation form. This reduces manual data entry and improves accuracy.
+
+### Key Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| ReferralDocument model | `prisma/schema.prisma` | Stores referral document metadata and extracted data |
+| referral.service | `src/domains/referrals/` | Core business logic for document processing |
+| referral-extraction.service | `src/domains/referrals/` | AI-powered structured data extraction |
+| ReferralUploader | `src/components/referral/` | Upload UI component |
+| ReferralReviewPanel | `src/components/referral/` | Review and edit extracted data |
+
+### Status Workflow
+
+```
+UPLOADED → TEXT_EXTRACTED → EXTRACTED → APPLIED
+    ↓           ↓              ↓
+  FAILED      FAILED        FAILED
+```
+
+| Status | Description |
+|--------|-------------|
+| `UPLOADED` | File uploaded to S3, awaiting text extraction |
+| `TEXT_EXTRACTED` | Text extracted from PDF/file, awaiting AI analysis |
+| `EXTRACTED` | AI has extracted structured data, ready for review |
+| `APPLIED` | Data has been applied to consultation context |
+| `FAILED` | Processing failed at some stage |
+
+---
+
+## Processing Pipeline
+
+### Architecture
+
+```
+┌─────────────────────┐
+│   1. File Upload    │ ← User drags/selects PDF or text file
+│   (ReferralUploader)│
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│ 2. S3 Upload        │ ← Presigned URL upload to object storage
+│ POST /api/referrals │   Creates ReferralDocument record
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│ 3. Text Extraction  │ ← pdf-parse for PDFs, direct read for .txt
+│ POST .../extract-text│  Updates contentText field
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│ 4. AI Extraction    │ ← Claude Sonnet extracts structured data
+│ POST .../extract-   │   Patient, GP, referrer, context
+│      structured     │
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│ 5. User Review      │ ← ReferralReviewPanel modal
+│ (ReferralReviewPanel│   Edit/confirm extracted fields
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│ 6. Apply to Form    │ ← Creates/matches patient, creates referrer
+│ POST .../apply      │   Links document to consultation
+└─────────────────────┘
+```
+
+### Step 1-2: File Upload
+
+1. User selects file via drag-drop or file picker
+2. Client validates: file type (PDF, TXT), size (≤10MB)
+3. `POST /api/referrals` creates `ReferralDocument` record
+4. Returns presigned S3 upload URL
+5. Client uploads directly to S3
+6. `PATCH /api/referrals/:id` confirms upload
+
+### Step 3: Text Extraction
+
+1. `POST /api/referrals/:id/extract-text`
+2. Fetches file from S3
+3. For PDF: uses `pdf-parse` library to extract text
+4. For TXT: reads directly as UTF-8
+5. Stores extracted text in `contentText` field
+6. Updates status to `TEXT_EXTRACTED`
+7. Flags `isShortText` if < 100 characters (may need vision fallback in future)
+
+### Step 4: AI Structured Extraction
+
+1. `POST /api/referrals/:id/extract-structured`
+2. Sends text to Claude Sonnet with extraction prompt
+3. Prompt requests JSON with:
+   - Patient: fullName, dateOfBirth, sex, medicare, MRN, address, phone, email
+   - GP: fullName, practiceName, address, phone, fax, email, providerNumber
+   - Referrer: fullName, specialty, organisation, contact details
+   - Context: reasonForReferral, keyProblems[], investigationsMentioned[], medicationsMentioned[], urgency
+   - Confidence scores (0-1) per section
+4. Parser handles various date formats (ISO, DD/MM/YYYY)
+5. Updates status to `EXTRACTED`
+
+### Step 5: User Review
+
+1. `ReferralReviewPanel` displays extracted data
+2. All fields are editable
+3. Confidence indicators show extraction reliability:
+   - ≥80%: Green (high confidence)
+   - 60-79%: Amber (medium confidence)
+   - <60%: Red (low confidence, needs review)
+4. User can clear sections or restore original values
+
+### Step 6: Apply to Consultation
+
+1. `POST /api/referrals/:id/apply` with (possibly edited) data
+2. Patient matching:
+   - First tries Medicare number match
+   - Then name + DOB match
+   - Creates new patient if no match
+3. Creates/updates practice-level referrer
+4. Creates patient-level GP contact
+5. Updates document status to `APPLIED`
+6. Returns IDs for form population
+
+---
+
+## Database Schema
+
+### ReferralDocument Table
+
+```prisma
+model ReferralDocument {
+  id              String    @id @default(uuid())
+  userId          String
+  practiceId      String
+  patientId       String?   // Linked after apply
+  consultationId  String?   // Linked after apply
+
+  filename        String
+  mimeType        String
+  sizeBytes       Int
+  s3Key           String
+
+  status          ReferralDocumentStatus @default(UPLOADED)
+  contentText     String?   @db.Text  // Extracted text
+  extractedData   Json?     // Structured extraction result
+  processingError String?   // Error message if failed
+  processedAt     DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(...)
+  practice        Practice  @relation(...)
+  patient         Patient?  @relation(...)
+  consultation    Consultation? @relation(...)
+}
+
+enum ReferralDocumentStatus {
+  UPLOADED
+  TEXT_EXTRACTED
+  EXTRACTED
+  APPLIED
+  FAILED
+}
+```
+
+### Extracted Data JSON Structure
+
+```typescript
+interface ReferralExtractedData {
+  patient: {
+    fullName?: string;
+    dateOfBirth?: string;  // ISO format: YYYY-MM-DD
+    sex?: 'male' | 'female' | 'other';
+    medicare?: string;
+    mrn?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+    confidence: number;    // 0-1
+  };
+  gp: {
+    fullName?: string;
+    practiceName?: string;
+    address?: string;
+    phone?: string;
+    fax?: string;
+    email?: string;
+    providerNumber?: string;
+    confidence: number;
+  };
+  referrer?: {
+    fullName?: string;
+    specialty?: string;
+    organisation?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+    confidence: number;
+  };
+  referralContext: {
+    reasonForReferral?: string;
+    keyProblems?: string[];
+    investigationsMentioned?: string[];
+    medicationsMentioned?: string[];
+    urgency?: 'routine' | 'urgent' | 'emergency';
+    referralDate?: string;
+    confidence: number;
+  };
+  overallConfidence: number;
+  extractedAt: string;      // ISO timestamp
+  modelUsed: string;        // Model ID used for extraction
+}
+```
+
+---
+
+## API Reference
+
+### Create Referral Document
+
+```
+POST /api/referrals
+Content-Type: application/json
+
+{
+  "filename": "referral-letter.pdf",
+  "mimeType": "application/pdf",
+  "sizeBytes": 102400
+}
+
+Response:
+{
+  "id": "uuid",
+  "uploadUrl": "https://s3.../presigned-upload-url",
+  "expiresAt": "2024-01-01T01:00:00Z"
+}
+```
+
+### Confirm Upload
+
+```
+PATCH /api/referrals/:id
+Content-Type: application/json
+
+{
+  "sizeBytes": 102400  // Actual uploaded size
+}
+```
+
+### Extract Text
+
+```
+POST /api/referrals/:id/extract-text
+
+Response:
+{
+  "id": "uuid",
+  "status": "TEXT_EXTRACTED",
+  "textLength": 1500,
+  "preview": "First 500 characters...",
+  "isShortText": false
+}
+```
+
+### Extract Structured Data
+
+```
+POST /api/referrals/:id/extract-structured
+
+Response:
+{
+  "id": "uuid",
+  "status": "EXTRACTED",
+  "extractedData": { ... }
+}
+```
+
+### Apply to Consultation
+
+```
+POST /api/referrals/:id/apply
+Content-Type: application/json
+
+{
+  "consultationId": "uuid",  // Optional
+  "patient": {
+    "fullName": "John Smith",
+    "dateOfBirth": "1980-01-15",
+    "medicare": "1234567890"
+  },
+  "gp": {
+    "fullName": "Dr. Jane Wilson",
+    "practiceName": "City Medical"
+  },
+  "referrer": { ... },      // Optional
+  "referralContext": { ... } // Optional
+}
+
+Response:
+{
+  "patientId": "uuid",
+  "referrerId": "uuid",
+  "consultationId": "uuid",
+  "status": "APPLIED"
+}
+```
+
+### List Documents
+
+```
+GET /api/referrals?status=EXTRACTED&page=1&limit=20
+
+Response:
+{
+  "documents": [...],
+  "total": 50,
+  "page": 1,
+  "limit": 20,
+  "hasMore": true
+}
+```
+
+---
+
+## PHI Handling
+
+### Data Flow & Storage
+
+| Data | Storage | PHI Status | Encryption |
+|------|---------|------------|------------|
+| Uploaded file | S3 | Contains PHI | At-rest encryption |
+| Extracted text | `contentText` | Contains PHI | Database encryption |
+| Extracted data | `extractedData` JSON | Contains PHI | Database encryption |
+| Patient records | `Patient` table | Contains PHI | Field-level encryption |
+
+### Access Control
+
+- All referral document operations require authentication
+- Documents are scoped to practice level (`practiceId`)
+- Any authenticated user within a practice can access referral documents
+- Operations are audit logged with userId
+
+### Data Retention
+
+- Referral documents are retained as part of the clinical record
+- Documents with status `APPLIED` cannot be deleted
+- Deletion removes both S3 object and database record
+
+### Audit Logging
+
+All referral operations create audit logs:
+
+```
+referral.create         - Document created
+referral.upload_confirm - S3 upload confirmed
+referral.extract_text   - Text extraction succeeded
+referral.extract_text_failed - Text extraction failed
+referral.extract_structured - AI extraction succeeded
+referral.apply          - Applied to consultation
+referral.delete         - Document deleted
+```
+
+---
+
+## Error Handling
+
+### Common Errors
+
+| Error | Status | User Message |
+|-------|--------|--------------|
+| Invalid file type | 400 | "PDF or plain text files only" |
+| File too large | 400 | "Maximum file size is 10MB" |
+| PDF parse failed | 500 | "Could not read this PDF. Try a different file." |
+| AI extraction failed | 500 | "Could not extract details. You can enter them manually." |
+| Already processed | 400 | "This document has already been processed" |
+
+### Graceful Degradation
+
+The UI always allows manual entry fallback:
+- Upload errors show "You can still complete the form manually"
+- Extraction errors don't block the consultation workflow
+- Low confidence warnings encourage review but don't prevent apply
+
+---
+
+## QA Testing Guide
+
+### Sample Test Referral Letter
+
+Use this sample text for testing (save as `test-referral.txt`):
+
+```
+Dr. Sarah Chen
+Harbour Medical Centre
+45 Harbour St, Sydney NSW 2000
+Phone: (02) 9876 5432
+Email: drschen@harbourmed.com.au
+
+15 January 2024
+
+Dear Specialist,
+
+Re: John Michael Smith
+DOB: 15/03/1965
+Medicare: 2345 67890 1
+Address: 123 Patient St, Sydney NSW 2000
+Phone: 0412 345 678
+
+I am referring this 58-year-old male patient for assessment of chest pain
+and shortness of breath on exertion over the past 3 months.
+
+History:
+Mr. Smith presents with increasing episodes of substernal chest discomfort
+on moderate exertion, relieved by rest. Associated dyspnoea noted.
+
+Key Problems:
+- Exertional chest pain
+- Dyspnoea on exertion
+- Hypertension (controlled)
+- Hyperlipidaemia
+
+Investigations:
+- ECG: Normal sinus rhythm
+- Stress test: ST depression in leads V4-V6 at peak exercise
+- Lipid panel: LDL 3.2 mmol/L
+
+Current Medications:
+- Aspirin 100mg daily
+- Metoprolol XL 50mg daily
+- Atorvastatin 20mg nocte
+
+Thank you for seeing this patient at your earliest convenience.
+
+Kind regards,
+
+Dr. Sarah Chen
+MBBS, FRACGP
+Provider Number: 1234567A
+```
+
+### Test Scenarios
+
+1. **Happy path PDF upload**
+   - Upload a valid PDF referral letter
+   - Verify text extraction succeeds
+   - Verify AI extraction returns patient and GP details
+   - Review and apply to consultation
+   - Verify patient and referrer created
+
+2. **Text file upload**
+   - Upload the sample text file above
+   - Verify same extraction flow works
+
+3. **Invalid file type**
+   - Try uploading .docx, .jpg, etc.
+   - Verify user-friendly error message
+
+4. **Large file rejection**
+   - Try uploading file >10MB
+   - Verify size error message
+
+5. **Low confidence handling**
+   - Upload a poorly formatted letter
+   - Verify confidence indicators show amber/red
+   - Verify low confidence warning banner appears
+
+6. **Edit extracted data**
+   - Upload and extract a letter
+   - Edit patient name in review panel
+   - Apply and verify edited name is used
+
+7. **Clear section**
+   - Upload and extract a letter
+   - Clear the GP section
+   - Apply and verify no GP is created
+
+8. **Existing patient match**
+   - Create a patient with Medicare 2345 67890 1
+   - Upload referral for same Medicare number
+   - Verify existing patient is matched, not duplicated
+
+### Verification Checklist
+
+- [ ] Upload zone accepts drag-and-drop
+- [ ] Upload zone accepts file picker
+- [ ] Progress indicator shows during upload
+- [ ] "Reading document..." shown during text extraction
+- [ ] "Extracting details..." shown during AI extraction
+- [ ] Review panel displays all extracted fields
+- [ ] Confidence indicators show correct colors
+- [ ] Fields are editable
+- [ ] Clear/Restore buttons work
+- [ ] Apply creates patient record
+- [ ] Apply creates referrer record
+- [ ] Consultation form is populated after apply
+- [ ] Error states show manual entry fallback
+- [ ] Retry button works on failure
+
+---
+
 *Last updated: 2025-12-24*
 *Version: 1.1.0 - Added Medical Specialty Taxonomy and Low-Friction Onboarding*

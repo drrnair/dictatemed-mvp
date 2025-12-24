@@ -18,7 +18,7 @@ interface HealthCheckResponse {
     database: ServiceStatus;
     deepgram: ServiceStatus;
     bedrock: ServiceStatus;
-    s3: ServiceStatus;
+    supabase: ServiceStatus;
   };
 }
 
@@ -68,26 +68,32 @@ async function checkBedrock(): Promise<ServiceStatus> {
   return { status: 'up' };
 }
 
-async function checkS3(): Promise<ServiceStatus> {
-  // S3 health check - verify bucket is configured
-  if (!process.env.S3_BUCKET_NAME) {
+async function checkSupabase(): Promise<ServiceStatus> {
+  // Supabase health check - verify credentials are configured
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
     return {
       status: 'down',
-      message: 'S3 bucket not configured',
+      message: 'Supabase URL not configured',
+    };
+  }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return {
+      status: 'down',
+      message: 'Supabase service role key not configured',
     };
   }
   return { status: 'up' };
 }
 
 async function performHealthCheck(): Promise<HealthCheckResponse> {
-  const [database, deepgram, bedrock, s3] = await Promise.all([
+  const [database, deepgram, bedrock, supabase] = await Promise.all([
     checkDatabase(),
     checkDeepgram(),
     checkBedrock(),
-    checkS3(),
+    checkSupabase(),
   ]);
 
-  const checks = { database, deepgram, bedrock, s3 };
+  const checks = { database, deepgram, bedrock, supabase };
 
   // Determine overall status
   const allChecks = Object.values(checks);
