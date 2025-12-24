@@ -144,8 +144,8 @@ const mockSubspecialties = [
     updatedAt: new Date('2024-01-01'),
   },
   {
-    id: 'subspec-2',
-    specialtyId: 'spec-1',
+    id: SUBSPEC_EP_ID,
+    specialtyId: SPEC_CARDIOLOGY_ID,
     name: 'Electrophysiology',
     slug: 'electrophysiology',
     description: 'Heart rhythm disorders',
@@ -156,7 +156,7 @@ const mockSubspecialties = [
 ];
 
 const mockCustomSpecialty = {
-  id: 'custom-spec-1',
+  id: CUSTOM_SPEC_ID,
   userId: 'user-123',
   name: 'Sports Cardiology',
   region: 'AU',
@@ -168,9 +168,9 @@ const mockCustomSpecialty = {
 };
 
 const mockCustomSubspecialty = {
-  id: 'custom-subspec-1',
+  id: CUSTOM_SUBSPEC_ID,
   userId: 'user-123',
-  specialtyId: 'spec-1',
+  specialtyId: SPEC_CARDIOLOGY_ID,
   customSpecialtyId: null,
   name: 'Cardiac MRI',
   description: 'Cardiac magnetic resonance imaging',
@@ -292,12 +292,12 @@ describe('Specialties API', () => {
   // ============================================================================
 
   describe('GET /api/specialties/:id/subspecialties', () => {
-    const routeParams = { params: Promise.resolve({ id: 'spec-1' }) };
+    const routeParams = { params: Promise.resolve({ id: SPEC_CARDIOLOGY_ID }) };
 
     it('should return 401 when not authenticated', async () => {
       vi.mocked(auth.getSession).mockResolvedValue(null);
 
-      const request = createRequest('/api/specialties/spec-1/subspecialties');
+      const request = createRequest(`/api/specialties/${SPEC_CARDIOLOGY_ID}/subspecialties`);
       const response = await GET_SUBSPECIALTIES(request, routeParams);
 
       expect(response.status).toBe(401);
@@ -306,7 +306,7 @@ describe('Specialties API', () => {
     it('should return 404 when specialty not found', async () => {
       vi.mocked(prisma.medicalSpecialty.findUnique).mockResolvedValue(null);
 
-      const request = createRequest('/api/specialties/spec-1/subspecialties');
+      const request = createRequest(`/api/specialties/${SPEC_CARDIOLOGY_ID}/subspecialties`);
       const response = await GET_SUBSPECIALTIES(request, routeParams);
 
       expect(response.status).toBe(404);
@@ -319,7 +319,7 @@ describe('Specialties API', () => {
       vi.mocked(prisma.medicalSubspecialty.findMany).mockResolvedValue(mockSubspecialties);
       vi.mocked(prisma.customSubspecialty.findMany).mockResolvedValue([]);
 
-      const request = createRequest('/api/specialties/spec-1/subspecialties');
+      const request = createRequest(`/api/specialties/${SPEC_CARDIOLOGY_ID}/subspecialties`);
       const response = await GET_SUBSPECIALTIES(request, routeParams);
 
       expect(response.status).toBe(200);
@@ -333,7 +333,7 @@ describe('Specialties API', () => {
       vi.mocked(prisma.medicalSubspecialty.findMany).mockResolvedValue([mockSubspecialties[0]!]);
       vi.mocked(prisma.customSubspecialty.findMany).mockResolvedValue([]);
 
-      const request = createRequest('/api/specialties/spec-1/subspecialties?query=interventional');
+      const request = createRequest(`/api/specialties/${SPEC_CARDIOLOGY_ID}/subspecialties?query=interventional`);
       const response = await GET_SUBSPECIALTIES(request, routeParams);
 
       expect(response.status).toBe(200);
@@ -352,7 +352,7 @@ describe('Specialties API', () => {
       vi.mocked(prisma.medicalSubspecialty.findMany).mockResolvedValue([]);
       vi.mocked(prisma.customSubspecialty.findMany).mockResolvedValue([mockCustomSubspecialty]);
 
-      const request = createRequest('/api/specialties/spec-1/subspecialties');
+      const request = createRequest(`/api/specialties/${SPEC_CARDIOLOGY_ID}/subspecialties`);
       const response = await GET_SUBSPECIALTIES(request, routeParams);
 
       expect(response.status).toBe(200);
@@ -466,7 +466,7 @@ describe('Specialties API', () => {
 
       const request = createRequest('/api/subspecialties/custom', {
         method: 'POST',
-        body: JSON.stringify({ name: 'Test', specialtyId: 'spec-1' }),
+        body: JSON.stringify({ name: 'Test', specialtyId: SPEC_CARDIOLOGY_ID }),
       });
       const response = await CREATE_CUSTOM_SUBSPECIALTY(request);
 
@@ -483,7 +483,7 @@ describe('Specialties API', () => {
 
       const request = createRequest('/api/subspecialties/custom', {
         method: 'POST',
-        body: JSON.stringify({ name: 'Test', specialtyId: 'spec-1' }),
+        body: JSON.stringify({ name: 'Test', specialtyId: SPEC_CARDIOLOGY_ID }),
       });
       const response = await CREATE_CUSTOM_SUBSPECIALTY(request);
 
@@ -505,7 +505,7 @@ describe('Specialties API', () => {
     it('should return 400 for name too short', async () => {
       const request = createRequest('/api/subspecialties/custom', {
         method: 'POST',
-        body: JSON.stringify({ name: 'A', specialtyId: 'spec-1' }),
+        body: JSON.stringify({ name: 'A', specialtyId: SPEC_CARDIOLOGY_ID }),
       });
       const response = await CREATE_CUSTOM_SUBSPECIALTY(request);
 
@@ -520,7 +520,7 @@ describe('Specialties API', () => {
         method: 'POST',
         body: JSON.stringify({
           name: 'Cardiac MRI',
-          specialtyId: 'spec-1',
+          specialtyId: SPEC_CARDIOLOGY_ID,
           description: 'Cardiac magnetic resonance imaging',
         }),
       });
@@ -536,7 +536,7 @@ describe('Specialties API', () => {
       const customSubWithCustomParent = {
         ...mockCustomSubspecialty,
         specialtyId: null,
-        customSpecialtyId: 'custom-spec-1',
+        customSpecialtyId: CUSTOM_SPEC_ID,
       };
       vi.mocked(prisma.customSubspecialty.findFirst).mockResolvedValue(null);
       vi.mocked(prisma.customSubspecialty.create).mockResolvedValue(customSubWithCustomParent);
@@ -545,7 +545,7 @@ describe('Specialties API', () => {
         method: 'POST',
         body: JSON.stringify({
           name: 'Custom Sub',
-          customSpecialtyId: 'custom-spec-1',
+          customSpecialtyId: CUSTOM_SPEC_ID,
         }),
       });
       const response = await CREATE_CUSTOM_SUBSPECIALTY(request);
@@ -588,7 +588,7 @@ describe('Specialties API', () => {
           {
             id: 'cs-1',
             userId: 'user-123',
-            specialtyId: 'spec-1',
+            specialtyId: SPEC_CARDIOLOGY_ID,
             specialty: mockSpecialties[0],
           },
         ],
@@ -596,7 +596,7 @@ describe('Specialties API', () => {
           {
             id: 'csub-1',
             userId: 'user-123',
-            subspecialtyId: 'subspec-1',
+            subspecialtyId: SUBSPEC_INTERVENTIONAL_ID,
             subspecialty: {
               ...mockSubspecialties[0],
               specialty: mockSpecialties[0],
@@ -704,7 +704,7 @@ describe('Specialties API', () => {
           {
             id: 'cs-1',
             userId: 'user-123',
-            specialtyId: 'spec-1',
+            specialtyId: SPEC_CARDIOLOGY_ID,
             specialty: mockSpecialties[0],
           },
         ],
@@ -732,8 +732,8 @@ describe('Specialties API', () => {
           clinicianRole: 'MEDICAL',
           specialties: [
             {
-              specialtyId: 'spec-1',
-              subspecialtyIds: ['subspec-1'],
+              specialtyId: SPEC_CARDIOLOGY_ID,
+              subspecialtyIds: [SUBSPEC_INTERVENTIONAL_ID],
             },
           ],
         }),
