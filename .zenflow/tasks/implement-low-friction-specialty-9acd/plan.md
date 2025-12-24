@@ -249,7 +249,7 @@ Created comprehensive technical specification in `spec.md` covering:
 
 ---
 
-### [ ] Step 5: UI Components - Combobox & Chips
+### [x] Step 5: UI Components - Combobox & Chips
 <!-- chat-id: b9d85f39-5c32-42e1-b24c-543405b91116 -->
 
 **Goal**: Build reusable type-ahead combobox and chip components.
@@ -290,6 +290,36 @@ Created comprehensive technical specification in `spec.md` covering:
 - `src/components/specialty/SpecialtyCombobox.tsx` (create)
 - `src/components/specialty/SubspecialtyPanel.tsx` (create)
 - `src/components/specialty/index.ts` (create)
+
+**Completed**:
+- Created `src/components/specialty/SpecialtyChip.tsx`:
+  - Displays name with optional "(custom)" suffix
+  - Removable "x" button with keyboard accessibility
+  - Size variants (sm, default) for different contexts
+  - Custom vs standard styling differentiation
+  - Disabled state support
+- Created `src/components/specialty/SpecialtyCombobox.tsx`:
+  - Type-ahead searchable multi-select with 150ms debounce
+  - Dropdown with max 7 results plus "Add as custom" option
+  - Full keyboard navigation (ArrowUp/Down, Enter, Escape)
+  - Selected items as removable chips below input
+  - Inline custom specialty creation without modal
+  - Loading states for search and custom creation
+  - ARIA attributes for accessibility (combobox, listbox roles)
+  - Auto-focus support for onboarding flow
+- Created `src/components/specialty/SubspecialtyPanel.tsx`:
+  - Collapsible accordion panel using Radix Accordion
+  - Titled "Any particular areas in {specialty}?"
+  - Subspecialty combobox with type-ahead search
+  - Optional "Popular choices" quick-select suggestions
+  - Inline custom subspecialty creation
+  - Selection count badge in panel header
+  - Helper text for optional nature
+- Created `src/components/specialty/index.ts` for public exports
+- Used existing UI patterns (Radix Accordion, Input, Button, Badge styling)
+- No cmdk dependency needed - custom implementation using existing patterns
+- TypeScript typecheck passes
+- ESLint passes
 
 ---
 
