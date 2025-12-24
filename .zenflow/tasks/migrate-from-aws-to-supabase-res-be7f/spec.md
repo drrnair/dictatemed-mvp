@@ -102,9 +102,9 @@ BEDROCK_OPUS_MODEL_ID="..."
 BEDROCK_SONNET_MODEL_ID="..."
 
 # New for Supabase
-SUPABASE_URL="https://xxx.supabase.co"
-SUPABASE_ANON_KEY="..."
-SUPABASE_SERVICE_ROLE_KEY="..."
+NEXT_PUBLIC_SUPABASE_URL="https://xxx.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="..."
+SUPABASE_SERVICE_ROLE_KEY="..."  # Server-side only, never expose to client
 
 # New for Resend
 RESEND_API_KEY="..."
@@ -121,15 +121,39 @@ RESEND_FROM_EMAIL="noreply@dictatemed.com"
 
 | Bucket | Purpose | Path Convention | Access |
 |--------|---------|-----------------|--------|
-| `audio_recordings` | Consultation audio | `{user_id}/{consultation_id}/{timestamp}_{mode}.webm` | User's own only |
-| `clinical_documents` | PDFs, images | `{user_id}/{patient_id}/{document_type}/{filename}_{timestamp}.{ext}` | User's own only |
-| `user_assets` | Signatures, letterheads | `{practice_id}/{user_id}/{type}/{filename}` | Practice members |
+| `audio-recordings` | Consultation audio | `{user_id}/{consultation_id}/{timestamp}_{mode}.webm` | User's own only |
+| `clinical-documents` | PDFs, images | `{user_id}/{patient_id}/{document_type}/{filename}_{timestamp}.{ext}` | User's own only |
+| `user-assets` | Signatures, letterheads | `signatures/{user_id}/...` or `letterheads/{practice_id}/...` | User's own / Practice members |
 
 **Security Controls**:
 - All buckets private (no public URLs)
 - RLS policies on storage.objects table
 - Short-lived signed URLs (15 min upload, 1 hour download)
 - Supabase's built-in encryption at rest
+
+### 3.1.1 Auth0 + Supabase Storage Architecture
+
+**Important**: DictateMED uses Auth0 for authentication, not Supabase Auth. This affects how we handle Supabase Storage RLS policies.
+
+**The Problem**: Supabase Storage RLS policies use `auth.uid()` which returns the Supabase Auth user ID. Since we use Auth0, `auth.uid()` will be null for our users.
+
+**The Solution**: Use the service role client for all storage operations with application-level authorization:
+
+1. **All storage operations use the service role client** (`getSupabaseServiceClient()`) which bypasses RLS
+2. **Authorization is enforced in application code** before calling Supabase:
+   - Verify the user is authenticated via Auth0
+   - Verify the user has permission to access the specific resource
+   - The storage path includes the user ID for audit purposes
+
+3. **RLS policies are defined but not relied upon** - they serve as:
+   - Defense-in-depth (if someone gets an anon key, RLS still blocks them)
+   - Documentation of intended access patterns
+   - Future-proofing if we migrate to Supabase Auth
+
+**Security Implications**:
+- Service role key MUST be server-side only
+- Every storage helper MUST verify user authorization before calling Supabase
+- Audit logging is critical since RLS isn't the enforcement layer
 
 ### 3.2 Database Schema Changes
 

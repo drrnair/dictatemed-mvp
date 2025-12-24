@@ -31,3 +31,50 @@ export {
   MIME_TO_EXTENSION,
   StorageError,
 } from './types';
+
+// Storage service exports
+export {
+  // Path generation helpers
+  generateAudioPath,
+  generateDocumentPath,
+  generateSignaturePath,
+  generateLetterheadPath,
+  // Content type validation
+  isValidAudioType,
+  isValidDocumentType,
+  isValidImageType,
+  validateFileSize,
+  ALLOWED_IMAGE_TYPES,
+  type AllowedImageType,
+  // URL generation
+  generateUploadUrl,
+  generateDownloadUrl,
+  generatePreviewUrl,
+  // File operations
+  uploadFile,
+  deleteFile,
+  deleteFiles,
+  getFileMetadata,
+  fileExists,
+  // Audit logging
+  createStorageAuditLog,
+  getDownloadUrlWithAudit,
+  type StorageResourceType,
+  type StorageAuditAction,
+  // Audio recording operations
+  getAudioUploadUrl,
+  getAudioDownloadUrl,
+  deleteAudioRecording,
+  // Clinical document operations
+  getDocumentUploadUrl,
+  getDocumentDownloadUrl,
+  deleteClinicalDocument,
+  // Signature operations
+  getSignatureUploadUrl,
+  getSignatureDownloadUrl,
+  deleteSignature,
+  // Letterhead operations
+  getLetterheadUploadUrl,
+  getLetterheadDownloadUrl,
+  deleteLetterhead,
+} from './storage.service';

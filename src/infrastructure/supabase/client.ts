@@ -106,6 +106,13 @@ export const STORAGE_BUCKETS = {
    * PHI Level: High - contains clinical data
    */
   CLINICAL_DOCUMENTS: 'clinical-documents',
+
+  /**
+   * Private bucket for user assets.
+   * Contains signatures and letterheads.
+   * PHI Level: Low - no patient data, but still private
+   */
+  USER_ASSETS: 'user-assets',
 } as const;
 
 export type StorageBucket = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS];

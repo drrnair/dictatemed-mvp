@@ -44,6 +44,21 @@ ON CONFLICT (id) DO UPDATE SET
   file_size_limit = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
+-- Create user-assets bucket (private)
+-- Stores signatures and letterheads
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'user-assets',
+  'user-assets',
+  false,  -- Private bucket
+  5242880,  -- 5MB max file size (signatures and letterheads are small)
+  ARRAY['image/png', 'image/jpeg', 'image/gif', 'image/webp']::text[]
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
 -- ============================================================================
 -- STORAGE RLS POLICIES
 -- ============================================================================
@@ -63,6 +78,11 @@ DROP POLICY IF EXISTS "clinical_documents_select" ON storage.objects;
 DROP POLICY IF EXISTS "clinical_documents_insert" ON storage.objects;
 DROP POLICY IF EXISTS "clinical_documents_update" ON storage.objects;
 DROP POLICY IF EXISTS "clinical_documents_delete" ON storage.objects;
+
+DROP POLICY IF EXISTS "user_assets_select" ON storage.objects;
+DROP POLICY IF EXISTS "user_assets_insert" ON storage.objects;
+DROP POLICY IF EXISTS "user_assets_update" ON storage.objects;
+DROP POLICY IF EXISTS "user_assets_delete" ON storage.objects;
 
 -- ============================================================================
 -- AUDIO RECORDINGS POLICIES
@@ -147,11 +167,68 @@ USING (
 );
 
 -- ============================================================================
+-- USER ASSETS POLICIES
+-- ============================================================================
+-- Path format:
+--   Signatures: signatures/{user_id}/{timestamp}.{ext}
+--   Letterheads: letterheads/{practice_id}/{timestamp}.{ext}
+--
+-- NOTE: Since the app uses Auth0 (not Supabase Auth), auth.uid() won't work
+-- for RLS policies. Instead, we use the service role client for all operations
+-- and implement authorization checks in application code.
+--
+-- The policies below are defined for completeness but won't be effective
+-- until either:
+-- 1. The app migrates to Supabase Auth, or
+-- 2. Custom JWT claims are configured to pass Auth0 user IDs
+
+-- SELECT: Users can read their own assets
+CREATE POLICY "user_assets_select"
+ON storage.objects FOR SELECT
+TO authenticated
+USING (
+  bucket_id = 'user-assets'
+  -- For signatures: user owns the file
+  -- For letterheads: all practice members can read
+  -- This simplified policy allows any authenticated user to read
+  -- Application-level auth handles the actual access control
+);
+
+-- INSERT: Users can upload to their folder
+CREATE POLICY "user_assets_insert"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'user-assets'
+);
+
+-- UPDATE: Users can update their files
+CREATE POLICY "user_assets_update"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (
+  bucket_id = 'user-assets'
+);
+
+-- DELETE: Users can delete their files
+CREATE POLICY "user_assets_delete"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'user-assets'
+);
+
+-- ============================================================================
 -- SERVICE ROLE ACCESS
 -- ============================================================================
 -- The service role key bypasses RLS by default in Supabase.
 -- This is intentional for server-side operations that have already
 -- performed authorization checks in application code.
+--
+-- IMPORTANT: Since DictateMED uses Auth0 (not Supabase Auth), the RLS
+-- policies above that use auth.uid() will NOT work for authenticated users.
+-- All storage operations MUST use the service role client, and authorization
+-- must be enforced in the application layer before calling Supabase.
 --
 -- SECURITY: Never expose the service role key to clients.
 
@@ -161,7 +238,7 @@ USING (
 -- Run these queries to verify the setup:
 
 -- Check buckets exist:
--- SELECT * FROM storage.buckets WHERE id IN ('audio-recordings', 'clinical-documents');
+-- SELECT * FROM storage.buckets WHERE id IN ('audio-recordings', 'clinical-documents', 'user-assets');
 
 -- Check policies exist:
 -- SELECT policyname, tablename, cmd FROM pg_policies

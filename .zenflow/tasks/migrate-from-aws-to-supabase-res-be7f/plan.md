@@ -46,7 +46,8 @@ Create the Supabase storage infrastructure with PHI-aware design.
 3. Create Supabase storage buckets (in Supabase dashboard or via SQL):
    - `audio-recordings` (private) - for consultation audio
    - `clinical-documents` (private) - for medical PDFs/images
-4. Create initial storage RLS policies for all buckets
+   - `user-assets` (private) - for signatures and letterheads
+4. Create initial storage RLS policies for all three buckets
 
 **Completed**:
 - ✅ Added `@supabase/supabase-js` to dependencies
@@ -69,6 +70,7 @@ Create the Supabase storage infrastructure with PHI-aware design.
 ---
 
 ### [ ] Step 2: Implement Supabase Storage Service
+<!-- chat-id: 8a32e8f3-5aa9-4149-9ff4-31f7075587c7 -->
 
 Create the storage service layer to replace S3 operations.
 
