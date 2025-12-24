@@ -15,6 +15,7 @@ export const RATE_LIMITS: Record<string, RateLimitConfig> = {
   documents: { requests: 20, windowMs: 60 * 1000 }, // 20/min
   letters: { requests: 10, windowMs: 60 * 1000 }, // 10/min
   approvals: { requests: 30, windowMs: 60 * 1000 }, // 30/min
+  emails: { requests: 10, windowMs: 60 * 1000 }, // 10/min - limit email sends
   default: { requests: 60, windowMs: 60 * 1000 }, // 60/min default
 };
 

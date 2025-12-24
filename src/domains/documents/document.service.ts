@@ -300,6 +300,7 @@ export async function getDocument(
 /**
  * List documents for a user with pagination and filters.
  * Uses Supabase Storage for document access.
+ * Excludes soft-deleted documents (where deletedAt is set).
  */
 export async function listDocuments(
   userId: string,
@@ -314,6 +315,7 @@ export async function listDocuments(
 
   const where = {
     userId,
+    deletedAt: null, // Exclude soft-deleted documents
     ...(query.patientId && { patientId: query.patientId }),
     ...(prismaType && { documentType: prismaType }),
     ...(query.status && { status: query.status }),
@@ -446,13 +448,14 @@ export async function deleteDocument(
 /**
  * Get documents for a patient.
  * Uses Supabase Storage for document access.
+ * Excludes soft-deleted documents (where deletedAt is set).
  */
 export async function getPatientDocuments(
   userId: string,
   patientId: string
 ): Promise<Document[]> {
   const documents = await prisma.document.findMany({
-    where: { userId, patientId },
+    where: { userId, patientId, deletedAt: null }, // Exclude soft-deleted documents
     orderBy: { createdAt: 'desc' },
   });
 

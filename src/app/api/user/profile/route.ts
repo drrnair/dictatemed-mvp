@@ -1,9 +1,11 @@
 // src/app/api/user/profile/route.ts
 // User profile API endpoints
+// Updated to generate signed URLs for signatures (migrated from S3 to Supabase)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/infrastructure/db/client';
 import { getSession } from '@/lib/auth';
+import { getSignatureDownloadUrl } from '@/infrastructure/supabase';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -40,12 +42,24 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Generate signed URL for signature if it exists
+    let signatureUrl: string | undefined;
+    if (user.signature) {
+      try {
+        const { signedUrl } = await getSignatureDownloadUrl(user.id, user.signature);
+        signatureUrl = signedUrl;
+      } catch (err) {
+        // Log but don't fail - signature URL generation is non-critical
+        log.warn('Failed to generate signature URL', { userId: user.id });
+      }
+    }
+
     return NextResponse.json({
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      signatureUrl: user.signature || undefined,
+      signatureUrl,
       practice: user.practice,
     });
   } catch (error) {
@@ -97,12 +111,24 @@ export async function PATCH(request: NextRequest) {
 
     log.info('User profile updated', { userId: user.id });
 
+    // Generate signed URL for signature if it exists
+    let signatureUrl: string | undefined;
+    if (user.signature) {
+      try {
+        const { signedUrl } = await getSignatureDownloadUrl(user.id, user.signature);
+        signatureUrl = signedUrl;
+      } catch (err) {
+        // Log but don't fail - signature URL generation is non-critical
+        log.warn('Failed to generate signature URL', { userId: user.id });
+      }
+    }
+
     return NextResponse.json({
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      signatureUrl: user.signature || undefined,
+      signatureUrl,
       practice: user.practice,
     });
   } catch (error) {

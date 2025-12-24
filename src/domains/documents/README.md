@@ -24,7 +24,7 @@ This module handles document upload, storage, and clinical data extraction from 
 
 ### Current Behavior (MVP)
 When a PDF is uploaded:
-1. ✅ Upload succeeds - PDF stored in S3
+1. ✅ Upload succeeds - PDF stored in Supabase Storage
 2. ✅ Document record created with `status: 'UPLOADED'`
 3. ⚠️ **Extraction will fail** - `fetchImageAsBase64()` doesn't handle PDFs
 4. ❌ Document status becomes `FAILED` with error
@@ -88,7 +88,7 @@ Rate limit headers returned in responses:
 ```
 src/domains/documents/
 ├── document.types.ts          # TypeScript types for all document types
-├── document.service.ts        # CRUD operations, S3 integration
+├── document.service.ts        # CRUD operations, Supabase Storage integration
 ├── extraction.service.ts      # Orchestrates Claude Vision extraction
 ├── extractors/
 │   ├── echo-report.ts        # Echo report extraction

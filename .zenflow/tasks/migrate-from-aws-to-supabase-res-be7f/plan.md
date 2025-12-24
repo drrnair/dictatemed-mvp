@@ -263,6 +263,15 @@ Replace S3 usage for user assets with Supabase.
   - Respects `audioDeletedAt` and `deletedAt` flags (doesn't delete already-deleted files)
   - Creates audit log entries for each deletion with `reason: 'account_deletion'`
 - ✅ RLS policies already created in `supabase/migrations/001_create_storage_buckets.sql`
+- ✅ Fixed `src/app/api/user/profile/route.ts` (review feedback):
+  - Now generates signed URLs for signatures instead of returning storage paths
+  - Uses `getSignatureDownloadUrl()` to create usable URLs for frontend
+  - Graceful fallback if URL generation fails (logs warning, continues)
+- ✅ Fixed `src/app/api/practice/route.ts` (review feedback):
+  - Now generates signed URLs for letterheads instead of returning storage paths
+  - Uses `getLetterheadDownloadUrl()` to create usable URLs for frontend
+  - Adds `letterheadUrl` field to response alongside raw `letterhead` path
+  - Graceful fallback if URL generation fails (logs warning, continues)
 - ✅ `npm run typecheck` passes
 - ✅ `npm run lint` passes
 - ✅ `npm run build` succeeds
@@ -273,6 +282,13 @@ Replace S3 usage for user assets with Supabase.
 - Lint passes ✅
 - Build succeeds ✅
 - All tests pass ✅
+
+**Note on API Response Changes**:
+- `GET /api/user/profile` - `signatureUrl` now returns a signed Supabase URL (was storage path)
+- `PATCH /api/user/profile` - `signatureUrl` now returns a signed Supabase URL (was storage path)
+- `GET /api/practice` - Added `letterheadUrl` field with signed URL (raw `letterhead` path still present)
+- `PATCH /api/practice` - Added `letterheadUrl` field with signed URL (raw `letterhead` path still present)
+- `POST /api/practice/letterhead` - Response field renamed: `s3Key` → `storagePath`
 
 ---
 
