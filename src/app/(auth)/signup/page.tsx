@@ -1,11 +1,8 @@
 // src/app/(auth)/signup/page.tsx
-// Signup page - placeholder
+// Signup page - wrapper for Auth0 Universal Login with signup hint
+
+import { SignupForm } from '@/components/auth/SignupForm';
 
 export default function SignupPage() {
-  return (
-    <div className="text-center">
-      <h1 className="text-heading-1 text-foreground">Start Free Trial</h1>
-      <p className="mt-2 text-muted-foreground">Signup page coming soon</p>
-    </div>
-  );
+  return <SignupForm />;
 }
