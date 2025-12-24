@@ -190,6 +190,7 @@ Created comprehensive technical specification in `spec.md` covering:
 ---
 
 ### [ ] Step 4: Specialty API Endpoints
+<!-- chat-id: a4925a4f-92ff-4c63-a214-c128f27f7b1f -->
 
 **Goal**: Create REST API endpoints for specialty operations.
 

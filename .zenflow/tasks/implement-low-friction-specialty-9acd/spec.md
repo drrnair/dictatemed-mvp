@@ -330,7 +330,7 @@ interface PracticeProfile {
 
 | File | Purpose |
 |------|---------|
-| `prisma/migrations/2024XXXX_add_specialty_tables/migration.sql` | DB migration |
+| `prisma/migrations/<timestamp>_add_medical_specialty_tables/migration.sql` | DB migration (auto-generated) |
 | `prisma/seeds/medical-specialties.ts` | Seed data definitions |
 | `src/domains/specialties/specialty.types.ts` | Type definitions |
 | `src/domains/specialties/specialty.service.ts` | Business logic |
