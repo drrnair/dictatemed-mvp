@@ -81,8 +81,8 @@ describe('Specialty API', () => {
 
     it('should return all specialties when no query provided', async () => {
       const mockSpecialties = [
-        { id: 'spec-1', name: 'Cardiology', slug: 'cardiology', description: null, synonyms: [], isCustom: false },
-        { id: 'spec-2', name: 'Neurology', slug: 'neurology', description: null, synonyms: [], isCustom: false },
+        { id: 'spec-1', name: 'Cardiology', slug: 'cardiology', description: null, synonyms: [] as string[], isCustom: false as const },
+        { id: 'spec-2', name: 'Neurology', slug: 'neurology', description: null, synonyms: [] as string[], isCustom: false as const },
       ];
 
       vi.mocked(specialtyService.getAllSpecialties).mockResolvedValue(mockSpecialties);
@@ -99,7 +99,7 @@ describe('Specialty API', () => {
     it('should search specialties by query', async () => {
       const mockSearchResult = {
         specialties: [
-          { id: 'spec-1', name: 'Cardiology', slug: 'cardiology', description: null, synonyms: [], isCustom: false },
+          { id: 'spec-1', name: 'Cardiology', slug: 'cardiology', description: null, synonyms: [] as string[], isCustom: false as const },
         ],
         total: 1,
       };
@@ -123,7 +123,7 @@ describe('Specialty API', () => {
 
     it('should respect limit parameter', async () => {
       const mockSearchResult = {
-        specialties: [{ id: 'spec-1', name: 'Cardiology', slug: 'cardiology', description: null, synonyms: [], isCustom: false }],
+        specialties: [{ id: 'spec-1', name: 'Cardiology', slug: 'cardiology', description: null, synonyms: [] as string[], isCustom: false as const }],
         total: 1,
       };
 
@@ -332,11 +332,11 @@ describe('Specialty API', () => {
       const mockCustomSpecialty = {
         id: 'custom-spec-1',
         name: 'Sports Medicine',
-        slug: null,
-        description: null,
-        synonyms: [],
-        isCustom: true,
-        status: 'PENDING',
+        slug: null as null,
+        description: null as null,
+        synonyms: [] as [],
+        isCustom: true as const,
+        status: 'PENDING' as const,
       };
 
       vi.mocked(specialtyService.createCustomSpecialty).mockResolvedValue({

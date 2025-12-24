@@ -46,6 +46,12 @@ vi.mock('@/domains/specialties/specialty.service', () => ({
   createCustomSubspecialty: vi.fn(),
 }));
 
+// Use valid UUIDs for test data
+const SPECIALTY_UUID = '550e8400-e29b-41d4-a716-446655440001';
+const SUBSPECIALTY_UUID_1 = '550e8400-e29b-41d4-a716-446655440002';
+const SUBSPECIALTY_UUID_2 = '550e8400-e29b-41d4-a716-446655440003';
+const CUSTOM_SUBSPEC_UUID = '550e8400-e29b-41d4-a716-446655440004';
+
 const mockUser = {
   id: 'user-123',
   auth0Id: 'auth0|123',
