@@ -177,8 +177,8 @@ function SecondaryActionCard({
       className="group block"
     >
       <Card variant="interactive" className="h-full">
-        <CardContent className="p-space-5 flex items-center gap-space-4">
-          <div className="flex-shrink-0 rounded-xl bg-slate-100 dark:bg-slate-800 p-space-3 text-slate-600 dark:text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-600 dark:group-hover:bg-teal-950 dark:group-hover:text-teal-400 transition-colors duration-200">
+        <CardContent className="p-5 flex items-center gap-4">
+          <div className="flex-shrink-0 rounded-xl bg-slate-100 dark:bg-slate-800 p-3 text-slate-600 dark:text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-600 dark:group-hover:bg-teal-950 dark:group-hover:text-teal-400 transition-colors duration-200">
             {icon}
           </div>
           <div className="flex-1 min-w-0">
@@ -220,7 +220,7 @@ function TimeSavedCard({ hours }: { hours: number }) {
   return (
     <Card className="relative overflow-hidden border-teal-200 dark:border-teal-800">
       <div className="absolute right-0 top-0 h-16 w-16 -mr-4 -mt-4 rounded-full bg-teal-500/10" />
-      <CardContent className="p-space-5 relative">
+      <CardContent className="p-5 relative">
         <div className="flex items-center gap-2">
           <svg
             className="h-4 w-4 text-teal-600 dark:text-teal-400"
