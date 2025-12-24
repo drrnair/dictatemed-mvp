@@ -17,9 +17,8 @@ env:
   AUTH0_CLIENT_SECRET: "test-client-secret"
   # PHI encryption key (test only)
   PHI_ENCRYPTION_KEY: "dGVzdC1rZXktMzItYnl0ZXMtbG9uZy1oZXJlIQ=="
-  # AWS (test values)
+  # AWS (for Bedrock AI only - S3 has been migrated to Supabase Storage)
   AWS_REGION: "ap-southeast-2"
-  S3_BUCKET_NAME: "dictatemed-test"
 
 jobs:
   lint:

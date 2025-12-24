@@ -486,10 +486,16 @@ Clean up after migration is complete and tested.
 **AWS Packages Remaining** (intentionally kept for Bedrock AI):
 - `@aws-sdk/client-bedrock-runtime` - used by `src/infrastructure/bedrock/vision.ts` and `src/infrastructure/bedrock/text-generation.ts`
 
+**Additional Cleanup (from review)**:
+- ✅ `.github/workflows/ci.yml` - Removed `S3_BUCKET_NAME` env var
+- ✅ `next.config.js` - Updated image remote patterns from S3 to `*.supabase.co`
+- ✅ `src/lib/errors.ts` - Renamed `S3_ERROR` to `STORAGE_ERROR`, added `SUPABASE_ERROR` and `RESEND_ERROR` codes
+
 **Verification**:
 - `npm run build` succeeds ✅
 - `npm run lint` passes ✅
 - `npm run typecheck` passes ✅
+- All 221 tests pass ✅
 - No S3 imports remain (grep check) ✅
 
 ---

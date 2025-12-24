@@ -72,12 +72,12 @@ const nextConfig = {
     ];
   },
 
-  // Image optimization
+  // Image optimization - Supabase Storage for signatures and letterheads
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '*.s3.ap-southeast-2.amazonaws.com',
+        hostname: '*.supabase.co',
       },
     ],
   },
