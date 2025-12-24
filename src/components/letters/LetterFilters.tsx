@@ -48,12 +48,12 @@ export function LetterFilters({ filters, onFilterChange, onClearFilters }: Lette
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         {/* Search */}
         <div className="relative flex-1 md:max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
           <Input
             placeholder="Search by patient name..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-9"
+            className="pl-9 rounded-xl"
           />
         </div>
 
@@ -64,7 +64,7 @@ export function LetterFilters({ filters, onFilterChange, onClearFilters }: Lette
             value={filters.type || 'all'}
             onValueChange={(value: string) => onFilterChange({ type: value === 'all' ? '' : value as LetterType })}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px] rounded-xl">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
@@ -81,7 +81,7 @@ export function LetterFilters({ filters, onFilterChange, onClearFilters }: Lette
             value={filters.status || 'all'}
             onValueChange={(value: string) => onFilterChange({ status: value === 'all' ? '' : value as LetterStatus })}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px] rounded-xl">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
             <SelectContent>
@@ -100,14 +100,14 @@ export function LetterFilters({ filters, onFilterChange, onClearFilters }: Lette
               type="date"
               value={filters.startDate || ''}
               onChange={(e) => onFilterChange({ startDate: e.target.value })}
-              className="w-[150px]"
+              className="w-[150px] rounded-xl"
               placeholder="Start date"
             />
             <Input
               type="date"
               value={filters.endDate || ''}
               onChange={(e) => onFilterChange({ endDate: e.target.value })}
-              className="w-[150px]"
+              className="w-[150px] rounded-xl"
               placeholder="End date"
             />
           </div>
@@ -132,12 +132,12 @@ export function LetterFilters({ filters, onFilterChange, onClearFilters }: Lette
 
       {/* Sort */}
       <div className="flex items-center gap-2 text-sm">
-        <span className="text-muted-foreground">Sort by:</span>
+        <span className="text-slate-500 dark:text-slate-400">Sort by:</span>
         <Select
           value={filters.sortBy || 'createdAt'}
           onValueChange={(value: string) => onFilterChange({ sortBy: value as 'createdAt' | 'approvedAt' })}
         >
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-[150px] rounded-xl">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -150,7 +150,7 @@ export function LetterFilters({ filters, onFilterChange, onClearFilters }: Lette
           value={filters.sortOrder || 'desc'}
           onValueChange={(value: string) => onFilterChange({ sortOrder: value as 'asc' | 'desc' })}
         >
-          <SelectTrigger className="w-[120px]">
+          <SelectTrigger className="w-[120px] rounded-xl">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

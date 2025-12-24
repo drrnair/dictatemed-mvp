@@ -118,15 +118,15 @@ export function LetterCardList({ letters, loading }: LetterCardListProps) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[...Array(6)].map((_, i) => (
-          <Card key={i}>
+          <Card key={i} className="rounded-xl">
             <CardHeader className="pb-3">
-              <div className="h-5 w-32 animate-pulse rounded bg-muted" />
-              <div className="mt-2 h-4 w-24 animate-pulse rounded bg-muted" />
+              <div className="h-5 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+              <div className="mt-2 h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="h-4 w-full animate-pulse rounded bg-muted" />
-              <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
-              <div className="h-9 w-full animate-pulse rounded bg-muted" />
+              <div className="h-4 w-full animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+              <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+              <div className="h-9 w-full animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
             </CardContent>
           </Card>
         ))}
