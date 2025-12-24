@@ -34,6 +34,7 @@ Created comprehensive technical specification in `spec.md` covering:
 ---
 
 ### [ ] Step 1: Foundation Layer (Tailwind & Fonts)
+<!-- chat-id: 630ec1a0-07b1-46dd-adb3-b4e48259a1a9 -->
 
 Update the design token foundation:
 

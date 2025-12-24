@@ -166,3 +166,17 @@
 .skip-link:focus {
   @apply top-4;
 }
+
+/* DictateMED Redesign - Transition Utilities */
+.transition-lift {
+  @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
+}
+
+.transition-scale {
+  @apply transition-transform duration-200 hover:scale-[1.02];
+}
+
+/* Interactive card hover effect */
+.card-interactive {
+  @apply transition-all duration-200 hover:shadow-md hover:border-slate-300 hover:-translate-y-0.5;
+}
