@@ -68,6 +68,7 @@ import {
   getDocumentDownloadUrlForAI,
   softDeleteDocumentFile,
   cleanupExpiredDocuments,
+  getPatientDocuments,
 } from '@/domains/documents/document.service';
 
 describe('Document Service - Supabase Storage Migration', () => {
@@ -436,6 +437,31 @@ describe('Document Service - Supabase Storage Migration', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             documentType: 'ECHO_REPORT',
+          }),
+        })
+      );
+    });
+
+    it('should exclude soft-deleted documents from list', async () => {
+      vi.mocked(prisma.document.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.document.count).mockResolvedValue(0);
+
+      await listDocuments(mockUserId, {});
+
+      // Verify the where clause includes deletedAt: null
+      expect(prisma.document.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            deletedAt: null,
+          }),
+        })
+      );
+
+      expect(prisma.document.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            deletedAt: null,
           }),
         })
       );

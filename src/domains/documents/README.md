@@ -117,7 +117,7 @@ Create a document and get pre-signed upload URL.
 ```json
 {
   "id": "doc-uuid",
-  "uploadUrl": "https://s3.../presigned-url",
+  "uploadUrl": "https://supabase.storage/signed-upload-url",
   "expiresAt": "2024-12-20T12:00:00Z"
 }
 ```
@@ -213,10 +213,11 @@ Documents that fail extraction:
 - Can be retried with `POST /api/documents/:id/process`
 
 Common errors:
-- **"Unable to fetch image"**: S3 URL expired or document not found
+- **"Unable to fetch image"**: Supabase Storage URL expired or document not found
 - **"Invalid image format"**: Unsupported MIME type
 - **"Vision analysis failed"**: Bedrock API error (check credentials, quotas)
 - **PDF processing not implemented**: User uploaded PDF (see strategy above)
+- **"Document not found or file has been deleted"**: Document soft-deleted or past retention
 
 ## Testing
 
