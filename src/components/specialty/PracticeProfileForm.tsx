@@ -53,11 +53,13 @@ export function PracticeProfileForm({
   onSave,
   onSkip,
   mode = 'onboarding',
-  autoFocus = true,
+  autoFocus,
   saveButtonText,
   skipButtonText,
   className,
 }: PracticeProfileFormProps) {
+  // Default autoFocus to true for onboarding, false for settings
+  const shouldAutoFocus = autoFocus ?? mode === 'onboarding';
   const {
     profile: fetchedProfile,
     isLoading,
@@ -265,7 +267,7 @@ export function PracticeProfileForm({
           onCreateCustom={handleCreateCustomSpecialty}
           placeholder='Start typing, e.g. "cardio", "neuro", "GP"...'
           disabled={isDisabled}
-          autoFocus={autoFocus} // eslint-disable-line jsx-a11y/no-autofocus -- Intentional for onboarding UX
+          autoFocus={shouldAutoFocus} // eslint-disable-line jsx-a11y/no-autofocus -- Intentional for onboarding UX
           maxResults={7}
         />
         {selectedSpecialties.length === 0 && (

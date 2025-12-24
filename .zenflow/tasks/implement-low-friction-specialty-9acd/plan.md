@@ -419,7 +419,8 @@ Created comprehensive technical specification in `spec.md` covering:
 
 ---
 
-### [ ] Step 8: Settings Page Update
+### [x] Step 8: Settings Page Update
+<!-- chat-id: f0196d9a-7889-45e0-bb65-66fddbdf2185 -->
 
 **Goal**: Update Settings → Subspecialties to "Your Specialties" with new UI.
 
@@ -442,6 +443,24 @@ Created comprehensive technical specification in `spec.md` covering:
 **Files**:
 - `src/app/(dashboard)/settings/subspecialties/page.tsx` (modify)
 - `src/app/(dashboard)/settings/page.tsx` (modify)
+
+**Completed**:
+- Updated `src/app/(dashboard)/settings/page.tsx`:
+  - Changed "Subspecialties" link to "Your Specialties"
+  - Updated icon from Heart to Stethoscope for better semantic match
+  - Updated description to "Manage your medical specialties and subspecialties for tailored content"
+  - Changed route from `/settings/subspecialties` to `/settings/specialties`
+- Created new `src/app/(dashboard)/settings/specialties/page.tsx`:
+  - Uses PracticeProfileForm component in "settings" mode
+  - Header with back navigation to settings main page
+  - Form auto-focuses disabled in settings mode (derived from mode prop)
+  - Save redirects back to settings, Cancel also returns to settings
+- Updated `src/components/specialty/PracticeProfileForm.tsx`:
+  - Changed autoFocus default to be mode-aware (true for onboarding, false for settings)
+  - Uses `shouldAutoFocus = autoFocus ?? mode === 'onboarding'` pattern
+- OnboardingRedirect already allowed `/settings/specialties` path (from Step 7)
+- TypeScript typecheck passes
+- ESLint passes with no warnings
 
 ---
 
