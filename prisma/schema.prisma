@@ -523,8 +523,8 @@ model MedicalSpecialty {
   description String?  @db.Text
   synonyms    Json     @default("[]") // e.g., ["cardiologist", "cardiac medicine"]
   active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
   subspecialties       MedicalSubspecialty[]
@@ -538,14 +538,14 @@ model MedicalSpecialty {
 // Subspecialties within a medical specialty
 model MedicalSubspecialty {
   id          String           @id @default(uuid())
-  specialtyId String
+  specialtyId String           @map("specialty_id")
   specialty   MedicalSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
   name        String // e.g., "Interventional cardiology"
   slug        String // e.g., "interventional-cardiology"
   description String?          @db.Text
   active      Boolean          @default(true)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
   // Relations
   clinicianSubspecialties ClinicianSubspecialty[]
@@ -559,11 +559,11 @@ model MedicalSubspecialty {
 // Junction table: User's selected specialties
 model ClinicianSpecialty {
   id          String           @id @default(uuid())
-  userId      String
+  userId      String           @map("user_id")
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  specialtyId String
+  specialtyId String           @map("specialty_id")
   specialty   MedicalSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
-  createdAt   DateTime         @default(now())
+  createdAt   DateTime         @default(now()) @map("created_at")
 
   @@unique([userId, specialtyId])
   @@index([userId])
@@ -574,11 +574,11 @@ model ClinicianSpecialty {
 // Junction table: User's selected subspecialties
 model ClinicianSubspecialty {
   id             String              @id @default(uuid())
-  userId         String
+  userId         String              @map("user_id")
   user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subspecialtyId String
+  subspecialtyId String              @map("subspecialty_id")
   subspecialty   MedicalSubspecialty @relation(fields: [subspecialtyId], references: [id], onDelete: Cascade)
-  createdAt      DateTime            @default(now())
+  createdAt      DateTime            @default(now()) @map("created_at")
 
   @@unique([userId, subspecialtyId])
   @@index([userId])
@@ -589,21 +589,22 @@ model ClinicianSubspecialty {
 // Custom specialty requests from clinicians (pending admin review)
 model CustomSpecialty {
   id        String              @id @default(uuid())
-  userId    String
+  userId    String              @map("user_id")
   user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   region    String? // e.g., "AU", "US" for regional specialties
   notes     String?             @db.Text
   status    CustomRequestStatus @default(PENDING)
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
 
   // If approved, link to the created MedicalSpecialty
-  approvedSpecialtyId String?
+  approvedSpecialtyId String?   @map("approved_specialty_id")
 
   // Custom subspecialties linked to this custom specialty
   customSubspecialties CustomSubspecialty[]
 
+  @@unique([userId, name])
   @@index([userId])
   @@index([status])
   @@map("custom_specialties")
@@ -612,23 +613,24 @@ model CustomSpecialty {
 // Custom subspecialty requests from clinicians (pending admin review)
 model CustomSubspecialty {
   id          String              @id @default(uuid())
-  userId      String
+  userId      String              @map("user_id")
   user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
   description String?             @db.Text
   status      CustomRequestStatus @default(PENDING)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
 
   // Can be linked to either a global specialty or a custom specialty
-  specialtyId       String?
-  specialty         MedicalSpecialty? @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
-  customSpecialtyId String?
-  customSpecialty   CustomSpecialty?  @relation(fields: [customSpecialtyId], references: [id], onDelete: Cascade)
+  specialtyId       String?           @map("specialty_id")
+  specialty         MedicalSpecialty? @relation(fields: [specialtyId], references: [id], onDelete: SetNull)
+  customSpecialtyId String?           @map("custom_specialty_id")
+  customSpecialty   CustomSpecialty?  @relation(fields: [customSpecialtyId], references: [id], onDelete: SetNull)
 
   // If approved, link to the created MedicalSubspecialty
-  approvedSubspecialtyId String?
+  approvedSubspecialtyId String?      @map("approved_subspecialty_id")
 
+  @@unique([userId, specialtyId, name])
   @@index([userId])
   @@index([specialtyId])
   @@index([customSpecialtyId])
