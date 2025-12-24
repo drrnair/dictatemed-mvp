@@ -239,11 +239,11 @@ export function RecordingSection({
       {/* Error display */}
       {error && (
         <div
-          className="flex items-center gap-space-2 rounded-lg border border-destructive/50 bg-destructive/10 p-space-4 text-destructive"
+          className="flex items-center gap-2 rounded-xl border border-rose-200 dark:border-rose-800/50 bg-rose-50 dark:bg-rose-900/20 p-4 text-rose-600 dark:text-rose-400"
           role="alert"
         >
           <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="text-body-sm">{error}</span>
+          <span className="text-sm">{error}</span>
         </div>
       )}
 
