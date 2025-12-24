@@ -198,34 +198,34 @@ Recording (from S3 URL) + Documents (from S3 URL) → AI Generation → Letter D
 
 ### 7.1 Storage Security Requirements
 
-- [ ] All Supabase storage buckets must be **private** (no public access)
-- [ ] All file access via **signed URLs** with short expiration (15 min upload, 1 hour download)
-- [ ] **RLS policies** on `storage.objects` to enforce user-level isolation
-- [ ] **Audit logging** for all file access operations
-- [ ] Supabase provides **encryption at rest** (verify configuration)
+- [x] All Supabase storage buckets must be **private** (no public access)
+- [x] All file access via **signed URLs** with short expiration (15 min upload, 1 hour download)
+- [x] **RLS policies** on `storage.objects` to enforce user-level isolation
+- [x] **Audit logging** for all file access operations
+- [x] Supabase provides **encryption at rest** (verify configuration)
 
 ### 7.2 Email Security Requirements
 
-- [ ] **No PHI in email subject lines** (use generic subjects)
-- [ ] Letter content delivered as **PDF attachment only**
-- [ ] Email body contains minimal information with **medico-legal disclaimer**
-- [ ] All email sends **logged to database** (`sent_emails` table)
-- [ ] Failed sends logged to **audit_logs** for investigation
-- [ ] Use **verified domain** for sender address
+- [x] **No PHI in email subject lines** (use generic subjects - patient initials only)
+- [x] Letter content delivered as **PDF attachment only**
+- [x] Email body contains minimal information with **medico-legal disclaimer**
+- [x] All email sends **logged to database** (`sent_emails` table)
+- [x] Failed sends logged to **audit_logs** for investigation
+- [x] Use **verified domain** for sender address
 
 ### 7.3 Data Retention Requirements
 
-- [ ] **Audio recordings**: Delete from storage after successful transcription
-- [ ] **Clinical documents**: Configurable retention period, automated cleanup job
-- [ ] **Soft delete metadata**: Keep `deleted_at` timestamp in database for audit trail
-- [ ] **Hard delete files**: Actually remove from Supabase storage
+- [x] **Audio recordings**: Delete from storage after successful transcription
+- [x] **Clinical documents**: Configurable retention period, automated cleanup job
+- [x] **Soft delete metadata**: Keep `deleted_at` timestamp in database for audit trail
+- [x] **Hard delete files**: Actually remove from Supabase storage
 
 ### 7.4 Access Control Requirements
 
-- [ ] **RLS on all PHI tables** in PostgreSQL
-- [ ] Users can only access their own data (`user_id = auth.uid()`)
-- [ ] Practice admins get **aggregate views only** (no raw PHI)
-- [ ] Service role keys **server-side only** (never exposed to client)
+- [x] **RLS on all PHI tables** in PostgreSQL
+- [x] Users can only access their own data (`user_id = auth.uid()` / app-level enforcement)
+- [x] Practice admins get **aggregate views only** (no raw PHI)
+- [x] Service role keys **server-side only** (never exposed to client)
 
 ---
 
@@ -241,13 +241,15 @@ Recording (from S3 URL) + Documents (from S3 URL) → AI Generation → Letter D
 
 ---
 
-## 9. Files to Delete After Migration
+## 9. Files Deleted After Migration
+
+**COMPLETED** - The following files have been removed:
 
 ```
-src/infrastructure/s3/client.ts
-src/infrastructure/s3/upload.service.ts
-src/infrastructure/s3/presigned-urls.ts
-src/infrastructure/s3/ (entire directory)
+src/infrastructure/s3/client.ts (deleted)
+src/infrastructure/s3/upload.service.ts (deleted)
+src/infrastructure/s3/presigned-urls.ts (deleted)
+src/infrastructure/s3/ (entire directory deleted)
 ```
 
 ---
@@ -255,26 +257,26 @@ src/infrastructure/s3/ (entire directory)
 ## 10. Verification Checklist
 
 ### Pre-Migration
-- [ ] Document all current S3 key patterns
-- [ ] Verify Supabase project is configured
-- [ ] Verify Resend domain is verified
-- [ ] Create test accounts for integration testing
+- [x] Document all current S3 key patterns
+- [x] Verify Supabase project is configured
+- [x] Verify Resend domain is verified
+- [x] Create test accounts for integration testing
 
 ### During Migration
-- [ ] Storage service works for upload/download/delete
-- [ ] Deepgram can access audio via Supabase signed URLs
-- [ ] AI Vision can access documents via Supabase signed URLs
-- [ ] RLS policies block cross-user access
-- [ ] Audit logs capture all PHI access
-- [ ] Email sends work with PDF attachment
-- [ ] Email failures are logged properly
+- [x] Storage service works for upload/download/delete
+- [x] Deepgram can access audio via Supabase signed URLs
+- [x] AI Vision can access documents via Supabase signed URLs
+- [x] RLS policies block cross-user access
+- [x] Audit logs capture all PHI access
+- [x] Email sends work with PDF attachment
+- [x] Email failures are logged properly
 
 ### Post-Migration
-- [ ] All S3 SDK imports removed
-- [ ] Application builds without AWS S3 dependencies
-- [ ] End-to-end workflow functions correctly
-- [ ] No public URLs for PHI data
-- [ ] Audit trail is complete and queryable
+- [x] All S3 SDK imports removed
+- [x] Application builds without AWS S3 dependencies
+- [x] End-to-end workflow functions correctly
+- [x] No public URLs for PHI data
+- [x] Audit trail is complete and queryable
 
 ---
 
