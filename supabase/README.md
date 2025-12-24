@@ -46,14 +46,15 @@ supabase db push
 
 ## Storage Buckets
 
-The migrations create two private storage buckets:
+The migrations create three private storage buckets:
 
 | Bucket | Purpose | Max Size | Allowed Types |
 |--------|---------|----------|---------------|
 | `audio-recordings` | Consultation audio | 500MB | webm, mp4, wav, mpeg, ogg |
 | `clinical-documents` | Clinical PDFs/images | 50MB | pdf, png, jpeg, tiff |
+| `user-assets` | Signatures, letterheads | 5MB | png, jpeg, gif, webp |
 
-Both buckets:
+All buckets:
 - Are **private** (no public access)
 - Have Row Level Security enabled
 - Enforce user-level isolation via path prefix
@@ -73,6 +74,18 @@ Example: `550e8400-e29b-41d4-a716-446655440000/abc123/1703460000000_dictation.we
 ```
 Example: `550e8400-e29b-41d4-a716-446655440000/patient123/echocardiogram/report_1703460000000.pdf`
 
+### User Assets (Signatures)
+```
+signatures/{user_id}/{timestamp}.{ext}
+```
+Example: `signatures/550e8400-e29b-41d4-a716-446655440000/1703460000000.png`
+
+### User Assets (Letterheads)
+```
+letterheads/{practice_id}/{timestamp}.{ext}
+```
+Example: `letterheads/practice-abc123/1703460000000.png`
+
 ## RLS Policies
 
 Storage RLS policies enforce that:
@@ -87,7 +100,7 @@ After running migrations, verify setup with these queries in SQL Editor:
 ```sql
 -- Check buckets exist
 SELECT * FROM storage.buckets
-WHERE id IN ('audio-recordings', 'clinical-documents');
+WHERE id IN ('audio-recordings', 'clinical-documents', 'user-assets');
 
 -- Check policies exist
 SELECT policyname, tablename, cmd
