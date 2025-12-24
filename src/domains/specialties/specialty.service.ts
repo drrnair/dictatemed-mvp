@@ -488,13 +488,15 @@ export async function updateUserPracticeProfile(
 
   // Use a transaction to ensure consistency
   await prisma.$transaction(async (tx) => {
-    // Update clinician role if provided
-    if (input.clinicianRole) {
-      await tx.user.update({
-        where: { id: userId },
-        data: { clinicianRole: input.clinicianRole },
-      });
-    }
+    // Update clinician role and mark onboarding as complete
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        ...(input.clinicianRole && { clinicianRole: input.clinicianRole }),
+        // Mark onboarding as complete when profile is saved
+        onboardingCompletedAt: new Date(),
+      },
+    });
 
     // Clear existing specialty selections
     await tx.clinicianSpecialty.deleteMany({

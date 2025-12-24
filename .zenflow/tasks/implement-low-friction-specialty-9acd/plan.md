@@ -376,7 +376,8 @@ Created comprehensive technical specification in `spec.md` covering:
 
 ---
 
-### [ ] Step 7: Onboarding Page Redesign
+### [x] Step 7: Onboarding Page Redesign
+<!-- chat-id: abfdc0c0-840a-4b3c-8045-e6c565bff1ff -->
 
 **Goal**: Replace existing onboarding page with new "About your practice" screen.
 
@@ -402,6 +403,19 @@ Created comprehensive technical specification in `spec.md` covering:
 
 **Files**:
 - `src/app/(dashboard)/onboarding/page.tsx` (modify)
+
+**Completed**:
+- Replaced grid selection with `PracticeProfileForm` component
+- Added welcome header with intro text explaining personalization
+- Configured form in "onboarding" mode with "Get Started" and "Skip for now" buttons
+- Added `onboardingCompletedAt` field to User model (nullable DateTime)
+- Created migration `20251224_add_medical_specialty_tables/migration.sql` with all specialty tables and onboardingCompletedAt field
+- Updated `auth.ts` to check `onboardingCompletedAt` OR legacy subspecialties for onboarding status
+- Created `/api/user/onboarding/complete` endpoint to mark onboarding complete (for skip action)
+- Updated `OnboardingRedirect` to allow `/settings/specialties` path
+- Updated test mocks to include `onboardingCompletedAt` field
+- TypeScript typecheck passes
+- ESLint passes with no warnings
 
 ---
 

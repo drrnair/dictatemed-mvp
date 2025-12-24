@@ -50,6 +50,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         role: true,
         practiceId: true,
         subspecialties: true,
+        onboardingCompletedAt: true,
       },
     });
 
@@ -73,6 +74,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
             role: true,
             practiceId: true,
             subspecialties: true,
+            onboardingCompletedAt: true,
           },
         });
       } else {
@@ -101,14 +103,17 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
             role: true,
             practiceId: true,
             subspecialties: true,
+            onboardingCompletedAt: true,
           },
         });
       }
     }
 
-    // Onboarding is considered complete if user has selected at least one subspecialty
+    // Onboarding is considered complete if:
+    // 1. User has explicit onboardingCompletedAt timestamp (new flow - saved or skipped), OR
+    // 2. User has legacy subspecialties (old flow - for backwards compatibility)
     const subspecialties = user.subspecialties || [];
-    const onboardingCompleted = subspecialties.length > 0;
+    const onboardingCompleted = user.onboardingCompletedAt !== null || subspecialties.length > 0;
 
     return {
       id: user.id,

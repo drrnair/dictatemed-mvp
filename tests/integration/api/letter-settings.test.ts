@@ -33,6 +33,7 @@ const mockUser = {
   practiceId: 'practice-123',
   subspecialties: ['Cardiology'],
   onboardingCompleted: true,
+  onboardingCompletedAt: new Date(),
   // Additional required Prisma fields
   createdAt: new Date(),
   updatedAt: new Date(),

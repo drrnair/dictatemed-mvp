@@ -57,6 +57,7 @@ const mockUser = {
   practiceId: 'practice-123',
   subspecialties: ['Cardiology'],
   onboardingCompleted: true,
+  onboardingCompletedAt: new Date(),
 };
 
 const mockLetter = {
