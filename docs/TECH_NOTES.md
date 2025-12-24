@@ -979,5 +979,5 @@ const response = await generateTextWithRetry({
 
 ---
 
-*Last updated: 2025-12-22*
-*Version: 1.0.0*
+*Last updated: 2025-12-24*
+*Version: 1.1.0 - Added Medical Specialty Taxonomy and Low-Friction Onboarding*

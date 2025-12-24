@@ -3,3 +3,4 @@
 
 export * from './specialty.types';
 export * from './specialty.service';
+export * from './specialty.validation';

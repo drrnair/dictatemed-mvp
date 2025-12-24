@@ -242,14 +242,17 @@ export async function getSubspecialtiesForSpecialty(
   }
 
   // Include user's custom subspecialties if requested
-  if (includeCustom) {
+  // Only query if at least one parent ID is provided to avoid empty OR array
+  if (includeCustom && (specialtyId || customSpecialtyId)) {
+    const orConditions = [
+      ...(specialtyId ? [{ specialtyId }] : []),
+      ...(customSpecialtyId ? [{ customSpecialtyId }] : []),
+    ];
+
     const customSubspecialties = await prisma.customSubspecialty.findMany({
       where: {
         userId,
-        OR: [
-          ...(specialtyId ? [{ specialtyId }] : []),
-          ...(customSpecialtyId ? [{ customSpecialtyId }] : []),
-        ],
+        OR: orConditions,
         ...(normalizedQuery && { name: { contains: normalizedQuery, mode: 'insensitive' } }),
       },
       orderBy: { name: 'asc' },
