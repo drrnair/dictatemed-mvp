@@ -39,20 +39,40 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     const email = session.user.email as string;
     const userName = String(session.user.name || email.split('@')[0]);
 
-    // Try to find existing user
-    let user = await prisma.user.findUnique({
-      where: { auth0Id },
-      select: {
-        id: true,
-        auth0Id: true,
-        email: true,
-        name: true,
-        role: true,
-        practiceId: true,
-        subspecialties: true,
-        onboardingCompletedAt: true,
-      },
+    logger.info('getCurrentUser: Auth0 session found', {
+      action: 'auth',
+      auth0Id: auth0Id.substring(0, 20) + '...',
+      email,
     });
+
+    // Try to find existing user
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { auth0Id },
+        select: {
+          id: true,
+          auth0Id: true,
+          email: true,
+          name: true,
+          role: true,
+          practiceId: true,
+          subspecialties: true,
+          onboardingCompletedAt: true,
+        },
+      });
+      logger.info('getCurrentUser: Prisma query completed', {
+        action: 'auth',
+        userFound: !!user,
+        userId: user?.id,
+      });
+    } catch (prismaError) {
+      logger.error('getCurrentUser: Prisma query failed', {
+        action: 'auth',
+        errorMessage: prismaError instanceof Error ? prismaError.message : String(prismaError),
+      }, prismaError instanceof Error ? prismaError : new Error(String(prismaError)));
+      throw prismaError;
+    }
 
     // Auto-provision new users on first login
     if (!user) {
@@ -126,7 +146,14 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       onboardingCompleted,
     };
   } catch (error) {
-    logger.error('getCurrentUser error', { action: 'auth' }, error instanceof Error ? error : new Error(String(error)));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    logger.error('getCurrentUser error', {
+      action: 'auth',
+      errorMessage,
+      errorStack,
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+    }, error instanceof Error ? error : new Error(String(error)));
     return null;
   }
 }
