@@ -632,3 +632,20 @@ Created comprehensive technical specification in `spec.md` covering:
   - Architecture decisions documented
   - Verification results
   - Future considerations noted
+
+**Review Feedback Addressed**:
+- Added comprehensive API Reference section to TECH_NOTES.md:
+  - GET /api/specialties (search with synonyms)
+  - GET /api/specialties/:id/subspecialties
+  - POST /api/specialties/custom
+  - POST /api/subspecialties/custom
+  - GET/PUT /api/user/practice-profile
+  - POST /api/user/onboarding/complete
+- Documented `approvedSpecialtyId`/`approvedSubspecialtyId` fields:
+  - Explained purpose for future admin approval workflow
+  - Documented how approval process will work
+- Verified schema duplication issue was already resolved (API routes import from domain)
+- Confirmed type definitions in usePracticeProfile.ts are intentionally different:
+  - Hook types use `id` + `isCustom` for form state
+  - API types use `specialtyId` + `customSpecialtyId` for database mapping
+  - This separation is intentional for form handling vs API layer
