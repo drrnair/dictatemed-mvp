@@ -8,7 +8,6 @@ import type { ClinicianRole } from '@prisma/client';
 import type {
   PracticeProfile,
   SpecialtySelection,
-  SelectedSpecialty,
 } from '@/domains/specialties';
 import type {
   SelectedSpecialtyItem,

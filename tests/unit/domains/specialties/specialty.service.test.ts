@@ -256,7 +256,7 @@ describe('specialty.service', () => {
 
   describe('getSpecialtyById', () => {
     it('should return specialty when found', async () => {
-      vi.mocked(prisma.medicalSpecialty.findUnique).mockResolvedValue(mockSpecialties[0]);
+      vi.mocked(prisma.medicalSpecialty.findUnique).mockResolvedValue(mockSpecialties[0] ?? null);
 
       const result = await specialtyService.getSpecialtyById('spec-1');
 
