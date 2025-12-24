@@ -2,19 +2,12 @@
 // API endpoint for creating custom specialties
 
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
-import { createCustomSpecialty } from '@/domains/specialties/specialty.service';
+import { createCustomSpecialty, createCustomSpecialtySchema } from '@/domains/specialties';
 
 const log = logger.child({ module: 'custom-specialties-api' });
-
-const createCustomSpecialtySchema = z.object({
-  name: z.string().min(2).max(100).trim(),
-  region: z.string().max(10).optional(),
-  notes: z.string().max(500).optional(),
-});
 
 /**
  * POST /api/specialties/custom

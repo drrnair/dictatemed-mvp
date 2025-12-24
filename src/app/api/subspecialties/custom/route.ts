@@ -2,25 +2,12 @@
 // API endpoint for creating custom subspecialties
 
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
-import { createCustomSubspecialty } from '@/domains/specialties/specialty.service';
+import { createCustomSubspecialty, createCustomSubspecialtySchema } from '@/domains/specialties';
 
 const log = logger.child({ module: 'custom-subspecialties-api' });
-
-const createCustomSubspecialtySchema = z
-  .object({
-    name: z.string().min(2).max(100).trim(),
-    specialtyId: z.string().uuid().optional(),
-    customSpecialtyId: z.string().uuid().optional(),
-    description: z.string().max(500).optional(),
-  })
-  .refine((data) => data.specialtyId || data.customSpecialtyId, {
-    message: 'Either specialtyId or customSpecialtyId must be provided',
-    path: ['specialtyId'],
-  });
 
 /**
  * POST /api/subspecialties/custom
