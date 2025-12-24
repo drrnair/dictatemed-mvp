@@ -1,10 +1,11 @@
 // src/app/api/documents/[id]/upload-url/route.ts
-// Generate presigned S3 upload URL for document re-upload
+// Generate presigned Supabase Storage upload URL for document re-upload
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getDocument } from '@/domains/documents/document.service';
-import { getUploadUrl } from '@/infrastructure/s3/presigned-urls';
+import { generateUploadUrl } from '@/infrastructure/supabase/storage.service';
+import { STORAGE_BUCKETS } from '@/infrastructure/supabase/client';
 import { logger } from '@/lib/logger';
 
 interface RouteParams {
@@ -44,20 +45,30 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Generate presigned upload URL
-    const { url, expiresAt } = await getUploadUrl(
-      document.s3Key ?? '',
+    // Verify storagePath exists
+    if (!document.storagePath) {
+      return NextResponse.json(
+        { error: 'Document has no storage path configured' },
+        { status: 400 }
+      );
+    }
+
+    // Generate presigned upload URL for Supabase Storage
+    const { signedUrl, expiresAt } = await generateUploadUrl(
+      STORAGE_BUCKETS.CLINICAL_DOCUMENTS,
+      document.storagePath,
       document.mimeType
     );
 
     log.info('Generated upload URL', {
       documentId: id,
       userId: session.user.id,
+      storagePath: document.storagePath,
       expiresAt,
     });
 
     return NextResponse.json({
-      uploadUrl: url,
+      uploadUrl: signedUrl,
       expiresAt,
       documentId: id,
     });
