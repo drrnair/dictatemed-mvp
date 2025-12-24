@@ -308,7 +308,7 @@ function StatCard({
 
   return (
     <Card>
-      <CardContent className="p-space-5">
+      <CardContent className="p-5">
         <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
           {iconMap[icon]}
           <p className="text-xs font-medium uppercase tracking-wide">{title}</p>
@@ -334,7 +334,7 @@ function RecentActivitySection() {
 
   return (
     <section>
-      <div className="flex items-center justify-between mb-space-4">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-medium text-slate-800 dark:text-slate-100">
           Recent Activity
         </h2>
@@ -357,7 +357,7 @@ function RecentActivitySection() {
               <li key={item.id}>
                 <Link
                   href={`/letters/${item.id}`}
-                  className="flex items-center gap-space-4 p-space-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-200"
+                  className="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-200"
                 >
                   {/* Patient avatar/initials */}
                   <div className="flex-shrink-0 h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-medium text-slate-600 dark:text-slate-400">
@@ -390,9 +390,9 @@ function RecentActivitySection() {
 function EmptyActivityState() {
   return (
     <Card className="border-dashed">
-      <CardContent className="p-space-8 text-center">
+      <CardContent className="p-8 text-center">
         {/* Illustration placeholder */}
-        <div className="mx-auto h-16 w-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-space-4">
+        <div className="mx-auto h-16 w-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
           <svg
             className="h-8 w-8 text-slate-400"
             fill="none"
@@ -410,7 +410,7 @@ function EmptyActivityState() {
         <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-1">
           No letters yet
         </h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-space-4 max-w-sm mx-auto">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 max-w-sm mx-auto">
           Start your first recording to generate a consultation letter. It only takes a few minutes.
         </p>
         <Button asChild>

@@ -3,7 +3,6 @@
 
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { FileText } from 'lucide-react';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import {
@@ -42,42 +41,40 @@ const letterTypeLabels: Record<string, string> = {
 };
 
 export function LetterList({ letters, loading }: LetterListProps) {
-  const router = useRouter();
-
   if (loading) {
     return (
-      <div className="rounded-md border">
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Patient</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Approved</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
+            <TableRow className="bg-slate-50 dark:bg-slate-800/50">
+              <TableHead className="text-slate-600 dark:text-slate-300">Patient</TableHead>
+              <TableHead className="text-slate-600 dark:text-slate-300">Type</TableHead>
+              <TableHead className="text-slate-600 dark:text-slate-300">Status</TableHead>
+              <TableHead className="text-slate-600 dark:text-slate-300">Created</TableHead>
+              <TableHead className="text-slate-600 dark:text-slate-300">Approved</TableHead>
+              <TableHead className="w-[100px] text-slate-600 dark:text-slate-300">Risk Score</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {[...Array(5)].map((_, i) => (
               <TableRow key={i}>
                 <TableCell>
-                  <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                 </TableCell>
                 <TableCell>
-                  <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                 </TableCell>
                 <TableCell>
-                  <div className="h-5 w-20 animate-pulse rounded bg-muted" />
+                  <div className="h-5 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
                 </TableCell>
                 <TableCell>
-                  <div className="h-4 w-28 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-28 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                 </TableCell>
                 <TableCell>
-                  <div className="h-4 w-28 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-28 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                 </TableCell>
                 <TableCell>
-                  <div className="h-4 w-16 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                 </TableCell>
               </TableRow>
             ))}

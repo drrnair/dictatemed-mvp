@@ -126,7 +126,7 @@ function LettersContent() {
       {/* Pagination */}
       {!loading && pagination.totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-slate-500 dark:text-slate-400">
             Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
             {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
             {pagination.total} letters
@@ -197,8 +197,8 @@ export default function LettersPage() {
       fallback={
         <div className="flex h-[calc(100vh-200px)] items-center justify-center">
           <div className="text-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p className="mt-4 text-sm text-muted-foreground">Loading letters...</p>
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
+            <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">Loading letters...</p>
           </div>
         </div>
       }

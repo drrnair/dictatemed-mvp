@@ -3,8 +3,7 @@
 
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { Calendar, User, FileText, AlertCircle } from 'lucide-react';
+import { Calendar, FileText, AlertCircle } from 'lucide-react';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import {
   Card,
@@ -41,8 +40,6 @@ const letterTypeLabels: Record<string, string> = {
 };
 
 export function LetterCard({ letter }: LetterCardProps) {
-  const router = useRouter();
-
   return (
     <Card variant="interactive" className="cursor-pointer">
       <CardHeader className="pb-3">
