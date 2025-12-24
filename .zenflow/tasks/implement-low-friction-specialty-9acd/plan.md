@@ -564,23 +564,28 @@ Created comprehensive technical specification in `spec.md` covering:
   - Tests for getUserPracticeProfile and updateUserPracticeProfile
   - Tests for hasCompletedPracticeProfile, getUserSpecialtyIds, getUserSubspecialtyIds
   - Tests for getSuggestedSubspecialties
-- Created `tests/integration/specialties/specialty-api.test.ts`:
-  - 18 integration tests for API endpoints
-  - Tests for GET /api/specialties with auth, search, limit, includeCustom
+- Created `tests/integration/api/specialties.test.ts`:
+  - 35 integration tests for API endpoints
+  - Tests for GET /api/specialties with auth, search, limit, includeCustom, synonyms
+  - Tests for GET /api/specialties/:id/subspecialties with query filtering
+  - Tests for POST /api/specialties/custom with validation
+  - Tests for POST /api/subspecialties/custom with validation
   - Tests for GET /api/user/practice-profile auth and data retrieval
   - Tests for PUT /api/user/practice-profile with validation and rate limiting
-  - Tests for POST /api/specialties/custom with validation
-- Created `tests/integration/specialties/onboarding-flow.test.ts`:
-  - 18 integration tests for onboarding flow
-  - Tests for POST /api/user/onboarding/complete
-  - Tests for GET /api/specialties/:id/subspecialties
-  - Tests for POST /api/subspecialties/custom
-  - Tests for complete onboarding flow scenarios
-  - Tests for multi-specialty support
+- Created `tests/integration/specialty/specialty-onboarding.test.ts`:
+  - 25 integration tests for onboarding flow
+  - Flow 1: Complete onboarding with standard specialty (5 tests)
+  - Flow 2: Select multiple specialties (1 test)
+  - Flow 3: Skip onboarding without selecting specialties (2 tests)
+  - Flow 4: Add custom specialty not in list (4 tests)
+  - Flow 5: Add custom subspecialty not in list (3 tests)
+  - Flow 6: Edit specialties from settings (3 tests)
+  - Helper functions tests (4 tests)
+  - Error handling tests (3 tests)
 - Fixed bug in `src/app/api/specialties/route.ts`:
   - `includeCustom=false` query parameter was being coerced to `true` by z.coerce.boolean()
-  - Added proper boolean string parsing with z.preprocess()
-- All 70 tests pass (34 unit + 36 integration)
+  - Added proper boolean string parsing with `booleanString` helper in `src/lib/validation.ts`
+- All specialty tests pass: 34 unit tests + 60 integration tests (35 API + 25 onboarding)
 
 ---
 
