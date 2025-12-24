@@ -248,8 +248,17 @@ Update letters page styling:
   - Enhanced empty state with illustration icon
   - Hover states on table rows (bg-slate-50/800 on hover)
   - Risk score colors: rose/amber/emerald
-- **LetterCard.tsx**: Status config updated with semantic variants
-- `npm run lint` passes successfully
+  - Table container with rounded-xl borders
+- **LetterCard.tsx**: Updated with:
+  - Status config using semantic variants (pending, approved, error)
+  - Interactive card variant with hover lift effect
+  - Risk score colors: rose/amber/emerald
+  - Loading skeleton with rounded-xl cards and slate backgrounds
+  - Enhanced empty state with illustration icon
+- **LetterFilters.tsx**: Updated with:
+  - rounded-xl for all inputs and select triggers
+  - Slate text colors for search icon and sort label
+- Both `npm run lint` and `npm run build` pass successfully
 
 ---
 
