@@ -108,6 +108,14 @@ export async function DELETE() {
       log.warn('Some storage objects failed to delete', { userId, errors: storageDeletionErrors });
     }
 
+    // Delete sent emails before transaction (table may not exist in all environments)
+    // This is done outside transaction to gracefully handle missing table
+    try {
+      await prisma.$executeRaw`DELETE FROM sent_emails WHERE "userId" = ${userId}::text`;
+    } catch {
+      // Table doesn't exist yet - skip silently
+    }
+
     // Delete database records in order (respecting foreign keys)
     await prisma.$transaction(async (tx) => {
       // Delete audit logs
@@ -125,9 +133,6 @@ export async function DELETE() {
 
       // Delete template preferences
       await tx.userTemplatePreference.deleteMany({ where: { userId } });
-
-      // Delete sent emails
-      await tx.sentEmail.deleteMany({ where: { userId } });
 
       // Delete letter sends
       await tx.letterSend.deleteMany({ where: { senderId: userId } });
