@@ -12,10 +12,20 @@ import {
 
 const log = logger.child({ module: 'specialties-api' });
 
+// Helper to properly parse boolean query strings
+const booleanString = z.preprocess(
+  (val) => {
+    if (val === undefined || val === null || val === '') return undefined;
+    if (typeof val === 'string') return val.toLowerCase() === 'true';
+    return Boolean(val);
+  },
+  z.boolean().optional()
+);
+
 const searchQuerySchema = z.object({
   query: z.string().max(100).optional(),
   limit: z.coerce.number().int().min(1).max(20).optional().default(7),
-  includeCustom: z.coerce.boolean().optional().default(true),
+  includeCustom: booleanString.default(true),
 });
 
 /**

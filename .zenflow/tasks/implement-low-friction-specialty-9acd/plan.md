@@ -514,7 +514,7 @@ Created comprehensive technical specification in `spec.md` covering:
 
 ---
 
-### [ ] Step 10: Unit & Integration Tests
+### [x] Step 10: Unit & Integration Tests
 <!-- chat-id: 436c36ae-fb22-4553-82b2-99f01b42234b -->
 
 **Goal**: Add comprehensive test coverage for new functionality.
@@ -540,6 +540,34 @@ Created comprehensive technical specification in `spec.md` covering:
 **Files**:
 - `tests/unit/specialty.service.test.ts` (create)
 - `tests/integration/specialty-onboarding.test.ts` (create)
+
+**Completed**:
+- Created `tests/unit/domains/specialties/specialty.service.test.ts`:
+  - 34 unit tests covering all service functions
+  - Tests for searchSpecialties with various query scenarios
+  - Tests for getSpecialtyById, getAllSpecialties, getSpecialtyBySlug
+  - Tests for getSubspecialtiesForSpecialty with filtering
+  - Tests for createCustomSpecialty and createCustomSubspecialty
+  - Tests for getUserPracticeProfile and updateUserPracticeProfile
+  - Tests for hasCompletedPracticeProfile, getUserSpecialtyIds, getUserSubspecialtyIds
+  - Tests for getSuggestedSubspecialties
+- Created `tests/integration/specialties/specialty-api.test.ts`:
+  - 18 integration tests for API endpoints
+  - Tests for GET /api/specialties with auth, search, limit, includeCustom
+  - Tests for GET /api/user/practice-profile auth and data retrieval
+  - Tests for PUT /api/user/practice-profile with validation and rate limiting
+  - Tests for POST /api/specialties/custom with validation
+- Created `tests/integration/specialties/onboarding-flow.test.ts`:
+  - 18 integration tests for onboarding flow
+  - Tests for POST /api/user/onboarding/complete
+  - Tests for GET /api/specialties/:id/subspecialties
+  - Tests for POST /api/subspecialties/custom
+  - Tests for complete onboarding flow scenarios
+  - Tests for multi-specialty support
+- Fixed bug in `src/app/api/specialties/route.ts`:
+  - `includeCustom=false` query parameter was being coerced to `true` by z.coerce.boolean()
+  - Added proper boolean string parsing with z.preprocess()
+- All 70 tests pass (34 unit + 36 integration)
 
 ---
 
