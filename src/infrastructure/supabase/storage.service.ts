@@ -474,6 +474,39 @@ export async function fileExists(bucket: StorageBucket, path: string): Promise<b
   }
 }
 
+/**
+ * Download file content from Supabase Storage.
+ *
+ * @param bucket - The storage bucket name
+ * @param path - The file path within the bucket
+ * @returns Object with content as Buffer and contentType
+ */
+export async function getFileContent(
+  bucket: StorageBucket,
+  path: string
+): Promise<{ content: Buffer; contentType: string }> {
+  const client = getSupabaseServiceClient();
+
+  const { data, error } = await client.storage.from(bucket).download(path);
+
+  if (error || !data) {
+    throw new StorageError(
+      `Failed to download file: ${error?.message || 'Unknown error'}`,
+      'FILE_NOT_FOUND',
+      error ? new Error(error.message) : undefined
+    );
+  }
+
+  // Convert Blob to Buffer
+  const arrayBuffer = await data.arrayBuffer();
+  const content = Buffer.from(arrayBuffer);
+
+  // Get content type from metadata or default
+  const contentType = data.type || 'application/octet-stream';
+
+  return { content, contentType };
+}
+
 // ============ Audit Logging Integration ============
 
 /**

@@ -2,15 +2,33 @@
 
 The Style Learning System analyzes physician edits to AI-generated letters to learn their writing preferences and automatically apply these preferences to future letter generation.
 
+> **Detailed Documentation**: See [docs/TECH_NOTES.md](/docs/TECH_NOTES.md) for comprehensive technical documentation and [docs/DESIGN_NOTES.md](/docs/DESIGN_NOTES.md) for architecture decisions.
+
+## Overview
+
+The system supports two modes:
+1. **Global Style** (legacy) - Single profile per clinician stored in `User.styleProfile`
+2. **Per-Subspecialty Style** (new) - Separate profiles per subspecialty in `StyleProfile` table
+
 ## Architecture
 
 ### Components
 
-1. **style.types.ts** - Type definitions for style profiles, edits, and analysis results
-2. **style-analyzer.ts** - Claude-powered analyzer that detects patterns in edits
-3. **style.service.ts** - Service layer for recording edits and managing style profiles
-4. **API Route** - `/api/style/analyze` for triggering analysis and retrieving statistics
-5. **UI** - Settings page at `/settings/style` for viewing and managing style profile
+**Global Style (Legacy):**
+1. **style.types.ts** - Type definitions for global style profiles
+2. **style-analyzer.ts** - Claude-powered analyzer for global profiles
+3. **style.service.ts** - Service layer for global profile management
+4. **API Route** - `/api/style/analyze` for global analysis
+
+**Per-Subspecialty Style (New):**
+1. **subspecialty-profile.types.ts** - Types for subspecialty profiles
+2. **subspecialty-profile.service.ts** - CRUD for subspecialty profiles with caching
+3. **diff-analyzer.ts** - Section-level diff computation
+4. **learning-pipeline.ts** - Background analysis pipeline
+5. **prompt-conditioner.ts** - Style-to-prompt transformation
+6. **analytics-aggregator.ts** - De-identified analytics
+7. **API Routes** - `/api/style/profiles/*`, `/api/style/seed/*`
+8. **UI** - Settings page with subspecialty profile management
 
 ### Database Schema
 
@@ -129,6 +147,67 @@ The system automatically adds style guidance like:
 • Vocabulary preferences: use "use" instead of "utilize", "start" instead of "commence"
 ```
 
+## Per-Subspecialty Style Learning
+
+### Quick Start
+
+```typescript
+import {
+  buildStyleConditionedPrompt,
+  recordSubspecialtyEdits,
+  queueStyleAnalysis,
+} from '@/domains/style';
+
+// On letter generation - apply style conditioning
+const { enhancedPrompt, hints, profileSource } = await buildStyleConditionedPrompt({
+  userId,
+  subspecialty: 'HEART_FAILURE',
+  basePrompt: originalPrompt,
+});
+
+// On letter approval - record edits for learning
+await recordSubspecialtyEdits({
+  userId,
+  letterId,
+  subspecialty: 'HEART_FAILURE',
+  draftContent: letter.contentDraft,
+  finalContent: input.finalContent,
+});
+
+// Check if analysis should run
+if (await shouldTriggerAnalysis(userId, 'HEART_FAILURE')) {
+  await queueStyleAnalysis(userId, 'HEART_FAILURE');
+}
+```
+
+### Fallback Chain
+
+When generating a letter, the system looks for profiles in this order:
+1. **Subspecialty profile** - `StyleProfile` for (userId, subspecialty)
+2. **Global profile** - `User.styleProfile` JSON field
+3. **No conditioning** - Returns base prompt unchanged
+
+### Thresholds
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `MIN_EDITS_FOR_ANALYSIS` | 5 | Edits before first analysis |
+| `ANALYSIS_INTERVAL` | 10 | Additional edits between re-analyses |
+| `MIN_CONFIDENCE_THRESHOLD` | 0.5 | Minimum confidence to apply preference |
+
+### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/style/profiles` | List all profiles |
+| POST | `/api/style/profiles` | Create/update profile |
+| GET | `/api/style/profiles/:sub` | Get specific profile |
+| DELETE | `/api/style/profiles/:sub` | Reset to defaults |
+| PATCH | `/api/style/profiles/:sub/strength` | Adjust learning strength |
+| POST | `/api/style/profiles/:sub/analyze` | Trigger analysis |
+| POST | `/api/style/seed` | Upload seed letter |
+| GET | `/api/style/seed` | List seed letters |
+
 ## Confidence Scoring
 
 Each preference has a confidence score (0-1):
@@ -139,7 +218,7 @@ Each preference has a confidence score (0-1):
 - **0.3-0.5**: Weak pattern, significant variation
 - **0.0-0.3**: No clear pattern detected
 
-Only preferences with confidence >= 0.6 are applied to prompts.
+Only preferences with confidence >= 0.5 are applied to prompts.
 
 ## Example Analysis Flow
 

@@ -65,7 +65,7 @@ export default function LetterError({ error, reset }: ErrorPageProps) {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md text-center">
         {/* Icon */}
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-clinical-critical/10">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-clinical-critical-muted">
           <AlertTriangle
             className="h-10 w-10 text-clinical-critical"
             aria-hidden="true"
@@ -86,7 +86,7 @@ export default function LetterError({ error, reset }: ErrorPageProps) {
 
         {/* Unsaved edits warning */}
         {hasUnsavedEdits && savedContent && (
-          <div className="mb-8 rounded-lg border border-clinical-warning bg-clinical-warning/10 p-4">
+          <div className="mb-8 rounded-lg border border-clinical-warning bg-clinical-warning-muted p-4">
             <div className="mb-3 flex items-center justify-center text-clinical-warning">
               <FileText className="mr-2 h-5 w-5" />
               <span className="font-medium">Unsaved Edits Detected</span>
@@ -98,7 +98,7 @@ export default function LetterError({ error, reset }: ErrorPageProps) {
               onClick={handleSaveDraft}
               variant="outline"
               size="sm"
-              className="w-full border-clinical-warning text-clinical-warning hover:bg-clinical-warning/10"
+              className="w-full border-clinical-warning text-clinical-warning hover:bg-clinical-warning-muted"
             >
               <Save className="mr-2 h-4 w-4" />
               Download Draft

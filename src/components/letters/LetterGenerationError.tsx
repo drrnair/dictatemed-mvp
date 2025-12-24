@@ -63,7 +63,7 @@ export function LetterGenerationError({
     >
       {/* Icon and Title */}
       <div className="mb-4 flex items-start">
-        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-clinical-critical/10">
+        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-clinical-critical-muted">
           <AlertCircle className="h-6 w-6 text-clinical-critical" aria-hidden="true" />
         </div>
         <div className="ml-4">
@@ -88,7 +88,7 @@ export function LetterGenerationError({
 
       {/* Partial content preview */}
       {partialContent && (
-        <div className="mb-4 rounded-md border border-clinical-warning/30 bg-clinical-warning/5 p-4">
+        <div className="mb-4 rounded-md border border-clinical-warning bg-clinical-warning-muted p-4">
           <div className="mb-2 flex items-center justify-between">
             <div className="flex items-center text-sm font-medium text-gray-900">
               <FileText className="mr-2 h-4 w-4 text-clinical-warning" />
@@ -182,7 +182,7 @@ export function LetterGenerationErrorCompact({
   return (
     <div
       className={cn(
-        'flex items-center justify-between rounded-md border border-clinical-critical/30 bg-clinical-critical/5 p-3',
+        'flex items-center justify-between rounded-md border border-clinical-critical bg-clinical-critical-muted p-3',
         className
       )}
       role="alert"

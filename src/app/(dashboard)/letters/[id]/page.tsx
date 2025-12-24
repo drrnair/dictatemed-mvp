@@ -142,9 +142,18 @@ export default async function LetterReviewPage({ params }: PageProps) {
     notFound();
   }
 
+  // Pass user with email and subspecialties for send letter dialog
+  const currentUser = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    subspecialties: user.subspecialties,
+  };
+
   return (
     <Suspense fallback={<LetterReviewSkeleton />}>
-      <LetterReviewClient letter={letter} currentUser={user} />
+      <LetterReviewClient letter={letter} currentUser={currentUser} />
     </Suspense>
   );
 }

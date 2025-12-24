@@ -74,13 +74,14 @@ export function LetterEditor({
         const anchorText = highlightedContent.substring(anchor.textStart, anchor.textEnd);
         const afterText = highlightedContent.substring(anchor.textEnd);
 
+        // Use design system colors - primary/10 for transcript, clinical-verified/10 for documents
         const highlightClass = anchor.sourceType === 'transcript'
-          ? 'bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800'
-          : 'bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800';
+          ? 'bg-primary/15 hover:bg-primary/25'
+          : 'bg-clinical-verified/15 hover:bg-clinical-verified/25';
 
         highlightedContent =
           beforeText +
-          `<span class="${highlightClass} cursor-pointer rounded px-0.5 transition-colors" data-anchor-id="${anchor.id}" data-source-type="${anchor.sourceType}">${anchorText}</span>` +
+          `<span class="${highlightClass} cursor-pointer rounded px-0.5 transition-colors duration-150" data-anchor-id="${anchor.id}" data-source-type="${anchor.sourceType}">${anchorText}</span>` +
           afterText;
       }
     });
@@ -260,9 +261,9 @@ export function LetterEditor({
       data-testid="letter-editor"
     >
       {/* Toolbar */}
-      <div className="flex items-center justify-between border-b bg-white px-4 py-3 dark:bg-gray-900">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between border-b border-border/60 bg-card px-space-4 py-space-3 shadow-card">
+        <div className="flex items-center gap-space-4">
+          <div className="flex items-center gap-space-2">
             <Button
               variant="outline"
               size="sm"
@@ -270,8 +271,9 @@ export function LetterEditor({
               disabled={historyIndex === 0 || readOnly}
               data-testid="undo-button"
               title="Undo (Ctrl+Z)"
+              className="min-h-touch"
             >
-              <span className="text-sm">Undo</span>
+              <span className="text-label">Undo</span>
             </Button>
             <Button
               variant="outline"
@@ -280,8 +282,9 @@ export function LetterEditor({
               disabled={historyIndex === editHistory.length - 1 || readOnly}
               data-testid="redo-button"
               title="Redo (Ctrl+Y)"
+              className="min-h-touch"
             >
-              <span className="text-sm">Redo</span>
+              <span className="text-label">Redo</span>
             </Button>
           </div>
 
@@ -293,10 +296,11 @@ export function LetterEditor({
               disabled={isSaving}
               data-testid="save-button"
               title="Save (Ctrl+S)"
+              className="min-h-touch gap-space-2"
             >
               {isSaving ? (
                 <>
-                  <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
                   Saving...
                 </>
               ) : (
@@ -306,21 +310,23 @@ export function LetterEditor({
           )}
         </div>
 
-        <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center gap-space-4 text-body-sm text-muted-foreground">
           {/* Auto-save indicator */}
           {isAutoSaving && (
             <span
-              className="flex items-center gap-1"
+              className="flex items-center gap-space-1"
               data-testid="auto-save-indicator"
+              role="status"
+              aria-live="polite"
             >
-              <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
+              <span className="h-2 w-2 animate-pulse rounded-full bg-primary" aria-hidden="true" />
               Auto-saving...
             </span>
           )}
 
           {/* Last saved */}
           {lastSaved && !isAutoSaving && (
-            <span data-testid="last-saved">
+            <span data-testid="last-saved" className="text-caption">
               Saved {formatLastSaved()}
             </span>
           )}
@@ -328,8 +334,9 @@ export function LetterEditor({
           {/* Error indicator */}
           {saveError && (
             <span
-              className="text-red-600 dark:text-red-400"
+              className="text-caption text-clinical-critical"
               data-testid="save-error"
+              role="alert"
             >
               Error: {saveError}
             </span>
@@ -337,42 +344,44 @@ export function LetterEditor({
 
           {/* Reading stats */}
           <div
-            className="flex items-center gap-3 border-l pl-4"
+            className="flex items-center gap-space-3 border-l border-border/60 pl-space-4"
             data-testid="reading-stats"
           >
-            <span>{characterCount} characters</span>
-            <span>{wordCount} words</span>
-            <span>{estimatedReadingTime} min read</span>
+            <span className="text-caption">{characterCount} characters</span>
+            <span className="text-caption">{wordCount} words</span>
+            <span className="text-caption">{estimatedReadingTime} min read</span>
           </div>
         </div>
       </div>
 
       {/* Editor area */}
-      <div className="flex-1 overflow-auto bg-white dark:bg-gray-900">
+      <div className="flex-1 overflow-auto bg-card">
         <div
           ref={editorRef}
           contentEditable={!readOnly}
           suppressContentEditableWarning
           onInput={handleInput}
           className={cn(
-            'min-h-full p-8 focus:outline-none',
+            'min-h-full p-space-8 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
             'prose prose-lg max-w-4xl mx-auto',
             'dark:prose-invert',
-            readOnly && 'cursor-default bg-gray-50 dark:bg-gray-800',
+            readOnly && 'cursor-default bg-muted/30',
             !readOnly && 'cursor-text'
           )}
           data-testid="editor-content"
           data-letter-id={letterId}
           spellCheck
           dangerouslySetInnerHTML={{ __html: getHighlightedContent() }}
+          aria-label="Letter content editor"
         />
       </div>
 
       {/* Read-only indicator */}
       {readOnly && (
         <div
-          className="border-t bg-gray-50 px-4 py-2 text-center text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+          className="border-t border-border/60 bg-muted/30 px-space-4 py-space-2 text-center text-body-sm text-muted-foreground"
           data-testid="readonly-indicator"
+          role="status"
         >
           This letter has been approved and is read-only
         </div>

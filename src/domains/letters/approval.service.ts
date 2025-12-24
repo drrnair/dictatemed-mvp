@@ -1,11 +1,17 @@
 // src/domains/letters/approval.service.ts
 // Letter approval workflow service
 
+import type { Subspecialty } from '@prisma/client';
 import { prisma } from '@/infrastructure/db/client';
 import { logger } from '@/lib/logger';
 import { AppError, ErrorCode, ValidationError } from '@/lib/errors';
 import type { ClinicalValue, HallucinationFlag, ContentDiff } from './letter.types';
 import { generateProvenance } from '@/domains/audit/provenance.service';
+import {
+  recordSubspecialtyEdits,
+  shouldTriggerAnalysis,
+  queueStyleAnalysis,
+} from '@/domains/style/learning-pipeline';
 
 export interface ApprovalInput {
   letterId: string;
@@ -240,6 +246,11 @@ export async function approveLetter(input: ApprovalInput): Promise<ApprovalResul
         user: true,
         patient: true,
         recording: true,
+        template: {
+          select: {
+            subspecialties: true,
+          },
+        },
         documents: {
           include: {
             document: true,
@@ -343,6 +354,9 @@ export async function approveLetter(input: ApprovalInput): Promise<ApprovalResul
     log.info('Provenance record generated', { provenanceId: provenance.id });
 
     // Step 8: Create audit log entry
+    // Infer subspecialty for logging
+    const inferredSubspecialty = letter.subspecialty ?? letter.template?.subspecialties?.[0] ?? null;
+
     await tx.auditLog.create({
       data: {
         userId: input.userId,
@@ -351,6 +365,7 @@ export async function approveLetter(input: ApprovalInput): Promise<ApprovalResul
         resourceId: input.letterId,
         metadata: {
           letterType: letter.letterType,
+          subspecialty: inferredSubspecialty,
           reviewDurationMs,
           verifiedValuesCount: updatedValues.filter((v) => v.verified).length,
           dismissedFlagsCount: updatedFlags.filter((f) => f.dismissed).length,
@@ -370,6 +385,11 @@ export async function approveLetter(input: ApprovalInput): Promise<ApprovalResul
       status: 'APPROVED' as const,
       approvedAt,
       provenanceId: provenance.id,
+      // Pass through for learning pipeline
+      draftContent: letter.contentDraft || '',
+      finalContent: input.finalContent,
+      subspecialty: letter.subspecialty as Subspecialty | null,
+      templateSubspecialties: letter.template?.subspecialties ?? [],
     };
   });
 
@@ -378,7 +398,35 @@ export async function approveLetter(input: ApprovalInput): Promise<ApprovalResul
     provenanceId: result.provenanceId,
   });
 
-  return result;
+  // === Per-Subspecialty Style Learning ===
+  // This runs after the transaction completes and is non-blocking.
+  // If it fails, it won't affect the approval result.
+  const subspecialty = inferSubspecialty(
+    result.subspecialty,
+    result.templateSubspecialties as Subspecialty[]
+  );
+
+  if (subspecialty && result.draftContent && result.finalContent) {
+    // Fire-and-forget style learning
+    recordSubspecialtyStyleEdits(
+      input.userId,
+      input.letterId,
+      result.draftContent,
+      result.finalContent,
+      subspecialty,
+      log
+    ).catch((err) => {
+      // Log but don't fail the approval
+      log.warn('Subspecialty style learning failed', { error: err instanceof Error ? err.message : 'Unknown error' });
+    });
+  }
+
+  return {
+    letterId: result.letterId,
+    status: result.status,
+    approvedAt: result.approvedAt,
+    provenanceId: result.provenanceId,
+  };
 }
 
 /**
@@ -428,4 +476,67 @@ export async function getApprovalStatus(letterId: string): Promise<{
     errors: validation.errors,
     warnings: validation.warnings,
   };
+}
+
+// ============ Subspecialty Style Learning Helpers ============
+
+/**
+ * Infer subspecialty from letter or template context.
+ * Priority: explicit letter subspecialty > first template subspecialty > null
+ */
+function inferSubspecialty(
+  letterSubspecialty: Subspecialty | null | undefined,
+  templateSubspecialties: Subspecialty[]
+): Subspecialty | null {
+  // Use explicit subspecialty if set on letter
+  if (letterSubspecialty) {
+    return letterSubspecialty;
+  }
+
+  // Fall back to first template subspecialty
+  if (templateSubspecialties.length > 0) {
+    return templateSubspecialties[0] ?? null;
+  }
+
+  return null;
+}
+
+/**
+ * Record subspecialty-specific style edits and trigger analysis if threshold met.
+ * This is a background task that doesn't block the approval workflow.
+ */
+async function recordSubspecialtyStyleEdits(
+  userId: string,
+  letterId: string,
+  draftContent: string,
+  finalContent: string,
+  subspecialty: Subspecialty,
+  log: ReturnType<typeof logger.child>
+): Promise<void> {
+  // Record the edits
+  const { editCount, diffAnalysis } = await recordSubspecialtyEdits({
+    userId,
+    letterId,
+    draftContent,
+    finalContent,
+    subspecialty,
+  });
+
+  log.info('Subspecialty edits recorded for style learning', {
+    subspecialty,
+    editCount,
+    sectionsModified: diffAnalysis.overallStats.sectionsModified,
+  });
+
+  // Check if we should trigger style analysis
+  const { shouldAnalyze, reason } = await shouldTriggerAnalysis(userId, subspecialty);
+
+  if (shouldAnalyze) {
+    log.info('Triggering style analysis', { reason, subspecialty });
+
+    // Queue analysis (runs async, doesn't block)
+    await queueStyleAnalysis(userId, subspecialty);
+  } else {
+    log.debug('Style analysis not triggered', { reason, subspecialty });
+  }
 }

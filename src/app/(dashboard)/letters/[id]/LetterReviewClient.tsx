@@ -13,6 +13,8 @@ import {
   type HallucinationFlag,
 } from '@/components/letters/VerificationPanel';
 import { DifferentialView } from '@/components/letters/DifferentialView';
+import { SendLetterDialog } from '@/components/letters/SendLetterDialog';
+import { SendHistory } from '@/components/letters/SendHistory';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -23,6 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Send, History } from 'lucide-react';
+import type { SendStatus, ContactType } from '@prisma/client';
 
 // Proper type definitions instead of `any`
 interface SourceAnchor {
@@ -87,12 +91,28 @@ interface LetterWithRelations {
   documents: DocumentData[];
 }
 
+interface SendHistoryItem {
+  id: string;
+  recipientName: string;
+  recipientEmail: string;
+  recipientType: ContactType | null;
+  channel: string;
+  subject: string;
+  status: SendStatus;
+  queuedAt: string;
+  sentAt: string | null;
+  failedAt: string | null;
+  errorMessage: string | null;
+}
+
 interface LetterReviewClientProps {
   letter: LetterWithRelations;
   currentUser: {
     id: string;
     name: string;
+    email: string;
     role: string;
+    subspecialties?: string[];
   };
 }
 
@@ -111,6 +131,11 @@ export function LetterReviewClient({
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
+  const [sendHistory, setSendHistory] = useState<SendHistoryItem[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Immutable state for extracted values and flags - cast from unknown[]
   const [localExtractedValues, setLocalExtractedValues] = useState<ExtractedValue[]>(
@@ -220,6 +245,52 @@ export function LetterReviewClient({
       }
     };
   }, []);
+
+  // Fetch send history for approved letters
+  const fetchSendHistory = useCallback(async () => {
+    if (letter.status !== 'APPROVED') return;
+
+    setIsLoadingHistory(true);
+    setHistoryError(null);
+    try {
+      const response = await fetch(`/api/letters/${letter.id}/sends`);
+      if (response.ok) {
+        const data = await response.json();
+        setSendHistory(data.sends || []);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setHistoryError(errorData.error || 'Failed to load send history');
+      }
+    } catch (error) {
+      console.error('Failed to fetch send history:', error);
+      setHistoryError('Failed to load send history');
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [letter.id, letter.status]);
+
+  // Fetch history on mount for approved letters
+  useEffect(() => {
+    fetchSendHistory();
+  }, [fetchSendHistory]);
+
+  // Handle retry for failed sends
+  const handleRetrySend = useCallback(
+    async (sendId: string) => {
+      const response = await fetch(`/api/letters/${letter.id}/sends/${sendId}/retry`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Retry failed');
+      }
+
+      // Refresh send history after retry
+      await fetchSendHistory();
+    },
+    [letter.id, fetchSendHistory]
+  );
 
   // Fetch source data when active anchor changes
   useEffect(() => {
@@ -401,20 +472,22 @@ export function LetterReviewClient({
   return (
     <div className="flex h-screen flex-col">
       {/* Header */}
-      <header className="border-b border-border bg-card px-6 py-4">
+      <header className="border-b border-border/60 bg-card px-space-6 py-space-4 shadow-card">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-space-4">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push('/letters')}
+              className="min-h-touch gap-space-2"
             >
               <svg
-                className="mr-2 h-4 w-4"
+                className="h-4 w-4"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -425,22 +498,22 @@ export function LetterReviewClient({
               Back to Letters
             </Button>
 
-            <div className="flex flex-col">
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl font-semibold">
+            <div className="flex flex-col gap-space-1">
+              <div className="flex items-center gap-space-3">
+                <h1 className="text-heading-2">
                   {letter.patient?.name || 'Unknown Patient'}
                 </h1>
-                <span className="text-sm text-muted-foreground">|</span>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-body-sm text-muted-foreground" aria-hidden="true">|</span>
+                <span className="text-body-sm text-muted-foreground">
                   {formatLetterType(letter.letterType)}
                 </span>
                 {getStatusBadge(letter.status)}
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-space-2 text-caption text-muted-foreground">
                 <span>Created {new Date(letter.createdAt).toLocaleDateString()}</span>
                 {letter.reviewStartedAt && (
                   <>
-                    <span>•</span>
+                    <span aria-hidden="true">•</span>
                     <span>
                       Review started {new Date(letter.reviewStartedAt).toLocaleDateString()}
                     </span>
@@ -450,10 +523,12 @@ export function LetterReviewClient({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-space-3">
             {/* Auto-save indicator */}
             {isSaving && (
-              <span className="text-xs text-muted-foreground">Saving...</span>
+              <span className="text-caption text-muted-foreground" role="status" aria-live="polite">
+                Saving...
+              </span>
             )}
 
             {/* Show diff toggle if modified */}
@@ -462,6 +537,7 @@ export function LetterReviewClient({
                 variant="outline"
                 size="sm"
                 onClick={() => setShowDiff(!showDiff)}
+                className="min-h-touch"
               >
                 {showDiff ? 'Hide' : 'Show'} Changes
               </Button>
@@ -473,13 +549,15 @@ export function LetterReviewClient({
               size="sm"
               onClick={handlePreview}
               disabled={isPreviewing}
+              className="min-h-touch gap-space-2"
             >
               <svg
-                className="mr-2 h-4 w-4"
+                className="h-4 w-4"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -502,6 +580,7 @@ export function LetterReviewClient({
                 size="sm"
                 onClick={handleSaveDraft}
                 disabled={!hasChanges || isSaving}
+                className="min-h-touch"
               >
                 Save Draft
               </Button>
@@ -513,14 +592,15 @@ export function LetterReviewClient({
                 size="sm"
                 onClick={() => setShowApprovalDialog(true)}
                 disabled={!canApprove}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="min-h-touch gap-space-2 bg-clinical-verified hover:bg-clinical-verified/90 text-white"
               >
                 <svg
-                  className="mr-2 h-4 w-4"
+                  className="h-4 w-4"
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -533,28 +613,59 @@ export function LetterReviewClient({
             )}
 
             {isReadOnly && letter.approvedAt && (
-              <Badge variant="verified" className="text-sm">
-                Approved on {new Date(letter.approvedAt).toLocaleDateString()}
-              </Badge>
+              <>
+                <Badge variant="verified" className="text-body-sm">
+                  Approved on {new Date(letter.approvedAt).toLocaleDateString()}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowHistory(!showHistory)}
+                  className={showHistory ? 'bg-muted' : ''}
+                >
+                  <History className="mr-2 h-4 w-4" />
+                  {showHistory ? 'Hide History' : 'View History'}
+                  {sendHistory.length > 0 && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      {sendHistory.length}
+                    </Badge>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setShowSendDialog(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Letter
+                </Button>
+              </>
             )}
           </div>
         </div>
 
         {/* Verification progress */}
         {!isReadOnly && totalValues > 0 && (
-          <div className="mt-3 flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">
+          <div className="mt-space-3 flex items-center gap-space-3" role="status" aria-live="polite">
+            <span className="text-caption text-muted-foreground">
               Verification: {verifiedCount}/{totalValues} values verified
             </span>
-            <div className="h-2 flex-1 max-w-xs overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-2 flex-1 max-w-xs overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuenow={verificationProgress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Verification progress"
+            >
               <div
-                className="h-full bg-green-600 transition-all"
+                className="h-full bg-clinical-verified transition-all duration-300"
                 style={{ width: `${verificationProgress}%` }}
               />
             </div>
-            <span className="text-xs font-medium">{verificationProgress}%</span>
+            <span className="text-caption font-medium">{verificationProgress}%</span>
             {!allCriticalVerified && (
-              <span className="text-xs text-amber-600">
+              <span className="text-caption text-clinical-warning">
                 Critical values need verification
               </span>
             )}
@@ -565,7 +676,7 @@ export function LetterReviewClient({
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Verification Panel (left) */}
-        <aside className="w-80 overflow-y-auto border-r border-border bg-card">
+        <aside className="w-80 overflow-y-auto border-r border-border/60 bg-card">
           <VerificationPanel
             extractedValues={localExtractedValues}
             hallucinationFlags={localHallucinationFlags}
@@ -577,10 +688,10 @@ export function LetterReviewClient({
         </aside>
 
         {/* Center content */}
-        <main className="flex flex-1 flex-col overflow-hidden">
+        <main className="flex flex-1 flex-col overflow-hidden bg-background-subtle" id="letter-content">
           {/* Differential view (collapsible) */}
           {showDiff && isModified && (
-            <div className="border-b border-border p-4">
+            <div className="border-b border-border/60 p-space-4 bg-card">
               <DifferentialView
                 originalContent={letter.contentDraft || ''}
                 modifiedContent={letter.contentFinal || ''}
@@ -591,7 +702,7 @@ export function LetterReviewClient({
           )}
 
           {/* Letter editor */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-space-6">
             <LetterEditor
               letterId={letter.id}
               initialContent={content}
@@ -603,6 +714,35 @@ export function LetterReviewClient({
             />
           </div>
         </main>
+
+        {/* Send History Panel (for approved letters) - right side */}
+        {isReadOnly && showHistory && (
+          <aside className="w-80 overflow-y-auto border-l border-border bg-muted/30 p-4">
+            {isLoadingHistory ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : historyError ? (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+                <p className="text-sm text-destructive">{historyError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchSendHistory}
+                  className="mt-2"
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <SendHistory
+                letterId={letter.id}
+                history={sendHistory}
+                onRetry={handleRetrySend}
+              />
+            )}
+          </aside>
+        )}
 
         {/* Source Panel (right, slides in) */}
         <SourcePanel
@@ -629,21 +769,21 @@ export function LetterReviewClient({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 py-4">
-            <div className="flex items-center justify-between rounded-lg bg-muted p-3">
-              <span className="text-sm">Values verified:</span>
-              <span className="font-semibold">
+          <div className="space-y-space-3 py-space-4">
+            <div className="flex items-center justify-between rounded-lg bg-muted p-space-3">
+              <span className="text-body-sm">Values verified:</span>
+              <span className="text-body-sm font-semibold">
                 {verifiedCount}/{totalValues}
               </span>
             </div>
 
-            <div className="flex items-center justify-between rounded-lg bg-muted p-3">
-              <span className="text-sm">Critical values verified:</span>
+            <div className="flex items-center justify-between rounded-lg bg-muted p-space-3">
+              <span className="text-body-sm">Critical values verified:</span>
               <span
-                className={`font-semibold ${
+                className={`text-body-sm font-semibold ${
                   allCriticalVerified
-                    ? 'text-green-600'
-                    : 'text-amber-600'
+                    ? 'text-clinical-verified'
+                    : 'text-clinical-warning'
                 }`}
               >
                 {allCriticalVerified ? 'Yes' : 'No'}
@@ -651,15 +791,15 @@ export function LetterReviewClient({
             </div>
 
             {letter.hallucinationRiskScore !== null && (
-              <div className="flex items-center justify-between rounded-lg bg-muted p-3">
-                <span className="text-sm">Hallucination risk:</span>
+              <div className="flex items-center justify-between rounded-lg bg-muted p-space-3">
+                <span className="text-body-sm">Hallucination risk:</span>
                 <span
-                  className={`font-semibold ${
+                  className={`text-body-sm font-semibold ${
                     letter.hallucinationRiskScore < 30
-                      ? 'text-green-600'
+                      ? 'text-clinical-verified'
                       : letter.hallucinationRiskScore < 70
-                        ? 'text-amber-600'
-                        : 'text-red-600'
+                        ? 'text-clinical-warning'
+                        : 'text-clinical-critical'
                   }`}
                 >
                   {letter.hallucinationRiskScore}/100
@@ -672,19 +812,38 @@ export function LetterReviewClient({
             <Button
               variant="outline"
               onClick={() => setShowApprovalDialog(false)}
+              className="min-h-touch"
             >
               Cancel
             </Button>
             <Button
               onClick={handleApprove}
               disabled={isApproving}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="min-h-touch bg-clinical-verified hover:bg-clinical-verified/90 text-white"
             >
               {isApproving ? 'Approving...' : 'Approve & Finalize'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Send Letter Dialog */}
+      <SendLetterDialog
+        isOpen={showSendDialog}
+        onClose={() => setShowSendDialog(false)}
+        letterId={letter.id}
+        patientId={letter.patient?.id || null}
+        patientName={letter.patient?.name || 'Unknown Patient'}
+        letterType={letter.letterType}
+        subspecialty={currentUser.subspecialties?.[0]}
+        userEmail={currentUser.email}
+        userName={currentUser.name}
+        onSendComplete={() => {
+          // Refresh history and show the history panel
+          fetchSendHistory();
+          setShowHistory(true);
+        }}
+      />
     </div>
   );
 }

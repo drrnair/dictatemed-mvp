@@ -1,6 +1,8 @@
 // src/domains/letters/letter.types.ts
 // Letter domain type definitions
 
+import type { Subspecialty } from '@prisma/client';
+
 export type LetterType = 'NEW_PATIENT' | 'FOLLOW_UP' | 'ANGIOGRAM_PROCEDURE' | 'ECHO_REPORT';
 
 export type LetterStatus =
@@ -17,6 +19,7 @@ export interface Letter {
   consultationId?: string | undefined;
   recordingId?: string | undefined;
   letterType: LetterType;
+  subspecialty?: Subspecialty | undefined; // Subspecialty for style learning
   status: LetterStatus;
 
   // Content (matches Prisma field names)

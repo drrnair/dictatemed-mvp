@@ -56,6 +56,7 @@ export {
   deleteFiles,
   getFileMetadata,
   fileExists,
+  getFileContent,
   // Audit logging
   createStorageAuditLog,
   getDownloadUrlWithAudit,
