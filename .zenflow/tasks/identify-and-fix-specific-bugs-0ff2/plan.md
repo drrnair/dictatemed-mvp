@@ -18,48 +18,33 @@ Do not make assumptions on important decisions — get clarification first.
 
 ## Workflow Steps
 
-### [ ] Step: Technical Specification
+### [x] Step: Technical Specification
 <!-- chat-id: b9333f59-8fc0-49ec-9bdd-749db43c9435 -->
 
-Assess the task's difficulty, as underestimating it leads to poor outcomes.
-- easy: Straightforward implementation, trivial bug fix or feature
-- medium: Moderate complexity, some edge cases or caveats to consider
-- hard: Complex logic, many caveats, architectural considerations, or high-risk changes
+**Difficulty**: Medium
 
-Create a technical specification for the task that is appropriate for the complexity level:
-- Review the existing codebase architecture and identify reusable components.
-- Define the implementation approach based on established patterns in the project.
-- Identify all source code files that will be created or modified.
-- Define any necessary data model, API, or interface changes.
-- Describe verification steps using the project's test and lint commands.
+**Bug Identified**: User account deletion fails with "Failed to delete account. Please contact support."
 
-Save the output to `{@artifacts_path}/spec.md` with:
-- Technical context (language, dependencies)
-- Implementation approach
-- Source code structure changes
-- Data model / API / interface changes
-- Verification approach
+**Root Cause**: The `sent_emails` table has a foreign key constraint (`ON DELETE RESTRICT`) on `userId`. The API route attempts to delete sent emails via raw SQL outside the transaction, but silently swallows all errors. When the raw SQL fails, the FK constraint blocks user deletion.
 
-If the task is complex enough, create a detailed implementation plan based on `{@artifacts_path}/spec.md`:
-- Break down the work into concrete tasks (incrementable, testable milestones)
-- Each task should reference relevant contracts and include verification steps
-- Replace the Implementation step below with the planned tasks
+**Solution**: Add `sentEmail.deleteMany` inside the Prisma transaction before deleting letters and the user.
 
-Rule of thumb for step size: each step should represent a coherent unit of work (e.g., implement a component, add an API endpoint, write tests for a module). Avoid steps that are too granular (single function).
-
-Save to `{@artifacts_path}/plan.md`. If the feature is trivial and doesn't warrant this breakdown, keep the Implementation step below as is.
+See full specification: `.zenflow/tasks/identify-and-fix-specific-bugs-0ff2/spec.md`
 
 ---
 
 ### [ ] Step: Implementation
 
-Implement the task according to the technical specification and general engineering best practices.
+Fix the user account deletion bug by updating the API route:
 
-1. Break the task into steps where possible.
-2. Implement the required changes in the codebase.
-3. Add and run relevant tests and linters.
-4. Perform basic manual verification if applicable.
-5. After completion, write a report to `{@artifacts_path}/report.md` describing:
-   - What was implemented
-   - How the solution was tested
-   - The biggest issues or challenges encountered
+**File**: `src/app/api/user/account/route.ts`
+
+**Changes**:
+1. Add `await tx.sentEmail.deleteMany({ where: { userId } });` inside the transaction, positioned before `letter.deleteMany`
+2. Improve error logging for the raw SQL fallback (optional, for debugging)
+
+**Verification**:
+1. Run linter: `npm run lint`
+2. Run type check: `npm run type-check` (if available)
+3. Manual test: Create user with sent emails, then delete account
+4. Write report to `{@artifacts_path}/report.md`
