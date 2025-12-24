@@ -305,14 +305,14 @@ describe('Cross-User Access Protection', () => {
     });
 
     it('should allow admin to perform admin-only operations', () => {
-      const canAccessAdminFeature = (user: typeof USER_A) => user.role === 'ADMIN';
+      const canAccessAdminFeature = (user: TestUser) => user.role === 'ADMIN';
 
       expect(canAccessAdminFeature(PRACTICE_ADMIN)).toBe(true);
       expect(canAccessAdminFeature(USER_A)).toBe(false);
     });
 
     it('should restrict practice-scoped admin actions to own practice', () => {
-      const canAdministerPractice = (user: typeof PRACTICE_ADMIN, practiceId: string) =>
+      const canAdministerPractice = (user: TestUser, practiceId: string) =>
         user.role === 'ADMIN' && user.practiceId === practiceId;
 
       expect(canAdministerPractice(PRACTICE_ADMIN, 'practice-a-id')).toBe(true);
@@ -322,7 +322,7 @@ describe('Cross-User Access Protection', () => {
 
   describe('Auth Helper Functions', () => {
     it('hasAccessToPractice should validate practice membership', () => {
-      const hasAccessToPractice = (user: typeof USER_A, practiceId: string) =>
+      const hasAccessToPractice = (user: TestUser, practiceId: string) =>
         user.practiceId === practiceId;
 
       expect(hasAccessToPractice(USER_A, 'practice-a-id')).toBe(true);
@@ -330,7 +330,7 @@ describe('Cross-User Access Protection', () => {
     });
 
     it('hasAccessToResource should validate resource practice ownership', () => {
-      const hasAccessToResource = (user: typeof USER_A, resourcePracticeId: string | null) => {
+      const hasAccessToResource = (user: TestUser, resourcePracticeId: string | null) => {
         if (!resourcePracticeId) return false;
         return user.practiceId === resourcePracticeId;
       };
