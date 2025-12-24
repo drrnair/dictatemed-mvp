@@ -13,8 +13,6 @@
 
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
-
 // Helper to generate consistent UUIDs for seed data
 // Format: 00000000-0001-{type}-{sequence}-000000000000
 // type: 0001 = specialty, 0002 = subspecialty
@@ -30,7 +28,7 @@ function subspecialtyId(specialtySeq: number, sequence: number): string {
 // MEDICAL SPECIALTIES
 // ============================================================================
 // Curated list based on ABMS and AHPRA recognized specialties
-// Ordered alphabetically with priority areas first (Cardiology, GP, Neurology, Surgery)
+// Ordered by category with priority areas first (Primary Care, Cardiology, Neurology, Surgery)
 
 export interface SpecialtySeedData {
   id: string;
@@ -769,12 +767,23 @@ export const SUBSPECIALTIES: SubspecialtySeedData[] = [
 // SEEDING FUNCTIONS
 // ============================================================================
 
-export async function seedMedicalSpecialties(): Promise<void> {
+// Singleton instance for direct execution; callers from seed.ts should pass their own client
+let _prisma: PrismaClient | null = null;
+
+function getPrismaClient(): PrismaClient {
+  if (!_prisma) {
+    _prisma = new PrismaClient();
+  }
+  return _prisma;
+}
+
+export async function seedMedicalSpecialties(prisma?: PrismaClient): Promise<void> {
+  const client = prisma ?? getPrismaClient();
   console.log('Seeding medical specialties...');
 
   // Upsert specialties
   for (const specialty of SPECIALTIES) {
-    await prisma.medicalSpecialty.upsert({
+    await client.medicalSpecialty.upsert({
       where: { id: specialty.id },
       update: {
         name: specialty.name,
@@ -798,7 +807,7 @@ export async function seedMedicalSpecialties(): Promise<void> {
 
   // Upsert subspecialties
   for (const subspecialty of SUBSPECIALTIES) {
-    await prisma.medicalSubspecialty.upsert({
+    await client.medicalSubspecialty.upsert({
       where: { id: subspecialty.id },
       update: {
         specialtyId: subspecialty.specialtyId,
@@ -857,6 +866,8 @@ if (require.main === module) {
       process.exit(1);
     })
     .finally(async () => {
-      await prisma.$disconnect();
+      if (_prisma) {
+        await _prisma.$disconnect();
+      }
     });
 }

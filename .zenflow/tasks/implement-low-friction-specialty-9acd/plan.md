@@ -510,6 +510,7 @@ Created comprehensive technical specification in `spec.md` covering:
 ---
 
 ### [ ] Step 10: Unit & Integration Tests
+<!-- chat-id: 436c36ae-fb22-4553-82b2-99f01b42234b -->
 
 **Goal**: Add comprehensive test coverage for new functionality.
 
