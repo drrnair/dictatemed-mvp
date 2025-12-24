@@ -1,9 +1,13 @@
 -- Add Supabase Storage fields to recordings table
--- This migration adds storagePath (for Supabase Storage) and audioDeletedAt (for retention tracking)
+-- This migration adds storagePath (for Supabase Storage), fileSizeBytes (for tracking),
+-- and audioDeletedAt (for retention tracking)
 
 -- Add storagePath column for Supabase Storage paths
 -- Format: {userId}/{consultationId}/{timestamp}_{mode}.{ext}
 ALTER TABLE "recordings" ADD COLUMN "storagePath" TEXT;
+
+-- Add fileSizeBytes column for tracking uploaded audio file size
+ALTER TABLE "recordings" ADD COLUMN "fileSizeBytes" INTEGER;
 
 -- Add audioDeletedAt for tracking when audio was deleted (retention policy)
 ALTER TABLE "recordings" ADD COLUMN "audioDeletedAt" TIMESTAMP(3);

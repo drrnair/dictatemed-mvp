@@ -100,6 +100,7 @@ model Recording {
 
   // Audio metadata
   durationSeconds Int?
+  fileSizeBytes   Int? // Size of uploaded audio file in bytes
   audioQuality    String? // excellent/good/fair/poor
   s3AudioKey      String? // @deprecated - use storagePath for Supabase Storage
   storagePath     String? // Supabase Storage path: {userId}/{consultationId}/{timestamp}_{mode}.{ext}
