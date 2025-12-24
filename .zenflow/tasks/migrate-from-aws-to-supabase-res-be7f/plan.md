@@ -110,6 +110,7 @@ Create the storage service layer to replace S3 operations.
 ---
 
 ### [ ] Step 3: Migrate Audio Recording Storage
+<!-- chat-id: 1df53fb1-4bfb-41ce-bc92-02a7497c91c6 -->
 
 Replace S3 usage in recording service with Supabase.
 

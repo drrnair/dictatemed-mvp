@@ -2,18 +2,19 @@
 // Transcription service for recording processing
 
 import { prisma } from '@/infrastructure/db/client';
-import { getDownloadUrl } from '@/infrastructure/s3/presigned-urls';
 import {
   submitTranscription,
   processTranscriptionResult,
 } from '@/infrastructure/deepgram/client';
 import type { TranscriptionResult, ProcessedTranscript } from '@/infrastructure/deepgram/types';
 import { logger } from '@/lib/logger';
+import { getAudioDownloadUrl, deleteAudioAfterTranscription } from './recording.service';
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 /**
  * Start transcription for a recording.
+ * Uses Supabase Storage signed URL for audio access.
  */
 export async function startTranscription(recordingId: string): Promise<string> {
   const log = logger.child({ recordingId, action: 'startTranscription' });
@@ -27,7 +28,7 @@ export async function startTranscription(recordingId: string): Promise<string> {
     throw new Error('Recording not found');
   }
 
-  if (!recording.s3AudioKey) {
+  if (!recording.storagePath) {
     throw new Error('Recording has no audio file');
   }
 
@@ -35,8 +36,16 @@ export async function startTranscription(recordingId: string): Promise<string> {
     throw new Error(`Invalid recording status: ${recording.status}`);
   }
 
-  // Generate a temporary download URL for Deepgram
-  const { url: audioUrl } = await getDownloadUrl(recording.s3AudioKey);
+  if (recording.audioDeletedAt) {
+    throw new Error('Recording audio has already been deleted');
+  }
+
+  // Generate a temporary download URL for Deepgram from Supabase Storage
+  const audioUrl = await getAudioDownloadUrl(recordingId);
+
+  if (!audioUrl) {
+    throw new Error('Failed to generate audio download URL');
+  }
 
   // Update status to transcribing
   await prisma.recording.update({
@@ -68,6 +77,7 @@ export async function startTranscription(recordingId: string): Promise<string> {
 
 /**
  * Handle transcription completion callback.
+ * After successful transcription, deletes audio from storage per retention policy.
  */
 export async function handleTranscriptionComplete(
   recordingId: string,
@@ -126,6 +136,21 @@ export async function handleTranscriptionComplete(
   log.info('Transcription complete', {
     fullTextLength: processed.fullText.length,
   });
+
+  // Delete audio from storage after successful transcription
+  // This supports PHI retention policy - audio is not needed after transcription
+  try {
+    await deleteAudioAfterTranscription(recordingId);
+    log.info('Audio deleted after transcription per retention policy');
+  } catch (error) {
+    // Log but don't fail the transcription - audio can be cleaned up later
+    log.error(
+      'Failed to delete audio after transcription',
+      {},
+      error instanceof Error ? error : undefined
+    );
+    // Don't rethrow - the transcription itself was successful
+  }
 
   return processed;
 }

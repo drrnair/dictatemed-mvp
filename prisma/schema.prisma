@@ -101,7 +101,9 @@ model Recording {
   // Audio metadata
   durationSeconds Int?
   audioQuality    String? // excellent/good/fair/poor
-  s3AudioKey      String?
+  s3AudioKey      String? // @deprecated - use storagePath for Supabase Storage
+  storagePath     String? // Supabase Storage path: {userId}/{consultationId}/{timestamp}_{mode}.{ext}
+  audioDeletedAt  DateTime? // When audio was deleted from storage (retention policy)
 
   // Consent
   consentType ConsentType?
