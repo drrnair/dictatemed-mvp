@@ -630,10 +630,10 @@ describe('Document Service - Supabase Storage Migration', () => {
       ];
 
       vi.mocked(prisma.document.findMany).mockResolvedValue(expiredDocuments as never);
-      vi.mocked(prisma.document.findUnique).mockImplementation((args: { where: { id: string } }) => {
-        const doc = expiredDocuments.find(d => d.id === args.where.id);
-        return Promise.resolve(doc as never);
-      });
+      // Mock findUnique to return matching document for each call
+      vi.mocked(prisma.document.findUnique)
+        .mockResolvedValueOnce(expiredDocuments[0] as never)
+        .mockResolvedValueOnce(expiredDocuments[1] as never);
       vi.mocked(prisma.document.update).mockResolvedValue({} as never);
 
       const result = await cleanupExpiredDocuments();

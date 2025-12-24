@@ -229,6 +229,8 @@ export async function getTranscript(
 
 /**
  * Retry a failed transcription.
+ * Note: If audio has been deleted (e.g., by cleanup job), retry will fail
+ * because the audio file is no longer available.
  */
 export async function retryTranscription(recordingId: string): Promise<string> {
   const recording = await prisma.recording.findUnique({
@@ -241,6 +243,18 @@ export async function retryTranscription(recordingId: string): Promise<string> {
 
   if (recording.status !== 'FAILED') {
     throw new Error(`Cannot retry transcription with status: ${recording.status}`);
+  }
+
+  // Check if audio is still available for retry
+  if (recording.audioDeletedAt) {
+    throw new Error(
+      'Cannot retry transcription: audio file has been deleted per retention policy. ' +
+        'Audio is automatically removed after successful transcription or by cleanup jobs.'
+    );
+  }
+
+  if (!recording.storagePath) {
+    throw new Error('Cannot retry transcription: recording has no audio file');
   }
 
   // Reset to uploaded status

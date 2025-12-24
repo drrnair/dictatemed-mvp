@@ -125,6 +125,7 @@ export async function confirmUpload(
     data: {
       status: 'UPLOADED',
       durationSeconds: input.durationSeconds,
+      fileSizeBytes: input.fileSize,
       audioQuality: input.audioQuality ?? null,
     },
   });
@@ -403,6 +404,7 @@ interface PrismaRecording {
   consentType: string | null;
   status: string;
   durationSeconds: number | null;
+  fileSizeBytes: number | null; // Size of uploaded audio file in bytes
   s3AudioKey: string | null; // @deprecated - use storagePath
   storagePath: string | null; // Supabase Storage path
   audioDeletedAt: Date | null; // When audio was deleted (retention policy)

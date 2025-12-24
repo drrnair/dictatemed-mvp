@@ -504,4 +504,140 @@ describe('Recording Service - Supabase Storage Migration', () => {
       ).rejects.toThrow('Recording not found');
     });
   });
+
+  describe('Large file handling', () => {
+    it('should handle large ambient recording (30 minutes, ~500MB)', async () => {
+      // Simulate a 30-minute ambient recording at high quality
+      // Typical size: ~250KB/minute for high-quality audio = ~7.5MB for 30 mins
+      // Max supported: 500MB per storage configuration
+      const largeFileSize = 500 * 1024 * 1024; // 500MB
+      const longDuration = 30 * 60; // 30 minutes in seconds
+
+      const mockRecording = {
+        id: mockRecordingId,
+        userId: mockUserId,
+        consultationId: mockConsultationId,
+        mode: 'AMBIENT',
+        status: 'UPLOADING',
+      };
+
+      vi.mocked(prisma.recording.create).mockResolvedValue(mockRecording as never);
+      vi.mocked(prisma.recording.update).mockResolvedValue({
+        ...mockRecording,
+        storagePath: mockStoragePath,
+      } as never);
+
+      // Create recording should handle large consultation IDs and paths
+      const result = await createRecording(mockUserId, {
+        mode: 'AMBIENT',
+        consentType: 'VERBAL',
+        consultationId: mockConsultationId,
+      });
+
+      expect(result.id).toBe(mockRecordingId);
+      expect(result.uploadUrl).toBe(mockSignedUrl);
+
+      // Confirm upload should accept large file sizes
+      const existingRecording = {
+        id: mockRecordingId,
+        userId: mockUserId,
+        storagePath: mockStoragePath,
+        status: 'UPLOADING',
+        mode: 'AMBIENT',
+      };
+
+      const updatedRecording = {
+        ...existingRecording,
+        status: 'UPLOADED',
+        durationSeconds: longDuration,
+        fileSizeBytes: largeFileSize,
+        audioQuality: 'excellent',
+      };
+
+      vi.mocked(prisma.recording.findFirst).mockResolvedValue(existingRecording as never);
+      vi.mocked(prisma.recording.update).mockResolvedValue(updatedRecording as never);
+
+      const uploadResult = await confirmUpload(mockUserId, mockRecordingId, {
+        durationSeconds: longDuration,
+        contentType: 'audio/webm',
+        fileSize: largeFileSize,
+        audioQuality: 'excellent',
+      });
+
+      expect(uploadResult.status).toBe('UPLOADED');
+      expect(uploadResult.durationSeconds).toBe(longDuration);
+
+      // Verify fileSizeBytes was passed to update
+      expect(prisma.recording.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            fileSizeBytes: largeFileSize,
+          }),
+        })
+      );
+    });
+
+    it('should generate valid paths for recordings with long consultation IDs', async () => {
+      const longConsultationId = 'a'.repeat(100);
+      const mockRecording = {
+        id: mockRecordingId,
+        userId: mockUserId,
+        consultationId: longConsultationId,
+        mode: 'AMBIENT',
+        status: 'UPLOADING',
+      };
+
+      vi.mocked(prisma.recording.create).mockResolvedValue(mockRecording as never);
+      vi.mocked(prisma.recording.update).mockResolvedValue(mockRecording as never);
+
+      await createRecording(mockUserId, {
+        mode: 'AMBIENT',
+        consentType: 'VERBAL',
+        consultationId: longConsultationId,
+      });
+
+      // Path generation should work with long IDs
+      expect(generateAudioPath).toHaveBeenCalledWith(
+        mockUserId,
+        longConsultationId,
+        'ambient',
+        'webm'
+      );
+    });
+  });
+
+  describe('fileSizeBytes persistence', () => {
+    it('should persist fileSize to database as fileSizeBytes', async () => {
+      const fileSize = 5 * 1024 * 1024; // 5MB
+
+      const existingRecording = {
+        id: mockRecordingId,
+        userId: mockUserId,
+        storagePath: mockStoragePath,
+        status: 'UPLOADING',
+        mode: 'AMBIENT',
+      };
+
+      vi.mocked(prisma.recording.findFirst).mockResolvedValue(existingRecording as never);
+      vi.mocked(prisma.recording.update).mockResolvedValue({
+        ...existingRecording,
+        status: 'UPLOADED',
+        fileSizeBytes: fileSize,
+      } as never);
+
+      await confirmUpload(mockUserId, mockRecordingId, {
+        durationSeconds: 120,
+        contentType: 'audio/webm',
+        fileSize: fileSize,
+      });
+
+      // Verify fileSizeBytes was included in the database update
+      expect(prisma.recording.update).toHaveBeenCalledWith({
+        where: { id: mockRecordingId },
+        data: expect.objectContaining({
+          fileSizeBytes: fileSize,
+        }),
+      });
+    });
+  });
 });

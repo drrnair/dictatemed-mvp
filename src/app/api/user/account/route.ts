@@ -1,10 +1,15 @@
 // src/app/api/user/account/route.ts
 // Account deletion API endpoint (GDPR-aligned)
+// Migrated from S3 to Supabase Storage
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/infrastructure/db/client';
 import { getSession } from '@/lib/auth';
-import { deleteObject } from '@/infrastructure/s3/presigned-urls';
+import {
+  deleteFile,
+  STORAGE_BUCKETS,
+  createStorageAuditLog,
+} from '@/infrastructure/supabase';
 import { logger } from '@/lib/logger';
 
 const log = logger.child({ module: 'user-account-api' });
@@ -28,8 +33,8 @@ export async function DELETE() {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        recordings: { select: { id: true, s3AudioKey: true } },
-        documents: { select: { id: true, s3Key: true } },
+        recordings: { select: { id: true, storagePath: true, audioDeletedAt: true } },
+        documents: { select: { id: true, storagePath: true, deletedAt: true } },
         letters: { select: { id: true } },
       },
     });
@@ -38,42 +43,69 @@ export async function DELETE() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Delete S3 objects (best-effort, continue on failure)
-    const s3DeletionErrors: string[] = [];
+    // Delete Supabase Storage objects (best-effort, continue on failure)
+    const storageDeletionErrors: string[] = [];
 
-    // Delete signature
+    // Delete signature from user-assets bucket
     if (user.signature) {
       try {
-        await deleteObject(user.signature);
+        await deleteFile(STORAGE_BUCKETS.USER_ASSETS, user.signature);
+        await createStorageAuditLog({
+          userId,
+          action: 'storage.delete',
+          bucket: STORAGE_BUCKETS.USER_ASSETS,
+          storagePath: user.signature,
+          resourceType: 'signature',
+          resourceId: userId,
+          metadata: { reason: 'account_deletion' },
+        });
       } catch (err) {
-        s3DeletionErrors.push(`signature: ${user.signature}`);
+        storageDeletionErrors.push(`signature: ${user.signature}`);
       }
     }
 
-    // Delete recordings audio files
+    // Delete recordings audio files (only those not already deleted after transcription)
     for (const recording of user.recordings) {
-      if (recording.s3AudioKey) {
+      if (recording.storagePath && !recording.audioDeletedAt) {
         try {
-          await deleteObject(recording.s3AudioKey);
+          await deleteFile(STORAGE_BUCKETS.AUDIO_RECORDINGS, recording.storagePath);
+          await createStorageAuditLog({
+            userId,
+            action: 'storage.delete',
+            bucket: STORAGE_BUCKETS.AUDIO_RECORDINGS,
+            storagePath: recording.storagePath,
+            resourceType: 'audio_recording',
+            resourceId: recording.id,
+            metadata: { reason: 'account_deletion' },
+          });
         } catch (err) {
-          s3DeletionErrors.push(`recording: ${recording.s3AudioKey}`);
+          storageDeletionErrors.push(`recording: ${recording.storagePath}`);
         }
       }
     }
 
-    // Delete document files
+    // Delete document files (only those not already soft-deleted)
     for (const document of user.documents) {
-      if (document.s3Key) {
+      if (document.storagePath && !document.deletedAt) {
         try {
-          await deleteObject(document.s3Key);
+          await deleteFile(STORAGE_BUCKETS.CLINICAL_DOCUMENTS, document.storagePath);
+          await createStorageAuditLog({
+            userId,
+            action: 'storage.delete',
+            bucket: STORAGE_BUCKETS.CLINICAL_DOCUMENTS,
+            storagePath: document.storagePath,
+            resourceType: 'clinical_document',
+            resourceId: document.id,
+            metadata: { reason: 'account_deletion' },
+          });
         } catch (err) {
-          s3DeletionErrors.push(`document: ${document.s3Key}`);
+          storageDeletionErrors.push(`document: ${document.storagePath}`);
         }
       }
     }
 
-    if (s3DeletionErrors.length > 0) {
-      log.warn('Some S3 objects failed to delete', { userId, errors: s3DeletionErrors });
+    if (storageDeletionErrors.length > 0) {
+      log.warn('Some storage objects failed to delete', { userId, errors: storageDeletionErrors });
     }
 
     // Delete database records in order (respecting foreign keys)
