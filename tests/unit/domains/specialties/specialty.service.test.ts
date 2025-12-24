@@ -164,8 +164,8 @@ describe('specialty.service', () => {
       });
 
       expect(result.specialties).toHaveLength(1);
-      expect(result.specialties[0].name).toBe('Cardiology');
-      expect(result.specialties[0].isCustom).toBe(false);
+      expect(result.specialties[0]?.name).toBe('Cardiology');
+      expect(result.specialties[0]?.isCustom).toBe(false);
     });
 
     it('should return specialties matching query by synonym', async () => {
@@ -178,7 +178,7 @@ describe('specialty.service', () => {
       });
 
       expect(result.specialties).toHaveLength(1);
-      expect(result.specialties[0].name).toBe('General Practice');
+      expect(result.specialties[0]?.name).toBe('General Practice');
     });
 
     it('should include custom specialties in results', async () => {
@@ -192,8 +192,8 @@ describe('specialty.service', () => {
       });
 
       expect(result.specialties).toHaveLength(1);
-      expect(result.specialties[0].name).toBe('Sports Medicine');
-      expect(result.specialties[0].isCustom).toBe(true);
+      expect(result.specialties[0]?.name).toBe('Sports Medicine');
+      expect(result.specialties[0]?.isCustom).toBe(true);
     });
 
     it('should respect the limit parameter', async () => {
@@ -234,7 +234,7 @@ describe('specialty.service', () => {
       });
 
       // Exact match should come first
-      expect(result.specialties[0].name.toLowerCase()).toBe('cardiac');
+      expect(result.specialties[0]?.name.toLowerCase()).toBe('cardiac');
     });
 
     it('should exclude custom specialties when includeCustom is false', async () => {

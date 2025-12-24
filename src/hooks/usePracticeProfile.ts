@@ -35,8 +35,8 @@ interface UsePracticeProfileReturn {
   error: string | null;
   /** Fetch the profile */
   fetchProfile: () => Promise<void>;
-  /** Save the profile */
-  saveProfile: (data: SaveProfileData) => Promise<boolean>;
+  /** Save the profile, returns the updated profile on success */
+  saveProfile: (data: SaveProfileData) => Promise<PracticeProfile | null>;
   /** Create a custom specialty */
   createCustomSpecialty: (name: string) => Promise<SelectedSpecialtyItem | null>;
   /** Create a custom subspecialty */
@@ -102,7 +102,7 @@ export function usePracticeProfile(
   }, []);
 
   // Save practice profile
-  const saveProfile = useCallback(async (data: SaveProfileData): Promise<boolean> => {
+  const saveProfile = useCallback(async (data: SaveProfileData): Promise<PracticeProfile | null> => {
     setIsSaving(true);
     setError(null);
 
@@ -146,12 +146,12 @@ export function usePracticeProfile(
         throw new Error(errorData.error || 'Failed to save profile');
       }
 
-      const updatedProfile = await response.json();
+      const updatedProfile: PracticeProfile = await response.json();
       setProfile(updatedProfile);
-      return true;
+      return updatedProfile;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save profile');
-      return false;
+      return null;
     } finally {
       setIsSaving(false);
     }
