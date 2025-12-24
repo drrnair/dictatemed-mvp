@@ -178,6 +178,7 @@ Full dashboard page redesign:
 ---
 
 ### [ ] Step 5: Record Page Updates
+<!-- chat-id: fd6832eb-74eb-4382-9eab-0ec1443b39ed -->
 
 Update recording page styling:
 
