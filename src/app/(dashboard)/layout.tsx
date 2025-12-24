@@ -1,9 +1,11 @@
 // src/app/(dashboard)/layout.tsx
 // Dashboard layout with sidebar and header
 
+import { Suspense } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { OnboardingRedirect } from '@/components/layout/OnboardingRedirect';
+import { WelcomeModalTrigger } from '@/components/auth/WelcomeModalTrigger';
 import { getCurrentUser } from '@/lib/auth';
 
 export default async function DashboardLayout({
@@ -25,6 +27,11 @@ export default async function DashboardLayout({
 
       {/* Client-side onboarding redirect check */}
       <OnboardingRedirect onboardingCompleted={user?.onboardingCompleted ?? false} />
+
+      {/* Welcome modal for new users (triggered by ?welcome=true) */}
+      <Suspense fallback={null}>
+        <WelcomeModalTrigger />
+      </Suspense>
 
       {/* Sidebar */}
       <Sidebar />

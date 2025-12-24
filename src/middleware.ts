@@ -7,6 +7,8 @@ import { getSession } from '@auth0/nextjs-auth0/edge';
 // Routes that don't require authentication
 const publicPaths = [
   '/',
+  '/signup',
+  '/login',
   '/api/auth',
   '/api/health',
   '/api/transcription/webhook',
