@@ -290,19 +290,22 @@ export function RecordingSection({
 
       {/* Upload UI */}
       {mode === 'UPLOAD' && (
-        <div className={cn('space-y-space-4', disabled && 'opacity-50 pointer-events-none')}>
+        <div className={cn('space-y-4', disabled && 'opacity-50 pointer-events-none')}>
           {!uploadFile ? (
-            // File selection
-            <div className="rounded-lg border-2 border-dashed border-border/60 p-space-8 text-center transition-colors duration-150 hover:border-primary/40 hover:bg-primary/5">
-              <FileAudio className="mx-auto h-10 w-10 text-muted-foreground mb-space-4" aria-hidden="true" />
-              <p className="text-label font-medium mb-space-1">Upload existing audio</p>
-              <p className="text-caption text-muted-foreground mb-space-4">
+            // File selection - enhanced dropzone
+            <div className="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 p-8 text-center transition-all duration-200 hover:border-teal-400 dark:hover:border-teal-500 hover:bg-teal-50/50 dark:hover:bg-teal-900/10 group">
+              <div className="mx-auto h-14 w-14 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:bg-teal-100 dark:group-hover:bg-teal-900/30 transition-colors duration-200">
+                <FileAudio className="h-7 w-7 text-slate-400 dark:text-slate-500 group-hover:text-teal-500 dark:group-hover:text-teal-400 transition-colors duration-200" aria-hidden="true" />
+              </div>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Upload existing audio</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
                 MP3, WAV, M4A, OGG, WebM up to 100MB
               </p>
               <Button
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled}
+                className="rounded-xl"
               >
                 <Upload className="h-4 w-4" aria-hidden="true" />
                 Select Audio File
@@ -319,14 +322,14 @@ export function RecordingSection({
             </div>
           ) : (
             // File selected - show details and upload button
-            <div className="rounded-lg border border-border/60 p-space-4 space-y-space-4 shadow-card">
-              <div className="flex items-center gap-space-3">
-                <div className="rounded-lg bg-muted p-space-2">
-                  <FileAudio className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+            <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-4 shadow-sm bg-white dark:bg-slate-900">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-teal-50 dark:bg-teal-900/30 p-3">
+                  <FileAudio className="h-5 w-5 text-teal-600 dark:text-teal-400" aria-hidden="true" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-label font-medium truncate">{uploadFile.name}</p>
-                  <p className="text-caption text-muted-foreground">
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{uploadFile.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     {(uploadFile.size / 1024 / 1024).toFixed(1)} MB
                     {audioDuration && ` • ${formatDuration(audioDuration)}`}
                   </p>
@@ -336,22 +339,23 @@ export function RecordingSection({
                   size="sm"
                   onClick={clearUpload}
                   disabled={uploading}
+                  className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                 >
                   Change
                 </Button>
               </div>
 
               {uploading && (
-                <div className="space-y-space-1" role="status" aria-live="polite">
-                  <Progress value={uploadProgress} />
-                  <p className="text-caption text-muted-foreground text-center">
+                <div className="space-y-2" role="status" aria-live="polite">
+                  <Progress value={uploadProgress} className="h-2" />
+                  <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
                     Uploading... {uploadProgress}%
                   </p>
                 </div>
               )}
 
               <Button
-                className="w-full"
+                className="w-full rounded-xl"
                 onClick={uploadAudioFile}
                 disabled={uploading || disabled}
               >
