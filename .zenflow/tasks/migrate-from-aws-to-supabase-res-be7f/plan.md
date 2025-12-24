@@ -364,7 +364,7 @@ Add email capability for sending approved letters.
 - ✅ `npm run typecheck` passes
 - ✅ `npm run lint` passes
 - ✅ `npm run build` succeeds
-- ✅ All 195 tests pass (29 email tests)
+- ✅ All 221 tests pass (29 email tests)
 
 **Verification**:
 - Unit tests verify template rendering ✅
@@ -374,14 +374,11 @@ Add email capability for sending approved letters.
 - `sent_emails` table created with proper schema ✅
 - Audit log entries created for all email operations ✅
 
-**API Endpoints**:
+**API Endpoints Created**:
 - `POST /api/letters/:id/email` - Send approved letter via email
-- `GET /api/letters/:id/email` - Get email sending history
-- `POST /api/webhooks/resend` - Resend webhook for delivery status
+- `GET /api/letters/:id/email` - Get email sending history for a letter
+- `POST /api/webhooks/resend` - Resend webhook for delivery status updates
 - `GET /api/webhooks/resend` - Webhook health check
-- `POST /api/email/send` - Alternative email send endpoint (standalone)
-- `POST /api/email/webhook` - Resend webhook (alternative path)
-- `GET /api/email/history?letterId=` - Get email history by letter ID
 
 ---
 
