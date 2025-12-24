@@ -16,8 +16,8 @@ export function OnboardingRedirect({ onboardingCompleted }: OnboardingRedirectPr
   const pathname = usePathname();
 
   useEffect(() => {
-    // Skip if already on onboarding page or settings pages (allow access to subspecialties)
-    const allowedPaths = ['/onboarding', '/settings/subspecialties'];
+    // Skip if already on onboarding page or settings pages (allow access to specialty editing)
+    const allowedPaths = ['/onboarding', '/settings/subspecialties', '/settings/specialties'];
     const isAllowedPath = allowedPaths.some(path => pathname.startsWith(path));
 
     if (!onboardingCompleted && !isAllowedPath) {

@@ -53,9 +53,11 @@ const mockUser = {
   email: 'test@example.com',
   name: 'Test User',
   role: 'SPECIALIST' as const,
+  clinicianRole: 'MEDICAL' as const,
   practiceId: 'practice-123',
   subspecialties: ['Cardiology'],
   onboardingCompleted: true,
+  onboardingCompletedAt: new Date(),
 };
 
 const mockLetter = {

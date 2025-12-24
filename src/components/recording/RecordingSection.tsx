@@ -192,7 +192,7 @@ export function RecordingSection({
       const { recording, uploadUrl } = await createResponse.json();
       setUploadProgress(20);
 
-      // Upload to S3
+      // Upload to storage
       const uploadResponse = await fetch(uploadUrl, {
         method: 'PUT',
         body: uploadFile,

@@ -1,7 +1,8 @@
 // src/domains/documents/extraction.service.ts
 // Document extraction orchestration service
+// Uses Supabase Storage signed URLs for PHI-compliant document access
 
-import { updateDocumentStatus } from './document.service';
+import { updateDocumentStatus, getDocumentDownloadUrlForAI } from './document.service';
 import {
   analyzeImage,
   analyzeMultipleImages,
@@ -16,19 +17,35 @@ import { GENERIC_EXTRACTION_PROMPT, LAB_EXTRACTION_PROMPT, parseGenericExtractio
 /**
  * Process a document for clinical data extraction.
  * This is called asynchronously after document upload.
+ * Uses Supabase Storage signed URLs for secure PHI access.
+ *
+ * @param documentId - ID of the document to process
+ * @param documentType - Type of clinical document
+ * @param documentUrl - Optional URL. If not provided, will generate from Supabase Storage
  */
 export async function processDocument(
   documentId: string,
   documentType: DocumentType,
-  documentUrl: string
+  documentUrl?: string
 ): Promise<ExtractedData> {
   const log = logger.child({ documentId, documentType, action: 'processDocument' });
 
   try {
     log.info('Starting document extraction');
 
+    // Get document URL from Supabase Storage if not provided
+    let url = documentUrl;
+    if (!url) {
+      const generatedUrl = await getDocumentDownloadUrlForAI(documentId);
+      if (!generatedUrl) {
+        throw new Error('Document not found or file has been deleted');
+      }
+      url = generatedUrl;
+      log.info('Generated Supabase signed URL for AI processing');
+    }
+
     // Fetch document as base64
-    const { base64, mimeType } = await fetchImageAsBase64(documentUrl);
+    const { base64, mimeType } = await fetchImageAsBase64(url);
 
     // Select extraction prompt based on document type
     let prompt: string;
@@ -266,11 +283,16 @@ function countNestedFields(data: Record<string, unknown>): number {
 /**
  * Re-extract data from a document with a different document type.
  * Useful when the automatic type inference was wrong.
+ * Uses Supabase Storage for document access.
+ *
+ * @param documentId - ID of the document to reprocess
+ * @param newType - New document type to use for extraction
+ * @param documentUrl - Optional URL. If not provided, will generate from Supabase Storage
  */
 export async function reprocessDocument(
   documentId: string,
   newType: DocumentType,
-  documentUrl: string
+  documentUrl?: string
 ): Promise<ExtractedData> {
   const log = logger.child({ documentId, newType, action: 'reprocessDocument' });
 
@@ -279,6 +301,6 @@ export async function reprocessDocument(
   // Update status to processing
   await updateDocumentStatus(documentId, 'PROCESSING');
 
-  // Process with new type
+  // Process with new type - will auto-generate URL from Supabase if not provided
   return processDocument(documentId, newType, documentUrl);
 }

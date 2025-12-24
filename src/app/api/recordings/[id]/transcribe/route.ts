@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/infrastructure/db/client';
-import { getDownloadUrl } from '@/infrastructure/s3/presigned-urls';
+import { getAudioDownloadUrl } from '@/infrastructure/supabase/storage.service';
 import { submitTranscription } from '@/infrastructure/deepgram/client';
 import { logger } from '@/lib/logger';
 
@@ -17,8 +17,6 @@ interface RouteParams {
  *
  * Initiates transcription for an uploaded recording using Deepgram.
  * Updates the recording status to TRANSCRIBING and queues the transcription job.
- *
- * TODO: Implement actual Deepgram API integration
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -42,7 +40,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         userId: true,
         mode: true,
         status: true,
-        s3AudioKey: true,
+        storagePath: true,
+        audioDeletedAt: true,
       },
     });
 
@@ -64,11 +63,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Verify audio file exists
-    if (!recording.s3AudioKey) {
+    // Verify audio file exists and hasn't been deleted
+    if (!recording.storagePath) {
       return NextResponse.json(
         { error: 'No audio file found for this recording' },
         { status: 400 }
+      );
+    }
+
+    if (recording.audioDeletedAt) {
+      return NextResponse.json(
+        { error: 'Audio file has been deleted after transcription' },
+        { status: 410 }
       );
     }
 
@@ -80,8 +86,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       },
     });
 
-    // Get audio download URL for transcription service
-    const { url: audioUrl } = await getDownloadUrl(recording.s3AudioKey);
+    // Get audio download URL from Supabase Storage for transcription service
+    const { signedUrl: audioUrl } = await getAudioDownloadUrl(
+      userId,
+      id,
+      recording.storagePath,
+      'ai_processing'
+    );
 
     // Build callback URL for Deepgram webhook
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -91,7 +102,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       recordingId: id,
       userId,
       mode: recording.mode,
-      s3AudioKey: recording.s3AudioKey,
+      storagePath: recording.storagePath,
     });
 
     let transcriptionJobId: string;
@@ -111,7 +122,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         callbackUrl,
       });
     } catch (deepgramError) {
-      // Revert status to UPLOADED on Deepgram failure
+      // Revert status to FAILED on Deepgram failure
       await prisma.recording.update({
         where: { id },
         data: { status: 'FAILED' },

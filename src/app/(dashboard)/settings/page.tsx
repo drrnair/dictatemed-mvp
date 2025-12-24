@@ -2,7 +2,7 @@
 // Settings page with navigation to sub-settings - Redesigned
 
 import Link from 'next/link';
-import { Building2, Sparkles, Heart, FileText, User, Send, ChevronRight } from 'lucide-react';
+import { Building2, Sparkles, Stethoscope, FileText, User, Send, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Route } from 'next';
 
@@ -31,10 +31,10 @@ const settingsLinks: Array<{
     icon: Sparkles,
   },
   {
-    title: 'Subspecialties',
-    description: 'Select your cardiology subspecialty interests for tailored templates',
-    href: '/settings/subspecialties' as Route,
-    icon: Heart,
+    title: 'Your Specialties',
+    description: 'Manage your medical specialties and subspecialties for tailored content',
+    href: '/settings/specialties' as Route,
+    icon: Stethoscope,
   },
   {
     title: 'Letter Templates',

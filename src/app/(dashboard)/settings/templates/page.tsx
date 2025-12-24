@@ -429,12 +429,12 @@ export default function TemplatesPage() {
         </div>
       )}
 
-      {/* Link to subspecialties */}
+      {/* Link to specialties */}
       <div className="rounded-lg border bg-muted/50 p-4">
         <p className="text-sm text-muted-foreground">
           Want better recommendations?{' '}
-          <Link href="/settings/subspecialties" className="text-primary hover:underline">
-            Update your subspecialty interests
+          <Link href="/settings/specialties" className="text-primary hover:underline">
+            Update your specialty interests
           </Link>
         </p>
       </div>

@@ -20,9 +20,10 @@ model Practice {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  users     User[]
-  patients  Patient[]
-  referrers Referrer[]
+  users             User[]
+  patients          Patient[]
+  referrers         Referrer[]
+  referralDocuments ReferralDocument[]
 
   @@map("practices")
 }
@@ -42,7 +43,13 @@ model User {
   updatedAt    DateTime  @updatedAt
   lastLoginAt  DateTime?
 
-  // Subspecialty interests for template recommendations
+  // Onboarding completion timestamp (set when user completes or skips onboarding)
+  onboardingCompletedAt DateTime?
+
+  // Clinician role for specialty-based onboarding (Medical, Nursing, Allied Health)
+  clinicianRole ClinicianRole @default(MEDICAL)
+
+  // Legacy: Subspecialty interests for template recommendations (being replaced by ClinicianSubspecialty)
   subspecialties String[] @default([]) // Array of Subspecialty enum values
 
   recordings          Recording[]
@@ -53,11 +60,21 @@ model User {
   notifications       Notification[]
   styleEdits          StyleEdit[]
   templatePreferences UserTemplatePreference[]
+  sentEmails          SentEmail[]
   letterSends         LetterSend[]
 
   // Per-subspecialty style learning
   styleProfiles    StyleProfile[]
   styleSeedLetters StyleSeedLetter[]
+
+  // Medical specialty selections
+  clinicianSpecialties    ClinicianSpecialty[]
+  clinicianSubspecialties ClinicianSubspecialty[]
+  customSpecialties       CustomSpecialty[]
+  customSubspecialties    CustomSubspecialty[]
+
+  // Referral documents
+  referralDocuments ReferralDocument[]
 
   @@map("users")
 }
@@ -65,6 +82,20 @@ model User {
 enum UserRole {
   ADMIN
   SPECIALIST
+}
+
+// Clinician role for specialty-based onboarding
+enum ClinicianRole {
+  MEDICAL
+  NURSING
+  ALLIED_HEALTH
+}
+
+// Status for custom specialty/subspecialty requests
+enum CustomRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // ============ Patients ============
@@ -78,12 +109,13 @@ model Patient {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  recordings    Recording[]
-  documents     Document[]
-  letters       Letter[]
-  consultations Consultation[]
-  contacts      PatientContact[]
-  letterSends   LetterSend[]
+  recordings        Recording[]
+  documents         Document[]
+  letters           Letter[]
+  consultations     Consultation[]
+  contacts          PatientContact[]
+  letterSends       LetterSend[]
+  referralDocuments ReferralDocument[]
 
   @@index([practiceId])
   @@map("patients")
@@ -92,11 +124,11 @@ model Patient {
 // ============ Recordings ============
 
 model Recording {
-  id        String    @id @default(uuid())
+  id        String   @id @default(uuid())
   userId    String
-  user      User      @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
   patientId String?
-  patient   Patient?  @relation(fields: [patientId], references: [id])
+  patient   Patient? @relation(fields: [patientId], references: [id])
 
   // Link to consultation context
   consultationId String?
@@ -107,17 +139,20 @@ model Recording {
 
   // Audio metadata
   durationSeconds Int?
+  fileSizeBytes   Int? // Size of uploaded audio file in bytes
   audioQuality    String? // excellent/good/fair/poor
-  s3AudioKey      String?
+  s3AudioKey      String? // @deprecated - use storagePath for Supabase Storage
+  storagePath     String? // Supabase Storage path: {userId}/{consultationId}/{timestamp}_{mode}.{ext}
+  audioDeletedAt  DateTime? // When audio was deleted from storage (retention policy)
 
   // Consent
   consentType ConsentType?
   consentAt   DateTime?
 
   // Transcription
-  transcriptRaw  Json?   // Full Deepgram response
+  transcriptRaw  Json? // Full Deepgram response
   transcriptText String? // Plain text transcript
-  speakers       Json?   // Speaker diarization data
+  speakers       Json? // Speaker diarization data
 
   // Processing
   processingError String?
@@ -167,13 +202,19 @@ model Document {
   filename  String
   mimeType  String
   sizeBytes Int
-  s3Key     String
+  s3Key     String? // @deprecated - use storagePath for Supabase Storage
+  storagePath String? // Supabase Storage path: {userId}/{patientId}/{docType}/{filename}_{timestamp}.{ext}
 
   documentType DocumentType?
   status       DocumentStatus @default(UPLOADING)
 
+  // Retention and soft delete
+  retentionUntil DateTime? // When the document should be deleted (retention policy)
+  deletedAt      DateTime? // When the document was deleted from storage
+  deletionReason String?   // Reason for deletion (retention_expired, user_requested, etc.)
+
   // Extraction results
-  extractedData   Json?   // Structured clinical data
+  extractedData   Json? // Structured clinical data
   extractedText   String? // OCR/parsed text
   processingError String?
   processedAt     DateTime?
@@ -184,6 +225,7 @@ model Document {
   letterDocuments LetterDocument[]
 
   @@index([userId, createdAt])
+  @@index([retentionUntil]) // For retention cleanup job
   @@map("documents")
 }
 
@@ -231,26 +273,26 @@ model Letter {
   // Content
   contentDraft String? @db.Text // Initial AI-generated content
   contentFinal String? @db.Text // After physician edits (approved content)
-  contentDiff  Json?   // Diff between draft and final
+  contentDiff  Json? // Diff between draft and final
 
   // Source anchoring
   sourceAnchors Json? // Map of text segments to sources
 
   // Clinical safety
-  extractedValues      Json?  // LVEF, stenosis, etc. (ClinicalValue[])
-  verifiedValues       Json?  // Which values physician confirmed
-  hallucinationFlags   Json?  // Critic model findings (HallucinationFlag[])
-  clinicalConcepts     Json?  // Diagnoses, meds, procedures (ClinicalConcepts)
-  verificationRate     Float? // Percentage of values with source anchors
+  extractedValues        Json? // LVEF, stenosis, etc. (ClinicalValue[])
+  verifiedValues         Json? // Which values physician confirmed
+  hallucinationFlags     Json? // Critic model findings (HallucinationFlag[])
+  clinicalConcepts       Json? // Diagnoses, meds, procedures (ClinicalConcepts)
+  verificationRate       Float? // Percentage of values with source anchors
   hallucinationRiskScore Int? // Risk score 0-100
 
   // Model tracking
-  primaryModel       String? // Model used for generation
-  criticModel        String? // Model used for hallucination check
-  styleConfidence    Float?  // 0-1 confidence in style match
-  inputTokens        Int?    // Tokens consumed for input
-  outputTokens       Int?    // Tokens generated for output
-  generationDurationMs Int?  // Time taken for generation
+  primaryModel         String? // Model used for generation
+  criticModel          String? // Model used for hallucination check
+  styleConfidence      Float? // 0-1 confidence in style match
+  inputTokens          Int? // Tokens consumed for input
+  outputTokens         Int? // Tokens generated for output
+  generationDurationMs Int? // Time taken for generation
 
   // Device locking for offline sync
   lockedByDeviceId String?
@@ -260,8 +302,8 @@ model Letter {
   generatedAt      DateTime?
   reviewStartedAt  DateTime?
   approvedAt       DateTime?
-  approvedBy       String?   // User ID who approved
-  reviewDurationMs Int?      // Time spent reviewing
+  approvedBy       String? // User ID who approved
+  reviewDurationMs Int? // Time spent reviewing
 
   // Processing
   processingError String?
@@ -272,6 +314,7 @@ model Letter {
   documents  LetterDocument[]
   provenance Provenance?
   styleEdits StyleEdit[]
+  sentEmails SentEmail[]
   sends      LetterSend[]
 
   @@index([userId, createdAt])
@@ -350,7 +393,7 @@ model Notification {
   title     String
   message   String           @db.Text
   read      Boolean          @default(false)
-  data      Json?            // Additional context data (letterId, recordingId, etc.)
+  data      Json? // Additional context data (letterId, recordingId, etc.)
   createdAt DateTime         @default(now())
 
   @@index([userId, createdAt])
@@ -369,11 +412,11 @@ enum NotificationType {
 // ============ Style Learning ============
 
 model StyleEdit {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  letterId  String
-  letter    Letter   @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  letterId String
+  letter   Letter @relation(fields: [letterId], references: [id], onDelete: Cascade)
 
   // Edit content
   beforeText String @db.Text // Original AI-generated text
@@ -422,9 +465,9 @@ model StyleProfile {
   paragraphStructure String? // "long" | "short" | "mixed"
 
   // Confidence & metadata
-  confidence         Json     @default("{}") // Per-preference confidence scores
-  learningStrength   Float    @default(1.0) // 0.0 = disabled, 1.0 = full effect
-  totalEditsAnalyzed Int      @default(0)
+  confidence         Json      @default("{}") // Per-preference confidence scores
+  learningStrength   Float     @default(1.0) // 0.0 = disabled, 1.0 = full effect
+  totalEditsAnalyzed Int       @default(0)
   lastAnalyzedAt     DateTime?
 
   createdAt DateTime @default(now())
@@ -470,6 +513,129 @@ model StyleAnalyticsAggregate {
   @@map("style_analytics_aggregates")
 }
 
+// ============ Medical Specialties Taxonomy ============
+
+// Global medical specialties (seeded from ABMS, AHPRA, etc.)
+model MedicalSpecialty {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g., "Cardiology"
+  slug        String   @unique // e.g., "cardiology"
+  description String?  @db.Text
+  synonyms    Json     @default("[]") // e.g., ["cardiologist", "cardiac medicine"]
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  subspecialties       MedicalSubspecialty[]
+  clinicianSpecialties ClinicianSpecialty[]
+  customSubspecialties CustomSubspecialty[]
+
+  @@index([active])
+  @@map("medical_specialties")
+}
+
+// Subspecialties within a medical specialty
+model MedicalSubspecialty {
+  id          String           @id @default(uuid())
+  specialtyId String
+  specialty   MedicalSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  name        String // e.g., "Interventional cardiology"
+  slug        String // e.g., "interventional-cardiology"
+  description String?          @db.Text
+  active      Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  clinicianSubspecialties ClinicianSubspecialty[]
+
+  @@unique([specialtyId, slug])
+  @@index([specialtyId])
+  @@index([active])
+  @@map("medical_subspecialties")
+}
+
+// Junction table: User's selected specialties
+model ClinicianSpecialty {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialtyId String
+  specialty   MedicalSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+
+  @@unique([userId, specialtyId])
+  @@index([userId])
+  @@index([specialtyId])
+  @@map("clinician_specialties")
+}
+
+// Junction table: User's selected subspecialties
+model ClinicianSubspecialty {
+  id             String              @id @default(uuid())
+  userId         String
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subspecialtyId String
+  subspecialty   MedicalSubspecialty @relation(fields: [subspecialtyId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+
+  @@unique([userId, subspecialtyId])
+  @@index([userId])
+  @@index([subspecialtyId])
+  @@map("clinician_subspecialties")
+}
+
+// Custom specialty requests from clinicians (pending admin review)
+model CustomSpecialty {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  region    String? // e.g., "AU", "US" for regional specialties
+  notes     String?             @db.Text
+  status    CustomRequestStatus @default(PENDING)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  // If approved, link to the created MedicalSpecialty
+  approvedSpecialtyId String?
+
+  // Custom subspecialties linked to this custom specialty
+  customSubspecialties CustomSubspecialty[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("custom_specialties")
+}
+
+// Custom subspecialty requests from clinicians (pending admin review)
+model CustomSubspecialty {
+  id          String              @id @default(uuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?             @db.Text
+  status      CustomRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  // Can be linked to either a global specialty or a custom specialty
+  specialtyId       String?
+  specialty         MedicalSpecialty? @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  customSpecialtyId String?
+  customSpecialty   CustomSpecialty?  @relation(fields: [customSpecialtyId], references: [id], onDelete: Cascade)
+
+  // If approved, link to the created MedicalSubspecialty
+  approvedSubspecialtyId String?
+
+  @@index([userId])
+  @@index([specialtyId])
+  @@index([customSpecialtyId])
+  @@index([status])
+  @@map("custom_subspecialties")
+}
+
 // ============ Letter Templates ============
 
 // Subspecialty categories for cardiology
@@ -494,15 +660,15 @@ enum TemplateCategory {
 
 // Letter templates with subspecialty tagging
 model LetterTemplate {
-  id          String   @id @default(uuid())
-  name        String   // e.g., "New Patient Consultation"
-  description String?  // Brief description of when to use
-  slug        String   @unique // URL-friendly identifier
+  id          String  @id @default(uuid())
+  name        String // e.g., "New Patient Consultation"
+  description String? // Brief description of when to use
+  slug        String  @unique // URL-friendly identifier
 
   // Categorization
   category       TemplateCategory
   subspecialties Subspecialty[] // Which subspecialties this applies to
-  isGeneric      Boolean        @default(false) // Available to all subspecialties
+  isGeneric      Boolean          @default(false) // Available to all subspecialties
 
   // Parent template for variants (e.g., "TTE Report" is parent of "Stress Echo Report")
   parentId String?
@@ -510,7 +676,7 @@ model LetterTemplate {
   variants LetterTemplate[] @relation("TemplateVariants")
 
   // Template content
-  promptTemplate   String  @db.Text // System prompt additions for this template
+  promptTemplate   String   @db.Text // System prompt additions for this template
   sectionOrder     String[] // Default section order for this template
   requiredSections String[] // Sections that must be included
   optionalSections String[] // Sections that can be added
@@ -564,19 +730,19 @@ model UserTemplatePreference {
 
 // Referrer/GP information (reusable across consultations within a practice)
 model Referrer {
-  id           String   @id @default(uuid())
-  practiceId   String
-  practice     Practice @relation(fields: [practiceId], references: [id])
+  id         String   @id @default(uuid())
+  practiceId String
+  practice   Practice @relation(fields: [practiceId], references: [id])
 
-  name         String   // Dr. John Smith
-  practiceName String?  // Sydney Medical Centre
+  name         String // Dr. John Smith
+  practiceName String? // Sydney Medical Centre
   email        String?
   phone        String?
   fax          String?
-  address      String?  @db.Text // Postal address
+  address      String? @db.Text // Postal address
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   consultations Consultation[]
 
@@ -591,11 +757,11 @@ model CCRecipient {
   consultationId String
   consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
 
-  name           String
-  email          String?
-  address        String?      @db.Text // Postal address
+  name    String
+  email   String?
+  address String? @db.Text // Postal address
 
-  createdAt      DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   @@index([consultationId])
   @@map("cc_recipients")
@@ -603,38 +769,39 @@ model CCRecipient {
 
 // Consultation context - bundles patient, referrer, recording, and selected materials
 model Consultation {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
   // Patient for this consultation
-  patientId   String?
-  patient     Patient? @relation(fields: [patientId], references: [id])
+  patientId String?
+  patient   Patient? @relation(fields: [patientId], references: [id])
 
   // Referrer/GP for this consultation
-  referrerId  String?
-  referrer    Referrer? @relation(fields: [referrerId], references: [id])
+  referrerId String?
+  referrer   Referrer? @relation(fields: [referrerId], references: [id])
 
   // Letter type pre-selection
-  templateId  String?
-  template    LetterTemplate? @relation(fields: [templateId], references: [id])
-  letterType  LetterType?
+  templateId String?
+  template   LetterTemplate? @relation(fields: [templateId], references: [id])
+  letterType LetterType?
 
   // Selected context materials (IDs of existing letters/documents to use as context)
   selectedLetterIds   String[] @default([])
   selectedDocumentIds String[] @default([])
 
   // Status tracking
-  status      ConsultationStatus @default(DRAFT)
+  status ConsultationStatus @default(DRAFT)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  ccRecipients CCRecipient[]
-  recordings   Recording[]
-  documents    Document[]     // Documents uploaded during this consultation
-  letters      Letter[]       // Generated letters from this consultation
+  ccRecipients     CCRecipient[]
+  recordings       Recording[]
+  documents        Document[]         // Documents uploaded during this consultation
+  letters          Letter[]           // Generated letters from this consultation
+  referralDocument ReferralDocument?  // Uploaded referral that populated context
 
   @@index([userId, createdAt])
   @@index([patientId])
@@ -643,11 +810,47 @@ model Consultation {
 }
 
 enum ConsultationStatus {
-  DRAFT       // Context being gathered
-  RECORDING   // Recording in progress
-  PROCESSING  // Transcription/processing in progress
-  READY       // Ready for letter generation
-  COMPLETED   // Letter generated
+  DRAFT // Context being gathered
+  RECORDING // Recording in progress
+  PROCESSING // Transcription/processing in progress
+  READY // Ready for letter generation
+  COMPLETED // Letter generated
+}
+
+// ============ Sent Emails (Resend Integration) ============
+
+model SentEmail {
+  id                String      @id @default(uuid())
+  userId            String
+  user              User        @relation(fields: [userId], references: [id])
+  letterId          String
+  letter            Letter      @relation(fields: [letterId], references: [id])
+
+  // Recipient information
+  recipientEmail    String
+  recipientName     String
+  ccEmails          String[]    @default([])
+  subject           String
+
+  // Provider tracking
+  providerMessageId String?     // Resend message ID for tracking
+  status            String      @default("pending") // pending, sent, delivered, bounced, failed
+  errorMessage      String?     // Error message if failed
+
+  // Timestamps
+  sentAt            DateTime?   // When email was accepted by provider
+  lastEventAt       DateTime?   // Last webhook event timestamp
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Webhook data (for debugging)
+  webhookPayload    String?     @db.Text
+
+  @@index([userId, createdAt])
+  @@index([letterId])
+  @@index([providerMessageId])
+  @@index([status])
+  @@map("sent_emails")
 }
 
 // ============ Patient Contacts & Letter Sending ============
@@ -674,33 +877,82 @@ enum SendStatus {
   BOUNCED
 }
 
+// ============ Referral Documents ============
+
+enum ReferralDocumentStatus {
+  UPLOADED        // File stored, awaiting text extraction
+  TEXT_EXTRACTED  // Text extracted from PDF
+  EXTRACTED       // AI structured extraction complete
+  APPLIED         // Data applied to consultation
+  FAILED          // Processing failed
+}
+
+model ReferralDocument {
+  id         String                 @id @default(uuid())
+  userId     String
+  user       User                   @relation(fields: [userId], references: [id])
+  practiceId String
+  practice   Practice               @relation(fields: [practiceId], references: [id])
+
+  // Optional links (set after extraction/review)
+  patientId      String?
+  patient        Patient?      @relation(fields: [patientId], references: [id])
+  consultationId String?       @unique
+  consultation   Consultation? @relation(fields: [consultationId], references: [id])
+
+  // File storage
+  filename  String
+  mimeType  String
+  sizeBytes Int
+  s3Key     String
+
+  // Processing status
+  status ReferralDocumentStatus @default(UPLOADED)
+
+  // Extracted content
+  contentText   String? @db.Text // Raw text from PDF/TXT
+  extractedData Json?            // Structured extraction result
+
+  // Metadata
+  processingError String?
+  processedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([practiceId])
+  @@index([patientId])
+  @@index([status])
+  @@map("referral_documents")
+}
+
 // Patient-linked contacts (GP, referrer, specialists, etc.)
 model PatientContact {
-  id                  String      @id @default(uuid())
-  patientId           String
-  patient             Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
-  type                ContactType // GP, REFERRER, SPECIALIST, OTHER
-  fullName            String
-  organisation        String?     // Practice name
-  role                String?     // Specialty/role (free text)
+  type         ContactType // GP, REFERRER, SPECIALIST, OTHER
+  fullName     String
+  organisation String? // Practice name
+  role         String? // Specialty/role (free text)
 
   // Communication channels
-  email               String?
-  phone               String?
-  fax                 String?
-  address             String?     @db.Text
-  secureMessagingId   String?     // Future: HealthLink/FHIR
-  preferredChannel    ChannelType @default(EMAIL)
+  email             String?
+  phone             String?
+  fax               String?
+  address           String?     @db.Text
+  secureMessagingId String? // Future: HealthLink/FHIR
+  preferredChannel  ChannelType @default(EMAIL)
 
   // Defaults
-  isDefaultForPatient Boolean     @default(false)
+  isDefaultForPatient Boolean @default(false)
 
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  letterSends         LetterSend[]
+  letterSends LetterSend[]
 
   @@index([patientId])
   @@index([patientId, type])
@@ -709,44 +961,44 @@ model PatientContact {
 
 // Audit log for letter sends
 model LetterSend {
-  id                  String          @id @default(uuid())
-  letterId            String
-  letter              Letter          @relation(fields: [letterId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  letterId String
+  letter   Letter @relation(fields: [letterId], references: [id], onDelete: Cascade)
 
   // Denormalized patientId for direct audit queries (preserved even if letter deleted via cascade)
-  patientId           String?
-  patient             Patient?        @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  patientId String?
+  patient   Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
 
   // Who sent
-  senderId            String
-  sender              User            @relation(fields: [senderId], references: [id])
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id])
 
   // Recipient info
-  patientContactId    String?         // Nullable for one-off recipients
-  patientContact      PatientContact? @relation(fields: [patientContactId], references: [id])
+  patientContactId String? // Nullable for one-off recipients
+  patientContact   PatientContact? @relation(fields: [patientContactId], references: [id])
 
   // Denormalized recipient info (for audit even if contact deleted)
-  recipientName       String
-  recipientEmail      String
-  recipientType       ContactType?
+  recipientName  String
+  recipientEmail String
+  recipientType  ContactType?
 
   // Send details
-  channel             ChannelType     @default(EMAIL)
-  subject             String
-  coverNote           String?         @db.Text
+  channel   ChannelType @default(EMAIL)
+  subject   String
+  coverNote String?     @db.Text
 
   // Status tracking
-  status              SendStatus      @default(QUEUED)
-  queuedAt            DateTime        @default(now())
-  sentAt              DateTime?
-  failedAt            DateTime?
-  errorMessage        String?
+  status       SendStatus @default(QUEUED)
+  queuedAt     DateTime   @default(now())
+  sentAt       DateTime?
+  failedAt     DateTime?
+  errorMessage String?
 
   // Email provider reference
-  externalId          String?         // Provider message ID for tracking
+  externalId String? // Provider message ID for tracking
 
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([letterId])
   @@index([patientId])

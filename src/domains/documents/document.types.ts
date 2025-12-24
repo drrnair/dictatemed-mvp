@@ -14,11 +14,15 @@ export interface Document {
   size: number;
   type: DocumentType;
   status: DocumentStatus;
-  s3Key?: string | undefined;
+  s3Key?: string | undefined; // @deprecated - use storagePath
+  storagePath?: string | undefined; // Supabase Storage path
   url?: string | undefined;
   thumbnailUrl?: string | undefined;
   extractedData?: ExtractedData | undefined;
   processingError?: string | undefined;
+  retentionUntil?: Date | undefined; // Retention policy expiration
+  deletedAt?: Date | undefined; // When file was deleted from storage
+  deletionReason?: string | undefined; // Why the file was deleted
   createdAt: Date;
   updatedAt: Date;
 }

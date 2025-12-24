@@ -1,15 +1,23 @@
 // src/app/api/user/signature/route.ts
 // User signature upload/delete API endpoints
+// Migrated from S3 to Supabase Storage
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/infrastructure/db/client';
 import { getSession } from '@/lib/auth';
-import { getUploadUrl, deleteObject, getDownloadUrl } from '@/infrastructure/s3/presigned-urls';
+import {
+  generateSignaturePath,
+  uploadFile,
+  deleteSignature,
+  getSignatureDownloadUrl,
+  isValidImageType,
+  STORAGE_BUCKETS,
+  createStorageAuditLog,
+} from '@/infrastructure/supabase';
 import { logger } from '@/lib/logger';
 
 const log = logger.child({ module: 'user-signature-api' });
 
-const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 
 /**
@@ -30,8 +38,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Validate file type
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    // Validate file type using Supabase storage validation
+    if (!isValidImageType(file.type)) {
       return NextResponse.json(
         { error: 'Invalid file type. Allowed: PNG, JPEG, GIF, WebP' },
         { status: 400 }
@@ -46,26 +54,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate S3 key
-    const fileExt = file.name.split('.').pop() || 'png';
-    const s3Key = `signatures/${session.user.id}/${Date.now()}.${fileExt}`;
+    // Generate Supabase storage path
+    const storagePath = generateSignaturePath(session.user.id, file.name);
 
-    // Get presigned upload URL
-    const { url: uploadUrl } = await getUploadUrl(s3Key, file.type);
+    // Upload file directly to Supabase Storage
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await uploadFile(STORAGE_BUCKETS.USER_ASSETS, storagePath, buffer, file.type);
 
-    // Upload file to S3
-    const buffer = await file.arrayBuffer();
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': file.type,
-      },
-      body: buffer,
+    // Audit the upload
+    await createStorageAuditLog({
+      userId: session.user.id,
+      action: 'storage.upload',
+      bucket: STORAGE_BUCKETS.USER_ASSETS,
+      storagePath,
+      resourceType: 'signature',
+      resourceId: session.user.id,
+      metadata: { fileSize: file.size, contentType: file.type },
     });
-
-    if (!uploadResponse.ok) {
-      throw new Error('Failed to upload to S3');
-    }
 
     // Delete old signature if exists
     const currentUser = await prisma.user.findUnique({
@@ -75,23 +80,26 @@ export async function POST(request: NextRequest) {
 
     if (currentUser?.signature) {
       try {
-        await deleteObject(currentUser.signature);
+        await deleteSignature(session.user.id, currentUser.signature);
       } catch (err) {
         // Log but don't fail - old signature cleanup is best-effort
-        log.warn('Failed to delete old signature', { key: currentUser.signature });
+        log.warn('Failed to delete old signature', { path: currentUser.signature });
       }
     }
 
-    // Update user with new signature key
+    // Update user with new storage path
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { signature: s3Key },
+      data: { signature: storagePath },
     });
 
     // Generate download URL for response
-    const { url: downloadUrl } = await getDownloadUrl(s3Key);
+    const { signedUrl: downloadUrl } = await getSignatureDownloadUrl(
+      session.user.id,
+      storagePath
+    );
 
-    log.info('Signature uploaded', { userId: session.user.id, key: s3Key });
+    log.info('Signature uploaded', { userId: session.user.id, path: storagePath });
 
     return NextResponse.json({
       success: true,
@@ -127,11 +135,11 @@ export async function DELETE() {
       return NextResponse.json({ success: true, message: 'No signature to delete' });
     }
 
-    // Delete from S3
+    // Delete from Supabase Storage (includes audit logging)
     try {
-      await deleteObject(user.signature);
+      await deleteSignature(session.user.id, user.signature);
     } catch (err) {
-      log.warn('Failed to delete signature from S3', { key: user.signature });
+      log.warn('Failed to delete signature from storage', { path: user.signature });
     }
 
     // Clear signature in database
