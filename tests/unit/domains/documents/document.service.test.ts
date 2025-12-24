@@ -468,6 +468,56 @@ describe('Document Service - Supabase Storage Migration', () => {
     });
   });
 
+  describe('getPatientDocuments', () => {
+    it('should exclude soft-deleted documents', async () => {
+      vi.mocked(prisma.document.findMany).mockResolvedValue([]);
+
+      await getPatientDocuments(mockUserId, mockPatientId);
+
+      // Verify the where clause includes deletedAt: null
+      expect(prisma.document.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockUserId,
+            patientId: mockPatientId,
+            deletedAt: null,
+          }),
+        })
+      );
+    });
+
+    it('should return documents with Supabase URLs', async () => {
+      const mockDocuments = [
+        {
+          id: 'doc-1',
+          userId: mockUserId,
+          patientId: mockPatientId,
+          filename: 'echo1.pdf',
+          mimeType: 'application/pdf',
+          sizeBytes: 1024,
+          storagePath: 'path1',
+          s3Key: null,
+          documentType: 'ECHO_REPORT',
+          status: 'UPLOADED',
+          deletedAt: null,
+          retentionUntil: new Date(),
+          deletionReason: null,
+          extractedData: null,
+          processingError: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      vi.mocked(prisma.document.findMany).mockResolvedValue(mockDocuments as never);
+
+      const result = await getPatientDocuments(mockUserId, mockPatientId);
+
+      expect(result).toHaveLength(1);
+      expect(generateDownloadUrl).toHaveBeenCalled();
+    });
+  });
+
   describe('deleteDocument', () => {
     it('should delete document from Supabase storage', async () => {
       const mockDocument = {

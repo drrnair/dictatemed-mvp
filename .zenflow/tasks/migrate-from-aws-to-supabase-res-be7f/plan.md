@@ -364,7 +364,7 @@ Add email capability for sending approved letters.
 - ✅ `npm run typecheck` passes
 - ✅ `npm run lint` passes
 - ✅ `npm run build` succeeds
-- ✅ All 194 tests pass (29 new email tests)
+- ✅ All 195 tests pass (29 email tests)
 
 **Verification**:
 - Unit tests verify template rendering ✅
@@ -379,10 +379,14 @@ Add email capability for sending approved letters.
 - `GET /api/letters/:id/email` - Get email sending history
 - `POST /api/webhooks/resend` - Resend webhook for delivery status
 - `GET /api/webhooks/resend` - Webhook health check
+- `POST /api/email/send` - Alternative email send endpoint (standalone)
+- `POST /api/email/webhook` - Resend webhook (alternative path)
+- `GET /api/email/history?letterId=` - Get email history by letter ID
 
 ---
 
 ### [ ] Step 7: Strengthen RLS Policies
+<!-- chat-id: 5cb3743f-6a0c-4111-897c-bffdf08b84ba -->
 
 Enable and test Row Level Security across all PHI tables.
 
