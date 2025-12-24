@@ -449,7 +449,7 @@ Since DictateMED uses Auth0 (not Supabase Auth), the security model works as fol
 
 ---
 
-### [ ] Step 8: Remove AWS S3 Dependencies
+### [x] Step 8: Remove AWS S3 Dependencies
 <!-- chat-id: 2a76b01c-1149-4abb-9674-d946a9b8acee -->
 
 Clean up after migration is complete and tested.
@@ -469,11 +469,28 @@ Clean up after migration is complete and tested.
    - Add Resend variables
 4. Update any remaining S3 references in code
 
+**Completed**:
+- ✅ Deleted `src/infrastructure/s3/` directory with all files (client.ts, upload.service.ts, presigned-urls.ts)
+- ✅ Removed `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` packages (21 packages removed)
+- ✅ Updated `.env.example` to clarify AWS is used only for Bedrock AI
+- ✅ Updated 3 API routes that still had S3 imports:
+  - `src/app/api/recordings/[id]/upload-url/route.ts` - now uses Supabase storage
+  - `src/app/api/recordings/[id]/transcribe/route.ts` - now uses Supabase storage
+  - `src/app/api/documents/[id]/upload-url/route.ts` - now uses Supabase storage
+- ✅ `npm run typecheck` passes
+- ✅ `npm run lint` passes
+- ✅ `npm run build` succeeds
+- ✅ All 221 tests pass
+- ✅ No S3 imports remain in source code (verified via grep)
+
+**AWS Packages Remaining** (intentionally kept for Bedrock AI):
+- `@aws-sdk/client-bedrock-runtime` - used by `src/infrastructure/bedrock/vision.ts` and `src/infrastructure/bedrock/text-generation.ts`
+
 **Verification**:
-- `npm run build` succeeds
-- `npm run lint` passes
-- `npm run typecheck` passes
-- No S3 imports remain (grep check)
+- `npm run build` succeeds ✅
+- `npm run lint` passes ✅
+- `npm run typecheck` passes ✅
+- No S3 imports remain (grep check) ✅
 
 ---
 
