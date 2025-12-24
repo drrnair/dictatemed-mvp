@@ -25,8 +25,8 @@ export default function SpecialtiesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/settings">
-          <Button variant="ghost" size="icon">
+        <Link href="/settings" aria-label="Back to settings">
+          <Button variant="ghost" size="icon" aria-hidden="true">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
@@ -38,7 +38,6 @@ export default function SpecialtiesPage() {
         </div>
       </div>
 
-      {/* Practice Profile Form - autoFocus defaults to true but settings mode should not auto-focus */}
       <PracticeProfileForm
         onSave={handleSave}
         onSkip={handleCancel}

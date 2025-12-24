@@ -3,7 +3,7 @@
 // src/components/specialty/PracticeProfileForm.tsx
 // Main form component for specialty onboarding and profile editing
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Loader2, Stethoscope, Info, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -205,15 +205,15 @@ export function PracticeProfileForm({
       subspecialtiesBySpecialty
     );
 
-    const success = await saveProfile(saveData);
+    const updatedProfile = await saveProfile(saveData);
 
-    if (success) {
-      onSave?.(baseProfile!);
+    if (updatedProfile) {
+      onSave?.(updatedProfile);
     } else {
       setFormError('Failed to save your practice profile. Please try again.');
     }
   }, [
-    baseProfile,
+    baseProfile?.clinicianRole,
     selectedSpecialties,
     subspecialtiesBySpecialty,
     saveProfile,
@@ -250,10 +250,12 @@ export function PracticeProfileForm({
         <p className="text-sm text-muted-foreground">
           Tell DictateMED what you practice. This helps tailor notes and templates for you.
         </p>
-        <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
-          <Info className="h-3 w-3" />
-          You can always change this later in Settings.
-        </p>
+        {mode === 'onboarding' && (
+          <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
+            <Info className="h-3 w-3" />
+            You can always change this later in Settings.
+          </p>
+        )}
       </div>
 
       {/* Section B: Primary specialties */}
@@ -269,6 +271,7 @@ export function PracticeProfileForm({
           disabled={isDisabled}
           autoFocus={shouldAutoFocus} // eslint-disable-line jsx-a11y/no-autofocus -- Intentional for onboarding UX
           maxResults={7}
+          aria-labelledby="specialty-label"
         />
         {selectedSpecialties.length === 0 && (
           <p className="text-xs text-muted-foreground">

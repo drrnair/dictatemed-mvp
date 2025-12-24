@@ -303,11 +303,13 @@ describe('specialty.service', () => {
       });
 
       expect(result.subspecialties).toHaveLength(2);
-      expect(result.subspecialties[0].name).toBe('Interventional Cardiology');
+      expect(result.subspecialties[0]?.name).toBe('Interventional Cardiology');
     });
 
     it('should filter subspecialties by query', async () => {
-      vi.mocked(prisma.medicalSubspecialty.findMany).mockResolvedValue([mockSubspecialties[0]]);
+      const firstSubspecialty = mockSubspecialties[0];
+      if (!firstSubspecialty) throw new Error('Test setup error');
+      vi.mocked(prisma.medicalSubspecialty.findMany).mockResolvedValue([firstSubspecialty]);
       vi.mocked(prisma.customSubspecialty.findMany).mockResolvedValue([]);
 
       const result = await specialtyService.getSubspecialtiesForSpecialty({
@@ -317,7 +319,7 @@ describe('specialty.service', () => {
       });
 
       expect(result.subspecialties).toHaveLength(1);
-      expect(result.subspecialties[0].name).toBe('Interventional Cardiology');
+      expect(result.subspecialties[0]?.name).toBe('Interventional Cardiology');
     });
 
     it('should include custom subspecialties when requested', async () => {
@@ -331,8 +333,8 @@ describe('specialty.service', () => {
       });
 
       expect(result.subspecialties).toHaveLength(1);
-      expect(result.subspecialties[0].name).toBe('Cardiac Rehabilitation');
-      expect(result.subspecialties[0].isCustom).toBe(true);
+      expect(result.subspecialties[0]?.name).toBe('Cardiac Rehabilitation');
+      expect(result.subspecialties[0]?.isCustom).toBe(true);
     });
   });
 
@@ -340,7 +342,9 @@ describe('specialty.service', () => {
 
   describe('getSubspecialtyById', () => {
     it('should return subspecialty when found', async () => {
-      vi.mocked(prisma.medicalSubspecialty.findUnique).mockResolvedValue(mockSubspecialties[0]);
+      const firstSubspecialty = mockSubspecialties[0];
+      if (!firstSubspecialty) throw new Error('Test setup error');
+      vi.mocked(prisma.medicalSubspecialty.findUnique).mockResolvedValue(firstSubspecialty);
 
       const result = await specialtyService.getSubspecialtyById('subspec-1');
 
@@ -479,8 +483,8 @@ describe('specialty.service', () => {
       expect(result?.userId).toBe(mockUserId);
       expect(result?.clinicianRole).toBe('MEDICAL');
       expect(result?.specialties).toHaveLength(1);
-      expect(result?.specialties[0].name).toBe('Cardiology');
-      expect(result?.specialties[0].subspecialties).toHaveLength(1);
+      expect(result?.specialties[0]?.name).toBe('Cardiology');
+      expect(result?.specialties[0]?.subspecialties).toHaveLength(1);
     });
 
     it('should include custom specialties and subspecialties in profile', async () => {
@@ -505,8 +509,8 @@ describe('specialty.service', () => {
       const result = await specialtyService.getUserPracticeProfile(mockUserId);
 
       expect(result?.specialties).toHaveLength(1);
-      expect(result?.specialties[0].isCustom).toBe(true);
-      expect(result?.specialties[0].name).toBe('Sports Medicine');
+      expect(result?.specialties[0]?.isCustom).toBe(true);
+      expect(result?.specialties[0]?.name).toBe('Sports Medicine');
     });
   });
 
@@ -652,7 +656,9 @@ describe('specialty.service', () => {
     });
 
     it('should respect the limit parameter', async () => {
-      vi.mocked(prisma.medicalSubspecialty.findMany).mockResolvedValue([mockSubspecialties[0]]);
+      const firstSubspecialty = mockSubspecialties[0];
+      if (!firstSubspecialty) throw new Error('Test setup error');
+      vi.mocked(prisma.medicalSubspecialty.findMany).mockResolvedValue([firstSubspecialty]);
 
       await specialtyService.getSuggestedSubspecialties('spec-1', 1);
 
@@ -671,7 +677,9 @@ describe('specialty.service', () => {
 
   describe('getSpecialtyBySlug', () => {
     it('should return specialty by slug', async () => {
-      vi.mocked(prisma.medicalSpecialty.findUnique).mockResolvedValue(mockSpecialties[0]);
+      const firstSpecialty = mockSpecialties[0];
+      if (!firstSpecialty) throw new Error('Test setup error');
+      vi.mocked(prisma.medicalSpecialty.findUnique).mockResolvedValue(firstSpecialty);
 
       const result = await specialtyService.getSpecialtyBySlug('cardiology');
 

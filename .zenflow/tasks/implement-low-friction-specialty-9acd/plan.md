@@ -455,11 +455,13 @@ Created comprehensive technical specification in `spec.md` covering:
   - Header with back navigation to settings main page
   - Form auto-focuses disabled in settings mode (derived from mode prop)
   - Save redirects back to settings, Cancel also returns to settings
+  - Added aria-label="Back to settings" on back link for accessibility
 - Updated `src/components/specialty/PracticeProfileForm.tsx`:
   - Changed autoFocus default to be mode-aware (true for onboarding, false for settings)
   - Uses `shouldAutoFocus = autoFocus ?? mode === 'onboarding'` pattern
+  - Made "change this later in Settings" hint only show in onboarding mode (contextually appropriate)
+- Deleted orphaned `src/app/(dashboard)/settings/subspecialties/` directory (old page no longer needed)
 - OnboardingRedirect already allowed `/settings/specialties` path (from Step 7)
-- TypeScript typecheck passes
 - ESLint passes with no warnings
 
 ---

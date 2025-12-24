@@ -33,6 +33,8 @@ export interface SpecialtyComboboxProps {
   autoFocus?: boolean;
   /** Callback when a custom specialty is created (returns the new item) */
   onCreateCustom?: (name: string) => Promise<SelectedSpecialtyItem | null>;
+  /** ID of the element that labels this combobox for accessibility */
+  'aria-labelledby'?: string;
   /** Additional CSS classes */
   className?: string;
 }
@@ -50,6 +52,7 @@ export function SpecialtyCombobox({
   debounceMs = 150,
   autoFocus = false,
   onCreateCustom,
+  'aria-labelledby': ariaLabelledBy,
   className,
 }: SpecialtyComboboxProps) {
   const [query, setQuery] = useState('');
@@ -297,6 +300,7 @@ export function SpecialtyCombobox({
           aria-expanded={showDropdown}
           aria-haspopup="listbox"
           aria-controls="specialty-listbox"
+          aria-labelledby={ariaLabelledBy}
           role="combobox"
         />
         {isSearching && (

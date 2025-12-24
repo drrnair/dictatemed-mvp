@@ -45,6 +45,48 @@ interface MigrationSummary {
 }
 
 /**
+ * Verify that required seed data exists before running migration.
+ * This ensures MedicalSpecialty and MedicalSubspecialty records exist
+ * for all legacy subspecialty mappings.
+ */
+async function verifySeedData(): Promise<{ valid: boolean; missing: string[] }> {
+  const missing: string[] = [];
+
+  // Get unique specialty and subspecialty IDs from the mapping
+  const requiredSpecialtyIds = new Set<string>();
+  const requiredSubspecialtyIds = new Set<string>();
+
+  for (const mapping of Object.values(LEGACY_SUBSPECIALTY_MAPPING)) {
+    requiredSpecialtyIds.add(mapping.specialtyId);
+    requiredSubspecialtyIds.add(mapping.subspecialtyId);
+  }
+
+  // Check specialties exist
+  for (const specialtyId of Array.from(requiredSpecialtyIds)) {
+    const specialty = await prisma.medicalSpecialty.findUnique({
+      where: { id: specialtyId },
+      select: { id: true, name: true },
+    });
+    if (!specialty) {
+      missing.push(`MedicalSpecialty with id ${specialtyId}`);
+    }
+  }
+
+  // Check subspecialties exist
+  for (const subspecialtyId of Array.from(requiredSubspecialtyIds)) {
+    const subspecialty = await prisma.medicalSubspecialty.findUnique({
+      where: { id: subspecialtyId },
+      select: { id: true, name: true },
+    });
+    if (!subspecialty) {
+      missing.push(`MedicalSubspecialty with id ${subspecialtyId}`);
+    }
+  }
+
+  return { valid: missing.length === 0, missing };
+}
+
+/**
  * Get all users with legacy subspecialties that need migration
  */
 async function getUsersToMigrate(): Promise<
@@ -158,8 +200,8 @@ async function migrateUser(
       }
 
       // Create ClinicianSubspecialty records
-      const subspecialtyEntries = Array.from(subspecialtiesToCreate.entries());
-      for (const [subspecialtyId] of subspecialtyEntries) {
+      const subspecialtyIds = Array.from(subspecialtiesToCreate.keys());
+      for (const subspecialtyId of subspecialtyIds) {
         await tx.clinicianSubspecialty.create({
           data: {
             userId: user.id,
@@ -204,6 +246,21 @@ async function runMigration(dryRun: boolean): Promise<MigrationSummary> {
     errors: [],
     results: [],
   };
+
+  // Verify seed data exists before proceeding
+  console.log('Verifying seed data...');
+  const seedCheck = await verifySeedData();
+  if (!seedCheck.valid) {
+    console.error('\n❌ Missing required seed data:');
+    for (const item of seedCheck.missing) {
+      console.error(`   - ${item}`);
+    }
+    console.error('\nPlease run the database seed first:');
+    console.error('  npx prisma db seed\n');
+    summary.errors.push(`Missing seed data: ${seedCheck.missing.join(', ')}`);
+    return summary;
+  }
+  console.log('✅ Seed data verified.\n');
 
   // Get users to migrate
   const users = await getUsersToMigrate();
@@ -291,7 +348,12 @@ async function main(): Promise<void> {
   const dryRun = args.includes('--dry-run');
 
   try {
-    await runMigration(dryRun);
+    const summary = await runMigration(dryRun);
+
+    // Exit with non-zero code if there were errors
+    if (summary.errors.length > 0) {
+      process.exit(1);
+    }
   } catch (error) {
     console.error('Migration failed:', error);
     process.exit(1);

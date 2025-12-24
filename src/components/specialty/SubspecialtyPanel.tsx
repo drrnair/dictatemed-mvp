@@ -4,7 +4,7 @@
 // Collapsible panel for subspecialty selection within a specialty
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Search, Loader2, Plus, ChevronDown, Sparkles } from 'lucide-react';
+import { Search, Loader2, Plus, Sparkles } from 'lucide-react';
 import {
   Accordion,
   AccordionItem,
