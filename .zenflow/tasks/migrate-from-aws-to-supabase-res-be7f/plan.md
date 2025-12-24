@@ -130,12 +130,12 @@ Replace S3 usage in recording service with Supabase.
 5. Implement audio deletion after successful transcription
 
 **Completed**:
-- ✅ Updated `prisma/schema.prisma` with `storagePath` and `audioDeletedAt` fields
+- ✅ Updated `prisma/schema.prisma` with `storagePath`, `fileSizeBytes`, and `audioDeletedAt` fields
 - ✅ Created SQL migration `prisma/migrations/20251224_add_recording_storage_path/migration.sql`
 - ✅ Updated `src/domains/recording/recording.service.ts`:
   - Replaced S3 imports with Supabase storage service
   - Updated `createRecording()` to generate Supabase storage path and upload URL
-  - Updated `confirmUpload()` to use Supabase download URL and audit logging
+  - Updated `confirmUpload()` to use Supabase download URL, persist `fileSizeBytes`, and audit logging
   - Updated `getRecording()` to check `audioDeletedAt` and use Supabase URLs
   - Updated `updateRecording()` to use Supabase URLs
   - Updated `listRecordings()` to use Supabase URLs
@@ -145,15 +145,23 @@ Replace S3 usage in recording service with Supabase.
 - ✅ Updated `src/domains/recording/transcription.service.ts`:
   - Use new `getAudioDownloadUrl()` for Deepgram submission
   - Call `deleteAudioAfterTranscription()` after successful transcription
-- ✅ Created `tests/unit/domains/recording/recording.service.test.ts` with 16 unit tests
-- ✅ `npm run typecheck` passes
+  - Added explicit error message for `retryTranscription()` when audio is deleted
+- ✅ Created `tests/unit/domains/recording/recording.service.test.ts` with 19 unit tests:
+  - Core functionality tests (create, confirm, get, delete)
+  - Audio deletion after transcription tests
+  - Cross-user access prevention tests
+  - Large file handling tests (30-minute ambient recordings, 500MB)
+  - fileSizeBytes persistence tests
+- ✅ Fixed type error in `src/app/api/practice/letterhead/route.ts`
 - ✅ `npm run lint` passes
 - ✅ `npm run build` succeeds
-- ✅ All 141 tests pass
+- ✅ All 165 tests pass
 
 **Verification**:
 - Unit tests verify upload → transcribe → audio deletion path ✅
 - Unit tests verify cross-user access fails ✅
+- Unit tests verify large file handling (30 minutes, 500MB) ✅
+- Unit tests verify fileSizeBytes is persisted ✅
 
 ---
 
@@ -269,6 +277,7 @@ Replace S3 usage for user assets with Supabase.
 ---
 
 ### [ ] Step 6: Implement Resend Email Service
+<!-- chat-id: bf28a1e9-5fd6-4982-8477-5ce9de9d5ca8 -->
 
 Add email capability for sending approved letters.
 
