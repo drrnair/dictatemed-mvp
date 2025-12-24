@@ -2,6 +2,7 @@
 
 // src/components/consultation/ConsultationContextForm.tsx
 // Main form combining patient, referrer, CC recipients, and letter type selection
+// Now includes optional referral upload for auto-population
 
 import { useCallback, useState } from 'react';
 import { AlertCircle, Users, ChevronDown, ChevronUp } from 'lucide-react';
@@ -13,8 +14,14 @@ import { CCRecipientsInput } from './CCRecipientsInput';
 import { LetterTypeSelector } from './LetterTypeSelector';
 import { TemplateSelector } from './TemplateSelector';
 import { PatientContacts } from './PatientContacts';
+import {
+  ReferralUploader,
+  ReferralReviewPanel,
+} from '@/components/referral';
+import { toast } from '@/hooks/use-toast';
 import type { PatientSummary, ReferrerInfo, CCRecipientInfo } from '@/domains/consultation';
 import type { LetterType } from '@prisma/client';
+import type { ReferralExtractedData, ApplyReferralInput } from '@/domains/referrals';
 
 export interface ConsultationFormData {
   patient?: PatientSummary;
@@ -22,6 +29,12 @@ export interface ConsultationFormData {
   ccRecipients: CCRecipientInfo[];
   letterType?: LetterType;
   templateId?: string;
+  // Referral context (populated from referral upload)
+  referralContext?: {
+    reasonForReferral?: string;
+    keyProblems?: string[];
+  };
+  referralDocumentId?: string;
 }
 
 interface ConsultationContextFormProps {
@@ -42,6 +55,108 @@ export function ConsultationContextForm({
   errors,
 }: ConsultationContextFormProps) {
   const [showContacts, setShowContacts] = useState(false);
+
+  // Referral upload state
+  const [referralId, setReferralId] = useState<string | null>(null);
+  const [extractedData, setExtractedData] = useState<ReferralExtractedData | null>(null);
+  const [showReviewPanel, setShowReviewPanel] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+
+  // Handle successful extraction
+  const handleExtractionComplete = useCallback(
+    (id: string, data: ReferralExtractedData) => {
+      setReferralId(id);
+      setExtractedData(data);
+      setShowReviewPanel(true);
+    },
+    []
+  );
+
+  // Handle apply from review panel
+  const handleApplyReferral = useCallback(
+    async (input: ApplyReferralInput) => {
+      if (!referralId) return;
+
+      setIsApplying(true);
+      try {
+        const response = await fetch(`/api/referrals/${referralId}/apply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to apply referral');
+        }
+
+        const result = await response.json();
+
+        // Update form with applied data
+        onChange({
+          ...value,
+          patient: {
+            id: result.patientId,
+            name: input.patient.fullName,
+            dateOfBirth: input.patient.dateOfBirth || '',
+          },
+          referrer: input.gp
+            ? {
+                id: result.referrerId,
+                name: input.gp.fullName,
+                practiceName: input.gp.practiceName,
+                email: input.gp.email,
+                phone: input.gp.phone,
+                fax: input.gp.fax,
+                address: input.gp.address,
+              }
+            : value.referrer,
+          referralContext: input.referralContext,
+          referralDocumentId: referralId,
+        });
+
+        setShowReviewPanel(false);
+
+        // Success toast
+        toast({
+          title: 'Referral applied',
+          description: 'Patient and referrer details have been added to the form.',
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to apply referral';
+        console.error('Failed to apply referral:', error);
+
+        // Error toast
+        toast({
+          title: 'Could not apply referral',
+          description: `${errorMessage} Please try again or enter details manually.`,
+          variant: 'destructive',
+        });
+        // Keep review panel open on error
+      } finally {
+        setIsApplying(false);
+      }
+    },
+    [referralId, value, onChange]
+  );
+
+  // Handle cancel from review panel
+  const handleCancelReview = useCallback(() => {
+    setShowReviewPanel(false);
+  }, []);
+
+  // Handle remove referral
+  const handleRemoveReferral = useCallback(() => {
+    setReferralId(null);
+    setExtractedData(null);
+    setShowReviewPanel(false);
+    // Clear referral-related data from form
+    onChange({
+      ...value,
+      referralDocumentId: undefined,
+      referralContext: undefined,
+    });
+  }, [value, onChange]);
 
   const handlePatientChange = useCallback(
     (patient: PatientSummary | undefined) => {
@@ -78,12 +193,53 @@ export function ConsultationContextForm({
     [value, onChange]
   );
 
+  // Determine if referral has been applied
+  const hasAppliedReferral = !!value.referralDocumentId;
+
   return (
     <Card>
       <CardHeader className="pb-4">
         <CardTitle className="text-lg">Consultation Context</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Referral Upload Section - only show if no patient selected and no referral applied */}
+        {!value.patient && !hasAppliedReferral && (
+          <div className="rounded-lg border border-dashed border-border/60 p-4 bg-muted/30">
+            <h3 className="text-sm font-medium mb-3">
+              Upload referral or previous letter (optional)
+            </h3>
+            <ReferralUploader
+              onExtractionComplete={handleExtractionComplete}
+              onRemove={handleRemoveReferral}
+              disabled={disabled}
+            />
+          </div>
+        )}
+
+        {/* Applied referral indicator */}
+        {hasAppliedReferral && value.referralContext?.reasonForReferral && (
+          <div className="rounded-lg border border-clinical-verified/30 bg-clinical-verified/5 p-4">
+            <h3 className="text-sm font-medium text-clinical-verified mb-2">
+              Referral context applied
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {value.referralContext.reasonForReferral}
+            </p>
+            {value.referralContext.keyProblems && value.referralContext.keyProblems.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {value.referralContext.keyProblems.map((problem, i) => (
+                  <span
+                    key={i}
+                    className="text-xs bg-clinical-verified/10 text-clinical-verified px-2 py-0.5 rounded"
+                  >
+                    {problem}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Patient selection */}
         <div>
           <PatientSelector
@@ -175,6 +331,18 @@ export function ConsultationContextForm({
           disabled={disabled}
         />
       </CardContent>
+
+      {/* Referral Review Panel */}
+      {extractedData && (
+        <ReferralReviewPanel
+          open={showReviewPanel}
+          onOpenChange={setShowReviewPanel}
+          extractedData={extractedData}
+          onApply={handleApplyReferral}
+          onCancel={handleCancelReview}
+          isApplying={isApplying}
+        />
+      )}
     </Card>
   );
 }

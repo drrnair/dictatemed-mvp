@@ -1,21 +1,44 @@
 import * as React from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
 
 import { cn } from '@/lib/utils';
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      // Subtle shadow, clean border, warm background
-      'rounded-lg border border-border/60 bg-card text-card-foreground shadow-card transition-shadow duration-150',
-      className
-    )}
-    {...props}
-  />
-));
+const cardVariants = cva(
+  // Base: rounded-xl (12px), subtle shadow, clean border, 200ms transitions
+  'rounded-xl border bg-white dark:bg-slate-900 text-card-foreground transition-all duration-200',
+  {
+    variants: {
+      variant: {
+        // Default - standard card
+        default: 'border-slate-200 dark:border-slate-800 shadow-sm',
+        // Interactive - clickable card with hover lift effect
+        interactive:
+          'border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 hover:-translate-y-0.5 cursor-pointer',
+        // Selected - highlighted/active card
+        selected: 'border-2 border-teal-500 bg-teal-50 dark:bg-teal-950 shadow-sm',
+        // Ghost - minimal card without border
+        ghost: 'border-transparent shadow-none bg-transparent',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
+  }
+);
+
+export interface CardProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardVariants> {}
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, variant, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(cardVariants({ variant }), className)}
+      {...props}
+    />
+  )
+);
 Card.displayName = 'Card';
 
 const CardHeader = React.forwardRef<
@@ -81,4 +104,12 @@ const CardFooter = React.forwardRef<
 ));
 CardFooter.displayName = 'CardFooter';
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
+export {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  cardVariants,
+};

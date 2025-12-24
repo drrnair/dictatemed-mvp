@@ -1,10 +1,15 @@
 // src/app/api/practice/route.ts
 // Practice management API endpoints
+// Updated to generate signed URLs for letterheads (migrated from S3 to Supabase)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireAdmin } from '@/lib/auth';
 import { prisma } from '@/infrastructure/db/client';
+import { getLetterheadDownloadUrl } from '@/infrastructure/supabase';
+import { logger } from '@/lib/logger';
 import { z } from 'zod';
+
+const log = logger.child({ module: 'practice-api' });
 
 const updatePracticeSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -38,9 +43,30 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({ practice });
+    // Generate signed URL for letterhead if it exists
+    let letterheadUrl: string | undefined;
+    if (practice.letterhead) {
+      try {
+        const { signedUrl } = await getLetterheadDownloadUrl(
+          practice.id,
+          user.id,
+          practice.letterhead
+        );
+        letterheadUrl = signedUrl;
+      } catch (err) {
+        // Log but don't fail - letterhead URL generation is non-critical
+        log.warn('Failed to generate letterhead URL', { practiceId: practice.id });
+      }
+    }
+
+    return NextResponse.json({
+      practice: {
+        ...practice,
+        letterheadUrl,
+      },
+    });
   } catch (error) {
-    console.error('Error fetching practice:', error);
+    log.error('Error fetching practice', {}, error as Error);
     return NextResponse.json(
       { error: 'Failed to fetch practice details' },
       { status: 500 }
@@ -71,7 +97,28 @@ export async function PATCH(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ practice });
+    // Generate signed URL for letterhead if it exists
+    let letterheadUrl: string | undefined;
+    if (practice.letterhead) {
+      try {
+        const { signedUrl } = await getLetterheadDownloadUrl(
+          practice.id,
+          user.id,
+          practice.letterhead
+        );
+        letterheadUrl = signedUrl;
+      } catch (err) {
+        // Log but don't fail - letterhead URL generation is non-critical
+        log.warn('Failed to generate letterhead URL', { practiceId: practice.id });
+      }
+    }
+
+    return NextResponse.json({
+      practice: {
+        ...practice,
+        letterheadUrl,
+      },
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -87,7 +134,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    console.error('Error updating practice:', error);
+    log.error('Error updating practice', {}, error as Error);
     return NextResponse.json(
       { error: 'Failed to update practice' },
       { status: 500 }

@@ -1,24 +1,47 @@
 // src/infrastructure/email/index.ts
-// Public API for email infrastructure
+// Email infrastructure exports - using Resend (replaces AWS SES)
 
+// Types
 export * from './types';
 export * from './validation';
-export { SESEmailAdapter, getSESAdapter } from './ses.adapter';
+
+// Resend client
+export {
+  getResendClient,
+  getSenderEmail,
+  isResendConfigured,
+  validateResendConnection,
+} from './resend.client';
+
+// Resend adapter (implements EmailAdapter interface)
+export { ResendEmailAdapter, getResendAdapter } from './resend.adapter';
+
+// Email service
+export {
+  sendLetterEmail,
+  updateEmailStatus,
+  getLetterEmailHistory,
+  retryFailedEmail,
+  type EmailStatus,
+  type SendLetterEmailInput,
+  type SendLetterEmailResult,
+} from './email.service';
+
+// Email templates
+export {
+  generateLetterEmailHtml,
+  generateLetterEmailText,
+  generateLetterEmailSubject,
+  type LetterEmailData,
+} from './templates/letter';
 
 import type { EmailAdapter } from './types';
-import { getSESAdapter } from './ses.adapter';
+import { getResendAdapter } from './resend.adapter';
 
 /**
  * Get the configured email adapter
- * Currently uses AWS SES, but can be extended to support other providers
+ * Currently uses Resend (replaces AWS SES)
  */
 export function getEmailAdapter(): EmailAdapter {
-  // Future: could check env var to select different providers
-  // const provider = process.env.EMAIL_PROVIDER || 'ses';
-  // switch (provider) {
-  //   case 'sendgrid': return getSendGridAdapter();
-  //   case 'smtp': return getSMTPAdapter();
-  //   default: return getSESAdapter();
-  // }
-  return getSESAdapter();
+  return getResendAdapter();
 }

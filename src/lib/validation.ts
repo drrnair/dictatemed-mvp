@@ -7,6 +7,19 @@ import { z } from 'zod';
 
 export const uuidSchema = z.string().uuid();
 
+/**
+ * Helper to properly parse boolean query strings.
+ * Handles "true"/"false" strings correctly (z.coerce.boolean treats "false" as true).
+ */
+export const booleanString = z.preprocess(
+  (val) => {
+    if (val === undefined || val === null || val === '') return undefined;
+    if (typeof val === 'string') return val.toLowerCase() === 'true';
+    return Boolean(val);
+  },
+  z.boolean().optional()
+);
+
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

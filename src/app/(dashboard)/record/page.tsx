@@ -166,24 +166,26 @@ export default function RecordPage() {
   const isContextComplete = formData.patient && formData.referrer && formData.letterType;
 
   return (
-    <div className="space-y-space-4 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto animate-fade-in-up">
       {/* Header with status */}
       <header className="flex items-start justify-between">
         <div>
-          <h1 className="text-heading-1">New Consultation</h1>
-          <p className="text-body-sm text-muted-foreground mt-space-1">
+          <h1 className="text-2xl md:text-3xl font-semibold text-slate-800 dark:text-slate-100 tracking-tight">
+            New Consultation
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Set up context, then record your consultation.
           </p>
         </div>
 
         {/* Network and sync status */}
-        <div className="flex items-center gap-space-2">
+        <div className="flex items-center gap-2">
           <div
             className={cn(
-              'flex items-center gap-space-1 rounded-full px-space-3 py-space-1 text-caption',
+              'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200',
               isOnline
-                ? 'bg-clinical-verified/10 text-clinical-verified'
-                : 'bg-destructive/10 text-destructive'
+                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                : 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'
             )}
             role="status"
             aria-live="polite"
@@ -202,10 +204,10 @@ export default function RecordPage() {
               onClick={() => syncNow()}
               disabled={!isOnline || syncStatus === 'syncing'}
               className={cn(
-                'flex items-center gap-space-1 rounded-full px-space-3 py-space-1 text-caption',
-                'bg-primary/10 text-primary min-h-touch',
-                'hover:bg-primary/20 transition-colors duration-150',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium',
+                'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 min-h-[44px]',
+                'hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors duration-200',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2',
                 (!isOnline || syncStatus === 'syncing') && 'opacity-50 cursor-not-allowed'
               )}
               aria-label={`Sync ${pendingCount} pending items`}
@@ -282,10 +284,10 @@ export default function RecordPage() {
 
       {/* SECTION 3: Recording */}
       <section
-        className="rounded-xl border-2 border-primary/20 bg-card p-space-6 shadow-card transition-shadow duration-150"
+        className="rounded-xl border-2 border-teal-200 dark:border-teal-800/50 bg-white dark:bg-slate-900 p-6 shadow-sm transition-all duration-200"
         aria-labelledby="recording-section-title"
       >
-        <h2 id="recording-section-title" className="text-heading-2 mb-space-4">
+        <h2 id="recording-section-title" className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-4">
           {formData.patient ? '4. Record Consultation' : 'Record Consultation'}
         </h2>
 
@@ -299,19 +301,19 @@ export default function RecordPage() {
         {/* Validation message if context incomplete */}
         {!isContextComplete && (
           <div
-            className="mt-space-4 flex items-center gap-space-2 rounded-lg bg-clinical-warning/10 p-space-3 text-clinical-warning"
+            className="mt-4 flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 p-3 text-amber-700 dark:text-amber-300"
             role="alert"
           >
             <AlertCircle className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-            <p className="text-body-sm">Please complete the consultation context above before recording.</p>
+            <p className="text-sm">Please complete the consultation context above before recording.</p>
           </div>
         )}
       </section>
 
       {/* Tip */}
       {!isRecording && (
-        <div className="flex items-center gap-space-2 text-caption text-muted-foreground px-space-1">
-          <Lightbulb className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 px-1">
+          <Lightbulb className="h-3.5 w-3.5 flex-shrink-0 text-amber-500" aria-hidden="true" />
           <span>
             Tip: Adding context improves letter quality. Include referral letters and previous correspondence when available.
           </span>
@@ -354,14 +356,15 @@ function CollapsibleSection({
 }: CollapsibleSectionProps) {
   return (
     <Card className={cn(
-      'border-border/60 shadow-card transition-all duration-150',
+      'rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-200',
+      isComplete && !isExpanded && 'border-teal-200 dark:border-teal-800/50 bg-teal-50/30 dark:bg-teal-950/10',
       disabled && 'opacity-60'
     )}>
       <CardHeader
         className={cn(
-          'cursor-pointer p-space-4 hover:bg-muted/30 transition-colors duration-150 min-h-touch',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-          disabled && 'cursor-not-allowed'
+          'cursor-pointer p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-200 min-h-[44px] rounded-t-xl',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2',
+          disabled && 'cursor-not-allowed hover:bg-transparent'
         )}
         onClick={() => !disabled && onToggle()}
         onKeyDown={(e) => {
@@ -376,32 +379,49 @@ function CollapsibleSection({
         aria-disabled={disabled}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-space-3">
-            {icon && <div className="text-muted-foreground" aria-hidden="true">{icon}</div>}
+          <div className="flex items-center gap-3">
+            {icon && (
+              <div className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-lg transition-colors duration-200',
+                isComplete
+                  ? 'bg-teal-100 dark:bg-teal-900/50 text-teal-600 dark:text-teal-400'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+              )} aria-hidden="true">
+                {icon}
+              </div>
+            )}
             <div>
-              <CardTitle className="text-heading-3 flex items-center gap-space-2">
+              <CardTitle className="text-base font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
                 {title}
-                {required && <span className="text-destructive" aria-label="required">*</span>}
+                {required && <span className="text-rose-500" aria-label="required">*</span>}
                 {isComplete && (
-                  <span className="text-caption font-normal text-clinical-verified bg-clinical-verified/10 px-space-2 py-space-1 rounded-full">
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
+                    <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                      <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                     Complete
                   </span>
                 )}
               </CardTitle>
               {subtitle && (
-                <p className="text-body-sm text-muted-foreground mt-space-1">{subtitle}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
               )}
             </div>
           </div>
-          {isExpanded ? (
-            <ChevronUp className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-          ) : (
-            <ChevronDown className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-          )}
+          <div className={cn(
+            'flex h-8 w-8 items-center justify-center rounded-lg transition-colors duration-200',
+            'hover:bg-slate-100 dark:hover:bg-slate-700'
+          )}>
+            {isExpanded ? (
+              <ChevronUp className="h-5 w-5 text-slate-400 dark:text-slate-500" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-slate-400 dark:text-slate-500" aria-hidden="true" />
+            )}
+          </div>
         </div>
       </CardHeader>
       {isExpanded && (
-        <CardContent className="pt-0 pb-space-6 px-space-6">{children}</CardContent>
+        <CardContent className="pt-0 pb-6 px-6">{children}</CardContent>
       )}
     </Card>
   );
