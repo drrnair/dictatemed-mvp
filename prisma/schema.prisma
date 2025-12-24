@@ -44,10 +44,10 @@ model User {
   lastLoginAt  DateTime?
 
   // Onboarding completion timestamp (set when user completes or skips onboarding)
-  onboardingCompletedAt DateTime?
+  onboardingCompletedAt DateTime? @map("onboarding_completed_at")
 
   // Clinician role for specialty-based onboarding (Medical, Nursing, Allied Health)
-  clinicianRole ClinicianRole @default(MEDICAL)
+  clinicianRole ClinicianRole @default(MEDICAL) @map("clinician_role")
 
   // Legacy: Subspecialty interests for template recommendations (being replaced by ClinicianSubspecialty)
   subspecialties String[] @default([]) // Array of Subspecialty enum values
