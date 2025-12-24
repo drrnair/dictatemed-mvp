@@ -101,9 +101,17 @@ const mockUser = {
   onboardingCompletedAt: null,
 };
 
+// Use valid UUIDs for all IDs
+const SPEC_CARDIOLOGY_ID = '550e8400-e29b-41d4-a716-446655440001';
+const SPEC_GP_ID = '550e8400-e29b-41d4-a716-446655440002';
+const SUBSPEC_INTERVENTIONAL_ID = '550e8400-e29b-41d4-a716-446655440011';
+const SUBSPEC_EP_ID = '550e8400-e29b-41d4-a716-446655440012';
+const CUSTOM_SPEC_ID = '550e8400-e29b-41d4-a716-446655440021';
+const CUSTOM_SUBSPEC_ID = '550e8400-e29b-41d4-a716-446655440031';
+
 const mockSpecialties = [
   {
-    id: 'spec-1',
+    id: SPEC_CARDIOLOGY_ID,
     name: 'Cardiology',
     slug: 'cardiology',
     description: 'Heart and cardiovascular system',
@@ -113,7 +121,7 @@ const mockSpecialties = [
     updatedAt: new Date('2024-01-01'),
   },
   {
-    id: 'spec-2',
+    id: SPEC_GP_ID,
     name: 'General Practice',
     slug: 'general-practice',
     description: 'Primary care',
@@ -126,8 +134,8 @@ const mockSpecialties = [
 
 const mockSubspecialties = [
   {
-    id: 'subspec-1',
-    specialtyId: 'spec-1',
+    id: SUBSPEC_INTERVENTIONAL_ID,
+    specialtyId: SPEC_CARDIOLOGY_ID,
     name: 'Interventional Cardiology',
     slug: 'interventional-cardiology',
     description: 'Catheter-based procedures',
