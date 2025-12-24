@@ -780,12 +780,129 @@ console.log(stats);  // { size: 15, hits: 120, misses: 8 }
 
 ## Extension Points
 
-### Adding a New Subspecialty
+### Adding a New Subspecialty (Legacy Enum)
 
 1. Add to `Subspecialty` enum in `prisma/schema.prisma`
 2. Run `npx prisma generate`
 3. Update `getAllSubspecialties()` in `useStyleProfiles.ts`
 4. Add label in `formatSubspecialtyLabel()` if custom format needed
+
+---
+
+## Medical Specialty Taxonomy
+
+### Overview
+
+DictateMED uses a hierarchical specialty → subspecialty model for clinician onboarding and personalization. This replaces the flat `Subspecialty` enum for new functionality while maintaining backwards compatibility.
+
+### Data Model
+
+```
+MedicalSpecialty (global, curated)
+    ├── id, name, slug, description, synonyms[], active
+    └── MedicalSubspecialty[] (child subspecialties)
+
+MedicalSubspecialty (linked to specialty)
+    └── id, specialtyId, name, slug, description, active
+
+ClinicianSpecialty (user → specialty junction)
+    └── userId, specialtyId
+
+ClinicianSubspecialty (user → subspecialty junction)
+    └── userId, subspecialtyId
+
+CustomSpecialty (user-submitted, pending admin review)
+    └── userId, name, region, notes, status
+
+CustomSubspecialty (user-submitted, pending admin review)
+    └── userId, specialtyId, name, description, status
+```
+
+### Seed Data Sources
+
+The specialty taxonomy is seeded from recognized medical specialty boards:
+
+| Source | Region | Description |
+|--------|--------|-------------|
+| **ABMS** | USA | American Board of Medical Specialties - 24 member boards |
+| **AHPRA** | Australia | Australian Health Practitioner Regulation Agency |
+| **RACGP** | Australia | Royal Australian College of General Practitioners |
+| **RACP** | Australia | Royal Australasian College of Physicians |
+
+**Seed File**: `prisma/seeds/medical-specialties.ts`
+
+### Current Specialty Count
+
+| Category | Count |
+|----------|-------|
+| Medical Specialties | 42 |
+| Subspecialties (total) | 51 |
+
+### Priority Areas (Deep Coverage)
+
+These specialties have comprehensive subspecialty coverage:
+
+| Specialty | Subspecialties |
+|-----------|----------------|
+| General Practice | 8 (Women's Health, Mental Health, Chronic Disease, etc.) |
+| Cardiology | 8 (Interventional, Electrophysiology, Heart Failure, etc.) |
+| Cardiothoracic Surgery | 5 (Adult Cardiac, Thoracic, Congenital, etc.) |
+| Neurology | 8 (Stroke, Epilepsy, Movement Disorders, etc.) |
+| Orthopaedic Surgery | 7 (Joint Replacement, Spine, Sports, etc.) |
+| Psychiatry | 5 (Child & Adolescent, Addiction, Forensic, etc.) |
+| Obstetrics & Gynaecology | 4 (MFM, Reproductive, Oncology, Urogynaecology) |
+
+### Legacy Subspecialty Mapping
+
+The old `Subspecialty` enum values map to the new model as follows:
+
+| Legacy Enum | New Specialty | New Subspecialty |
+|-------------|---------------|------------------|
+| `GENERAL_CARDIOLOGY` | Cardiology | General Cardiology |
+| `INTERVENTIONAL` | Cardiology | Interventional Cardiology |
+| `STRUCTURAL` | Cardiology | Structural Heart |
+| `ELECTROPHYSIOLOGY` | Cardiology | Electrophysiology |
+| `IMAGING` | Cardiology | Cardiac Imaging |
+| `HEART_FAILURE` | Cardiology | Heart Failure & Transplant |
+| `CARDIAC_SURGERY` | Cardiothoracic Surgery | Adult Cardiac Surgery |
+
+This mapping is defined in `prisma/seeds/medical-specialties.ts` as `LEGACY_SUBSPECIALTY_MAPPING`.
+
+### Adding New Specialties
+
+For curated global specialties:
+
+1. Add to `SPECIALTIES` array in `prisma/seeds/medical-specialties.ts`
+2. Assign a unique sequence number for the UUID
+3. Include synonyms for search matching
+4. Run `npx prisma db seed`
+
+For subspecialties:
+
+1. Add to `SUBSPECIALTIES` array in `prisma/seeds/medical-specialties.ts`
+2. Reference the parent specialty ID
+3. Run `npx prisma db seed`
+
+### Custom Specialty Workflow
+
+Users can add custom specialties/subspecialties during onboarding:
+
+1. User types a specialty not in the curated list
+2. System shows "Add '{name}' as my specialty (custom)" option
+3. Creates `CustomSpecialty` with `status = PENDING`
+4. Immediately usable for that clinician
+5. Queued for admin review (future feature)
+
+### UUID Scheme
+
+Seed data uses deterministic UUIDs for reproducibility:
+
+```
+Specialties:    00000000-0001-0001-{NNNN}-000000000000
+Subspecialties: 00000000-0001-0002-{SSNN}-000000000000
+                                   ^^-- specialty sequence
+                                     ^^-- subspecialty sequence within specialty
+```
 
 ### Adding a New Section Type
 

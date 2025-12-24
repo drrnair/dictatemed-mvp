@@ -83,7 +83,8 @@ Created comprehensive technical specification in `spec.md` covering:
 
 ---
 
-### [ ] Step 2: Seed Data
+### [x] Step 2: Seed Data
+<!-- chat-id: d0ec0442-00a0-4837-b3e3-0b98e02e0f46 -->
 
 **Goal**: Populate medical specialties and subspecialties with curated data.
 
@@ -107,6 +108,28 @@ Created comprehensive technical specification in `spec.md` covering:
 **Files**:
 - `prisma/seeds/medical-specialties.ts` (create)
 - `prisma/seed.ts` (modify)
+
+**Completed**:
+- Created `prisma/seeds/medical-specialties.ts` with:
+  - 42 medical specialties (exceeds 25+ requirement)
+  - 51 subspecialties across priority areas
+  - Deterministic UUIDs for reproducible seeding
+  - Synonyms for search matching (e.g., "GP", "cardiologist", "ENT")
+  - Descriptions for all specialties
+- Priority area subspecialty coverage:
+  - General Practice: 8 subspecialties (Women's Health, Mental Health, Chronic Disease, Aged Care, etc.)
+  - Cardiology: 8 subspecialties (Interventional, Electrophysiology, Heart Failure, Imaging, etc.)
+  - Cardiothoracic Surgery: 5 subspecialties (Adult Cardiac, Thoracic, Congenital, etc.)
+  - Neurology: 8 subspecialties (Stroke, Epilepsy, Movement Disorders, etc.)
+  - Additional coverage: Orthopaedics (7), Psychiatry (5), O&G (4), GI (3), Respiratory (3)
+- Created `LEGACY_SUBSPECIALTY_MAPPING` for migration of existing Subspecialty enum values
+- Updated `prisma/seed.ts` to call `seedMedicalSpecialties()` function
+- Updated `docs/TECH_NOTES.md` with:
+  - Medical Specialty Taxonomy section
+  - Seed data sources (ABMS, AHPRA, RACGP, RACP)
+  - Legacy subspecialty mapping table
+  - UUID scheme documentation
+- TypeScript typecheck passes
 
 ---
 

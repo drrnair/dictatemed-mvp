@@ -7,11 +7,15 @@
 
 import { PrismaClient } from '@prisma/client';
 import { encryptPatientData } from '../src/infrastructure/db/encryption';
+import { seedMedicalSpecialties } from './seeds/medical-specialties';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding database...');
+
+  // Seed medical specialties first (reference data)
+  await seedMedicalSpecialties();
 
   // Create demo practice
   const practice = await prisma.practice.upsert({
