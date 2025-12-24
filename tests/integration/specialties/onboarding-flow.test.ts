@@ -124,7 +124,7 @@ describe('Specialty Onboarding Flow', () => {
 
   describe('GET /api/specialties/:id/subspecialties', () => {
     const mockSpecialty = {
-      id: 'spec-1',
+      id: SPECIALTY_UUID,
       name: 'Cardiology',
       slug: 'cardiology',
       description: null,
@@ -133,15 +133,15 @@ describe('Specialty Onboarding Flow', () => {
     };
 
     const mockSubspecialties = [
-      { id: 'subspec-1', specialtyId: 'spec-1', name: 'Interventional Cardiology', slug: 'interventional', description: null, isCustom: false as const },
-      { id: 'subspec-2', specialtyId: 'spec-1', name: 'Electrophysiology', slug: 'electrophysiology', description: null, isCustom: false as const },
+      { id: SUBSPECIALTY_UUID_1, specialtyId: SPECIALTY_UUID, name: 'Interventional Cardiology', slug: 'interventional', description: null, isCustom: false as const },
+      { id: SUBSPECIALTY_UUID_2, specialtyId: SPECIALTY_UUID, name: 'Electrophysiology', slug: 'electrophysiology', description: null, isCustom: false as const },
     ];
 
     it('should return 401 when not authenticated', async () => {
       vi.mocked(auth.getSession).mockResolvedValue(null);
 
-      const request = createRequest('/api/specialties/spec-1/subspecialties');
-      const response = await getSubspecialties(request, { params: Promise.resolve({ id: 'spec-1' }) });
+      const request = createRequest(`/api/specialties/${SPECIALTY_UUID}/subspecialties`);
+      const response = await getSubspecialties(request, { params: Promise.resolve({ id: SPECIALTY_UUID }) });
 
       expect(response.status).toBe(401);
     });
@@ -153,8 +153,8 @@ describe('Specialty Onboarding Flow', () => {
         total: 2,
       });
 
-      const request = createRequest('/api/specialties/spec-1/subspecialties');
-      const response = await getSubspecialties(request, { params: Promise.resolve({ id: 'spec-1' }) });
+      const request = createRequest(`/api/specialties/${SPECIALTY_UUID}/subspecialties`);
+      const response = await getSubspecialties(request, { params: Promise.resolve({ id: SPECIALTY_UUID }) });
 
       expect(response.status).toBe(200);
       const json = await response.json();
@@ -175,13 +175,14 @@ describe('Specialty Onboarding Flow', () => {
 
     it('should filter subspecialties by query', async () => {
       vi.mocked(specialtyService.getSpecialtyById).mockResolvedValue(mockSpecialty);
+      const firstSubspec = mockSubspecialties[0]!;
       vi.mocked(specialtyService.getSubspecialtiesForSpecialty).mockResolvedValue({
-        subspecialties: [mockSubspecialties[0]],
+        subspecialties: [firstSubspec],
         total: 1,
       });
 
-      const request = createRequest('/api/specialties/spec-1/subspecialties?query=interventional');
-      const response = await getSubspecialties(request, { params: Promise.resolve({ id: 'spec-1' }) });
+      const request = createRequest(`/api/specialties/${SPECIALTY_UUID}/subspecialties?query=interventional`);
+      const response = await getSubspecialties(request, { params: Promise.resolve({ id: SPECIALTY_UUID }) });
 
       expect(response.status).toBe(200);
       const json = await response.json();
