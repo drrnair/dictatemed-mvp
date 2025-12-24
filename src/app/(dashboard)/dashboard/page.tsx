@@ -5,8 +5,11 @@ import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 // Time-aware greeting helper
+// NOTE: This runs on the server, so greeting is based on server time, not user's local time.
+// For client-side time, consider extracting greeting to a client component.
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good morning';
@@ -40,7 +43,7 @@ export default async function DashboardPage() {
           title="Draft Letters"
           description="Review and approve pending letters"
           href="/letters?status=draft"
-          count={0}
+          count={0} // TODO: Fetch actual draft count
           icon={
             <svg
               className="h-5 w-5"
@@ -81,6 +84,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats row - Time Saved highlighted */}
+      {/* TODO: Replace placeholder values with real data from API */}
       <div className="grid gap-space-4 md:grid-cols-2 lg:grid-cols-4">
         <TimeSavedCard hours={0} />
         <StatCard title="Letters Today" value="0" icon="today" />

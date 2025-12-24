@@ -5,17 +5,17 @@ import { cn } from '@/lib/utils';
 
 const cardVariants = cva(
   // Base: rounded-xl (12px), subtle shadow, clean border, 200ms transitions
-  'rounded-xl border bg-white text-card-foreground transition-all duration-200',
+  'rounded-xl border bg-white dark:bg-slate-900 text-card-foreground transition-all duration-200',
   {
     variants: {
       variant: {
         // Default - standard card
-        default: 'border-slate-200 shadow-sm',
+        default: 'border-slate-200 dark:border-slate-800 shadow-sm',
         // Interactive - clickable card with hover lift effect
         interactive:
-          'border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 hover:-translate-y-0.5 cursor-pointer',
+          'border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 hover:-translate-y-0.5 cursor-pointer',
         // Selected - highlighted/active card
-        selected: 'border-2 border-teal-500 bg-teal-50 shadow-sm',
+        selected: 'border-2 border-teal-500 bg-teal-50 dark:bg-teal-950 shadow-sm',
         // Ghost - minimal card without border
         ghost: 'border-transparent shadow-none bg-transparent',
       },

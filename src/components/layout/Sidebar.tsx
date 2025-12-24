@@ -67,20 +67,20 @@ export function Sidebar() {
               aria-current={isActive ? 'page' : undefined}
               className={cn(
                 // Base styles - 44px min height for touch targets
-                'flex items-center gap-3 rounded-xl px-3 py-2.5 min-h-[44px]',
+                'relative flex items-center gap-3 rounded-r-xl px-3 py-2.5 min-h-[44px]',
                 'text-sm font-medium transition-all duration-200',
                 // Focus visible for keyboard navigation
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500',
                 isActive
-                  ? // Active: teal highlight with left border accent
-                    'bg-teal-50 text-teal-700 border-l-2 border-teal-500 dark:bg-teal-950 dark:text-teal-300'
+                  ? // Active: teal highlight with left border accent (using pseudo-element for clean corners)
+                    'bg-teal-50 text-teal-700 before:absolute before:left-0 before:top-0 before:h-full before:w-0.5 before:bg-teal-500 dark:bg-teal-950 dark:text-teal-300'
                   : // Inactive: slate text with hover lift effect
                     'text-slate-600 hover:bg-slate-100 hover:text-slate-800 hover:-translate-y-0.5 hover:shadow-sm dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
               )}
             >
               <Icon
                 className={cn(
-                  'h-5 w-5 shrink-0 transition-colors duration-200',
+                  'h-5 w-5 shrink-0',
                   isActive ? 'text-teal-600 dark:text-teal-400' : ''
                 )}
                 aria-hidden="true"
@@ -93,10 +93,11 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-slate-200 p-4 dark:border-slate-800">
-        <p className="text-xs text-slate-400 dark:text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           DictateMED v0.1.0
-          <br />
-          <span className="text-slate-500 dark:text-slate-400">Clinical documentation assistant</span>
+        </p>
+        <p className="text-xs text-slate-400 dark:text-slate-500">
+          Clinical documentation assistant
         </p>
       </div>
     </aside>
