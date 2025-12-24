@@ -29,7 +29,7 @@ export default async function DashboardPage() {
           {greeting}
           {user?.name ? `, ${user.name}` : ''}
         </h1>
-        <p className="text-slate-600 dark:text-slate-400 mt-space-1">
+        <p className="text-slate-600 dark:text-slate-400 mt-1">
           Ready to capture your next consultation.
         </p>
       </header>
@@ -38,7 +38,7 @@ export default async function DashboardPage() {
       <HeroActionCard />
 
       {/* Secondary action cards - smaller, white background */}
-      <div className="grid gap-space-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <SecondaryActionCard
           title="Draft Letters"
           description="Review and approve pending letters"
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
 
       {/* Stats row - Time Saved highlighted */}
       {/* TODO: Replace placeholder values with real data from API */}
-      <div className="grid gap-space-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <TimeSavedCard hours={0} />
         <StatCard title="Letters Today" value="0" icon="today" />
         <StatCard title="Pending Review" value="0" icon="pending" />
@@ -103,15 +103,15 @@ function HeroActionCard() {
   return (
     <Link
       href="/record"
-      className="group block relative overflow-hidden rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 p-space-6 md:p-space-8 shadow-md hover:shadow-elevated transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2"
+      className="group block relative overflow-hidden rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 p-6 md:p-8 shadow-md hover:shadow-elevated transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2"
     >
       {/* Background decorative element */}
       <div className="absolute right-0 top-0 -mr-8 -mt-8 h-32 w-32 rounded-full bg-white/10" />
       <div className="absolute right-12 bottom-0 -mb-12 h-24 w-24 rounded-full bg-white/5" />
 
-      <div className="relative flex items-center gap-space-4 md:gap-space-6">
+      <div className="relative flex items-center gap-4 md:gap-6">
         {/* Icon container */}
-        <div className="flex-shrink-0 rounded-xl bg-white/20 p-space-4 backdrop-blur-sm">
+        <div className="flex-shrink-0 rounded-xl bg-white/20 p-4 backdrop-blur-sm">
           <svg
             className="h-8 w-8 md:h-10 md:w-10 text-white"
             fill="none"
