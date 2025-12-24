@@ -883,6 +883,61 @@ For subspecialties:
 2. Reference the parent specialty ID
 3. Run `npx prisma db seed`
 
+### Data Migration for Existing Users
+
+Existing users with legacy `subspecialties` array data can be migrated to the new model:
+
+```bash
+# Preview what would be migrated (no changes made)
+npm run db:migrate:subspecialties:dry-run
+
+# Run the actual migration
+npm run db:migrate:subspecialties
+```
+
+**Migration Script**: `prisma/migrations/scripts/migrate-subspecialties.ts`
+
+**What the migration does:**
+
+1. Finds all users with non-empty `subspecialties[]` array
+2. Maps each legacy enum value to new specialty + subspecialty IDs
+3. Creates `ClinicianSpecialty` records (e.g., links user to Cardiology)
+4. Creates `ClinicianSubspecialty` records (e.g., links user to Interventional Cardiology)
+5. Sets `onboardingCompletedAt` for users who haven't completed new onboarding
+
+**Idempotency**: The migration is safe to run multiple times. It:
+- Skips users who already have the new records
+- Uses transactions per user (all-or-nothing per user)
+- Reports detailed progress and any errors
+
+**Example output:**
+
+```
+============================================================
+Legacy Subspecialty Migration (DRY RUN)
+============================================================
+
+Found 3 user(s) with legacy subspecialties.
+
+Processing user: dr.smith@example.com
+  Legacy subspecialties: INTERVENTIONAL, HEART_FAILURE
+  ✅ Would create:
+     - 1 specialty link(s)
+     - 2 subspecialty link(s)
+     - Marked onboarding as completed
+
+...
+
+============================================================
+Migration Summary
+============================================================
+Total users with legacy subspecialties: 3
+Users migrated: 3
+Users skipped (already migrated or errors): 0
+Specialty links to create: 3
+Subspecialty links to create: 6
+```
+
 ### Custom Specialty Workflow
 
 Users can add custom specialties/subspecialties during onboarding:

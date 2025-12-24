@@ -24,6 +24,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:subspecialties": "npx tsx prisma/migrations/scripts/migrate-subspecialties.ts",
+    "db:migrate:subspecialties:dry-run": "npx tsx prisma/migrations/scripts/migrate-subspecialties.ts --dry-run",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio"
   },

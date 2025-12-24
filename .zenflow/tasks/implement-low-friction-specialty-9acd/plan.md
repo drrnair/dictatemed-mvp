@@ -464,7 +464,8 @@ Created comprehensive technical specification in `spec.md` covering:
 
 ---
 
-### [ ] Step 9: Data Migration for Existing Users
+### [x] Step 9: Data Migration for Existing Users
+<!-- chat-id: 2d5284bb-8695-42af-8669-070a5f39d99a -->
 
 **Goal**: Migrate existing users with subspecialties to new model.
 
@@ -484,6 +485,27 @@ Created comprehensive technical specification in `spec.md` covering:
 
 **Files**:
 - `prisma/migrations/scripts/migrate-subspecialties.ts` (create)
+
+**Completed**:
+- Created `prisma/migrations/scripts/migrate-subspecialties.ts`:
+  - Finds all users with non-empty `subspecialties[]` array (legacy data)
+  - Maps each legacy enum value to new specialty + subspecialty IDs using `LEGACY_SUBSPECIALTY_MAPPING`
+  - Creates `ClinicianSpecialty` records (e.g., links user to Cardiology or Cardiothoracic Surgery)
+  - Creates `ClinicianSubspecialty` records (e.g., links user to Interventional Cardiology)
+  - Sets `onboardingCompletedAt` for migrated users who haven't completed new onboarding
+  - Uses transactions per user for atomicity
+  - Idempotent: safe to run multiple times, skips already-migrated users
+  - Supports `--dry-run` flag to preview changes without modifying database
+  - Detailed progress reporting and error handling
+- Added npm scripts to `package.json`:
+  - `npm run db:migrate:subspecialties` - run the migration
+  - `npm run db:migrate:subspecialties:dry-run` - preview migration without changes
+- Updated `docs/TECH_NOTES.md` with:
+  - Data migration documentation section
+  - Usage instructions and example output
+  - Idempotency and safety notes
+- TypeScript typecheck passes
+- ESLint passes with no warnings
 
 ---
 
