@@ -250,6 +250,7 @@ Created comprehensive technical specification in `spec.md` covering:
 ---
 
 ### [ ] Step 5: UI Components - Combobox & Chips
+<!-- chat-id: b9d85f39-5c32-42e1-b24c-543405b91116 -->
 
 **Goal**: Build reusable type-ahead combobox and chip components.
 
