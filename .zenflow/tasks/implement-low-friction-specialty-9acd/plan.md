@@ -189,7 +189,7 @@ Created comprehensive technical specification in `spec.md` covering:
 
 ---
 
-### [ ] Step 4: Specialty API Endpoints
+### [x] Step 4: Specialty API Endpoints
 <!-- chat-id: a4925a4f-92ff-4c63-a214-c128f27f7b1f -->
 
 **Goal**: Create REST API endpoints for specialty operations.
@@ -222,6 +222,30 @@ Created comprehensive technical specification in `spec.md` covering:
 - `src/app/api/specialties/custom/route.ts` (create)
 - `src/app/api/subspecialties/custom/route.ts` (create)
 - `src/app/api/user/practice-profile/route.ts` (create)
+
+**Completed**:
+- Created `src/app/api/specialties/route.ts`:
+  - `GET /api/specialties?query=...&limit=7&includeCustom=true` - search specialties with synonyms
+  - Returns all specialties if no query provided
+  - Input validation with Zod
+- Created `src/app/api/specialties/[id]/subspecialties/route.ts`:
+  - `GET /api/specialties/:id/subspecialties?query=...` - get subspecialties for specialty
+  - Validates specialty exists before fetching subspecialties
+  - Returns specialty info along with subspecialties
+- Created `src/app/api/specialties/custom/route.ts`:
+  - `POST /api/specialties/custom` - create custom specialty
+  - Rate limited
+  - Validates name (2-100 chars), optional region and notes
+- Created `src/app/api/subspecialties/custom/route.ts`:
+  - `POST /api/subspecialties/custom` - create custom subspecialty
+  - Rate limited
+  - Requires either specialtyId or customSpecialtyId
+- Created `src/app/api/user/practice-profile/route.ts`:
+  - `GET /api/user/practice-profile` - get user's complete practice profile
+  - `PUT /api/user/practice-profile` - update clinician role and specialty selections
+  - Rate limited for updates
+- All endpoints follow existing patterns (session auth, rate limiting, Zod validation, logging)
+- TypeScript typecheck passes
 
 ---
 
