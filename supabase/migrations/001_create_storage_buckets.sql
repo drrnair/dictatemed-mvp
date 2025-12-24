@@ -4,11 +4,34 @@
 -- IMPORTANT: Run this migration via Supabase Dashboard SQL Editor or supabase CLI.
 -- This is NOT a Prisma migration - it manages Supabase Storage infrastructure.
 --
--- PHI Security Notes:
+-- ============================================================================
+-- PHI SECURITY ARCHITECTURE
+-- ============================================================================
 -- - All buckets are PRIVATE (no public access)
--- - RLS policies enforce user-level isolation
--- - Signed URLs are required for all access
 -- - Supabase provides at-rest encryption automatically
+-- - Signed URLs are required for all file access
+-- - File paths embed user/practice IDs for logical isolation
+--
+-- ============================================================================
+-- AUTH0 vs SUPABASE AUTH - CRITICAL NOTE
+-- ============================================================================
+-- DictateMED uses Auth0 for authentication, NOT Supabase Auth. This means:
+--
+-- 1. auth.uid() returns NULL for Auth0-authenticated requests
+-- 2. RLS policies below that use auth.uid() will NOT work automatically
+-- 3. ALL storage operations use the SERVICE ROLE client (server-side only)
+-- 4. Authorization is enforced in APPLICATION CODE before calling Supabase
+--
+-- The RLS policies below serve as:
+-- a) DEFENSE IN DEPTH: Blocks anon/public key access to storage
+-- b) DOCUMENTATION: Shows intended access patterns
+-- c) FUTURE-PROOFING: Ready if custom JWT claims are configured
+--
+-- SECURITY GUARANTEE:
+-- - Service role key is ONLY used on the backend (never exposed to clients)
+-- - User authentication is verified via Auth0 session before any storage operation
+-- - File paths are validated to match authenticated user's ID
+-- ============================================================================
 
 -- ============================================================================
 -- STORAGE BUCKETS
