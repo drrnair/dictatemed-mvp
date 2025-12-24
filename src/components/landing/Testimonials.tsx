@@ -37,15 +37,12 @@ export function Testimonials() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section className="bg-background-subtle py-20 md:py-32">
+    <section id="about" className="bg-background-subtle py-20 md:py-32">
       <Container>
         <AnimatedSection className="text-center">
           <h2 className="text-section-title md:text-section-title-lg text-foreground">
             What clinicians are saying
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Example testimonials - to be replaced with real feedback
-          </p>
         </AnimatedSection>
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">

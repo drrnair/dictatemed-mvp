@@ -10,7 +10,7 @@ const footerLinks = {
   ],
   company: [
     { label: 'About', href: '#about' },
-    { label: 'Contact', href: '#contact' },
+    { label: 'Contact', href: 'mailto:hello@dictatemed.com' },
   ],
   legal: [
     { label: 'Privacy', href: '/privacy' },

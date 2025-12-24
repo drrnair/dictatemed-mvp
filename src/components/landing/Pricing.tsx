@@ -61,7 +61,7 @@ export function Pricing() {
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Volume discounts for practices.{' '}
             <a
-              href="#contact"
+              href="mailto:hello@dictatemed.com"
               className="text-primary underline-offset-4 hover:underline"
             >
               Contact us

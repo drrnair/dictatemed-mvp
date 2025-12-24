@@ -53,10 +53,10 @@ export function ProductDemo({ videoUrl, thumbnailUrl }: ProductDemoProps) {
                   </div>
                 </a>
               ) : (
-                /* Placeholder for MVP */
+                /* Placeholder for MVP - shows abstract UI mockup */
                 <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-gradient-to-br from-primary/20 via-primary/10 to-accent">
                   {/* Abstract UI placeholder elements */}
-                  <div className="absolute inset-4 flex flex-col gap-3 opacity-30">
+                  <div className="absolute inset-4 flex flex-col gap-3 opacity-40">
                     <div className="h-8 w-32 rounded bg-foreground/20" />
                     <div className="flex flex-1 gap-4">
                       <div className="flex-1 rounded-lg bg-foreground/10 p-4">
@@ -64,21 +64,24 @@ export function ProductDemo({ videoUrl, thumbnailUrl }: ProductDemoProps) {
                           <div className="h-3 w-full rounded bg-foreground/20" />
                           <div className="h-3 w-4/5 rounded bg-foreground/20" />
                           <div className="h-3 w-3/4 rounded bg-foreground/20" />
+                          <div className="h-3 w-full rounded bg-foreground/20" />
+                          <div className="h-3 w-2/3 rounded bg-foreground/20" />
                         </div>
                       </div>
                       <div className="w-64 rounded-lg bg-foreground/10 p-4">
                         <div className="space-y-2">
                           <div className="h-3 w-full rounded bg-foreground/20" />
                           <div className="h-3 w-3/4 rounded bg-foreground/20" />
+                          <div className="mt-4 h-8 w-full rounded bg-foreground/15" />
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Play Button */}
+                  {/* "Coming Soon" overlay instead of play button */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
-                      <Play className="h-6 w-6 translate-x-0.5" />
+                    <div className="rounded-full bg-background/80 px-4 py-2 text-sm font-medium text-foreground shadow-lg backdrop-blur-sm">
+                      Demo video coming soon
                     </div>
                   </div>
                 </div>
@@ -87,7 +90,7 @@ export function ProductDemo({ videoUrl, thumbnailUrl }: ProductDemoProps) {
           </div>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            See DictateMED in action (2 min)
+            {hasVideo ? 'See DictateMED in action (2 min)' : 'Product walkthrough coming soon'}
           </p>
         </AnimatedSection>
       </Container>
