@@ -57,9 +57,7 @@ src/app/
 │   ├── layout.tsx         # Centered card layout
 │   ├── signup/
 │   │   └── page.tsx
-│   ├── login/
-│   │   └── page.tsx
-│   └── forgot-password/
+│   └── login/
 │       └── page.tsx
 ├── (dashboard)/           # EXISTING - Protected app routes
 │   └── ...
@@ -71,7 +69,8 @@ Middleware must be updated to allow public access to new routes:
 - `/` - Landing page (change from redirect to marketing page)
 - `/signup` - Signup flow
 - `/login` - Login page
-- `/forgot-password` - Password reset
+
+**Deferred:** `/forgot-password` - Auth0 handles password reset via Universal Login. A custom page is not needed for MVP.
 
 ### Component Organization
 
@@ -94,9 +93,9 @@ src/components/
 ├── auth/                  # NEW - Auth components
 │   ├── SignupForm.tsx
 │   ├── LoginForm.tsx
-│   ├── SocialAuthButton.tsx
-│   ├── PasswordInput.tsx
-│   └── WelcomeModal.tsx
+│   ├── SocialAuthButton.tsx    # Styled "Continue with..." button
+│   ├── WelcomeModal.tsx
+│   └── WelcomeModalTrigger.tsx # Client component for query param detection
 ├── shared/                # NEW - Shared components
 │   ├── AnimatedSection.tsx
 │   └── Container.tsx
@@ -160,9 +159,8 @@ keyframes: {
 | `src/app/(marketing)/layout.tsx` | Marketing layout (no sidebar, clean) |
 | `src/app/(marketing)/page.tsx` | Landing page composing all sections |
 | `src/app/(auth)/layout.tsx` | Auth layout (centered card) |
-| `src/app/(auth)/signup/page.tsx` | Two-step signup flow |
-| `src/app/(auth)/login/page.tsx` | Login page |
-| `src/app/(auth)/forgot-password/page.tsx` | Password reset |
+| `src/app/(auth)/signup/page.tsx` | Signup wrapper page |
+| `src/app/(auth)/login/page.tsx` | Login wrapper page |
 | `src/components/landing/*.tsx` | 13 landing page section components |
 | `src/components/auth/*.tsx` | 5 auth-related components |
 | `src/components/shared/*.tsx` | 2 shared utility components |
@@ -171,7 +169,7 @@ keyframes: {
 
 | File | Changes |
 |------|---------|
-| `src/middleware.ts` | Add `/signup`, `/login`, `/forgot-password` to public routes |
+| `src/middleware.ts` | Add `/signup`, `/login` to public routes |
 | `tailwind.config.js` | Add landing-specific typography and shadow extensions |
 | `src/app/globals.css` | Add landing-specific animation keyframes |
 | `package.json` | Add `framer-motion` dependency |
@@ -233,7 +231,6 @@ const publicPaths = [
   '/',                     // Now serves landing page
   '/signup',               // NEW
   '/login',                // NEW
-  '/forgot-password',      // NEW
   '/api/auth',
   '/api/health',
   // ... existing paths
@@ -267,6 +264,8 @@ The custom `/login` and `/signup` pages will:
 For signup vs login distinction:
 - `/signup` → `/api/auth/login?screen_hint=signup&returnTo=/dashboard?welcome=true`
 - `/login` → `/api/auth/login?returnTo=/dashboard`
+
+**Note on URL encoding:** The `returnTo` parameter value should be URL-encoded when the destination includes query params. Use `encodeURIComponent('/dashboard?welcome=true')` to produce `/api/auth/login?screen_hint=signup&returnTo=%2Fdashboard%3Fwelcome%3Dtrue`. However, the Auth0 SDK may handle this automatically—verify during implementation.
 
 This requires Auth0 to be configured with "New Universal Login" experience (supports `screen_hint`).
 

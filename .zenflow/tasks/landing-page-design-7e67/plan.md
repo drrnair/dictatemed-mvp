@@ -28,7 +28,7 @@ Created `spec.md` with:
 
 ---
 
-### [ ] Step: Foundation Setup
+### [x] Step: Foundation Setup
 
 Set up the foundation for landing page implementation:
 
@@ -39,7 +39,7 @@ Set up the foundation for landing page implementation:
    - Section typography (`text-section-title`, `text-section-title-lg`)
    - Elevated shadow for product demo
 4. Add animation keyframes to globals.css
-5. Update middleware to allow public routes (`/`, `/signup`, `/login`, `/forgot-password`)
+5. Update middleware to allow public routes (`/`, `/signup`, `/login`)
 6. Create route group structures:
    - `(marketing)/layout.tsx` - Clean full-width layout
    - `(auth)/layout.tsx` - Centered card layout

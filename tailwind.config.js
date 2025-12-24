@@ -98,6 +98,14 @@ module.exports = {
         'heading-2': ['1.25rem', { lineHeight: '1.4', letterSpacing: '-0.01em', fontWeight: '600' }],
         /* Heading 1: 24px */
         'heading-1': ['1.5rem', { lineHeight: '1.33', letterSpacing: '-0.02em', fontWeight: '600' }],
+        /* Landing page - Hero: 48px */
+        hero: ['3rem', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '600' }],
+        /* Landing page - Hero large: 60px */
+        'hero-lg': ['3.75rem', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '600' }],
+        /* Landing page - Section title: 30px */
+        'section-title': ['1.875rem', { lineHeight: '1.2', letterSpacing: '-0.01em', fontWeight: '600' }],
+        /* Landing page - Section title large: 36px */
+        'section-title-lg': ['2.25rem', { lineHeight: '1.2', letterSpacing: '-0.01em', fontWeight: '600' }],
       },
       /* Spacing scale (8px base) */
       spacing: {
@@ -121,6 +129,8 @@ module.exports = {
         card: '0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)',
         /* Focus shadow for accessibility */
         focus: '0 0 0 2px hsl(var(--ring) / 0.2)',
+        /* Landing page - elevated shadow for product demo */
+        elevated: '0 10px 40px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04)',
       },
       /* Keyframes */
       keyframes: {
