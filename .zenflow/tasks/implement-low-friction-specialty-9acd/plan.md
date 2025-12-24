@@ -134,6 +134,7 @@ Created comprehensive technical specification in `spec.md` covering:
 ---
 
 ### [ ] Step 3: Specialty Domain Types & Service
+<!-- chat-id: 7e67d038-e512-461b-844e-fbd935be991c -->
 
 **Goal**: Create type definitions and business logic for specialty management.
 
