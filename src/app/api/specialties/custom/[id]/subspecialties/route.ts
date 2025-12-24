@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { booleanString } from '@/lib/validation';
 import { getSubspecialtiesForSpecialty } from '@/domains/specialties/specialty.service';
 import { prisma } from '@/infrastructure/db/client';
 
@@ -13,7 +14,7 @@ const log = logger.child({ module: 'custom-subspecialties-api' });
 const searchQuerySchema = z.object({
   query: z.string().max(100).optional(),
   limit: z.coerce.number().int().min(1).max(20).optional().default(10),
-  includeCustom: z.coerce.boolean().optional().default(true),
+  includeCustom: booleanString.default(true),
 });
 
 interface RouteParams {

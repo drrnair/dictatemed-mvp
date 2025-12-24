@@ -5,22 +5,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { booleanString } from '@/lib/validation';
 import {
   searchSpecialties,
   getAllSpecialties,
 } from '@/domains/specialties/specialty.service';
 
 const log = logger.child({ module: 'specialties-api' });
-
-// Helper to properly parse boolean query strings
-const booleanString = z.preprocess(
-  (val) => {
-    if (val === undefined || val === null || val === '') return undefined;
-    if (typeof val === 'string') return val.toLowerCase() === 'true';
-    return Boolean(val);
-  },
-  z.boolean().optional()
-);
 
 const searchQuerySchema = z.object({
   query: z.string().max(100).optional(),
