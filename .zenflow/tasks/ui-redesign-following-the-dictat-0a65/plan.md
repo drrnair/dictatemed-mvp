@@ -132,7 +132,8 @@ Update navigation components:
 
 ---
 
-### [ ] Step 4: Dashboard Redesign
+### [x] Step 4: Dashboard Redesign
+<!-- chat-id: 17c81182-34fa-4aec-a473-878257a28379 -->
 
 Full dashboard page redesign:
 
@@ -145,6 +146,34 @@ Full dashboard page redesign:
    - Improve empty state with encouraging copy
 
 **Verification**: Dashboard displays hero card, greeting updates based on time
+
+**Completed Changes**:
+- **Time-aware greeting**: Added `getGreeting()` function that returns "Good morning/afternoon/evening" based on current hour
+- **HeroActionCard**: Created prominent teal gradient card for "Start Recording" with:
+  - `bg-gradient-to-br from-teal-500 to-teal-600` gradient
+  - Large microphone icon in frosted glass container
+  - Decorative background circles for visual interest
+  - Hover lift effect and arrow indicator
+  - Full accessibility with focus-visible states
+- **SecondaryActionCard**: Replaced original QuickActionCard with smaller, white cards:
+  - Uses Card component with interactive variant
+  - Icon changes to teal on hover
+  - Chevron arrow indicator with hover animation
+  - Optional count badge for pending items
+- **TimeSavedCard**: Added highlighted stat card with:
+  - Teal accent border and decorative circle
+  - Clock icon with teal coloring
+  - Hours display with "This month" subtitle
+- **StatCard**: Redesigned standard stat cards with icons for today/pending/month
+- **RecentActivitySection**: Added activity feed section with:
+  - Section header with "View all" link
+  - List layout with patient initials, letter type, time
+  - Status badges using approved/pending variants
+- **EmptyActivityState**: Encouraging empty state with:
+  - Document illustration icon
+  - Friendly copy: "No letters yet" / "Start your first recording..."
+  - Prominent "Start Recording" CTA button
+- Both `npm run lint` and `npm run build` pass successfully
 
 ---
 
