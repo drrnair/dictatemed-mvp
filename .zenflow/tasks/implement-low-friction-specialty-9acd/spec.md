@@ -443,13 +443,15 @@ npx prisma db seed      # Run seed data
 
 ## Dependencies to Add
 
+**Optional** (not required - a custom implementation using existing Radix primitives was used instead):
+
 ```json
 {
-  "cmdk": "^1.0.0"  // Command palette component for type-ahead
+  "cmdk": "^1.0.0"  // Command palette component for type-ahead (optional)
 }
 ```
 
-Or use Radix Combobox pattern with custom implementation.
+The implementation uses a custom combobox built with existing Radix UI Popover and custom dropdown patterns, avoiding the need for an additional dependency.
 
 ---
 
@@ -457,11 +459,19 @@ Or use Radix Combobox pattern with custom implementation.
 
 ### Search Strategy for Synonyms
 
-The specialty search uses a two-phase approach:
-1. **Direct match**: PostgreSQL `ILIKE` on `name` field for fast prefix matching
-2. **Synonym match**: JSON array contains query using `@>` operator on the `synonyms` field
+The specialty search uses an **in-memory filtering approach** optimized for the current dataset size (~42 specialties):
 
-For higher volume, consider adding PostgreSQL full-text search (tsvector/tsquery) or a GIN index on synonyms.
+1. **Fetch**: Load all active specialties from the database
+2. **Filter**: Apply case-insensitive matching in JavaScript:
+   - Match on specialty `name` using `.toLowerCase().includes()`
+   - Match on `synonyms` array using `.some(s => s.toLowerCase().includes())`
+3. **Sort**: Rank results by relevance (exact match > prefix match > contains match)
+4. **Limit**: Return top N results (default 7)
+
+This approach is efficient for the current dataset and provides fast, responsive type-ahead. For significantly larger datasets (hundreds+ of specialties), consider:
+- PostgreSQL `ILIKE` for database-level prefix matching
+- GIN index on the `synonyms` JSON field with `@>` operator
+- Full-text search with `tsvector`/`tsquery` for fuzzy matching
 
 ### Error Handling for Custom Specialty Creation
 
