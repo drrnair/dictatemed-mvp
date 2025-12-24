@@ -228,7 +228,7 @@ export function RecordingSection({
   const isRecording = recordingState === 'recording' || recordingState === 'paused';
 
   return (
-    <div className="space-y-space-6">
+    <div className="space-y-6">
       {/* Mode selector */}
       <RecordingModeSelector
         value={mode}
