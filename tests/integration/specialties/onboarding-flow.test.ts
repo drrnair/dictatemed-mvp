@@ -175,7 +175,8 @@ describe('Specialty Onboarding Flow', () => {
 
     it('should filter subspecialties by query', async () => {
       vi.mocked(specialtyService.getSpecialtyById).mockResolvedValue(mockSpecialty);
-      const firstSubspec = mockSubspecialties[0]!;
+      const firstSubspec = mockSubspecialties[0];
+      if (!firstSubspec) throw new Error('Test setup error');
       vi.mocked(specialtyService.getSubspecialtiesForSpecialty).mockResolvedValue({
         subspecialties: [firstSubspec],
         total: 1,
@@ -200,7 +201,7 @@ describe('Specialty Onboarding Flow', () => {
       const request = createRequest('/api/subspecialties/custom', {
         method: 'POST',
         body: JSON.stringify({
-          specialtyId: 'spec-1',
+          specialtyId: SPECIALTY_UUID,
           name: 'Cardiac Rehabilitation',
         }),
       });
@@ -211,14 +212,14 @@ describe('Specialty Onboarding Flow', () => {
 
     it('should create custom subspecialty successfully', async () => {
       const mockCustomSubspecialty = {
-        id: 'custom-subspec-1',
-        specialtyId: 'spec-1',
+        id: CUSTOM_SUBSPEC_UUID,
+        specialtyId: SPECIALTY_UUID,
         customSpecialtyId: null,
         name: 'Cardiac Rehabilitation',
         slug: null,
         description: null,
-        isCustom: true,
-        status: 'PENDING',
+        isCustom: true as const,
+        status: 'PENDING' as const,
       };
 
       vi.mocked(specialtyService.createCustomSubspecialty).mockResolvedValue({
@@ -229,7 +230,7 @@ describe('Specialty Onboarding Flow', () => {
       const request = createRequest('/api/subspecialties/custom', {
         method: 'POST',
         body: JSON.stringify({
-          specialtyId: 'spec-1',
+          specialtyId: SPECIALTY_UUID,
           name: 'Cardiac Rehabilitation',
           description: 'Post-surgery recovery programs',
         }),
@@ -260,7 +261,7 @@ describe('Specialty Onboarding Flow', () => {
       const request = createRequest('/api/subspecialties/custom', {
         method: 'POST',
         body: JSON.stringify({
-          specialtyId: 'spec-1',
+          specialtyId: SPECIALTY_UUID,
           name: 'X', // Too short (min 2 chars)
         }),
       });
@@ -275,7 +276,7 @@ describe('Specialty Onboarding Flow', () => {
       const request = createRequest('/api/subspecialties/custom', {
         method: 'POST',
         body: JSON.stringify({
-          specialtyId: 'spec-1',
+          specialtyId: SPECIALTY_UUID,
           name: 'Cardiac Rehabilitation',
         }),
       });
@@ -333,14 +334,14 @@ describe('Specialty Onboarding Flow', () => {
       // POST /api/subspecialties/custom creates pending custom subspecialty
 
       const mockCustomSubspecialty = {
-        id: 'custom-subspec-1',
-        specialtyId: 'spec-1',
+        id: CUSTOM_SUBSPEC_UUID,
+        specialtyId: SPECIALTY_UUID,
         customSpecialtyId: null,
         name: 'Preventive Cardiology',
         slug: null,
         description: null,
-        isCustom: true,
-        status: 'PENDING',
+        isCustom: true as const,
+        status: 'PENDING' as const,
       };
 
       vi.mocked(specialtyService.createCustomSubspecialty).mockResolvedValue({
@@ -351,7 +352,7 @@ describe('Specialty Onboarding Flow', () => {
       const request = createRequest('/api/subspecialties/custom', {
         method: 'POST',
         body: JSON.stringify({
-          specialtyId: 'spec-1',
+          specialtyId: SPECIALTY_UUID,
           name: 'Preventive Cardiology',
         }),
       });
