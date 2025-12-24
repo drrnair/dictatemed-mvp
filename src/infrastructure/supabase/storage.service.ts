@@ -23,6 +23,19 @@ import {
 // ============ Path Generation Helpers ============
 
 /**
+ * Validate that a required string parameter is not empty.
+ * @throws StorageError if the parameter is empty
+ */
+function validateRequiredParam(value: string, paramName: string): void {
+  if (!value || value.trim() === '') {
+    throw new StorageError(
+      `${paramName} is required and cannot be empty`,
+      'VALIDATION_FAILED'
+    );
+  }
+}
+
+/**
  * Sanitize a filename to prevent path traversal and special character issues.
  * Removes or replaces characters that could cause security or compatibility issues.
  */
@@ -45,6 +58,7 @@ function sanitizeFilename(filename: string): string {
  * @param mode - Recording mode: ambient or dictation
  * @param extension - File extension (e.g., 'webm', 'mp4')
  * @returns Storage path for the audio file
+ * @throws StorageError if required parameters are empty
  */
 export function generateAudioPath(
   userId: string,
@@ -52,6 +66,10 @@ export function generateAudioPath(
   mode: AudioMode,
   extension: string
 ): string {
+  validateRequiredParam(userId, 'userId');
+  validateRequiredParam(consultationId, 'consultationId');
+  validateRequiredParam(extension, 'extension');
+
   const timestamp = Date.now();
   const sanitizedExt = sanitizeFilename(extension).toLowerCase();
   return `${userId}/${consultationId}/${timestamp}_${mode}.${sanitizedExt}`;

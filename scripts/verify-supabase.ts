@@ -61,7 +61,7 @@ async function verifySupabaseConnection(): Promise<void> {
     // Check for required buckets
     console.log('\n3. Checking storage buckets...');
 
-    const requiredBuckets = ['audio-recordings', 'clinical-documents'];
+    const requiredBuckets = ['audio-recordings', 'clinical-documents', 'user-assets'];
     const existingBuckets = buckets?.map((b) => b.name) || [];
 
     for (const bucket of requiredBuckets) {
