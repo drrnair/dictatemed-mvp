@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   const greeting = getGreeting();
 
   return (
-    <div className="space-y-space-6 animate-fade-in-up">
+    <div className="space-y-6 animate-fade-in-up">
       {/* Welcome section - Time-aware greeting */}
       <header>
         <h1 className="text-2xl md:text-3xl font-semibold text-slate-800 dark:text-slate-100 tracking-tight">
