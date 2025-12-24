@@ -354,23 +354,26 @@ Created comprehensive technical specification in `spec.md` covering:
 - `src/hooks/usePracticeProfile.ts` (create)
 
 **Completed**:
-- Created `src/hooks/useSpecialtySearch.ts`:
-  - `useSpecialtySearch()` - debounced API search for specialties with configurable options
-  - `useSubspecialtySearch()` - subspecialty search within a specific specialty
-  - Both hooks support custom debounce timing, max results, and error handling
 - Created `src/hooks/usePracticeProfile.ts`:
   - `usePracticeProfile()` - fetch and update user's practice profile
+  - `saveProfile()` returns the updated `PracticeProfile` on success (not just boolean)
   - `createCustomSpecialty()` and `createCustomSubspecialty()` for inline custom entry creation
   - Helper functions: `profileToFormState()` and `formStateToSaveData()` for form data transformation
 - Created `src/components/specialty/PracticeProfileForm.tsx`:
   - Section A: Intro with "About your practice" header and reassurance text
-  - Section B: SpecialtyCombobox for primary specialty selection
+  - Section B: SpecialtyCombobox for primary specialty selection with `aria-labelledby` for accessibility
   - Section C: Dynamic SubspecialtyPanel components per selected specialty
   - Full change tracking to enable/disable save button appropriately
   - Loading, saving, and error states with clear user feedback
   - Mode support: 'onboarding' (with Skip) and 'settings' (with Cancel)
+  - Mode-aware autoFocus: defaults to true for onboarding, false for settings
   - Proper cleanup of subspecialty state when specialties are removed
+  - `onSave` callback receives the updated profile from the API (not stale state)
+- Updated `src/components/specialty/SpecialtyCombobox.tsx`:
+  - Added `aria-labelledby` prop for accessibility
 - Updated `src/components/specialty/index.ts` with PracticeProfileForm exports
+- Removed unused `src/hooks/useSpecialtySearch.ts` (search logic is inline in SpecialtyCombobox)
+- Fixed test type issues in `tests/integration/specialties/onboarding-flow.test.ts`
 - TypeScript typecheck passes
 - ESLint passes with no warnings
 

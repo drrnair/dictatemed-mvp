@@ -52,7 +52,6 @@ export default function OnboardingPage() {
       </div>
 
       {/* Practice Profile Form - autoFocus is intentional for onboarding UX */}
-      {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
       <div className="rounded-lg border bg-card p-6">
         <PracticeProfileForm
           mode="onboarding"
