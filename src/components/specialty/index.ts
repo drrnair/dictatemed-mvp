@@ -16,3 +16,6 @@ export type {
   SelectedSubspecialtyItem,
   SuggestedSubspecialty,
 } from './SubspecialtyPanel';
+
+export { PracticeProfileForm } from './PracticeProfileForm';
+export type { PracticeProfileFormProps } from './PracticeProfileForm';

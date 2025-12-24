@@ -323,7 +323,8 @@ Created comprehensive technical specification in `spec.md` covering:
 
 ---
 
-### [ ] Step 6: Practice Profile Form Component
+### [x] Step 6: Practice Profile Form Component
+<!-- chat-id: a010008d-9789-4c5d-87fd-088c2495cac7 -->
 
 **Goal**: Create the main form component combining role, specialties, and subspecialties.
 
@@ -351,6 +352,27 @@ Created comprehensive technical specification in `spec.md` covering:
 - `src/components/specialty/PracticeProfileForm.tsx` (create)
 - `src/hooks/useSpecialtySearch.ts` (create)
 - `src/hooks/usePracticeProfile.ts` (create)
+
+**Completed**:
+- Created `src/hooks/useSpecialtySearch.ts`:
+  - `useSpecialtySearch()` - debounced API search for specialties with configurable options
+  - `useSubspecialtySearch()` - subspecialty search within a specific specialty
+  - Both hooks support custom debounce timing, max results, and error handling
+- Created `src/hooks/usePracticeProfile.ts`:
+  - `usePracticeProfile()` - fetch and update user's practice profile
+  - `createCustomSpecialty()` and `createCustomSubspecialty()` for inline custom entry creation
+  - Helper functions: `profileToFormState()` and `formStateToSaveData()` for form data transformation
+- Created `src/components/specialty/PracticeProfileForm.tsx`:
+  - Section A: Intro with "About your practice" header and reassurance text
+  - Section B: SpecialtyCombobox for primary specialty selection
+  - Section C: Dynamic SubspecialtyPanel components per selected specialty
+  - Full change tracking to enable/disable save button appropriately
+  - Loading, saving, and error states with clear user feedback
+  - Mode support: 'onboarding' (with Skip) and 'settings' (with Cancel)
+  - Proper cleanup of subspecialty state when specialties are removed
+- Updated `src/components/specialty/index.ts` with PracticeProfileForm exports
+- TypeScript typecheck passes
+- ESLint passes with no warnings
 
 ---
 
