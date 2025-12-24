@@ -226,7 +226,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
  *   }>
  * }
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getSession();
     if (!session) {
