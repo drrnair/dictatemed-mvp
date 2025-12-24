@@ -249,12 +249,13 @@ export function RecordingSection({
 
       {/* Recording UI (Ambient/Dictation modes) */}
       {mode !== 'UPLOAD' && (
-        <div className={cn('space-y-space-6', disabled && 'opacity-50 pointer-events-none')}>
+        <div className={cn('space-y-6', disabled && 'opacity-50 pointer-events-none')}>
           {/* Waveform visualizer */}
           <div className="flex justify-center">
             <WaveformVisualizer
               isActive={recordingState === 'recording'}
               audioLevel={audioLevel}
+              className="w-full max-w-md"
             />
           </div>
 
