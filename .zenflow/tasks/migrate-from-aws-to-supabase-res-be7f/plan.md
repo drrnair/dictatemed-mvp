@@ -37,6 +37,7 @@ This migration involves:
 ---
 
 ### [ ] Step 1: Set Up Supabase Infrastructure
+<!-- chat-id: 604a312a-2857-490a-8779-2d7b6b9c97e9 -->
 
 Create the Supabase storage infrastructure with PHI-aware design.
 
