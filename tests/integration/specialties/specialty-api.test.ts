@@ -35,6 +35,11 @@ vi.mock('@/domains/specialties/specialty.service', () => ({
   createCustomSpecialty: vi.fn(),
 }));
 
+// Use valid UUIDs for test data
+const SPECIALTY_UUID = '550e8400-e29b-41d4-a716-446655440001';
+const SUBSPECIALTY_UUID = '550e8400-e29b-41d4-a716-446655440002';
+const CLINICIAN_SPECIALTY_UUID = '550e8400-e29b-41d4-a716-446655440003';
+
 const mockUser = {
   id: 'user-123',
   auth0Id: 'auth0|123',
@@ -270,7 +275,7 @@ describe('Specialty API', () => {
         method: 'PUT',
         body: JSON.stringify({
           clinicianRole: 'MEDICAL',
-          specialties: [{ specialtyId: 'spec-1', subspecialtyIds: [] }],
+          specialties: [{ specialtyId: SPECIALTY_UUID, subspecialtyIds: [] }],
         }),
       });
       const response = await updatePracticeProfile(request);

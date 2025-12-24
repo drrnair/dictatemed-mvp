@@ -154,6 +154,7 @@ const mockCustomSpecialty = {
   region: 'AU',
   notes: 'Focus on athlete heart health',
   status: 'PENDING' as CustomRequestStatus,
+  approvedSpecialtyId: null,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 };
@@ -166,6 +167,7 @@ const mockCustomSubspecialty = {
   name: 'Cardiac MRI',
   description: 'Cardiac magnetic resonance imaging',
   status: 'PENDING' as CustomRequestStatus,
+  approvedSubspecialtyId: null,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 };
