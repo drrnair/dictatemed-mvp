@@ -65,7 +65,8 @@ Update the design token foundation:
 
 ---
 
-### [ ] Step 2: Core UI Components
+### [x] Step 2: Core UI Components
+<!-- chat-id: f7bac414-3df4-41fd-805a-e02bbcbf5e9c -->
 
 Update base UI component styling:
 
@@ -88,6 +89,13 @@ Update base UI component styling:
    - Add amber/emerald status variants
 
 **Verification**: `npm run lint` passes, components render correctly
+
+**Completed Changes**:
+- **button.tsx**: Updated to rounded-xl, teal-500 primary with shadow-sm/hover:shadow-md, 200ms transitions, rose-500 for destructive, teal focus ring
+- **card.tsx**: Added cardVariants with cva for default/interactive/selected/ghost variants, rounded-xl, interactive variant has hover lift effect (-translate-y-0.5)
+- **input.tsx**: Updated to rounded-xl, bg-slate-50, teal-500 focus ring, 200ms transitions, focus:bg-white
+- **badge.tsx**: Added pending (amber-50/amber-600), approved (emerald-50/emerald-600), error (rose-50/rose-600) status variants plus solid versions
+- Both `npm run lint` and `npm run build` pass successfully
 
 ---
 

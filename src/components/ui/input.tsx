@@ -12,7 +12,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           // Min height 44px for WCAG touch targets, body typography, accessible focus
-          'flex h-11 min-h-touch w-full rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background transition-colors duration-150 file:border-0 file:bg-transparent file:text-body file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50',
+          // Updated: rounded-xl (12px), bg-slate-50, teal focus ring, 200ms transitions
+          'flex h-11 min-h-touch w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 ring-offset-background transition-all duration-200 file:border-0 file:bg-transparent file:text-body file:font-medium placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 focus-visible:border-teal-500 focus-visible:bg-white disabled:cursor-not-allowed disabled:opacity-50',
           className
         )}
         ref={ref}

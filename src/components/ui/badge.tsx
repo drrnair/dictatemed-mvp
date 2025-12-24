@@ -4,36 +4,51 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  // Base: caption typography, accessible focus, subtle transitions
-  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-caption transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+  // Base: caption typography, accessible focus, subtle transitions, 200ms duration
+  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-caption transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2',
   {
     variants: {
       variant: {
-        // Default - uses primary with softer appearance
+        // Default - teal primary with softer appearance
         default:
-          'border-transparent bg-primary/15 text-primary hover:bg-primary/20',
+          'border-transparent bg-teal-50 text-teal-700 hover:bg-teal-100',
         // Secondary - subtle muted background
         secondary:
-          'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        // Destructive - softer red for less alarm
+          'border-transparent bg-slate-100 text-slate-600 hover:bg-slate-200',
+        // Destructive - softer rose for less alarm
         destructive:
-          'border-transparent bg-destructive/15 text-destructive hover:bg-destructive/20',
+          'border-transparent bg-rose-50 text-rose-600 hover:bg-rose-100',
         // Outline - bordered style for minimal emphasis
-        outline: 'border-border text-foreground',
+        outline: 'border-slate-200 text-slate-600 hover:bg-slate-50',
+        // Status variants - semantic colors for letter/document statuses
+        // Pending - amber (waiting for action)
+        pending:
+          'border-transparent bg-amber-50 text-amber-600 font-medium',
+        // Approved/Success - emerald (completed successfully)
+        approved:
+          'border-transparent bg-emerald-50 text-emerald-600 font-medium',
+        // Error/Rejected - rose (needs attention)
+        error:
+          'border-transparent bg-rose-50 text-rose-600 font-medium',
         // Clinical variants - softer backgrounds with solid text for readability
         verified:
-          'border-transparent bg-clinical-verified/15 text-clinical-verified font-medium',
+          'border-transparent bg-emerald-50 text-emerald-600 font-medium',
         warning:
-          'border-transparent bg-clinical-warning/20 text-clinical-warning font-medium',
+          'border-transparent bg-amber-50 text-amber-600 font-medium',
         critical:
-          'border-transparent bg-clinical-critical/15 text-clinical-critical font-medium',
+          'border-transparent bg-rose-50 text-rose-600 font-medium',
         // Solid clinical variants for high emphasis
         'verified-solid':
-          'border-transparent bg-clinical-verified text-white font-medium',
+          'border-transparent bg-emerald-500 text-white font-medium',
         'warning-solid':
-          'border-transparent bg-clinical-warning text-black font-medium',
+          'border-transparent bg-amber-500 text-black font-medium',
         'critical-solid':
-          'border-transparent bg-clinical-critical text-white font-medium',
+          'border-transparent bg-rose-500 text-white font-medium',
+        // Solid status variants
+        'pending-solid':
+          'border-transparent bg-amber-500 text-black font-medium',
+        'approved-solid':
+          'border-transparent bg-emerald-500 text-white font-medium',
       },
     },
     defaultVariants: {
