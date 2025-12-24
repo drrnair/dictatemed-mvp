@@ -1140,8 +1140,6 @@ const response = await generateTextWithRetry({
 
 ---
 
----
-
 # Technical Notes: Referral Upload & Auto-Populate Feature
 
 This document provides technical documentation for the referral letter upload and auto-population feature in DictateMED.
