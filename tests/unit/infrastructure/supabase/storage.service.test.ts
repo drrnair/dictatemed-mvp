@@ -100,10 +100,10 @@ describe('Supabase Storage Service', () => {
         expect(path).toBe('signatures/user-123/1703462400000.jpeg');
       });
 
-      it('should use last part of filename as extension if no dot', () => {
-        // When filename has no extension, it uses the whole filename as extension
+      it('should default to png extension if filename has no extension', () => {
+        // When filename has no extension, it defaults to 'png'
         const path = generateSignaturePath('user-123', 'signature');
-        expect(path).toBe('signatures/user-123/1703462400000.signature');
+        expect(path).toBe('signatures/user-123/1703462400000.png');
       });
     });
 
@@ -238,9 +238,19 @@ describe('Supabase Storage Service', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle empty strings gracefully', () => {
-      const path = generateAudioPath('', '', 'ambient', '');
-      expect(path).toBe('//1703462400000_ambient.');
+    it('should reject empty strings with validation error', () => {
+      expect(() => generateAudioPath('', 'consultation-123', 'ambient', 'webm'))
+        .toThrow(StorageError);
+      expect(() => generateAudioPath('user-123', '', 'ambient', 'webm'))
+        .toThrow(StorageError);
+      expect(() => generateAudioPath('user-123', 'consultation-123', 'ambient', ''))
+        .toThrow(StorageError);
+      expect(() => generateDocumentPath('', 'patient-123', 'ecg', 'test.pdf'))
+        .toThrow(StorageError);
+      expect(() => generateSignaturePath('', 'sig.png'))
+        .toThrow(StorageError);
+      expect(() => generateLetterheadPath('', 'logo.png'))
+        .toThrow(StorageError);
     });
 
     it('should handle unicode in filenames', () => {

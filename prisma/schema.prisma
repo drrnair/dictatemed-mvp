@@ -162,10 +162,16 @@ model Document {
   filename  String
   mimeType  String
   sizeBytes Int
-  s3Key     String
+  s3Key     String? // @deprecated - use storagePath for Supabase Storage
+  storagePath String? // Supabase Storage path: {userId}/{patientId}/{docType}/{filename}_{timestamp}.{ext}
 
   documentType DocumentType?
   status       DocumentStatus @default(UPLOADING)
+
+  // Retention and soft delete
+  retentionUntil DateTime? // When the document should be deleted (retention policy)
+  deletedAt      DateTime? // When the document was deleted from storage
+  deletionReason String?   // Reason for deletion (retention_expired, user_requested, etc.)
 
   // Extraction results
   extractedData   Json?   // Structured clinical data
@@ -179,6 +185,7 @@ model Document {
   letterDocuments LetterDocument[]
 
   @@index([userId, createdAt])
+  @@index([retentionUntil]) // For retention cleanup job
   @@map("documents")
 }
 

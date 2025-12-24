@@ -1,8 +1,18 @@
 // src/domains/documents/document.service.ts
-// Document domain service
+// Document domain service - Uses Supabase Storage for PHI-compliant document storage
 
 import { prisma } from '@/infrastructure/db/client';
-import { getUploadUrl, getDownloadUrl, deleteObject } from '@/infrastructure/s3/presigned-urls';
+import {
+  generateDocumentPath,
+  generateUploadUrl,
+  generateDownloadUrl,
+  deleteFile,
+  createStorageAuditLog,
+  isValidDocumentType,
+  getDocumentDownloadUrl,
+} from '@/infrastructure/supabase/storage.service';
+import { STORAGE_BUCKETS } from '@/infrastructure/supabase/client';
+import { type ClinicalDocumentType } from '@/infrastructure/supabase/types';
 import { logger } from '@/lib/logger';
 import type {
   Document,
@@ -16,7 +26,31 @@ import type {
   ExtractedData,
 } from './document.types';
 
-const DOCUMENT_BUCKET_PATH = 'documents';
+// Default retention period in days (7 years for medical records)
+const DEFAULT_RETENTION_DAYS = 7 * 365;
+
+/**
+ * Map domain DocumentType to Supabase ClinicalDocumentType for storage paths.
+ */
+function toStorageDocumentType(type: DocumentType): ClinicalDocumentType {
+  switch (type) {
+    case 'ECHO_REPORT':
+      return 'echocardiogram';
+    case 'ANGIOGRAM_REPORT':
+      return 'angiogram';
+    case 'ECG_REPORT':
+      return 'ecg';
+    case 'HOLTER_REPORT':
+      return 'holter';
+    case 'LAB_RESULT':
+      return 'lab_results';
+    case 'REFERRAL':
+      return 'referral';
+    case 'OTHER':
+    default:
+      return 'other';
+  }
+}
 
 /**
  * Infer document type from filename and MIME type.

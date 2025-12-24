@@ -1,5 +1,32 @@
 // src/infrastructure/supabase/storage.service.ts
 // Supabase Storage service for PHI-aware file operations
+//
+// ============================================================================
+// IMPORTANT: Auth0 + Supabase RLS Compatibility Note
+// ============================================================================
+//
+// DictateMED uses Auth0 for authentication, NOT Supabase Auth. This means:
+//
+// 1. Supabase RLS policies using `auth.uid()` will NOT work because Auth0
+//    tokens are not recognized by Supabase's built-in auth system.
+//
+// 2. ALL storage operations in this file use the SERVICE ROLE client, which
+//    BYPASSES Row Level Security entirely.
+//
+// 3. Authorization MUST be enforced in the APPLICATION LAYER before calling
+//    any function in this module. Every function that accesses PHI should:
+//    - Verify the user is authenticated via Auth0
+//    - Verify the user has permission to access the specific resource
+//    - Log the access to the audit trail
+//
+// 4. The RLS policies in supabase/migrations/001_create_storage_buckets.sql
+//    are defined for documentation purposes and defense-in-depth, but they
+//    are NOT the primary access control mechanism.
+//
+// SECURITY: Never expose storage functions directly to API routes without
+// proper authorization checks. Always validate user permissions first.
+//
+// ============================================================================
 
 import { prisma } from '@/infrastructure/db/client';
 import {
@@ -84,6 +111,7 @@ export function generateAudioPath(
  * @param documentType - Type of clinical document
  * @param filename - Original filename (will be sanitized)
  * @returns Storage path for the document
+ * @throws StorageError if required parameters are empty
  */
 export function generateDocumentPath(
   userId: string,
@@ -91,6 +119,10 @@ export function generateDocumentPath(
   documentType: ClinicalDocumentType,
   filename: string
 ): string {
+  validateRequiredParam(userId, 'userId');
+  validateRequiredParam(patientId, 'patientId');
+  validateRequiredParam(filename, 'filename');
+
   const timestamp = Date.now();
   const sanitized = sanitizeFilename(filename);
   const parts = sanitized.split('.');
@@ -106,11 +138,16 @@ export function generateDocumentPath(
  * @param userId - User ID who owns the signature
  * @param filename - Original filename (will be sanitized)
  * @returns Storage path for the signature
+ * @throws StorageError if required parameters are empty
  */
 export function generateSignaturePath(userId: string, filename: string): string {
+  validateRequiredParam(userId, 'userId');
+  validateRequiredParam(filename, 'filename');
+
   const timestamp = Date.now();
   const sanitized = sanitizeFilename(filename);
-  const ext = sanitized.split('.').pop() || 'png';
+  const parts = sanitized.split('.');
+  const ext = parts.length > 1 ? parts.pop() : 'png';
   return `signatures/${userId}/${timestamp}.${ext}`;
 }
 
@@ -121,11 +158,16 @@ export function generateSignaturePath(userId: string, filename: string): string 
  * @param practiceId - Practice ID that owns the letterhead
  * @param filename - Original filename (will be sanitized)
  * @returns Storage path for the letterhead
+ * @throws StorageError if required parameters are empty
  */
 export function generateLetterheadPath(practiceId: string, filename: string): string {
+  validateRequiredParam(practiceId, 'practiceId');
+  validateRequiredParam(filename, 'filename');
+
   const timestamp = Date.now();
   const sanitized = sanitizeFilename(filename);
-  const ext = sanitized.split('.').pop() || 'png';
+  const parts = sanitized.split('.');
+  const ext = parts.length > 1 ? parts.pop() : 'png';
   return `letterheads/${practiceId}/${timestamp}.${ext}`;
 }
 

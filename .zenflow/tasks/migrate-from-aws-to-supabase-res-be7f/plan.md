@@ -158,6 +158,7 @@ Replace S3 usage in recording service with Supabase.
 ---
 
 ### [ ] Step 4: Migrate Clinical Document Storage
+<!-- chat-id: 73d6a9af-0997-4d75-be27-9dcaf65cf8aa -->
 
 Replace S3 usage in document service with Supabase.
 
