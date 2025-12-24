@@ -453,6 +453,7 @@ Since DictateMED uses Auth0 (not Supabase Auth), the security model works as fol
 ---
 
 ### [ ] Step 8: Remove AWS S3 Dependencies
+<!-- chat-id: 2a76b01c-1149-4abb-9674-d946a9b8acee -->
 
 Clean up after migration is complete and tested.
 
