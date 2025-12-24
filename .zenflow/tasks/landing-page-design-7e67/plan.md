@@ -33,23 +33,26 @@ Created `spec.md` with:
 Set up the foundation for landing page implementation:
 
 1. Install framer-motion dependency
-2. Extend Tailwind config with landing-specific tokens:
+2. **DELETE** `src/app/page.tsx` (route conflict — see spec.md for details)
+3. Extend Tailwind config with landing-specific tokens:
    - Hero typography (`text-hero`, `text-hero-lg`)
    - Section typography (`text-section-title`, `text-section-title-lg`)
    - Elevated shadow for product demo
-3. Add animation keyframes to globals.css
-4. Update middleware to allow public routes (`/`, `/signup`, `/login`, `/forgot-password`)
-5. Create route group structures:
+4. Add animation keyframes to globals.css
+5. Update middleware to allow public routes (`/`, `/signup`, `/login`, `/forgot-password`)
+6. Create route group structures:
    - `(marketing)/layout.tsx` - Clean full-width layout
    - `(auth)/layout.tsx` - Centered card layout
-6. Create shared components:
+7. Create shared components:
    - `AnimatedSection.tsx` - Scroll-triggered fade-in wrapper
    - `Container.tsx` - Max-width wrapper with padding
+8. Create `public/images/landing/` directory for assets
 
 **Verification:**
 - `npm run typecheck` passes
 - `npm run lint` passes
 - Route groups render correctly
+- `/` serves marketing layout (not redirect)
 
 ---
 
@@ -61,16 +64,21 @@ Build the sticky navigation with scroll detection:
    - Logo text mark ("DictateMED" in primary color)
    - Nav links: Features, Pricing, About (hidden on mobile)
    - CTAs: "Sign In" (ghost), "Start Free Trial" (primary)
-   - Mobile hamburger menu with slide-out drawer
+   - Mobile hamburger menu using Radix Dialog (slide-in from right)
 2. Implement scroll detection:
    - Transparent initially
    - `bg-white/80 backdrop-blur-xl border-b` when scrolled >20px
-3. Ensure fixed positioning with z-index management
+3. Mobile menu behavior:
+   - Slide-in from right with framer-motion
+   - Close on: outside click, escape key, close button, link click
+   - Focus trap while open
+4. Ensure fixed positioning with z-index management
 
 **Verification:**
 - Navigation renders correctly
 - Scroll effect triggers properly
-- Mobile menu opens/closes
+- Mobile menu opens/closes with animation
+- Focus is trapped in mobile menu
 - Links work (even if pages don't exist yet)
 
 ---
@@ -166,19 +174,23 @@ Build the key differentiators grid:
 Build sections 7 and 8:
 
 1. Create `src/components/landing/ProductDemo.tsx`:
-   - Screenshot placeholder with elevated shadow
-   - "See DictateMED in action" caption
-   - Device frame mockup styling
+   - Video embed placeholder (Option B from spec)
+   - Gradient placeholder with play button overlay
+   - "See DictateMED in action (2 min)" caption
+   - Elevated shadow, rounded-2xl, centered max-w-5xl
+   - CSS-only device frame (no images needed)
 2. Create `src/components/landing/Testimonials.tsx`:
    - Headline: "What clinicians are saying"
    - 3 testimonial cards (horizontal scroll on mobile)
-   - Quote, author name, specialty, hospital
+   - **Placeholder content**: Generic names, specialty only (no hospital)
+   - Initials in colored circles instead of photos
    - Quote mark decorative icon
 
 **Verification:**
 - Product demo section centers properly
+- Play button overlay is visible
 - Testimonials scroll horizontally on mobile
-- Quote styling looks professional
+- No fake photos used (initials only)
 
 ---
 
@@ -268,48 +280,56 @@ Assemble all sections into the landing page:
 
 ### [ ] Step: Auth Pages - Login
 
-Build the login page:
+Build the login page (wrapper for Auth0 Universal Login):
 
 1. Create `src/components/auth/LoginForm.tsx`:
-   - Email input with icon
-   - Password input with show/hide toggle
-   - "Forgot password?" link
-   - Submit button with loading state
-   - Google SSO option
-   - "Don't have account?" link to signup
+   - Branded UI with value propositions
+   - "Continue with Google" button → `/api/auth/login?connection=google-oauth2`
+   - "Continue with Email" button → `/api/auth/login`
+   - "Don't have account?" link to `/signup`
+   - **Note**: These are wrapper pages, not custom auth forms
 2. Create `src/app/(auth)/login/page.tsx`:
    - Centered single-column layout
    - Logo at top
    - LoginForm component
 
+**Auth0 Integration:**
+- Both buttons redirect to Auth0's Universal Login
+- `returnTo` parameter set to `/dashboard`
+- No password field (Auth0 handles this)
+
 **Verification:**
-- Form renders correctly
-- Password toggle works
-- Loading state displays
-- Links navigate correctly
+- Page renders with branded UI
+- Buttons redirect to Auth0 login
+- Link to signup works
 
 ---
 
 ### [ ] Step: Auth Pages - Signup
 
-Build the signup flow:
+Build the signup page (wrapper for Auth0 Universal Login with signup hint):
 
 1. Create `src/components/auth/SignupForm.tsx`:
-   - 2-step flow with progress indicator
-   - Step 1: Email, password, continue button
-   - Step 2: Name, practice (optional), specialty selector
-   - Step transitions with slide animation
-   - Google SSO option
+   - Branded UI with value propositions and benefits
+   - "Continue with Google" button → `/api/auth/login?screen_hint=signup&connection=google-oauth2&returnTo=/dashboard?welcome=true`
+   - "Continue with Email" button → `/api/auth/login?screen_hint=signup&returnTo=/dashboard?welcome=true`
+   - "Already have account?" link to `/login`
+   - **Note**: These are wrapper pages; Auth0 handles account creation
 2. Create `src/app/(auth)/signup/page.tsx`:
-   - Split layout (form left, branding right on desktop)
-   - Mobile: form only
+   - Split layout (value props left, form right on desktop)
+   - Mobile: form only with value props above
    - SignupForm component
 
+**Auth0 Integration:**
+- `screen_hint=signup` tells Auth0 to show signup mode
+- `returnTo` includes `?welcome=true` for onboarding modal
+- No custom form fields (specialty selection happens in app onboarding)
+
 **Verification:**
-- Step progression works
-- Back button returns to step 1
-- Form validation works
-- Specialty buttons select correctly
+- Page renders with branded UI
+- Buttons redirect to Auth0 signup
+- Link to login works
+- `welcome=true` param is in redirect URL
 
 ---
 
@@ -325,16 +345,25 @@ Build the onboarding modal:
    - Progress dots
    - Skip option
    - Final "Start Recording" CTA
-2. Integrate into dashboard layout:
-   - Detect `?welcome=true` query param
-   - Show modal on first load
-   - Redirect to /record on completion
+2. Create `src/components/auth/WelcomeModalTrigger.tsx` (client component):
+   - Detects `?welcome=true` query param using `useSearchParams`
+   - Shows modal when param is present
+   - Removes param from URL on close using `router.replace`
+3. Integrate into dashboard layout:
+   - Add `<WelcomeModalTrigger />` to `src/app/(dashboard)/layout.tsx`
+   - Wrap in `<Suspense>` for searchParams handling
+
+**State Persistence:**
+- No database or localStorage needed
+- Query param is only set once during signup redirect
+- Closing modal removes param, preventing re-display
 
 **Verification:**
-- Modal opens with welcome param
+- Modal opens when navigating to `/dashboard?welcome=true`
 - Steps navigate correctly
-- Skip closes modal
+- Skip closes modal and removes param
 - Final CTA redirects to /record
+- Modal doesn't reappear on page refresh after closing
 
 ---
 
@@ -351,16 +380,27 @@ Complete final verification:
    - Tablet (768px)
    - Desktop (1280px+)
 3. Test accessibility:
-   - Keyboard navigation
+   - Keyboard navigation through all sections
    - Screen reader compatibility
-   - Reduced motion preference
+   - Reduced motion preference (disable animations)
+   - Focus states visible on all interactive elements
 4. Performance check:
-   - Lighthouse audit (target >90)
-   - Check FCP (<1.5s)
-5. Write completion report to `report.md`
+   - Lighthouse audit (target >90 for Performance, Accessibility, Best Practices)
+   - Core Web Vitals:
+     - LCP < 2.5s
+     - FID < 100ms
+     - CLS < 0.1
+   - FCP < 1.5s
+5. End-to-end flow test:
+   - Landing page → "Start Free Trial" → Signup page → Auth0 → Dashboard with welcome modal
+   - Landing page → "Sign In" → Login page → Auth0 → Dashboard
+6. Write completion report to `report.md`
 
 **Verification:**
 - All tests pass
-- Lighthouse >90
+- Lighthouse >90 in all categories
+- Core Web Vitals pass
 - No console errors
 - Auth flow completes successfully
+- Mobile navigation works
+- All 13 sections render correctly

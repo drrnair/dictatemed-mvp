@@ -32,11 +32,15 @@ Build a conversion-optimized landing page for DictateMED with seamless auth flow
 ```
 Required for scroll-triggered animations, staggered reveals, and page transitions.
 
-### Font Update Required
-The task specifies **Plus Jakarta Sans** but current codebase uses **Inter**.
-- Option A: Keep Inter (already loaded, similar aesthetic)
-- Option B: Add Plus Jakarta Sans as secondary font for marketing pages
-- **Recommendation:** Keep Inter for consistency with existing app
+### Font Decision: Keep Inter (Deviation from Task Spec)
+The task specifies **Plus Jakarta Sans** but we will keep **Inter** for the following reasons:
+
+1. **Consistency**: The authenticated app uses Inter; switching fonts between marketing and app creates visual discontinuity
+2. **Performance**: Loading an additional font adds 15-20KB and increases render-blocking time
+3. **Visual similarity**: Inter and Plus Jakarta Sans are both geometric sans-serifs with similar x-heights and letter spacing — the difference is subtle
+4. **Maintenance**: Single font family reduces design system complexity
+
+**Trade-off acknowledged**: Plus Jakarta Sans has slightly more personality/warmth which could improve marketing appeal. If stakeholder feedback suggests the landing page feels too "clinical," we can revisit this decision.
 
 ---
 
@@ -172,11 +176,11 @@ keyframes: {
 | `src/app/globals.css` | Add landing-specific animation keyframes |
 | `package.json` | Add `framer-motion` dependency |
 
-### Removed/Replaced
+### Deleted Files
 
-| File | Action |
+| File | Reason |
 |------|--------|
-| `src/app/page.tsx` | Remove (replaced by marketing route) |
+| `src/app/page.tsx` | **MUST DELETE** — This file currently redirects to `/dashboard`. Since Next.js route groups don't affect URL structure, both `src/app/page.tsx` and `src/app/(marketing)/page.tsx` would resolve to `/`, causing a conflict. The existing file must be deleted, not just replaced. |
 
 ---
 
@@ -236,9 +240,39 @@ const publicPaths = [
 ];
 ```
 
+### Auth0 Integration Strategy
+
+The current codebase uses Auth0's Universal Login (redirects to Auth0-hosted login page). For the custom `/login` and `/signup` pages, we have two options:
+
+**Option A: Wrapper Pages (Recommended)**
+- `/login` and `/signup` are branded landing pages with CTAs
+- Clicking "Sign In" or "Sign Up" redirects to Auth0's Universal Login (`/api/auth/login`)
+- Auth0 handles the actual authentication
+- After auth, Auth0 redirects back to `/dashboard` (or `/dashboard?welcome=true` for new users)
+
+**Option B: Embedded Login (Not Recommended)**
+- Custom forms that call Auth0 APIs directly
+- Requires Auth0 "Custom Domains" and additional configuration
+- More complex, higher security surface area
+- Not recommended for MVP
+
+**Chosen approach: Option A (Wrapper Pages)**
+
+The custom `/login` and `/signup` pages will:
+1. Display branded UI with value propositions
+2. Provide "Continue with Google" and "Continue with Email" buttons
+3. Both buttons redirect to `/api/auth/login` (existing Auth0 flow)
+4. Auth0 `returnTo` parameter controls post-login destination
+
+For signup vs login distinction:
+- `/signup` → `/api/auth/login?screen_hint=signup&returnTo=/dashboard?welcome=true`
+- `/login` → `/api/auth/login?returnTo=/dashboard`
+
+This requires Auth0 to be configured with "New Universal Login" experience (supports `screen_hint`).
+
 ### Auth Flow URLs
-- Signup starts new user flow → creates account → redirects to `/dashboard?welcome=true`
-- Login authenticates → redirects to `/dashboard`
+- "Start Free Trial" → `/signup` → Auth0 Universal Login (signup mode) → `/dashboard?welcome=true`
+- "Sign In" → `/login` → Auth0 Universal Login (login mode) → `/dashboard`
 - Dashboard layout detects `?welcome=true` and shows onboarding modal
 
 ---
@@ -299,6 +333,24 @@ interface NavigationProps {
   // No props - self-contained with scroll detection
 }
 // Internal state: scrolled (boolean) for blur effect
+// Internal state: mobileMenuOpen (boolean) for hamburger menu
+```
+
+**Mobile Menu Implementation:**
+- Use Radix `Dialog` component for accessible modal behavior
+- Slide-in from right (transform: translateX)
+- Close triggers: outside click, escape key, close button, link click
+- Focus trap while open
+- Animate with framer-motion (0.2s ease-out)
+
+```typescript
+// Mobile menu structure
+<Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+  <DialogContent className="fixed inset-y-0 right-0 w-[80%] max-w-sm">
+    {/* Nav links */}
+    {/* CTAs */}
+  </DialogContent>
+</Dialog>
 ```
 
 ### Hero
@@ -308,6 +360,28 @@ interface HeroProps {
 }
 // Contains: headline, subheadline, CTAs, trust indicators
 ```
+
+### ProductDemo
+**Chosen approach: Video Embed (Option B)**
+
+For MVP simplicity, we'll implement a video embed placeholder:
+- Tasteful thumbnail with centered play button
+- "See DictateMED in action (2 min)" caption
+- Rounded corners (rounded-2xl), elevated shadow
+- On click: opens video in modal (or links to external video)
+
+**MVP implementation:** Static placeholder image with play button overlay. The actual video can be added later when product demo video is recorded.
+
+```typescript
+interface ProductDemoProps {
+  videoUrl?: string;  // Optional - shows placeholder if not provided
+  thumbnailUrl?: string;  // Optional - shows gradient placeholder if not provided
+}
+```
+
+**Future enhancements** (not in MVP):
+- Option A: Animated product mockup with typing effect
+- Option C: Screenshot carousel with dot indicators
 
 ### FAQ
 ```typescript
@@ -335,6 +409,68 @@ interface WelcomeModalProps {
 // 3-step onboarding carousel
 ```
 
+**State Persistence Strategy:**
+The welcome modal should only show once per user. Implementation:
+
+1. **Trigger**: Dashboard layout checks for `?welcome=true` query param
+2. **Display**: If param present, show modal and remove param from URL (using `router.replace`)
+3. **Persistence**: No additional persistence needed — the query param is only set once during signup redirect
+4. **Skip behavior**: Clicking "Skip" or completing the flow both close the modal
+5. **No database flag needed**: The param-based approach is stateless and doesn't require backend changes
+
+**Dashboard Layout Integration:**
+```typescript
+// In src/app/(dashboard)/layout.tsx (or a client component within)
+'use client';
+import { useSearchParams, useRouter } from 'next/navigation';
+
+function WelcomeModalTrigger() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const showWelcome = searchParams.get('welcome') === 'true';
+
+  const handleClose = () => {
+    // Remove query param without page reload
+    router.replace('/dashboard', { scroll: false });
+  };
+
+  return <WelcomeModal isOpen={showWelcome} onClose={handleClose} />;
+}
+```
+
+---
+
+## Image & Asset Strategy
+
+### Asset Storage
+- All marketing images stored in `public/images/landing/`
+- Use Next.js `Image` component for automatic optimization
+- Specify width/height to prevent layout shift
+
+### Placeholder Strategy (MVP)
+Since actual product screenshots and testimonial photos may not be available:
+
+| Asset | Placeholder Approach |
+|-------|---------------------|
+| Product demo thumbnail | Gradient background (teal to blue) with abstract UI elements |
+| Testimonial photos | Initials in colored circles (no fake photos) |
+| Hero visual | Abstract geometric shapes or waveform visualization |
+| Device frames | CSS-only device frame styling |
+
+### Image Specifications
+```
+Hero visual: 800x600px (or SVG)
+Product demo: 1200x800px (16:10 ratio)
+Testimonial avatars: 48x48px (rendered as initials for MVP)
+```
+
+### Testimonial Content (MVP)
+The example testimonials in the task spec will be used as **clearly fictional placeholders**:
+- Mark with "Example testimonials - to be replaced with real feedback"
+- Use generic names: "Dr. Sarah M.", "Dr. James P."
+- Include specialty but omit hospital names
+- These are for layout/design purposes only and should be replaced before public launch
+
 ---
 
 ## Risk Mitigation
@@ -355,10 +491,23 @@ interface WelcomeModalProps {
 
 ## Success Criteria
 
-1. Landing page loads in <1.5s (FCP)
-2. Lighthouse score >90 for Performance, Accessibility, Best Practices
-3. All 13 sections render correctly across breakpoints
-4. Scroll animations work smoothly (60fps)
-5. Auth flow completes without errors
-6. Reduced motion preference is respected
-7. All interactive elements have visible focus states
+### Performance
+1. Lighthouse score >90 for Performance, Accessibility, Best Practices
+2. Core Web Vitals:
+   - LCP (Largest Contentful Paint): < 2.5s
+   - FID (First Input Delay): < 100ms
+   - CLS (Cumulative Layout Shift): < 0.1
+3. First Contentful Paint: < 1.5s
+4. Scroll animations run at 60fps (no jank)
+
+### Functionality
+5. All 13 sections render correctly across breakpoints (375px, 768px, 1280px+)
+6. Auth flow completes: Landing → Signup → Auth0 → Dashboard with welcome modal
+7. All CTAs link to correct destinations
+8. Mobile navigation opens/closes correctly
+
+### Accessibility
+9. Reduced motion preference is respected (`prefers-reduced-motion`)
+10. All interactive elements have visible focus states
+11. Keyboard navigation works throughout
+12. Color contrast meets WCAG AA (4.5:1 for text)
