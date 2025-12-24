@@ -218,6 +218,7 @@ Update recording page styling:
 ---
 
 ### [ ] Step 6: Letters Page Updates
+<!-- chat-id: 4c914384-abd9-4cf9-b127-20cd41485e12 -->
 
 Update letters page styling:
 
