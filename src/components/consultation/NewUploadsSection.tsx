@@ -85,7 +85,7 @@ export function NewUploadsSection({
 
       const { document, uploadUrl } = await response.json();
 
-      // Upload to S3
+      // Upload to storage
       setFiles((prev) =>
         prev.map((f) =>
           f.id === fileId ? { ...f, progress: 30 } : f

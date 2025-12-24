@@ -37,8 +37,10 @@ export enum ErrorCode {
   // External Services (6xxx)
   DEEPGRAM_ERROR = 6001,
   BEDROCK_ERROR = 6002,
-  S3_ERROR = 6003,
+  STORAGE_ERROR = 6003, // Supabase Storage (formerly S3)
   AUTH0_ERROR = 6004,
+  SUPABASE_ERROR = 6005,
+  RESEND_ERROR = 6006,
 
   // Rate Limiting (7xxx)
   RATE_LIMIT_EXCEEDED = 7001,

@@ -1,5 +1,5 @@
 // tests/unit/domains/referrals/referral.service.test.ts
-// Tests for referral document service (unit tests with mocked Prisma and S3)
+// Tests for referral document service (unit tests with mocked Prisma and Supabase Storage)
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ReferralDocumentStatus } from '@/domains/referrals/referral.types';
@@ -37,12 +37,17 @@ vi.mock('@/infrastructure/db/client', () => ({
   },
 }));
 
-// Mock S3 presigned URLs
-vi.mock('@/infrastructure/s3/presigned-urls', () => ({
-  getUploadUrl: vi.fn(),
-  getDownloadUrl: vi.fn(),
-  deleteObject: vi.fn(),
-  getObjectContent: vi.fn(),
+// Mock Supabase storage
+vi.mock('@/infrastructure/supabase', () => ({
+  generateUploadUrl: vi.fn(),
+  generateDownloadUrl: vi.fn(),
+  deleteFile: vi.fn(),
+  getFileContent: vi.fn(),
+  STORAGE_BUCKETS: {
+    AUDIO_RECORDINGS: 'audio-recordings',
+    CLINICAL_DOCUMENTS: 'clinical-documents',
+    USER_ASSETS: 'user-assets',
+  },
 }));
 
 // Mock pdf-utils module
@@ -76,7 +81,7 @@ vi.mock('@/lib/logger', () => ({
 // Import after mocks are set up
 import * as referralService from '@/domains/referrals/referral.service';
 import { prisma } from '@/infrastructure/db/client';
-import * as s3 from '@/infrastructure/s3/presigned-urls';
+import * as supabaseStorage from '@/infrastructure/supabase';
 
 describe('referral.service', () => {
   beforeEach(() => {
@@ -110,7 +115,7 @@ describe('referral.service', () => {
       vi.mocked(prisma.referralDocument.create).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
-      vi.mocked(s3.getUploadUrl).mockResolvedValue({ url: uploadUrl, expiresAt });
+      vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({ signedUrl: uploadUrl, storagePath: 'test', expiresAt });
 
       const result = await referralService.createReferralDocument('user-1', 'practice-1', {
         filename: 'referral-letter.pdf',
@@ -166,7 +171,7 @@ describe('referral.service', () => {
       });
       vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
-      vi.mocked(s3.getUploadUrl).mockResolvedValue({ url: uploadUrl, expiresAt });
+      vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({ signedUrl: uploadUrl, storagePath: 'test', expiresAt });
 
       const result = await referralService.createReferralDocument('user-1', 'practice-1', {
         filename: 'referral.txt',
@@ -186,7 +191,7 @@ describe('referral.service', () => {
       vi.mocked(prisma.referralDocument.create).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
-      vi.mocked(s3.getUploadUrl).mockResolvedValue({ url: uploadUrl, expiresAt });
+      vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({ signedUrl: uploadUrl, storagePath: 'test', expiresAt });
 
       await referralService.createReferralDocument('user-1', 'practice-1', {
         filename: 'referral-letter.pdf',
@@ -211,7 +216,7 @@ describe('referral.service', () => {
       const expiresAt = new Date('2024-01-01T01:00:00Z');
 
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
-      vi.mocked(s3.getDownloadUrl).mockResolvedValue({ url: downloadUrl, expiresAt });
+      vi.mocked(supabaseStorage.generateDownloadUrl).mockResolvedValue({ signedUrl: downloadUrl, storagePath: 'test', expiresAt });
 
       const result = await referralService.getReferralDocument('user-1', 'practice-1', 'ref-doc-1');
 
@@ -246,7 +251,7 @@ describe('referral.service', () => {
 
       vi.mocked(prisma.referralDocument.findMany).mockResolvedValue(documents);
       vi.mocked(prisma.referralDocument.count).mockResolvedValue(5);
-      vi.mocked(s3.getDownloadUrl).mockResolvedValue({ url: downloadUrl, expiresAt });
+      vi.mocked(supabaseStorage.generateDownloadUrl).mockResolvedValue({ signedUrl: downloadUrl, storagePath: 'test', expiresAt });
 
       const result = await referralService.listReferralDocuments('user-1', 'practice-1', {
         page: 1,
@@ -269,8 +274,9 @@ describe('referral.service', () => {
     it('should apply status filter', async () => {
       vi.mocked(prisma.referralDocument.findMany).mockResolvedValue([mockReferralDocument]);
       vi.mocked(prisma.referralDocument.count).mockResolvedValue(1);
-      vi.mocked(s3.getDownloadUrl).mockResolvedValue({
-        url: 'https://s3.example.com/download',
+      vi.mocked(supabaseStorage.generateDownloadUrl).mockResolvedValue({
+        signedUrl: 'https://storage.example.com/download',
+        storagePath: 'test',
         expiresAt: new Date(),
       });
 
@@ -303,8 +309,9 @@ describe('referral.service', () => {
     it('should calculate hasMore correctly', async () => {
       vi.mocked(prisma.referralDocument.findMany).mockResolvedValue([mockReferralDocument]);
       vi.mocked(prisma.referralDocument.count).mockResolvedValue(1);
-      vi.mocked(s3.getDownloadUrl).mockResolvedValue({
-        url: 'https://s3.example.com/download',
+      vi.mocked(supabaseStorage.generateDownloadUrl).mockResolvedValue({
+        signedUrl: 'https://storage.example.com/download',
+        storagePath: 'test',
         expiresAt: new Date(),
       });
 
@@ -433,7 +440,7 @@ describe('referral.service', () => {
         sizeBytes: 150000,
       });
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
-      vi.mocked(s3.getDownloadUrl).mockResolvedValue({ url: downloadUrl, expiresAt });
+      vi.mocked(supabaseStorage.generateDownloadUrl).mockResolvedValue({ signedUrl: downloadUrl, storagePath: 'test', expiresAt });
 
       const result = await referralService.confirmReferralUpload(
         'user-1',
@@ -477,7 +484,7 @@ describe('referral.service', () => {
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
-      vi.mocked(s3.getDownloadUrl).mockResolvedValue({ url: downloadUrl, expiresAt });
+      vi.mocked(supabaseStorage.generateDownloadUrl).mockResolvedValue({ signedUrl: downloadUrl, storagePath: 'test', expiresAt });
 
       await referralService.confirmReferralUpload('user-1', 'practice-1', 'ref-doc-1', 100000);
 
@@ -495,13 +502,13 @@ describe('referral.service', () => {
   describe('deleteReferralDocument', () => {
     it('should delete document and S3 object', async () => {
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
-      vi.mocked(s3.deleteObject).mockResolvedValue(undefined);
+      vi.mocked(supabaseStorage.deleteFile).mockResolvedValue(undefined);
       vi.mocked(prisma.referralDocument.delete).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
       await referralService.deleteReferralDocument('user-1', 'practice-1', 'ref-doc-1');
 
-      expect(s3.deleteObject).toHaveBeenCalledWith(mockReferralDocument.s3Key);
+      expect(supabaseStorage.deleteFile).toHaveBeenCalledWith('clinical-documents', mockReferralDocument.s3Key);
       expect(prisma.referralDocument.delete).toHaveBeenCalledWith({
         where: { id: 'ref-doc-1' },
       });
@@ -528,7 +535,7 @@ describe('referral.service', () => {
 
     it('should create audit log for deletion', async () => {
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
-      vi.mocked(s3.deleteObject).mockResolvedValue(undefined);
+      vi.mocked(supabaseStorage.deleteFile).mockResolvedValue(undefined);
       vi.mocked(prisma.referralDocument.delete).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
@@ -546,7 +553,7 @@ describe('referral.service', () => {
 
     it('should continue even if S3 delete fails', async () => {
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
-      vi.mocked(s3.deleteObject).mockRejectedValue(new Error('S3 error'));
+      vi.mocked(supabaseStorage.deleteFile).mockRejectedValue(new Error('Storage error'));
       vi.mocked(prisma.referralDocument.delete).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
@@ -569,7 +576,7 @@ describe('referral.service', () => {
       expect(result).not.toBeNull();
       expect(result?.id).toBe('ref-doc-1');
       // Should not have called getDownloadUrl
-      expect(s3.getDownloadUrl).not.toHaveBeenCalled();
+      expect(supabaseStorage.generateDownloadUrl).not.toHaveBeenCalled();
     });
 
     it('should return null when document not found', async () => {
@@ -609,7 +616,7 @@ describe('referral.service', () => {
 
     it('should extract text from PDF successfully', async () => {
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
-      vi.mocked(s3.getObjectContent).mockResolvedValue({
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
         content: Buffer.from('fake pdf content'),
         contentType: 'application/pdf',
       });
@@ -629,7 +636,7 @@ describe('referral.service', () => {
       expect(prisma.referralDocument.findFirst).toHaveBeenCalledWith({
         where: { id: 'ref-doc-1', practiceId: 'practice-1' },
       });
-      expect(s3.getObjectContent).toHaveBeenCalledWith(mockReferralDocument.s3Key);
+      expect(supabaseStorage.getFileContent).toHaveBeenCalledWith('clinical-documents', mockReferralDocument.s3Key);
       expect(mockExtractPdfText).toHaveBeenCalled();
       expect(prisma.referralDocument.update).toHaveBeenCalledWith({
         where: { id: 'ref-doc-1' },
@@ -653,7 +660,7 @@ describe('referral.service', () => {
       };
 
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(textDoc);
-      vi.mocked(s3.getObjectContent).mockResolvedValue({
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
         content: Buffer.from(textContent),
         contentType: 'text/plain',
       });
@@ -708,7 +715,7 @@ describe('referral.service', () => {
         ...mockReferralDocument,
         mimeType: 'image/jpeg',
       });
-      vi.mocked(s3.getObjectContent).mockResolvedValue({
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
         content: Buffer.from('fake image'),
         contentType: 'image/jpeg',
       });
@@ -744,7 +751,7 @@ describe('referral.service', () => {
 
     it('should handle PDF parsing failure', async () => {
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
-      vi.mocked(s3.getObjectContent).mockResolvedValue({
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
         content: Buffer.from('corrupt pdf'),
         contentType: 'application/pdf',
       });
@@ -770,7 +777,7 @@ describe('referral.service', () => {
 
     it('should create audit log for successful extraction', async () => {
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
-      vi.mocked(s3.getObjectContent).mockResolvedValue({
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
         content: Buffer.from('fake pdf'),
         contentType: 'application/pdf',
       });
@@ -803,7 +810,7 @@ describe('referral.service', () => {
 
     it('should handle S3 fetch failure', async () => {
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
-      vi.mocked(s3.getObjectContent).mockRejectedValue(new Error('S3 access denied'));
+      vi.mocked(supabaseStorage.getFileContent).mockRejectedValue(new Error('Storage access denied'));
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({
         ...mockReferralDocument,
         status: 'FAILED' as ReferralDocumentStatus,
@@ -812,7 +819,7 @@ describe('referral.service', () => {
 
       await expect(
         referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1')
-      ).rejects.toThrow('S3 access denied');
+      ).rejects.toThrow('Storage access denied');
 
       expect(prisma.referralDocument.update).toHaveBeenCalledWith({
         where: { id: 'ref-doc-1' },
@@ -825,7 +832,7 @@ describe('referral.service', () => {
     it('should truncate preview to 500 characters', async () => {
       const longText = 'A'.repeat(1000);
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
-      vi.mocked(s3.getObjectContent).mockResolvedValue({
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
         content: Buffer.from('fake pdf'),
         contentType: 'application/pdf',
       });
@@ -849,7 +856,7 @@ describe('referral.service', () => {
     it('should flag short text extraction and log warning', async () => {
       const shortText = 'Very short.'; // Less than 100 characters
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
-      vi.mocked(s3.getObjectContent).mockResolvedValue({
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
         content: Buffer.from('fake pdf'),
         contentType: 'application/pdf',
       });

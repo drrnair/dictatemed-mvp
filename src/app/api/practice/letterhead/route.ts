@@ -1,13 +1,20 @@
 // src/app/api/practice/letterhead/route.ts
 // Letterhead upload API endpoints
+// Migrated from S3 to Supabase Storage
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/infrastructure/db/client';
-import { getUploadUrl, deleteObject } from '@/infrastructure/s3/presigned-urls';
+import {
+  getLetterheadUploadUrl,
+  deleteLetterhead,
+  isValidImageType,
+} from '@/infrastructure/supabase';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
-const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+const log = logger.child({ module: 'practice-letterhead-api' });
+
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 const uploadRequestSchema = z.object({
@@ -27,29 +34,25 @@ export async function POST(request: NextRequest) {
 
     const validated = uploadRequestSchema.parse(body);
 
-    // Validate content type
-    if (!ALLOWED_IMAGE_TYPES.includes(validated.contentType)) {
+    // Validate content type using Supabase storage validation
+    // Note: We allow PNG, JPEG, GIF, WebP for letterheads (same as signatures)
+    if (!isValidImageType(validated.contentType)) {
       return NextResponse.json(
         {
-          error: 'Invalid file type. Only PNG and JPEG images are allowed.',
+          error: 'Invalid file type. Only PNG, JPEG, GIF, and WebP images are allowed.',
         },
         { status: 400 }
       );
     }
 
-    // Generate S3 key for letterhead
-    const timestamp = Date.now();
-    const extension = validated.filename.split('.').pop() || 'png';
-    const s3Key = `assets/${admin.practiceId}/letterhead/${timestamp}.${extension}`;
-
-    // Get presigned URL for upload
-    const { url, expiresAt } = await getUploadUrl(
-      s3Key,
-      validated.contentType,
-      validated.contentLength
+    // Get presigned URL for upload (also creates audit log entry)
+    const { signedUrl, storagePath, expiresAt } = await getLetterheadUploadUrl(
+      admin.practiceId,
+      admin.id,
+      validated.filename,
+      validated.contentType
     );
 
-    // Update practice with new letterhead key
     // Delete old letterhead if it exists
     const practice = await prisma.practice.findUnique({
       where: { id: admin.practiceId },
@@ -58,21 +61,28 @@ export async function POST(request: NextRequest) {
 
     const oldLetterhead = practice?.letterhead;
 
+    // Update practice with new letterhead storage path
     await prisma.practice.update({
       where: { id: admin.practiceId },
-      data: { letterhead: s3Key },
+      data: { letterhead: storagePath },
     });
 
-    // Delete old letterhead from S3 (fire and forget)
+    // Delete old letterhead from storage (fire and forget)
     if (oldLetterhead) {
-      deleteObject(oldLetterhead).catch((error) => {
-        console.error('Failed to delete old letterhead:', error);
+      deleteLetterhead(admin.practiceId, admin.id, oldLetterhead).catch((error) => {
+        log.warn('Failed to delete old letterhead', { path: oldLetterhead, error });
       });
     }
 
+    log.info('Letterhead upload URL generated', {
+      practiceId: admin.practiceId,
+      userId: admin.id,
+      path: storagePath,
+    });
+
     return NextResponse.json({
-      uploadUrl: url,
-      s3Key,
+      uploadUrl: signedUrl,
+      storagePath,
       expiresAt,
     });
   } catch (error) {
@@ -90,7 +100,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Error generating letterhead upload URL:', error);
+    log.error('Error generating letterhead upload URL', {}, error as Error);
     return NextResponse.json(
       { error: 'Failed to generate upload URL' },
       { status: 500 }
@@ -126,9 +136,14 @@ export async function DELETE() {
       data: { letterhead: null },
     });
 
-    // Delete from S3 (fire and forget)
-    deleteObject(oldLetterhead).catch((error) => {
-      console.error('Failed to delete letterhead from S3:', error);
+    // Delete from Supabase Storage (includes audit logging)
+    deleteLetterhead(admin.practiceId, admin.id, oldLetterhead).catch((error) => {
+      log.warn('Failed to delete letterhead from storage', { path: oldLetterhead, error });
+    });
+
+    log.info('Letterhead deleted', {
+      practiceId: admin.practiceId,
+      userId: admin.id,
     });
 
     return NextResponse.json({ message: 'Letterhead removed successfully' });
@@ -140,7 +155,7 @@ export async function DELETE() {
       );
     }
 
-    console.error('Error removing letterhead:', error);
+    log.error('Error removing letterhead', {}, error as Error);
     return NextResponse.json(
       { error: 'Failed to remove letterhead' },
       { status: 500 }

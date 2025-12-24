@@ -8,11 +8,12 @@ import {
   type PatientData,
 } from '@/infrastructure/db/encryption';
 import {
-  getUploadUrl,
-  getDownloadUrl,
-  deleteObject,
-  getObjectContent,
-} from '@/infrastructure/s3/presigned-urls';
+  generateUploadUrl,
+  generateDownloadUrl,
+  deleteFile,
+  getFileContent,
+  STORAGE_BUCKETS,
+} from '@/infrastructure/supabase';
 import { logger } from '@/lib/logger';
 import { extractPdfText } from './pdf-utils';
 import type {
@@ -58,7 +59,7 @@ function getExtensionFromMimeType(mimeType: string): string {
 }
 
 /**
- * Generate S3 key for referral document.
+ * Generate storage path for referral document.
  *
  * Format: referrals/{practiceId}/{year}/{month}/{documentId}.{ext}
  */
@@ -171,8 +172,12 @@ export async function createReferralDocument(
     data: { s3Key: finalKey },
   });
 
-  // Generate pre-signed upload URL
-  const { url, expiresAt } = await getUploadUrl(finalKey, input.mimeType, input.sizeBytes);
+  // Generate pre-signed upload URL using Supabase Storage
+  const { signedUrl, expiresAt } = await generateUploadUrl(
+    STORAGE_BUCKETS.CLINICAL_DOCUMENTS,
+    finalKey,
+    input.mimeType
+  );
 
   // Create audit log
   await prisma.auditLog.create({
@@ -191,7 +196,7 @@ export async function createReferralDocument(
 
   return {
     id: document.id,
-    uploadUrl: url,
+    uploadUrl: signedUrl,
     expiresAt,
   };
 }
@@ -219,11 +224,11 @@ export async function getReferralDocument(
     return null;
   }
 
-  // Generate download URL
+  // Generate download URL using Supabase Storage
   let downloadUrl: string | undefined;
   if (document.s3Key) {
-    const result = await getDownloadUrl(document.s3Key);
-    downloadUrl = result.url;
+    const result = await generateDownloadUrl(STORAGE_BUCKETS.CLINICAL_DOCUMENTS, document.s3Key);
+    downloadUrl = result.signedUrl;
   }
 
   return mapReferralDocument(document, downloadUrl);
@@ -261,13 +266,13 @@ export async function listReferralDocuments(
     prisma.referralDocument.count({ where }),
   ]);
 
-  // Generate download URLs for all documents
+  // Generate download URLs for all documents using Supabase Storage
   const mappedDocuments = await Promise.all(
     documents.map(async (doc) => {
       let downloadUrl: string | undefined;
       if (doc.s3Key) {
-        const result = await getDownloadUrl(doc.s3Key);
-        downloadUrl = result.url;
+        const result = await generateDownloadUrl(STORAGE_BUCKETS.CLINICAL_DOCUMENTS, doc.s3Key);
+        downloadUrl = result.signedUrl;
       }
       return mapReferralDocument(doc, downloadUrl);
     })
@@ -415,11 +420,11 @@ export async function confirmReferralUpload(
     },
   });
 
-  // Generate download URL
+  // Generate download URL using Supabase Storage
   let downloadUrl: string | undefined;
   if (document.s3Key) {
-    const result = await getDownloadUrl(document.s3Key);
-    downloadUrl = result.url;
+    const result = await generateDownloadUrl(STORAGE_BUCKETS.CLINICAL_DOCUMENTS, document.s3Key);
+    downloadUrl = result.signedUrl;
   }
 
   return mapReferralDocument(document, downloadUrl);
@@ -449,15 +454,15 @@ export async function deleteReferralDocument(
     throw new Error('Cannot delete a referral document that has been applied to a consultation');
   }
 
-  // Delete from S3 if uploaded
+  // Delete from Supabase Storage if uploaded
   if (document.s3Key) {
     try {
-      await deleteObject(document.s3Key);
-      log.info('Referral document deleted from S3', { s3Key: document.s3Key });
+      await deleteFile(STORAGE_BUCKETS.CLINICAL_DOCUMENTS, document.s3Key);
+      log.info('Referral document deleted from storage', { storagePath: document.s3Key });
     } catch (error) {
       log.error(
-        'Failed to delete referral document from S3',
-        { s3Key: document.s3Key },
+        'Failed to delete referral document from storage',
+        { storagePath: document.s3Key },
         error instanceof Error ? error : undefined
       );
     }
@@ -544,8 +549,8 @@ export async function extractTextFromDocument(
   });
 
   try {
-    // Fetch file content from S3
-    const { content } = await getObjectContent(document.s3Key);
+    // Fetch file content from Supabase Storage
+    const { content } = await getFileContent(STORAGE_BUCKETS.CLINICAL_DOCUMENTS, document.s3Key);
 
     // Extract text based on MIME type
     let extractedText: string;

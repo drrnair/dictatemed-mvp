@@ -54,6 +54,7 @@ model User {
   notifications       Notification[]
   styleEdits          StyleEdit[]
   templatePreferences UserTemplatePreference[]
+  sentEmails          SentEmail[]
   letterSends         LetterSend[]
 
   // Per-subspecialty style learning
@@ -112,8 +113,11 @@ model Recording {
 
   // Audio metadata
   durationSeconds Int?
+  fileSizeBytes   Int? // Size of uploaded audio file in bytes
   audioQuality    String? // excellent/good/fair/poor
-  s3AudioKey      String?
+  s3AudioKey      String? // @deprecated - use storagePath for Supabase Storage
+  storagePath     String? // Supabase Storage path: {userId}/{consultationId}/{timestamp}_{mode}.{ext}
+  audioDeletedAt  DateTime? // When audio was deleted from storage (retention policy)
 
   // Consent
   consentType ConsentType?
@@ -172,10 +176,16 @@ model Document {
   filename  String
   mimeType  String
   sizeBytes Int
-  s3Key     String
+  s3Key     String? // @deprecated - use storagePath for Supabase Storage
+  storagePath String? // Supabase Storage path: {userId}/{patientId}/{docType}/{filename}_{timestamp}.{ext}
 
   documentType DocumentType?
   status       DocumentStatus @default(UPLOADING)
+
+  // Retention and soft delete
+  retentionUntil DateTime? // When the document should be deleted (retention policy)
+  deletedAt      DateTime? // When the document was deleted from storage
+  deletionReason String?   // Reason for deletion (retention_expired, user_requested, etc.)
 
   // Extraction results
   extractedData   Json?   // Structured clinical data
@@ -189,6 +199,7 @@ model Document {
   letterDocuments LetterDocument[]
 
   @@index([userId, createdAt])
+  @@index([retentionUntil]) // For retention cleanup job
   @@map("documents")
 }
 
@@ -277,6 +288,7 @@ model Letter {
   documents  LetterDocument[]
   provenance Provenance?
   styleEdits StyleEdit[]
+  sentEmails SentEmail[]
   sends      LetterSend[]
 
   @@index([userId, createdAt])
@@ -654,6 +666,42 @@ enum ConsultationStatus {
   PROCESSING  // Transcription/processing in progress
   READY       // Ready for letter generation
   COMPLETED   // Letter generated
+}
+
+// ============ Sent Emails (Resend Integration) ============
+
+model SentEmail {
+  id                String      @id @default(uuid())
+  userId            String
+  user              User        @relation(fields: [userId], references: [id])
+  letterId          String
+  letter            Letter      @relation(fields: [letterId], references: [id])
+
+  // Recipient information
+  recipientEmail    String
+  recipientName     String
+  ccEmails          String[]    @default([])
+  subject           String
+
+  // Provider tracking
+  providerMessageId String?     // Resend message ID for tracking
+  status            String      @default("pending") // pending, sent, delivered, bounced, failed
+  errorMessage      String?     // Error message if failed
+
+  // Timestamps
+  sentAt            DateTime?   // When email was accepted by provider
+  lastEventAt       DateTime?   // Last webhook event timestamp
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Webhook data (for debugging)
+  webhookPayload    String?     @db.Text
+
+  @@index([userId, createdAt])
+  @@index([letterId])
+  @@index([providerMessageId])
+  @@index([status])
+  @@map("sent_emails")
 }
 
 // ============ Patient Contacts & Letter Sending ============

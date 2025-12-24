@@ -48,12 +48,17 @@ vi.mock('@/infrastructure/db/client', () => ({
   },
 }));
 
-// Mock S3
-vi.mock('@/infrastructure/s3/presigned-urls', () => ({
-  getUploadUrl: vi.fn(),
-  getDownloadUrl: vi.fn(),
-  deleteObject: vi.fn(),
-  getObjectContent: vi.fn(),
+// Mock Supabase storage
+vi.mock('@/infrastructure/supabase', () => ({
+  generateUploadUrl: vi.fn(),
+  generateDownloadUrl: vi.fn(),
+  deleteFile: vi.fn(),
+  getFileContent: vi.fn(),
+  STORAGE_BUCKETS: {
+    AUDIO_RECORDINGS: 'audio-recordings',
+    CLINICAL_DOCUMENTS: 'clinical-documents',
+    USER_ASSETS: 'user-assets',
+  },
 }));
 
 // Mock encryption
@@ -90,7 +95,7 @@ vi.mock('@/lib/logger', () => ({
 // Now import handlers
 import * as auth from '@/lib/auth';
 import { prisma } from '@/infrastructure/db/client';
-import * as s3 from '@/infrastructure/s3/presigned-urls';
+import * as supabaseStorage from '@/infrastructure/supabase';
 import { GET, POST } from '@/app/api/referrals/route';
 import { GET as GET_BY_ID, DELETE } from '@/app/api/referrals/[id]/route';
 import { POST as APPLY_REFERRAL } from '@/app/api/referrals/[id]/apply/route';
@@ -144,8 +149,9 @@ describe('Referrals API', () => {
       vi.mocked(prisma.referralDocument.create).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
-      vi.mocked(s3.getUploadUrl).mockResolvedValue({
-        url: 'https://s3.example.com/presigned-upload',
+      vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({
+        signedUrl: 'https://storage.example.com/presigned-upload',
+        storagePath: 'test',
         expiresAt: new Date('2024-01-01T01:00:00Z'),
       });
 
@@ -163,7 +169,7 @@ describe('Referrals API', () => {
 
       expect(response.status).toBe(201);
       expect(body.id).toBe(mockReferralDocument.id);
-      expect(body.uploadUrl).toBe('https://s3.example.com/presigned-upload');
+      expect(body.uploadUrl).toBe('https://storage.example.com/presigned-upload');
     });
 
     it('rejects invalid MIME type', async () => {
@@ -240,8 +246,9 @@ describe('Referrals API', () => {
     it('returns paginated documents', async () => {
       vi.mocked(prisma.referralDocument.findMany).mockResolvedValue([mockReferralDocument]);
       vi.mocked(prisma.referralDocument.count).mockResolvedValue(1);
-      vi.mocked(s3.getDownloadUrl).mockResolvedValue({
-        url: 'https://s3.example.com/download',
+      vi.mocked(supabaseStorage.generateDownloadUrl).mockResolvedValue({
+        signedUrl: 'https://storage.example.com/download',
+        storagePath: 'test',
         expiresAt: new Date(),
       });
 
@@ -266,8 +273,9 @@ describe('Referrals API', () => {
   describe('GET /api/referrals/:id - Get document', () => {
     it('returns document with download URL', async () => {
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
-      vi.mocked(s3.getDownloadUrl).mockResolvedValue({
-        url: 'https://s3.example.com/download',
+      vi.mocked(supabaseStorage.generateDownloadUrl).mockResolvedValue({
+        signedUrl: 'https://storage.example.com/download',
+        storagePath: 'test',
         expiresAt: new Date(),
       });
 
@@ -277,7 +285,7 @@ describe('Referrals API', () => {
 
       expect(response.status).toBe(200);
       expect(body.id).toBe(mockReferralDocument.id);
-      expect(body.downloadUrl).toBe('https://s3.example.com/download');
+      expect(body.downloadUrl).toBe('https://storage.example.com/download');
     });
 
     it('returns 404 for non-existent document', async () => {
@@ -304,7 +312,7 @@ describe('Referrals API', () => {
   describe('DELETE /api/referrals/:id - Delete document', () => {
     it('deletes document and S3 object', async () => {
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument);
-      vi.mocked(s3.deleteObject).mockResolvedValue(undefined);
+      vi.mocked(supabaseStorage.deleteFile).mockResolvedValue(undefined);
       vi.mocked(prisma.referralDocument.delete).mockResolvedValue(mockReferralDocument);
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
 
@@ -315,7 +323,7 @@ describe('Referrals API', () => {
 
       // DELETE returns 204 No Content on success
       expect(response.status).toBe(204);
-      expect(s3.deleteObject).toHaveBeenCalledWith(mockReferralDocument.s3Key);
+      expect(supabaseStorage.deleteFile).toHaveBeenCalledWith('clinical-documents', mockReferralDocument.s3Key);
     });
 
     it('prevents deleting applied documents', async () => {
