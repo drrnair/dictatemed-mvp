@@ -2,28 +2,16 @@
 // API endpoints for managing user's practice profile (specialties & subspecialties)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
 import {
   getUserPracticeProfile,
   updateUserPracticeProfile,
-} from '@/domains/specialties/specialty.service';
+  updatePracticeProfileSchema,
+} from '@/domains/specialties';
 
 const log = logger.child({ module: 'practice-profile-api' });
-
-const specialtySelectionSchema = z.object({
-  specialtyId: z.string().uuid().optional(),
-  customSpecialtyId: z.string().uuid().optional(),
-  subspecialtyIds: z.array(z.string().uuid()).optional(),
-  customSubspecialtyIds: z.array(z.string().uuid()).optional(),
-});
-
-const updatePracticeProfileSchema = z.object({
-  clinicianRole: z.enum(['MEDICAL', 'NURSING', 'ALLIED_HEALTH']).optional(),
-  specialties: z.array(specialtySelectionSchema),
-});
 
 /**
  * GET /api/user/practice-profile

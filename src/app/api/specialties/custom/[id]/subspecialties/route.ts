@@ -48,7 +48,7 @@ export async function GET(request: NextRequest, context: RouteParams) {
       includeCustom: searchParams.get('includeCustom') ?? undefined,
     };
 
-    const parsed = searchQuerySchema.safeParse(queryInput);
+    const parsed = subspecialtiesApiQuerySchema.safeParse(queryInput);
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Invalid query parameters', details: parsed.error.format() },
