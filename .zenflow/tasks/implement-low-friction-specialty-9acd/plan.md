@@ -321,6 +321,19 @@ Created comprehensive technical specification in `spec.md` covering:
 - TypeScript typecheck passes
 - ESLint passes
 
+**Review Fixes Applied**:
+- Created `src/app/api/specialties/custom/[id]/subspecialties/route.ts`:
+  - API endpoint for fetching subspecialties for custom specialties
+  - Validates custom specialty exists and belongs to user (403 for unauthorized access)
+  - Uses `getSubspecialtiesForSpecialty` service with `customSpecialtyId`
+- Removed unused `ChevronDown` import from SubspecialtyPanel.tsx
+- Added `booleanString` helper to `src/lib/validation.ts` for proper query parameter parsing
+- Updated all 3 subspecialty-related endpoints to use shared `booleanString` helper:
+  - `src/app/api/specialties/route.ts`
+  - `src/app/api/specialties/[id]/subspecialties/route.ts`
+  - `src/app/api/specialties/custom/[id]/subspecialties/route.ts`
+- `aria-labelledby` prop added to SpecialtyCombobox for accessibility
+
 ---
 
 ### [x] Step 6: Practice Profile Form Component
