@@ -818,6 +818,151 @@ CustomSubspecialty (user-submitted, pending admin review)
     └── userId, specialtyId, name, description, status
 ```
 
+### API Reference
+
+#### Search Specialties
+
+```
+GET /api/specialties?query=cardio&limit=7&includeCustom=true
+```
+
+Search global specialties and user's custom specialties.
+
+**Query Parameters:**
+- `query` (optional): Search text (matches name and synonyms)
+- `limit` (optional, default: 7): Max results to return
+- `includeCustom` (optional, default: true): Include user's custom specialties
+
+**Response:**
+```json
+{
+  "specialties": [
+    {
+      "id": "uuid",
+      "name": "Cardiology",
+      "slug": "cardiology",
+      "description": "Diagnosis and treatment of heart conditions",
+      "isCustom": false
+    }
+  ]
+}
+```
+
+#### Get Subspecialties for Specialty
+
+```
+GET /api/specialties/:id/subspecialties?query=&limit=10&includeCustom=true
+```
+
+**Response:**
+```json
+{
+  "specialty": { "id": "uuid", "name": "Cardiology" },
+  "subspecialties": [
+    {
+      "id": "uuid",
+      "name": "Interventional Cardiology",
+      "slug": "interventional-cardiology",
+      "isCustom": false
+    }
+  ]
+}
+```
+
+#### Create Custom Specialty
+
+```
+POST /api/specialties/custom
+Content-Type: application/json
+
+{
+  "name": "Sports Cardiology",
+  "region": "AU",           // optional
+  "notes": "Focus on athletes"  // optional
+}
+```
+
+**Response:**
+```json
+{
+  "customSpecialty": {
+    "id": "uuid",
+    "name": "Sports Cardiology",
+    "status": "PENDING"
+  }
+}
+```
+
+#### Create Custom Subspecialty
+
+```
+POST /api/subspecialties/custom
+Content-Type: application/json
+
+{
+  "name": "Cardiac Genetics",
+  "specialtyId": "uuid",    // either specialtyId or customSpecialtyId required
+  "description": "optional"
+}
+```
+
+#### Get Practice Profile
+
+```
+GET /api/user/practice-profile
+```
+
+**Response:**
+```json
+{
+  "userId": "uuid",
+  "clinicianRole": "MEDICAL",
+  "specialties": [
+    {
+      "specialtyId": "uuid",
+      "name": "Cardiology",
+      "isCustom": false,
+      "subspecialties": [
+        {
+          "subspecialtyId": "uuid",
+          "name": "Interventional Cardiology",
+          "isCustom": false
+        }
+      ]
+    }
+  ],
+  "updatedAt": "2025-01-15T10:30:00Z"
+}
+```
+
+#### Update Practice Profile
+
+```
+PUT /api/user/practice-profile
+Content-Type: application/json
+
+{
+  "clinicianRole": "MEDICAL",
+  "specialties": [
+    {
+      "specialtyId": "uuid",
+      "subspecialtyIds": ["uuid1", "uuid2"],
+      "customSubspecialtyIds": []
+    }
+  ]
+}
+```
+
+#### Complete Onboarding
+
+```
+POST /api/user/onboarding/complete
+```
+
+Marks onboarding as complete without saving a practice profile (for "Skip" action).
+
+---
+
 ### Seed Data Sources
 
 The specialty taxonomy is seeded from recognized medical specialty boards:
@@ -947,6 +1092,22 @@ Users can add custom specialties/subspecialties during onboarding:
 3. Creates `CustomSpecialty` with `status = PENDING`
 4. Immediately usable for that clinician
 5. Queued for admin review (future feature)
+
+**Approval Fields (for future admin UI):**
+
+The `CustomSpecialty` and `CustomSubspecialty` models include fields for tracking admin approval:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `PENDING` \| `APPROVED` \| `REJECTED` | Admin review status |
+| `approvedSpecialtyId` | `String?` | If approved, links to the promoted `MedicalSpecialty` |
+| `approvedSubspecialtyId` | `String?` | If approved, links to the promoted `MedicalSubspecialty` |
+
+When an admin approves a custom entry:
+1. Create a new `MedicalSpecialty` or `MedicalSubspecialty` from the custom entry
+2. Set `approvedSpecialtyId` / `approvedSubspecialtyId` to link to the new global entry
+3. Update `status` to `APPROVED`
+4. Existing users keep their custom entry links (no data migration needed)
 
 ### UUID Scheme
 
