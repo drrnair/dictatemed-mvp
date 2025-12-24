@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Route } from 'next';
 import { Check } from 'lucide-react';
 import { SocialAuthButton } from './SocialAuthButton';
 
@@ -61,11 +62,11 @@ export function SignupForm() {
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
           By signing up, you agree to our{' '}
-          <Link href="/terms" className="underline hover:text-foreground">
+          <Link href={'/terms' as Route} className="underline hover:text-foreground">
             Terms
           </Link>{' '}
           and{' '}
-          <Link href="/privacy" className="underline hover:text-foreground">
+          <Link href={'/privacy' as Route} className="underline hover:text-foreground">
             Privacy Policy
           </Link>
         </p>

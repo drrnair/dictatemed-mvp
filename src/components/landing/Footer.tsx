@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Route } from 'next';
 import { Container } from '@/components/shared/Container';
 
 const footerLinks = {
@@ -75,7 +76,7 @@ export function Footer() {
                 {footerLinks.legal.map((link) => (
                   <li key={link.label}>
                     <Link
-                      href={link.href}
+                      href={link.href as Route}
                       className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                     >
                       {link.label}
