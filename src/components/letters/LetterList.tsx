@@ -21,15 +21,16 @@ interface LetterListProps {
   loading?: boolean;
 }
 
+// Updated status config with new semantic variants
 const statusConfig: Record<
   LetterStatus,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+  { label: string; variant: 'default' | 'secondary' | 'pending' | 'approved' | 'error' | 'outline' }
 > = {
   GENERATING: { label: 'Generating', variant: 'default' },
-  DRAFT: { label: 'Draft', variant: 'secondary' },
-  IN_REVIEW: { label: 'In Review', variant: 'outline' },
-  APPROVED: { label: 'Approved', variant: 'default' },
-  FAILED: { label: 'Failed', variant: 'destructive' },
+  DRAFT: { label: 'Draft', variant: 'pending' },
+  IN_REVIEW: { label: 'In Review', variant: 'pending' },
+  APPROVED: { label: 'Approved', variant: 'approved' },
+  FAILED: { label: 'Failed', variant: 'error' },
 };
 
 const letterTypeLabels: Record<string, string> = {
