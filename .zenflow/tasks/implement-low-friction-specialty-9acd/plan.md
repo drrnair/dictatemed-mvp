@@ -133,7 +133,7 @@ Created comprehensive technical specification in `spec.md` covering:
 
 ---
 
-### [ ] Step 3: Specialty Domain Types & Service
+### [x] Step 3: Specialty Domain Types & Service
 <!-- chat-id: 7e67d038-e512-461b-844e-fbd935be991c -->
 
 **Goal**: Create type definitions and business logic for specialty management.
@@ -161,6 +161,31 @@ Created comprehensive technical specification in `spec.md` covering:
 - `src/domains/specialties/specialty.types.ts` (create)
 - `src/domains/specialties/specialty.service.ts` (create)
 - `src/domains/specialties/index.ts` (create)
+
+**Completed**:
+- Created `src/domains/specialties/specialty.types.ts` with:
+  - `SpecialtyOption` and `CustomSpecialtyOption` interfaces for type-ahead display
+  - `SubspecialtyOption` and `CustomSubspecialtyOption` interfaces
+  - `AnySpecialtyOption` and `AnySubspecialtyOption` union types
+  - `PracticeProfile` interface with selected specialties/subspecialties
+  - `SelectedSpecialty` and `SelectedSubspecialty` for profile representation
+  - Input types: `CreateCustomSpecialtyInput`, `CreateCustomSubspecialtyInput`, `UpdatePracticeProfileInput`
+  - Query types: `SpecialtySearchOptions`, `SubspecialtySearchOptions`
+  - Result types for all operations
+- Created `src/domains/specialties/specialty.service.ts` with:
+  - `searchSpecialties()` - search with synonym matching and relevance sorting
+  - `getSpecialtyById()`, `getAllSpecialties()`, `getSpecialtyBySlug()`
+  - `getSubspecialtiesForSpecialty()` - with optional query filtering
+  - `getSubspecialtyById()`
+  - `createCustomSpecialty()` - with duplicate detection
+  - `createCustomSubspecialty()` - with validation and duplicate detection
+  - `getUserPracticeProfile()` - builds complete profile with nested subspecialties
+  - `updateUserPracticeProfile()` - transaction-based upsert
+  - `hasCompletedPracticeProfile()` - for onboarding check
+  - `getUserSpecialtyIds()`, `getUserSubspecialtyIds()` - for quick lookups
+  - `getSuggestedSubspecialties()` - for UX hints
+- Created `src/domains/specialties/index.ts` for public exports
+- TypeScript typecheck passes
 
 ---
 

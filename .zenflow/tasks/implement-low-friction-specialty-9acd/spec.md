@@ -28,7 +28,7 @@ This task is complex because:
 - Vitest + React Testing Library for tests
 
 **Relevant Existing Code**:
-- `prisma/schema.prisma` - Current `Subspecialty` enum (lines 476-484)
+- `prisma/schema.prisma` - Current `Subspecialty` enum (legacy cardiology types)
 - `src/domains/letters/templates/template.types.ts` - Current subspecialty types
 - `src/app/(dashboard)/onboarding/page.tsx` - Current onboarding (grid selection)
 - `src/app/api/user/subspecialties/route.ts` - Current subspecialties API
@@ -49,16 +49,17 @@ model MedicalSpecialty {
   id          String   @id @default(uuid())
   name        String   @unique  // e.g., "Cardiology"
   slug        String   @unique  // e.g., "cardiology"
-  description String?
-  synonyms    Json?    // e.g., ["cardiologist", "heart doctor"]
+  description String?  @db.Text
+  synonyms    Json     @default("[]")  // e.g., ["cardiologist", "cardiac medicine"]
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  subspecialties       MedicalSubspecialty[]
-  clinicianSpecialties ClinicianSpecialty[]
-  customSubspecialties CustomSubspecialty[]
+  subspecialties         MedicalSubspecialty[]
+  clinicianSpecialties   ClinicianSpecialty[]
+  customSubspecialties   CustomSubspecialty[]
 
+  @@index([active])
   @@map("medical_specialties")
 }
 
@@ -66,17 +67,19 @@ model MedicalSpecialty {
 model MedicalSubspecialty {
   id           String           @id @default(uuid())
   specialtyId  String
-  specialty    MedicalSpecialty @relation(fields: [specialtyId], references: [id])
+  specialty    MedicalSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
   name         String           // e.g., "Interventional Cardiology"
-  slug         String           @unique
-  description  String?
+  slug         String           // e.g., "interventional-cardiology"
+  description  String?          @db.Text
   active       Boolean          @default(true)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
   clinicianSubspecialties ClinicianSubspecialty[]
 
-  @@unique([specialtyId, name])
+  @@unique([specialtyId, slug])
+  @@index([specialtyId])
+  @@index([active])
   @@map("medical_subspecialties")
 }
 
@@ -86,11 +89,12 @@ model ClinicianSpecialty {
   userId      String
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   specialtyId String
-  specialty   MedicalSpecialty @relation(fields: [specialtyId], references: [id])
+  specialty   MedicalSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
   createdAt   DateTime         @default(now())
 
   @@unique([userId, specialtyId])
   @@index([userId])
+  @@index([specialtyId])
   @@map("clinician_specialties")
 }
 
@@ -100,11 +104,12 @@ model ClinicianSubspecialty {
   userId          String
   user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   subspecialtyId  String
-  subspecialty    MedicalSubspecialty @relation(fields: [subspecialtyId], references: [id])
+  subspecialty    MedicalSubspecialty @relation(fields: [subspecialtyId], references: [id], onDelete: Cascade)
   createdAt       DateTime            @default(now())
 
   @@unique([userId, subspecialtyId])
   @@index([userId])
+  @@index([subspecialtyId])
   @@map("clinician_subspecialties")
 }
 
@@ -114,11 +119,17 @@ model CustomSpecialty {
   userId    String
   user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
-  region    String?              // e.g., "AU", "US"
-  notes     String?
+  region    String?              // e.g., "AU", "US" for regional specialties
+  notes     String?              @db.Text
   status    CustomRequestStatus  @default(PENDING)
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
+
+  // If approved, link to the created MedicalSpecialty
+  approvedSpecialtyId String?
+
+  // Custom subspecialties linked to this custom specialty
+  customSubspecialties CustomSubspecialty[]
 
   @@index([userId])
   @@index([status])
@@ -130,16 +141,24 @@ model CustomSubspecialty {
   id          String               @id @default(uuid())
   userId      String
   user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  specialtyId String?              // Nullable if parent specialty is also custom
-  specialty   MedicalSpecialty?    @relation(fields: [specialtyId], references: [id])
   name        String
-  description String?
+  description String?              @db.Text
   status      CustomRequestStatus  @default(PENDING)
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
 
+  // Can be linked to either a global specialty or a custom specialty
+  specialtyId       String?
+  specialty         MedicalSpecialty? @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  customSpecialtyId String?
+  customSpecialty   CustomSpecialty?  @relation(fields: [customSpecialtyId], references: [id], onDelete: Cascade)
+
+  // If approved, link to the created MedicalSubspecialty
+  approvedSubspecialtyId String?
+
   @@index([userId])
   @@index([specialtyId])
+  @@index([customSpecialtyId])
   @@index([status])
   @@map("custom_subspecialties")
 }
@@ -426,8 +445,39 @@ npx prisma db seed      # Run seed data
 
 ```json
 {
-  "cmdk": "^0.2.0"  // Command palette component for type-ahead
+  "cmdk": "^1.0.0"  // Command palette component for type-ahead
 }
 ```
 
 Or use Radix Combobox pattern with custom implementation.
+
+---
+
+## Additional Implementation Notes
+
+### Search Strategy for Synonyms
+
+The specialty search uses a two-phase approach:
+1. **Direct match**: PostgreSQL `ILIKE` on `name` field for fast prefix matching
+2. **Synonym match**: JSON array contains query using `@>` operator on the `synonyms` field
+
+For higher volume, consider adding PostgreSQL full-text search (tsvector/tsquery) or a GIN index on synonyms.
+
+### Error Handling for Custom Specialty Creation
+
+When custom specialty creation fails:
+1. Show an unobtrusive toast notification with the error
+2. Keep the user's typed text in the input (don't clear it)
+3. Show a "Retry" link in the toast that re-attempts the API call
+4. Allow the user to continue with other selections while retrying
+
+### Accessibility Requirements
+
+The combobox components should implement:
+- `role="combobox"` on the input
+- `aria-expanded` to indicate dropdown state
+- `aria-activedescendant` for keyboard navigation
+- `role="listbox"` on the dropdown
+- `role="option"` on each suggestion
+- Arrow key navigation with visual focus indicator
+- Screen reader announcements for selection changes
