@@ -35,7 +35,8 @@ Created comprehensive technical specification in `spec.md` covering:
 
 ---
 
-### [ ] Step 1: Database Schema & Migration
+### [x] Step 1: Database Schema & Migration
+<!-- chat-id: 4b48b2b0-570e-45ad-b49f-de7386c30bb3 -->
 
 **Goal**: Add new tables for medical specialties taxonomy and custom entries.
 
@@ -65,6 +66,20 @@ Created comprehensive technical specification in `spec.md` covering:
 - `npx prisma validate` passes
 - Migration applies cleanly to dev database
 - `npm run typecheck` passes
+
+**Completed**:
+- Added `ClinicianRole` enum (MEDICAL, NURSING, ALLIED_HEALTH)
+- Added `CustomRequestStatus` enum (PENDING, APPROVED, REJECTED)
+- Added `MedicalSpecialty` model with name, slug, description, synonyms, active fields
+- Added `MedicalSubspecialty` model linked to specialty with name, slug, description, active fields
+- Added `ClinicianSpecialty` junction table (User <-> MedicalSpecialty)
+- Added `ClinicianSubspecialty` junction table (User <-> MedicalSubspecialty)
+- Added `CustomSpecialty` model for user-submitted custom specialties (pending admin review)
+- Added `CustomSubspecialty` model for user-submitted custom subspecialties
+- Updated `User` model with `clinicianRole` field and relations to new tables
+- Updated test mocks to include `clinicianRole` field
+- Prisma schema validates successfully
+- TypeScript typecheck passes
 
 ---
 

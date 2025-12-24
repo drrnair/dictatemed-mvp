@@ -42,7 +42,10 @@ model User {
   updatedAt    DateTime  @updatedAt
   lastLoginAt  DateTime?
 
-  // Subspecialty interests for template recommendations
+  // Clinician role for specialty-based onboarding (Medical, Nursing, Allied Health)
+  clinicianRole ClinicianRole @default(MEDICAL)
+
+  // Legacy: Subspecialty interests for template recommendations (being replaced by ClinicianSubspecialty)
   subspecialties String[] @default([]) // Array of Subspecialty enum values
 
   recordings          Recording[]
@@ -59,12 +62,32 @@ model User {
   styleProfiles    StyleProfile[]
   styleSeedLetters StyleSeedLetter[]
 
+  // Medical specialty selections
+  clinicianSpecialties    ClinicianSpecialty[]
+  clinicianSubspecialties ClinicianSubspecialty[]
+  customSpecialties       CustomSpecialty[]
+  customSubspecialties    CustomSubspecialty[]
+
   @@map("users")
 }
 
 enum UserRole {
   ADMIN
   SPECIALIST
+}
+
+// Clinician role for specialty-based onboarding
+enum ClinicianRole {
+  MEDICAL
+  NURSING
+  ALLIED_HEALTH
+}
+
+// Status for custom specialty/subspecialty requests
+enum CustomRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // ============ Patients ============
@@ -468,6 +491,129 @@ model StyleAnalyticsAggregate {
 
   @@unique([subspecialty, period])
   @@map("style_analytics_aggregates")
+}
+
+// ============ Medical Specialties Taxonomy ============
+
+// Global medical specialties (seeded from ABMS, AHPRA, etc.)
+model MedicalSpecialty {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g., "Cardiology"
+  slug        String   @unique // e.g., "cardiology"
+  description String?  @db.Text
+  synonyms    Json     @default("[]") // e.g., ["cardiologist", "cardiac medicine"]
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  subspecialties         MedicalSubspecialty[]
+  clinicianSpecialties   ClinicianSpecialty[]
+  customSubspecialties   CustomSubspecialty[]
+
+  @@index([active])
+  @@map("medical_specialties")
+}
+
+// Subspecialties within a medical specialty
+model MedicalSubspecialty {
+  id          String           @id @default(uuid())
+  specialtyId String
+  specialty   MedicalSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  name        String           // e.g., "Interventional cardiology"
+  slug        String           // e.g., "interventional-cardiology"
+  description String?          @db.Text
+  active      Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  clinicianSubspecialties ClinicianSubspecialty[]
+
+  @@unique([specialtyId, slug])
+  @@index([specialtyId])
+  @@index([active])
+  @@map("medical_subspecialties")
+}
+
+// Junction table: User's selected specialties
+model ClinicianSpecialty {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialtyId String
+  specialty   MedicalSpecialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+
+  @@unique([userId, specialtyId])
+  @@index([userId])
+  @@index([specialtyId])
+  @@map("clinician_specialties")
+}
+
+// Junction table: User's selected subspecialties
+model ClinicianSubspecialty {
+  id             String              @id @default(uuid())
+  userId         String
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subspecialtyId String
+  subspecialty   MedicalSubspecialty @relation(fields: [subspecialtyId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+
+  @@unique([userId, subspecialtyId])
+  @@index([userId])
+  @@index([subspecialtyId])
+  @@map("clinician_subspecialties")
+}
+
+// Custom specialty requests from clinicians (pending admin review)
+model CustomSpecialty {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  region    String?             // e.g., "AU", "US" for regional specialties
+  notes     String?             @db.Text
+  status    CustomRequestStatus @default(PENDING)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  // If approved, link to the created MedicalSpecialty
+  approvedSpecialtyId String?
+
+  // Custom subspecialties linked to this custom specialty
+  customSubspecialties CustomSubspecialty[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("custom_specialties")
+}
+
+// Custom subspecialty requests from clinicians (pending admin review)
+model CustomSubspecialty {
+  id          String              @id @default(uuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?             @db.Text
+  status      CustomRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  // Can be linked to either a global specialty or a custom specialty
+  specialtyId       String?
+  specialty         MedicalSpecialty? @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  customSpecialtyId String?
+  customSpecialty   CustomSpecialty?  @relation(fields: [customSpecialtyId], references: [id], onDelete: Cascade)
+
+  // If approved, link to the created MedicalSubspecialty
+  approvedSubspecialtyId String?
+
+  @@index([userId])
+  @@index([specialtyId])
+  @@index([customSpecialtyId])
+  @@index([status])
+  @@map("custom_subspecialties")
 }
 
 // ============ Letter Templates ============
