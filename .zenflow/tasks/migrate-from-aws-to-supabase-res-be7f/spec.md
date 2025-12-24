@@ -59,7 +59,8 @@ This is a complex migration involving multiple AWS services, PHI (Protected Heal
 **S3 Key Patterns Currently Used**:
 - Audio: `recordings/{userId}/{recordingId}.webm`
 - Documents: `documents/{userId}/{documentId}.{ext}`
-- Assets: `assets/{practiceId}/{type}/{userId}-{filename}`
+- Signatures: `signatures/{userId}/{timestamp}.{ext}` (via `/api/user/signature`)
+- Letterheads: `assets/{practiceId}/letterhead/{timestamp}.{ext}` (via `/api/practice/letterhead`)
 
 **PHI Data Flows**:
 1. **Audio Recordings**: Consultation audio (ambient/dictation) → S3 → Deepgram (via presigned URL) → Transcript stored in DB
@@ -251,7 +252,11 @@ CREATE POLICY "users_own_data" ON recordings
 | `src/domains/documents/extraction.service.ts` | Update to use Supabase signed URLs for AI Vision |
 | `src/domains/letters/approval.service.ts` | Add email sending on approval |
 | `src/app/api/recordings/[id]/upload-url/route.ts` | Use Supabase storage |
+| `src/app/api/recordings/[id]/transcribe/route.ts` | Use Supabase signed URLs for Deepgram |
 | `src/app/api/documents/[id]/upload-url/route.ts` | Use Supabase storage |
+| `src/app/api/user/signature/route.ts` | Replace S3 with Supabase for signature upload/delete |
+| `src/app/api/practice/letterhead/route.ts` | Replace S3 with Supabase for letterhead upload/delete |
+| `src/app/api/user/account/route.ts` | Replace S3 deleteObject with Supabase storage delete |
 | `prisma/schema.prisma` | Add new fields, new tables |
 | `package.json` | Remove S3 SDK, add Supabase/Resend |
 | `.env.example` | Update environment variables |

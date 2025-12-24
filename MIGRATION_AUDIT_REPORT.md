@@ -24,15 +24,24 @@
 | `src/domains/recording/transcription.service.ts` | `getDownloadUrl` | Audio URL for Deepgram |
 | `src/domains/documents/document.service.ts` | `getUploadUrl`, `getDownloadUrl`, `deleteObject` | Clinical documents |
 
-### 1.3 API Routes Using S3 (Indirectly via Services)
+### 1.3 API Routes Using S3 Directly
+
+| Route | S3 Functions Imported | Purpose |
+|-------|----------------------|---------|
+| `src/app/api/recordings/[id]/upload-url/route.ts` | `getUploadUrl` | Get presigned upload URL for audio |
+| `src/app/api/recordings/[id]/transcribe/route.ts` | `getDownloadUrl` | Get audio URL for Deepgram submission |
+| `src/app/api/documents/[id]/upload-url/route.ts` | `getUploadUrl` | Get presigned upload URL for documents |
+| `src/app/api/user/signature/route.ts` | `getUploadUrl`, `deleteObject`, `getDownloadUrl` | User signature upload/delete/display |
+| `src/app/api/practice/letterhead/route.ts` | `getUploadUrl`, `deleteObject` | Practice letterhead upload/delete (admin only) |
+| `src/app/api/user/account/route.ts` | `deleteObject` | Delete user assets on account deletion |
+
+### 1.4 API Routes Using S3 Indirectly (via Services)
 
 | Route | Purpose |
 |-------|---------|
-| `src/app/api/recordings/route.ts` | Create recording session |
-| `src/app/api/recordings/[id]/upload-url/route.ts` | Get presigned upload URL for audio |
-| `src/app/api/recordings/[id]/upload/route.ts` | Confirm audio upload |
-| `src/app/api/documents/route.ts` | Create document session |
-| `src/app/api/documents/[id]/upload-url/route.ts` | Get presigned upload URL for documents |
+| `src/app/api/recordings/route.ts` | Create recording session (via recording.service) |
+| `src/app/api/recordings/[id]/upload/route.ts` | Confirm audio upload (via recording.service) |
+| `src/app/api/documents/route.ts` | Create document session (via document.service) |
 
 ---
 
@@ -89,7 +98,9 @@ User Device → [S3 Upload URL] → S3 Bucket → [Referenced in letters]
 - **Type**: Signatures, letterheads
 - **Content**: Physician signatures, practice branding
 - **Sensitivity**: LOW - No patient data
-- **Current Storage Key**: `assets/{practiceId}/{type}/{userId}-{filename}`
+- **Current Storage Keys**:
+  - Signatures: `signatures/{userId}/{timestamp}.{ext}` (see `src/app/api/user/signature/route.ts:51`)
+  - Letterheads: `assets/{practiceId}/letterhead/{timestamp}.{ext}` (see `src/app/api/practice/letterhead/route.ts:43`)
 
 ### 3.4 Letter Generation Flow (Uses S3 indirectly)
 

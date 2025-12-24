@@ -45,9 +45,10 @@ Create the Supabase storage infrastructure with PHI-aware design.
 1. Add `@supabase/supabase-js` to dependencies
 2. Create `src/infrastructure/supabase/client.ts` - Supabase client singleton
 3. Create Supabase storage buckets (in Supabase dashboard or via SQL):
-   - `audio_recordings` (private)
-   - `clinical_documents` (private)
-4. Create initial storage RLS policies
+   - `audio_recordings` (private) - for consultation audio
+   - `clinical_documents` (private) - for medical PDFs/images
+   - `user_assets` (private) - for signatures and letterheads
+4. Create initial storage RLS policies for all three buckets
 
 **Verification**:
 - `npm install` succeeds
@@ -69,7 +70,9 @@ Create the storage service layer to replace S3 operations.
 2. Add path generation helpers:
    - `generateAudioPath(userId, consultationId, mode)`
    - `generateDocumentPath(userId, patientId, docType, filename)`
-3. Add content type validation (audio: webm/mp4/wav, documents: pdf/png/jpeg)
+   - `generateSignaturePath(userId, filename)`
+   - `generateLetterheadPath(practiceId, filename)`
+3. Add content type validation (audio: webm/mp4/wav, documents: pdf/png/jpeg, images: png/jpeg/gif/webp)
 4. Add audit logging integration for all PHI access
 
 **Verification**:
@@ -128,7 +131,33 @@ Replace S3 usage in document service with Supabase.
 
 ---
 
-### [ ] Step 5: Implement Resend Email Service
+### [ ] Step 5: Migrate User Assets (Signatures & Letterheads)
+
+Replace S3 usage for user assets with Supabase.
+
+**Tasks**:
+1. Update `src/app/api/user/signature/route.ts`:
+   - Replace S3 imports with Supabase storage service
+   - Update path convention: `signatures/{userId}/{timestamp}.{ext}` → `user_assets` bucket
+   - Update upload, download, and delete operations
+2. Update `src/app/api/practice/letterhead/route.ts`:
+   - Replace S3 imports with Supabase storage service
+   - Update path convention: `letterheads/{practiceId}/{timestamp}.{ext}` → `user_assets` bucket
+   - Update upload and delete operations
+3. Update `src/app/api/user/account/route.ts`:
+   - Replace S3 `deleteObject` with Supabase storage delete
+4. Add RLS policy for `user_assets` bucket:
+   - Signatures: user can only access their own
+   - Letterheads: practice members can access their practice's letterhead
+
+**Verification**:
+- Integration test: upload signature → retrieve → delete
+- Integration test: upload letterhead (admin only) → retrieve → delete
+- Test non-admin cannot upload/delete letterhead
+
+---
+
+### [ ] Step 6: Implement Resend Email Service
 
 Add email capability for sending approved letters.
 
@@ -154,7 +183,7 @@ Add email capability for sending approved letters.
 
 ---
 
-### [ ] Step 6: Strengthen RLS Policies
+### [ ] Step 7: Strengthen RLS Policies
 
 Enable and test Row Level Security across all PHI tables.
 
@@ -169,6 +198,7 @@ Enable and test Row Level Security across all PHI tables.
 2. Create Supabase storage RLS policies:
    - `audio_recordings` bucket - user-scoped
    - `clinical_documents` bucket - user-scoped
+   - `user_assets` bucket - user-scoped for signatures, practice-scoped for letterheads
 3. Create SQL test script to verify:
    - User A cannot access User B's data
    - Practice admin sees aggregates only (if applicable)
@@ -179,7 +209,7 @@ Enable and test Row Level Security across all PHI tables.
 
 ---
 
-### [ ] Step 7: Remove AWS S3 Dependencies
+### [ ] Step 8: Remove AWS S3 Dependencies
 
 Clean up after migration is complete and tested.
 
@@ -206,25 +236,27 @@ Clean up after migration is complete and tested.
 
 ---
 
-### [ ] Step 8: End-to-End Smoke Test
+### [ ] Step 9: End-to-End Smoke Test
 
 Verify complete workflow with real data.
 
 **Tasks**:
 1. Login as specialist user
-2. Create new consultation with patient
-3. Record audio (dictation or ambient)
-4. Verify audio uploads to Supabase
-5. Start transcription, verify audio URL works for Deepgram
-6. After transcription completes, verify audio deleted from storage
-7. Upload clinical PDF
-8. Verify document processing works (AI extraction)
-9. Generate letter
-10. Verify source-anchored documentation works
-11. Approve letter
-12. Send letter via email to test address
-13. Verify email received with PDF attachment
-14. Check audit logs for complete trail
+2. Upload a signature image, verify it appears in profile
+3. (As admin) Upload letterhead, verify it appears in practice settings
+4. Create new consultation with patient
+5. Record audio (dictation or ambient)
+6. Verify audio uploads to Supabase
+7. Start transcription, verify audio URL works for Deepgram
+8. After transcription completes, verify audio deleted from storage
+9. Upload clinical PDF
+10. Verify document processing works (AI extraction)
+11. Generate letter (should include signature/letterhead)
+12. Verify source-anchored documentation works
+13. Approve letter
+14. Send letter via email to test address
+15. Verify email received with PDF attachment
+16. Check audit logs for complete trail
 
 **Verification**:
 - All steps complete without errors
@@ -234,7 +266,7 @@ Verify complete workflow with real data.
 
 ---
 
-### [ ] Step 9: Documentation and Cleanup
+### [ ] Step 10: Documentation and Cleanup
 
 Final documentation and code quality.
 
@@ -257,10 +289,10 @@ Final documentation and code quality.
 
 ## Summary
 
-**Total Steps**: 9 (after Technical Specification)
+**Total Steps**: 10 (after Technical Specification)
 **Estimated Files to Create**: ~10-12
-**Estimated Files to Modify**: ~15-20
+**Estimated Files to Modify**: ~18-22 (including API routes for signatures/letterheads)
 **Estimated Files to Delete**: 3
 
 This plan follows the task requirements to work incrementally:
-`audit → audio migration → document migration → email → cleanup → RLS tightening → smoke test`
+`audit → audio migration → document migration → user assets migration → email → cleanup → RLS tightening → smoke test`
