@@ -294,7 +294,7 @@ export async function uploadFile(
   }
 
   // Get file size
-  const size = file instanceof Buffer ? file.length : file.size;
+  const size = Buffer.isBuffer(file) ? file.length : file.size;
 
   return {
     storagePath: path,

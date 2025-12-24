@@ -69,8 +69,7 @@ Create the Supabase storage infrastructure with PHI-aware design.
 
 ---
 
-### [ ] Step 2: Implement Supabase Storage Service
-<!-- chat-id: 8a32e8f3-5aa9-4149-9ff4-31f7075587c7 -->
+### [x] Step 2: Implement Supabase Storage Service
 
 Create the storage service layer to replace S3 operations.
 
@@ -88,9 +87,25 @@ Create the storage service layer to replace S3 operations.
 3. Add content type validation (audio: webm/mp4/wav, documents: pdf/png/jpeg, images: png/jpeg/gif/webp)
 4. Add audit logging integration for all PHI access
 
+**Completed**:
+- ✅ Created `src/infrastructure/supabase/storage.service.ts` with:
+  - Path generation helpers for audio, documents, signatures, and letterheads
+  - Content type validation for audio (webm/mp4/wav/mpeg/ogg), documents (pdf/png/jpeg/tiff), images (png/jpeg/gif/webp)
+  - File size validation
+  - Signed URL generation for uploads and downloads
+  - File operations: upload, delete, deleteFiles, getFileMetadata, fileExists
+  - Audit logging integration via `createStorageAuditLog` and `getDownloadUrlWithAudit`
+  - Convenience methods for each resource type (audio, documents, signatures, letterheads)
+- ✅ Updated `src/infrastructure/supabase/index.ts` with all new exports
+- ✅ Created `tests/unit/infrastructure/supabase/storage.service.test.ts` with 48 unit tests
+- ✅ `npm run typecheck` passes
+- ✅ `npm run lint` passes
+- ✅ `npm run build` succeeds
+- ✅ All unit tests pass
+
 **Verification**:
-- Unit tests for path generation
-- Integration test: upload → download → delete cycle
+- Unit tests for path generation ✅
+- Integration test: upload → download → delete cycle (will be tested in Step 3)
 
 ---
 
