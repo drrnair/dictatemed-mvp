@@ -119,8 +119,18 @@ export async function DELETE() {
       // Delete style edits
       await tx.styleEdit.deleteMany({ where: { userId } });
 
+      // Delete style profiles and seed letters
+      await tx.styleProfile.deleteMany({ where: { userId } });
+      await tx.styleSeedLetter.deleteMany({ where: { userId } });
+
       // Delete template preferences
       await tx.userTemplatePreference.deleteMany({ where: { userId } });
+
+      // Delete sent emails
+      await tx.sentEmail.deleteMany({ where: { userId } });
+
+      // Delete letter sends
+      await tx.letterSend.deleteMany({ where: { senderId: userId } });
 
       // Delete letters
       await tx.letter.deleteMany({ where: { userId } });
@@ -131,8 +141,17 @@ export async function DELETE() {
       // Delete recordings
       await tx.recording.deleteMany({ where: { userId } });
 
+      // Delete referral documents
+      await tx.referralDocument.deleteMany({ where: { userId } });
+
       // Delete consultations
       await tx.consultation.deleteMany({ where: { userId } });
+
+      // Delete medical specialty selections
+      await tx.clinicianSubspecialty.deleteMany({ where: { userId } });
+      await tx.clinicianSpecialty.deleteMany({ where: { userId } });
+      await tx.customSubspecialty.deleteMany({ where: { userId } });
+      await tx.customSpecialty.deleteMany({ where: { userId } });
 
       // Finally delete the user
       await tx.user.delete({ where: { id: userId } });
