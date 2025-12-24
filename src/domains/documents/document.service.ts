@@ -132,6 +132,7 @@ function mapFromPrismaDocumentType(type: string | null): DocumentType {
 
 /**
  * Create a new document and get a pre-signed upload URL.
+ * Uses Supabase Storage with PHI-aware path conventions.
  */
 export async function createDocument(
   userId: string,
@@ -139,16 +140,30 @@ export async function createDocument(
 ): Promise<CreateDocumentResult> {
   const log = logger.child({ userId, action: 'createDocument' });
 
+  // Validate content type for clinical documents
+  if (!isValidDocumentType(input.mimeType)) {
+    throw new Error(`Invalid document content type: ${input.mimeType}. Only PDF and image files are allowed.`);
+  }
+
   // Infer type if not provided
   const documentType = input.type ?? inferDocumentType(input.name, input.mimeType);
   const prismaType = mapToPrismaDocumentType(documentType);
+  const storageDocType = toStorageDocumentType(documentType);
 
-  // Generate extension from MIME type
-  const extension = input.mimeType === 'application/pdf' ? 'pdf' : input.mimeType.split('/')[1] ?? 'bin';
+  // Calculate retention date (7 years from now by default)
+  const retentionUntil = new Date();
+  retentionUntil.setDate(retentionUntil.getDate() + DEFAULT_RETENTION_DAYS);
 
-  // Generate S3 key with a temp ID first
-  const tempId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const tempKey = `${DOCUMENT_BUCKET_PATH}/${userId}/${tempId}.${extension}`;
+  // For documents, we need a patientId for the path. Use a placeholder if not provided.
+  const patientIdForPath = input.patientId ?? 'unassigned';
+
+  // Generate Supabase Storage path: {userId}/{patientId}/{docType}/{filename}_{timestamp}.{ext}
+  const storagePath = generateDocumentPath(
+    userId,
+    patientIdForPath,
+    storageDocType,
+    input.name
+  );
 
   // Create document in database
   const document = await prisma.document.create({
@@ -158,33 +173,32 @@ export async function createDocument(
       filename: input.name,
       mimeType: input.mimeType,
       sizeBytes: input.size,
-      s3Key: tempKey,
+      storagePath,
       documentType: prismaType,
       status: 'UPLOADING',
+      retentionUntil,
     },
   });
 
-  log.info('Document created', { documentId: document.id, type: documentType });
+  log.info('Document created', { documentId: document.id, type: documentType, storagePath });
 
-  // Update S3 key with actual document ID
-  const finalKey = `${DOCUMENT_BUCKET_PATH}/${userId}/${document.id}.${extension}`;
-  await prisma.document.update({
-    where: { id: document.id },
-    data: { s3Key: finalKey },
-  });
-
-  // Generate pre-signed upload URL
-  const { url, expiresAt } = await getUploadUrl(finalKey, input.mimeType);
+  // Generate pre-signed upload URL for Supabase Storage
+  const { signedUrl, expiresAt } = await generateUploadUrl(
+    STORAGE_BUCKETS.CLINICAL_DOCUMENTS,
+    storagePath,
+    input.mimeType
+  );
 
   return {
     id: document.id,
-    uploadUrl: url,
+    uploadUrl: signedUrl,
     expiresAt,
   };
 }
 
 /**
  * Confirm that a document has been uploaded and update metadata.
+ * Uses Supabase Storage for document access.
  */
 export async function confirmUpload(
   userId: string,
@@ -206,6 +220,16 @@ export async function confirmUpload(
     throw new Error('Document already uploaded');
   }
 
+  if (!existing.storagePath) {
+    throw new Error('Document has no storage path');
+  }
+
+  // Generate download URL from Supabase Storage
+  const { signedUrl: documentUrl } = await generateDownloadUrl(
+    STORAGE_BUCKETS.CLINICAL_DOCUMENTS,
+    existing.storagePath
+  );
+
   // Update document with upload confirmation
   const document = await prisma.document.update({
     where: { id: documentId },
@@ -215,31 +239,29 @@ export async function confirmUpload(
     },
   });
 
-  log.info('Document upload confirmed', { size: input.size });
+  log.info('Document upload confirmed', { size: input.size, storagePath: existing.storagePath });
 
-  // Create audit log
-  await prisma.auditLog.create({
-    data: {
-      userId,
-      action: 'document.upload',
-      resourceType: 'document',
-      resourceId: documentId,
-      metadata: {
-        name: document.filename,
-        type: document.documentType,
-        size: input.size,
-      },
+  // Create audit log with storage details
+  await createStorageAuditLog({
+    userId,
+    action: 'storage.upload',
+    bucket: STORAGE_BUCKETS.CLINICAL_DOCUMENTS,
+    storagePath: existing.storagePath,
+    resourceType: 'clinical_document',
+    resourceId: documentId,
+    metadata: {
+      name: document.filename,
+      type: document.documentType,
+      size: input.size,
     },
   });
 
-  // Generate download URL
-  const { url } = await getDownloadUrl(document.s3Key);
-
-  return mapDocument(document, url);
+  return mapDocument(document, documentUrl);
 }
 
 /**
  * Get a document by ID.
+ * Returns signed download URL for document if available in Supabase Storage.
  */
 export async function getDocument(
   userId: string,
@@ -253,11 +275,23 @@ export async function getDocument(
     return null;
   }
 
-  // Generate download URL if available
+  // Generate download URL if document is available and not deleted
   let url: string | undefined;
-  if (document.s3Key) {
-    const result = await getDownloadUrl(document.s3Key);
-    url = result.url;
+  if (document.storagePath && !document.deletedAt) {
+    try {
+      const result = await generateDownloadUrl(
+        STORAGE_BUCKETS.CLINICAL_DOCUMENTS,
+        document.storagePath
+      );
+      url = result.signedUrl;
+    } catch (error) {
+      // Log but don't fail if we can't generate a URL
+      logger.warn('Failed to generate document download URL', {
+        documentId,
+        storagePath: document.storagePath,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
   }
 
   return mapDocument(document, url);
@@ -265,6 +299,7 @@ export async function getDocument(
 
 /**
  * List documents for a user with pagination and filters.
+ * Uses Supabase Storage for document access.
  */
 export async function listDocuments(
   userId: string,
@@ -294,13 +329,20 @@ export async function listDocuments(
     prisma.document.count({ where }),
   ]);
 
-  // Generate download URLs
+  // Generate download URLs from Supabase Storage
   const mappedDocuments = await Promise.all(
     documents.map(async (doc) => {
       let url: string | undefined;
-      if (doc.s3Key) {
-        const result = await getDownloadUrl(doc.s3Key);
-        url = result.url;
+      if (doc.storagePath && !doc.deletedAt) {
+        try {
+          const result = await generateDownloadUrl(
+            STORAGE_BUCKETS.CLINICAL_DOCUMENTS,
+            doc.storagePath
+          );
+          url = result.signedUrl;
+        } catch {
+          // Silently skip URL generation failures for list operations
+        }
       }
       return mapDocument(doc, url);
     })
@@ -339,6 +381,7 @@ export async function updateDocumentStatus(
 
 /**
  * Delete a document.
+ * Deletes file from Supabase Storage and removes database record.
  */
 export async function deleteDocument(
   userId: string,
@@ -352,15 +395,27 @@ export async function deleteDocument(
     throw new Error('Document not found');
   }
 
-  // Delete from S3 if uploaded
-  if (document.s3Key) {
+  // Delete from Supabase Storage if it exists and hasn't been deleted
+  if (document.storagePath && !document.deletedAt) {
     try {
-      await deleteObject(document.s3Key);
-      logger.info('Document deleted from S3', { documentId, s3Key: document.s3Key });
+      await deleteFile(STORAGE_BUCKETS.CLINICAL_DOCUMENTS, document.storagePath);
+      logger.info('Document deleted from Supabase Storage', { documentId, storagePath: document.storagePath });
+
+      // Log the deletion for audit purposes
+      await createStorageAuditLog({
+        userId,
+        action: 'storage.delete',
+        bucket: STORAGE_BUCKETS.CLINICAL_DOCUMENTS,
+        storagePath: document.storagePath,
+        resourceType: 'clinical_document',
+        resourceId: documentId,
+        metadata: { reason: 'user_requested' },
+      });
     } catch (error) {
+      // Log but don't fail - we still want to delete the database record
       logger.error(
-        'Failed to delete document from S3',
-        { documentId, s3Key: document.s3Key },
+        'Failed to delete document from Supabase Storage',
+        { documentId, storagePath: document.storagePath },
         error instanceof Error ? error : undefined
       );
     }
@@ -390,6 +445,7 @@ export async function deleteDocument(
 
 /**
  * Get documents for a patient.
+ * Uses Supabase Storage for document access.
  */
 export async function getPatientDocuments(
   userId: string,
@@ -403,9 +459,16 @@ export async function getPatientDocuments(
   return Promise.all(
     documents.map(async (doc) => {
       let url: string | undefined;
-      if (doc.s3Key) {
-        const result = await getDownloadUrl(doc.s3Key);
-        url = result.url;
+      if (doc.storagePath && !doc.deletedAt) {
+        try {
+          const result = await generateDownloadUrl(
+            STORAGE_BUCKETS.CLINICAL_DOCUMENTS,
+            doc.storagePath
+          );
+          url = result.signedUrl;
+        } catch {
+          // Silently skip URL generation failures
+        }
       }
       return mapDocument(doc, url);
     })
@@ -422,7 +485,11 @@ interface PrismaDocument {
   sizeBytes: number;
   documentType: string | null;
   status: string;
-  s3Key: string;
+  s3Key: string | null; // @deprecated - use storagePath
+  storagePath: string | null; // Supabase Storage path
+  retentionUntil: Date | null;
+  deletedAt: Date | null;
+  deletionReason: string | null;
   extractedData: unknown;
   processingError: string | null;
   createdAt: Date;
@@ -442,11 +509,187 @@ function mapDocument(
     size: record.sizeBytes,
     type: mapFromPrismaDocumentType(record.documentType),
     status: record.status as DocumentStatus,
-    s3Key: record.s3Key ?? undefined,
+    s3Key: record.s3Key ?? undefined, // @deprecated
+    storagePath: record.storagePath ?? undefined,
     url,
     extractedData: record.extractedData as ExtractedData | undefined,
     processingError: record.processingError ?? undefined,
+    retentionUntil: record.retentionUntil ?? undefined,
+    deletedAt: record.deletedAt ?? undefined,
+    deletionReason: record.deletionReason ?? undefined,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
+  };
+}
+
+/**
+ * Get the Supabase Storage download URL for a document.
+ * Used by extraction service to submit documents to AI Vision.
+ * Logs access for audit purposes.
+ */
+export async function getDocumentDownloadUrlForAI(documentId: string): Promise<string | null> {
+  const document = await prisma.document.findUnique({
+    where: { id: documentId },
+    select: {
+      id: true,
+      userId: true,
+      storagePath: true,
+      deletedAt: true,
+    },
+  });
+
+  if (!document || !document.storagePath || document.deletedAt) {
+    return null;
+  }
+
+  try {
+    const { signedUrl } = await getDocumentDownloadUrl(
+      document.userId,
+      documentId,
+      document.storagePath,
+      'ai_processing'
+    );
+
+    return signedUrl;
+  } catch (error) {
+    logger.error(
+      'Failed to generate document download URL for AI',
+      { documentId, storagePath: document.storagePath },
+      error instanceof Error ? error : undefined
+    );
+    return null;
+  }
+}
+
+/**
+ * Soft delete a document file from storage after it's no longer needed.
+ * Keeps metadata for audit purposes but removes the actual file.
+ */
+export async function softDeleteDocumentFile(
+  documentId: string,
+  reason: string = 'retention_expired'
+): Promise<void> {
+  const log = logger.child({ documentId, action: 'softDeleteDocumentFile' });
+
+  const document = await prisma.document.findUnique({
+    where: { id: documentId },
+    select: {
+      id: true,
+      userId: true,
+      storagePath: true,
+      deletedAt: true,
+    },
+  });
+
+  if (!document) {
+    log.warn('Document not found for soft delete');
+    return;
+  }
+
+  // Only delete if file exists and hasn't already been deleted
+  if (!document.storagePath || document.deletedAt) {
+    log.info('Document file already deleted or no storage path', {
+      hasStoragePath: !!document.storagePath,
+      deletedAt: document.deletedAt,
+    });
+    return;
+  }
+
+  try {
+    // Delete the file from Supabase Storage
+    await deleteFile(STORAGE_BUCKETS.CLINICAL_DOCUMENTS, document.storagePath);
+
+    // Mark document as deleted in the database (soft delete metadata)
+    await prisma.document.update({
+      where: { id: documentId },
+      data: {
+        deletedAt: new Date(),
+        deletionReason: reason,
+      },
+    });
+
+    // Create audit log for the deletion
+    await createStorageAuditLog({
+      userId: document.userId,
+      action: 'storage.delete',
+      bucket: STORAGE_BUCKETS.CLINICAL_DOCUMENTS,
+      storagePath: document.storagePath,
+      resourceType: 'clinical_document',
+      resourceId: documentId,
+      metadata: { reason },
+    });
+
+    log.info('Document file soft deleted', {
+      storagePath: document.storagePath,
+      reason,
+    });
+  } catch (error) {
+    log.error(
+      'Failed to soft delete document file',
+      { storagePath: document.storagePath },
+      error instanceof Error ? error : undefined
+    );
+    throw error;
+  }
+}
+
+/**
+ * Process documents that have passed their retention date.
+ * Deletes files from storage but keeps metadata for audit.
+ * This should be called by a scheduled cleanup job.
+ */
+export async function cleanupExpiredDocuments(): Promise<{
+  processed: number;
+  deleted: number;
+  errors: number;
+}> {
+  const log = logger.child({ action: 'cleanupExpiredDocuments' });
+  const now = new Date();
+
+  // Find documents past retention date that haven't been deleted
+  const expiredDocuments = await prisma.document.findMany({
+    where: {
+      retentionUntil: { lte: now },
+      deletedAt: null,
+      storagePath: { not: null },
+    },
+    select: {
+      id: true,
+      userId: true,
+      storagePath: true,
+      filename: true,
+    },
+    take: 100, // Process in batches to avoid overwhelming the system
+  });
+
+  log.info('Found expired documents for cleanup', { count: expiredDocuments.length });
+
+  let deleted = 0;
+  let errors = 0;
+
+  for (const doc of expiredDocuments) {
+    try {
+      await softDeleteDocumentFile(doc.id, 'retention_expired');
+      deleted++;
+    } catch (error) {
+      log.error(
+        'Failed to cleanup expired document',
+        { documentId: doc.id, filename: doc.filename },
+        error instanceof Error ? error : undefined
+      );
+      errors++;
+    }
+  }
+
+  log.info('Cleanup complete', {
+    processed: expiredDocuments.length,
+    deleted,
+    errors,
+  });
+
+  return {
+    processed: expiredDocuments.length,
+    deleted,
+    errors,
   };
 }
