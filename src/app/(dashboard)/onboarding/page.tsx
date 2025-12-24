@@ -39,20 +39,22 @@ export default function OnboardingPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 py-8">
+    <div className="mx-auto max-w-2xl space-y-8 py-8 animate-fade-in-up">
       {/* Welcome Header */}
-      <div className="text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-          <Sparkles className="h-8 w-8 text-primary" />
+      <div className="text-center mb-8">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/20">
+          <Sparkles className="h-7 w-7 text-teal-600 dark:text-teal-400" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight">Welcome to DictateMED</h1>
-        <p className="mt-2 text-lg text-muted-foreground">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+          Welcome to DictateMED
+        </h1>
+        <p className="mt-2 text-lg text-slate-600 dark:text-slate-400">
           Let&apos;s personalize your experience in just a moment.
         </p>
       </div>
 
       {/* Practice Profile Form - autoFocus is intentional for onboarding UX */}
-      <div className="rounded-lg border bg-card p-6">
+      <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-soft">
         <PracticeProfileForm
           mode="onboarding"
           onSave={handleSave}
@@ -64,9 +66,9 @@ export default function OnboardingPage() {
       </div>
 
       {/* Bottom reassurance */}
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-sm text-slate-500 dark:text-slate-500">
         You can always update your specialties later in{' '}
-        <span className="font-medium">Settings &rarr; Your Specialties</span>
+        <span className="font-medium">Settings → Your Specialties</span>
       </p>
     </div>
   );

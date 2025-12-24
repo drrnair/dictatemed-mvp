@@ -6,39 +6,41 @@ import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
   // Base: min-touch for WCAG hit areas, smooth transitions, accessible focus states
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-label font-medium ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  // Updated: rounded-xl (12px), 200ms transitions, teal focus ring
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-label font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        // Primary - medical-grade teal accent
+        // Primary - teal with shadow lift effect
         default:
-          'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:bg-primary/95',
-        // Destructive - critical actions
+          'bg-teal-500 text-white shadow-sm hover:bg-teal-600 hover:shadow-md active:bg-teal-700',
+        // Destructive - rose colors
         destructive:
-          'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 active:bg-destructive/95',
-        // Outline - secondary emphasis
+          'bg-rose-500 text-white shadow-sm hover:bg-rose-600 hover:shadow-md active:bg-rose-700',
+        // Outline - secondary emphasis with hover lift
         outline:
-          'border border-input bg-background hover:bg-accent hover:text-accent-foreground active:bg-accent/80',
+          'border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100',
         // Secondary - subtle UI elements
         secondary:
-          'bg-secondary text-secondary-foreground hover:bg-secondary/80 active:bg-secondary/70',
+          'bg-slate-100 text-slate-700 hover:bg-slate-200 active:bg-slate-300',
         // Ghost - minimal presence
-        ghost: 'hover:bg-accent hover:text-accent-foreground active:bg-accent/80',
+        ghost:
+          'text-slate-600 hover:text-slate-800 hover:bg-slate-100 active:bg-slate-200',
         // Link - inline text actions
-        link: 'text-primary underline-offset-4 hover:underline',
+        link: 'text-teal-600 underline-offset-4 hover:underline hover:text-teal-700',
         // Clinical-specific variants - softer, more accessible
         verified:
-          'bg-clinical-verified/90 text-white shadow-sm hover:bg-clinical-verified active:bg-clinical-verified/95',
+          'bg-emerald-500 text-white shadow-sm hover:bg-emerald-600 hover:shadow-md active:bg-emerald-700',
         warning:
-          'bg-clinical-warning/90 text-black shadow-sm hover:bg-clinical-warning active:bg-clinical-warning/95',
+          'bg-amber-500 text-black shadow-sm hover:bg-amber-600 hover:shadow-md active:bg-amber-700',
         critical:
-          'bg-clinical-critical/90 text-white shadow-sm hover:bg-clinical-critical active:bg-clinical-critical/95',
+          'bg-rose-500 text-white shadow-sm hover:bg-rose-600 hover:shadow-md active:bg-rose-700',
       },
       size: {
-        // All sizes meet 44px minimum touch target
-        default: 'h-11 min-w-touch px-4 py-2',
-        sm: 'h-10 min-w-touch rounded-md px-3 text-body-sm',
-        lg: 'h-12 min-w-touch rounded-md px-8',
+        // All sizes meet 44px minimum touch target, updated to rounded-xl
+        default: 'h-11 min-w-touch px-4 py-2.5',
+        sm: 'h-10 min-w-touch px-3 text-body-sm',
+        lg: 'h-12 min-w-touch px-8',
         icon: 'h-11 w-11 min-w-touch',
       },
     },

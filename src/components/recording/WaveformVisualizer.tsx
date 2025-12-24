@@ -1,5 +1,5 @@
 // src/components/recording/WaveformVisualizer.tsx
-// Real-time audio waveform visualization
+// Real-time audio waveform visualization with teal theme
 
 'use client';
 
@@ -57,8 +57,10 @@ export function WaveformVisualizer({
         {/* Top bar */}
         <div
           className={cn(
-            'absolute bottom-1/2 w-full rounded-t-full bg-primary transition-all duration-75',
-            !isActive && 'bg-muted'
+            'absolute bottom-1/2 w-full rounded-t-full transition-all duration-75',
+            isActive
+              ? 'bg-gradient-to-t from-teal-500 to-teal-400'
+              : 'bg-slate-200 dark:bg-slate-700'
           )}
           style={{
             height: `${finalHeight * 50}%`,
@@ -67,8 +69,10 @@ export function WaveformVisualizer({
         {/* Bottom bar (mirror) */}
         <div
           className={cn(
-            'absolute top-1/2 w-full rounded-b-full bg-primary transition-all duration-75',
-            !isActive && 'bg-muted'
+            'absolute top-1/2 w-full rounded-b-full transition-all duration-75',
+            isActive
+              ? 'bg-gradient-to-b from-teal-500 to-teal-400'
+              : 'bg-slate-200 dark:bg-slate-700'
           )}
           style={{
             height: `${finalHeight * 50}%`,
@@ -81,7 +85,8 @@ export function WaveformVisualizer({
   return (
     <div
       className={cn(
-        'flex h-24 items-center justify-center gap-0.5 rounded-lg bg-muted/50 px-4',
+        'flex h-24 items-center justify-center gap-0.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 px-4 border border-slate-200 dark:border-slate-700',
+        isActive && 'bg-teal-50/50 dark:bg-teal-900/10 border-teal-200 dark:border-teal-800/50',
         className
       )}
     >
@@ -97,17 +102,17 @@ interface AudioLevelBarProps {
 }
 
 export function AudioLevelBar({ level, className }: AudioLevelBarProps) {
-  // Color based on level
+  // Color based on level - teal for normal, rose for clipping
   const getColor = () => {
-    if (level > 0.8) return 'bg-destructive';
-    if (level > 0.5) return 'bg-primary';
-    return 'bg-primary/60';
+    if (level > 0.8) return 'bg-rose-500';
+    if (level > 0.5) return 'bg-teal-500';
+    return 'bg-teal-400';
   };
 
   return (
     <div
       className={cn(
-        'h-2 w-full overflow-hidden rounded-full bg-muted',
+        'h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700',
         className
       )}
     >
