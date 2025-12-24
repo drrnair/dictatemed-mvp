@@ -15,7 +15,7 @@ async function main() {
   console.log('Seeding database...');
 
   // Seed medical specialties first (reference data)
-  await seedMedicalSpecialties();
+  await seedMedicalSpecialties(prisma);
 
   // Create demo practice
   const practice = await prisma.practice.upsert({
