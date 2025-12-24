@@ -122,13 +122,13 @@ describe('Specialty Onboarding Flow', () => {
       name: 'Cardiology',
       slug: 'cardiology',
       description: null,
-      synonyms: [],
-      isCustom: false,
+      synonyms: [] as string[],
+      isCustom: false as const,
     };
 
     const mockSubspecialties = [
-      { id: 'subspec-1', specialtyId: 'spec-1', name: 'Interventional Cardiology', slug: 'interventional', description: null, isCustom: false },
-      { id: 'subspec-2', specialtyId: 'spec-1', name: 'Electrophysiology', slug: 'electrophysiology', description: null, isCustom: false },
+      { id: 'subspec-1', specialtyId: 'spec-1', name: 'Interventional Cardiology', slug: 'interventional', description: null, isCustom: false as const },
+      { id: 'subspec-2', specialtyId: 'spec-1', name: 'Electrophysiology', slug: 'electrophysiology', description: null, isCustom: false as const },
     ];
 
     it('should return 401 when not authenticated', async () => {
