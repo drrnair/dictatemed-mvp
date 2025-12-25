@@ -52,25 +52,44 @@ async function tryMockAuthentication(page: Page): Promise<boolean> {
   console.log('Mock auth: Attempting mock authentication...');
 
   try {
-    // Check if mock auth endpoint is available
-    const checkResponse = await page.request.get('/api/auth/mock-login');
-    const checkData = await checkResponse.json();
+    // First, navigate to the app's homepage so we're on the correct origin
+    // This is required before we can make fetch requests from the browser context
+    console.log('Mock auth: Navigating to app homepage first...');
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: TEST_TIMEOUTS.pageLoad });
 
-    if (!checkData.mockAuthEnabled) {
-      console.log('Mock auth: Endpoint reports mock auth is disabled');
+    // Check if mock auth is available and create session from within the browser context
+    // This ensures cookies are properly set in the browser
+    const loginResult = await page.evaluate(async () => {
+      try {
+        // First check if mock auth is enabled
+        const checkResponse = await fetch('/api/auth/mock-login', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        const checkData = await checkResponse.json();
+
+        if (!checkData.mockAuthEnabled) {
+          return { ok: false, data: { error: 'Mock auth is disabled on server' } };
+        }
+
+        // Now create the session
+        const response = await fetch('/api/auth/mock-login?returnTo=/dashboard', {
+          method: 'POST',
+          credentials: 'include', // Important: include cookies
+        });
+        const data = await response.json();
+        return { ok: response.ok, data };
+      } catch (error) {
+        return { ok: false, data: { error: String(error) } };
+      }
+    });
+
+    if (!loginResult.ok || !loginResult.data.success) {
+      console.log(`Mock auth: Login failed - ${loginResult.data.error || 'Unknown error'}`);
       return false;
     }
 
-    // Call mock login endpoint
-    const loginResponse = await page.request.post('/api/auth/mock-login?returnTo=/dashboard');
-    const loginData = await loginResponse.json();
-
-    if (!loginResponse.ok() || !loginData.success) {
-      console.log(`Mock auth: Login failed - ${loginData.error || 'Unknown error'}`);
-      return false;
-    }
-
-    console.log(`Mock auth: Success! Logged in as ${loginData.user?.email}`);
+    console.log(`Mock auth: Success! Logged in as ${loginResult.data.user?.email}`);
 
     // Navigate to dashboard to verify auth works
     await page.goto('/dashboard');
