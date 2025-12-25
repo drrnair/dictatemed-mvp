@@ -246,6 +246,7 @@ MOCK_SERVICES=false npm run test:e2e
 | `tests/e2e/workflows/referral-upload.spec.ts` | Import MOCK_SERVICES, update setupReferralMocks |
 | `tests/e2e/workflows/style-profile.spec.ts` | Added setupMockRoute helper, all page.route() calls converted |
 | `tests/e2e/page-objects/BasePage.ts` | Import MOCK_SERVICES, update mockApiResponse() |
+| `prisma/scripts/migrate-subspecialties.ts` | Fixed import path (`../../seeds/` → `../seeds/`) |
 
 ### Next Steps for Full E2E Execution
 
