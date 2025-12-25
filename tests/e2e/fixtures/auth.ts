@@ -40,7 +40,10 @@ export function hasValidAuthState(): boolean {
 
 /**
  * Try mock authentication for CI environments.
- * Returns true if mock auth succeeded, false if it should fall back to Auth0.
+ * When E2E_MOCK_AUTH=true, the middleware bypasses auth checks entirely,
+ * so we just need to verify we can reach the dashboard.
+ *
+ * Returns true if mock auth mode is working, false if it should fall back to Auth0.
  */
 async function tryMockAuthentication(page: Page): Promise<boolean> {
   // Only try mock auth if E2E_MOCK_AUTH is enabled
@@ -49,28 +52,27 @@ async function tryMockAuthentication(page: Page): Promise<boolean> {
     return false;
   }
 
-  console.log('Mock auth: Attempting mock authentication...');
+  console.log('Mock auth: E2E_MOCK_AUTH is enabled - middleware will bypass auth');
+  console.log('Mock auth: Navigating directly to dashboard...');
 
   try {
-    // Use the GET endpoint with redirect parameter
-    // This creates the session cookie and redirects to dashboard in one step
-    // Much simpler than trying to use fetch from browser context
-    console.log('Mock auth: Navigating to mock login endpoint...');
-    await page.goto('/api/auth/mock-login?redirect=/dashboard', {
+    // With E2E_MOCK_AUTH=true, the middleware skips auth checks
+    // and getCurrentUser() returns the seeded E2E test user
+    await page.goto('/dashboard', {
       waitUntil: 'domcontentloaded',
       timeout: TEST_TIMEOUTS.pageLoad,
     });
 
     // Check if we successfully landed on dashboard
     const currentUrl = page.url();
-    console.log(`Mock auth: Current URL after redirect: ${currentUrl}`);
+    console.log(`Mock auth: Current URL: ${currentUrl}`);
 
     if (currentUrl.includes('/dashboard')) {
-      console.log('Mock auth: Success! Reached dashboard');
+      console.log('Mock auth: Success! Reached dashboard without Auth0');
       return true;
     } else if (currentUrl.includes('/api/auth/login') || currentUrl.includes('auth0.com')) {
-      // We got redirected to login, which means the session cookie wasn't accepted
-      console.log('Mock auth: Session not accepted - redirected to login');
+      // If we got redirected to login, mock auth isn't working
+      console.log('Mock auth: Failed - redirected to login (middleware bypass not working?)');
       return false;
     } else {
       console.log(`Mock auth: Unexpected redirect to ${currentUrl}`);

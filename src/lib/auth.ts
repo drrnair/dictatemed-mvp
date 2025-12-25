@@ -22,12 +22,79 @@ export interface AuthUser {
   onboardingCompleted: boolean;
 }
 
+// E2E test user - matches seed-e2e-test-data.ts
+const E2E_TEST_USER_AUTH0_ID = 'auth0|e2e-test-clinician';
+const E2E_TEST_USER_EMAIL = 'test.cardiologist+e2e@dictatemed.dev';
+
+/**
+ * Get the E2E test user from the database.
+ * Used when E2E_MOCK_AUTH is enabled to bypass Auth0.
+ */
+async function getE2ETestUser(): Promise<AuthUser | null> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { auth0Id: E2E_TEST_USER_AUTH0_ID },
+      select: {
+        id: true,
+        auth0Id: true,
+        email: true,
+        name: true,
+        role: true,
+        practiceId: true,
+        subspecialties: true,
+        onboardingCompletedAt: true,
+      },
+    });
+
+    if (!user) {
+      logger.warn('E2E test user not found in database. Run npm run db:seed:e2e first.', {
+        action: 'auth',
+        auth0Id: E2E_TEST_USER_AUTH0_ID,
+      });
+      return null;
+    }
+
+    const subspecialties = user.subspecialties || [];
+    const onboardingCompleted = user.onboardingCompletedAt !== null || subspecialties.length > 0;
+
+    logger.info('E2E mock auth: Using test user', {
+      action: 'auth',
+      userId: user.id,
+      email: user.email,
+    });
+
+    return {
+      id: user.id,
+      auth0Id: user.auth0Id,
+      email: user.email,
+      name: user.name ?? E2E_TEST_USER_EMAIL.split('@')[0],
+      role: user.role,
+      practiceId: user.practiceId,
+      subspecialties,
+      onboardingCompleted,
+    };
+  } catch (error) {
+    logger.error('E2E mock auth: Failed to get test user', {
+      action: 'auth',
+      error: error instanceof Error ? error.message : String(error),
+    }, error instanceof Error ? error : new Error(String(error)));
+    return null;
+  }
+}
+
 /**
  * Get the current authenticated user from Auth0 session and database.
  * Auto-provisions new users on first login.
  * Returns null if not authenticated.
+ *
+ * When E2E_MOCK_AUTH=true, returns the seeded E2E test user instead.
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
+  // E2E Test Mode: Return the seeded test user without Auth0
+  if (process.env.E2E_MOCK_AUTH === 'true') {
+    return getE2ETestUser();
+  }
+
   try {
     const session = await getAuth0Session();
 
