@@ -5,14 +5,19 @@
 //
 // This script converts the .txt referral templates in tests/e2e/fixtures/referrals/
 // to PDF files that can be used in E2E tests for the referral upload workflow.
+//
+// Note: This script requires `pdfkit` to be installed:
+//   npm install -D pdfkit @types/pdfkit
+//
+// Alternatively, use the existing pdf-lib dependency to create PDFs.
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
-// Try to use pdfkit if available, otherwise provide instructions
 async function generatePDFs(): Promise<void> {
   const fixturesDir = path.join(__dirname, '../tests/e2e/fixtures/referrals');
-  const txtFiles = fs.readdirSync(fixturesDir).filter((f) => f.endsWith('.txt'));
+  const txtFiles = fs.readdirSync(fixturesDir).filter((f) => f.endsWith('.txt') && !f.includes('README'));
 
   if (txtFiles.length === 0) {
     console.log('No .txt files found in fixtures/referrals/');
@@ -21,24 +26,6 @@ async function generatePDFs(): Promise<void> {
 
   console.log('Generating PDF files from text templates...\n');
 
-  // Check if pdfkit is available
-  let PDFDocument: typeof import('pdfkit') | null = null;
-  try {
-    PDFDocument = (await import('pdfkit')).default;
-  } catch {
-    console.log('pdfkit not installed. To generate PDFs, run:');
-    console.log('  npm install -D pdfkit');
-    console.log('');
-    console.log('Alternatively, convert the .txt files manually using:');
-    console.log('  - LibreOffice: libreoffice --headless --convert-to pdf <file.txt>');
-    console.log('  - macOS: textutil -convert pdf <file.txt>');
-    console.log('  - Online: Any text-to-PDF converter');
-    console.log('');
-    console.log('Text files available:');
-    txtFiles.forEach((f) => console.log(`  - ${f}`));
-    return;
-  }
-
   for (const txtFile of txtFiles) {
     const txtPath = path.join(fixturesDir, txtFile);
     const pdfFile = txtFile.replace('.txt', '.pdf');
@@ -46,44 +33,46 @@ async function generatePDFs(): Promise<void> {
 
     try {
       const content = fs.readFileSync(txtPath, 'utf-8');
-      const doc = new PDFDocument({
-        size: 'A4',
-        margins: { top: 50, bottom: 50, left: 50, right: 50 },
-      });
 
-      const writeStream = fs.createWriteStream(pdfPath);
-      doc.pipe(writeStream);
+      // Create PDF using pdf-lib (already a project dependency)
+      const pdfDoc = await PDFDocument.create();
+      const courierFont = await pdfDoc.embedFont(StandardFonts.Courier);
 
-      // Set font
-      doc.font('Courier');
-      doc.fontSize(10);
+      // A4 size in points: 595.28 x 841.89
+      const pageWidth = 595.28;
+      const pageHeight = 841.89;
+      const margin = 50;
+      const fontSize = 10;
+      const lineHeight = fontSize * 1.4;
 
-      // Process content line by line
+      let page = pdfDoc.addPage([pageWidth, pageHeight]);
+      let yPosition = pageHeight - margin;
+
       const lines = content.split('\n');
+
       for (const line of lines) {
-        // Check for headers (lines with dashes or all caps)
-        if (line.match(/^-+$/) || line.match(/^\s*\*{3}.*\*{3}\s*$/)) {
-          doc.fontSize(10).text(line);
-        } else if (line.match(/^[A-Z][A-Z\s]+:$/)) {
-          // Section headers
-          doc.fontSize(11).text(line, { bold: true });
-          doc.fontSize(10);
-        } else if (line.includes('URGENT') || line.includes('SPECIALIST REFERRAL')) {
-          // Emphasis
-          doc.fontSize(12).text(line, { underline: true });
-          doc.fontSize(10);
-        } else {
-          doc.text(line);
+        // Check if we need a new page
+        if (yPosition < margin + lineHeight) {
+          page = pdfDoc.addPage([pageWidth, pageHeight]);
+          yPosition = pageHeight - margin;
         }
+
+        // Draw the line
+        const displayLine = line.length > 80 ? line.substring(0, 77) + '...' : line;
+        page.drawText(displayLine, {
+          x: margin,
+          y: yPosition,
+          size: fontSize,
+          font: courierFont,
+          color: rgb(0, 0, 0),
+        });
+
+        yPosition -= lineHeight;
       }
 
-      doc.end();
-
-      // Wait for stream to finish
-      await new Promise<void>((resolve, reject) => {
-        writeStream.on('finish', resolve);
-        writeStream.on('error', reject);
-      });
+      // Save the PDF
+      const pdfBytes = await pdfDoc.save();
+      fs.writeFileSync(pdfPath, pdfBytes);
 
       console.log(`✓ Generated: ${pdfFile}`);
     } catch (error) {

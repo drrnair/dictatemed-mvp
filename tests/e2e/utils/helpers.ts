@@ -85,7 +85,20 @@ export async function waitForToastDismiss(
 
 /**
  * Assert no console errors occurred on the page
- * Collects errors and throws if any are found
+ *
+ * @deprecated Prefer using `setupConsoleErrorCollection()` at test setup and checking
+ * errors at teardown for more reliable error detection. This function uses a short
+ * fixed wait which may miss errors that appear after the 100ms window.
+ *
+ * @example
+ * ```typescript
+ * // Preferred approach:
+ * test.beforeEach(({ page }) => {
+ *   const getErrors = setupConsoleErrorCollection(page);
+ *   // ... run test ...
+ *   expect(getErrors()).toHaveLength(0);
+ * });
+ * ```
  */
 export async function assertNoConsoleErrors(page: Page): Promise<void> {
   const errors: string[] = [];
@@ -103,7 +116,8 @@ export async function assertNoConsoleErrors(page: Page): Promise<void> {
     }
   });
 
-  // Give time for errors to appear
+  // Note: This fixed wait may miss errors that appear later.
+  // Consider using setupConsoleErrorCollection() for more reliable detection.
   await page.waitForTimeout(100);
 
   if (errors.length > 0) {
@@ -333,16 +347,22 @@ export async function retryWithBackoff<T>(
 /**
  * Wait for element to be stable (not moving/resizing)
  * Useful for animations or layout shifts
+ *
+ * Note: This function uses a short fixed wait (100ms) between bounding box checks
+ * to detect stability. This is intentional - we need to sample the element's position
+ * at two points in time to determine if it has stopped moving. This is different from
+ * arbitrary waits that delay for no specific reason.
  */
 export async function waitForStable(
   locator: Locator,
   timeout = 5000
 ): Promise<void> {
   const startTime = Date.now();
+  const STABILITY_CHECK_INTERVAL = 100; // Intentional: need time between samples to detect motion
 
   while (Date.now() - startTime < timeout) {
     const box1 = await locator.boundingBox();
-    await locator.page().waitForTimeout(100);
+    await locator.page().waitForTimeout(STABILITY_CHECK_INTERVAL);
     const box2 = await locator.boundingBox();
 
     if (

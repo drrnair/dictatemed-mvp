@@ -227,11 +227,17 @@ export class NewConsultationPage extends BasePage {
 
   /**
    * Search for a patient by name, DOB, or MRN
+   * Waits for search results to appear or for network to be idle
    */
   async searchPatient(query: string): Promise<void> {
     await this.patientSearchInput.fill(query);
-    await this.page.waitForTimeout(500); // Debounce
-    await this.waitForNetworkIdle();
+    // Wait for search results to appear or network to settle
+    await Promise.race([
+      this.patientSearchResults.waitFor({ state: 'visible', timeout: 5000 }),
+      this.waitForNetworkIdle(),
+    ]).catch(() => {
+      // Results might not appear if no matches - that's okay
+    });
   }
 
   /**
@@ -248,9 +254,9 @@ export class NewConsultationPage extends BasePage {
    */
   async selectPatientByMrn(mrn: string): Promise<void> {
     await this.searchPatient(mrn);
-    // Wait for results and click on the matching patient
-    await this.page.waitForTimeout(500);
+    // Wait for search results to be visible with matching MRN
     const patientResult = this.patientSearchResults.filter({ hasText: mrn }).first();
+    await patientResult.waitFor({ state: 'visible', timeout: 10000 });
     await patientResult.click();
     await expect(this.selectedPatientDisplay).toBeVisible();
   }
@@ -299,11 +305,17 @@ export class NewConsultationPage extends BasePage {
 
   /**
    * Search for a referrer
+   * Waits for search results to appear or for network to be idle
    */
   async searchReferrer(query: string): Promise<void> {
     await this.referrerSearchInput.fill(query);
-    await this.page.waitForTimeout(500);
-    await this.waitForNetworkIdle();
+    // Wait for search results to appear or network to settle
+    await Promise.race([
+      this.referrerSearchResults.waitFor({ state: 'visible', timeout: 5000 }),
+      this.waitForNetworkIdle(),
+    ]).catch(() => {
+      // Results might not appear if no matches - that's okay
+    });
   }
 
   /**

@@ -258,22 +258,58 @@ export class BasePage {
   }
 
   /**
-   * Assert no console errors occurred
+   * Console error collector - must be set up early in test
+   * Call setupConsoleErrorCollection() at test start, then assertNoConsoleErrors() at end
    */
-  async assertNoConsoleErrors(): Promise<void> {
-    const errors: string[] = [];
+  private consoleErrors: string[] = [];
+  private consoleListenerAttached = false;
+
+  /**
+   * Set up console error collection - call this at the beginning of a test
+   * to capture any console errors that occur during the test
+   */
+  setupConsoleErrorCollection(): void {
+    if (this.consoleListenerAttached) return;
+
+    this.consoleErrors = [];
     this.page.on('console', (msg) => {
       if (msg.type() === 'error') {
-        errors.push(msg.text());
+        this.consoleErrors.push(msg.text());
       }
     });
+    this.consoleListenerAttached = true;
+  }
 
-    // Give time for any errors to appear
-    await this.page.waitForTimeout(100);
-
-    if (errors.length > 0) {
-      throw new Error(`Console errors found:\n${errors.join('\n')}`);
+  /**
+   * Assert no console errors occurred during the test
+   * Must call setupConsoleErrorCollection() first
+   */
+  assertNoConsoleErrors(): void {
+    if (!this.consoleListenerAttached) {
+      throw new Error(
+        'Console error collection not set up. Call setupConsoleErrorCollection() at test start.'
+      );
     }
+
+    if (this.consoleErrors.length > 0) {
+      const errorList = this.consoleErrors.join('\n');
+      this.consoleErrors = []; // Reset for next check
+      throw new Error(`Console errors found:\n${errorList}`);
+    }
+  }
+
+  /**
+   * Get collected console errors without asserting
+   */
+  getConsoleErrors(): string[] {
+    return [...this.consoleErrors];
+  }
+
+  /**
+   * Clear collected console errors
+   */
+  clearConsoleErrors(): void {
+    this.consoleErrors = [];
   }
 
   // ============================================

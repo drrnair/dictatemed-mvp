@@ -221,21 +221,26 @@ export class ReferralUploadPage extends BasePage {
 
   /**
    * Wait for extraction to complete (success or error)
+   * Uses explicit wait conditions instead of polling with arbitrary delays
    */
   async waitForExtraction(timeout = 30000): Promise<ExtractionState> {
-    const startTime = Date.now();
+    // Wait for either success or error state to be visible
+    const successCondition = this.reviewPanel.or(this.extractionSuccessIcon);
+    const errorCondition = this.extractionErrorIcon.or(this.extractionErrorMessage);
+    const completionCondition = successCondition.or(errorCondition);
 
-    while (Date.now() - startTime < timeout) {
-      const state = await this.getExtractionState();
-
-      if (state === 'ready' || state === 'error') {
-        return state;
-      }
-
-      await this.page.waitForTimeout(500);
+    try {
+      await completionCondition.waitFor({ state: 'visible', timeout });
+    } catch {
+      throw new Error('Extraction timed out waiting for completion');
     }
 
-    throw new Error('Extraction timed out');
+    // Determine final state
+    if (await errorCondition.isVisible()) {
+      return 'error';
+    }
+
+    return 'ready';
   }
 
   /**

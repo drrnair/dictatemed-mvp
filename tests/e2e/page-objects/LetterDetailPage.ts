@@ -616,7 +616,8 @@ export class LetterDetailPage extends BasePage {
   async expectVerificationItems(minCount = 1): Promise<void> {
     await expect(this.verificationPanel).toBeVisible();
     const items = this.verificationPanel.locator('[data-testid^="value-card-"]');
-    await expect(items).toHaveCount({ minimum: minCount } as unknown as number);
+    const count = await items.count();
+    expect(count).toBeGreaterThanOrEqual(minCount);
   }
 
   /**

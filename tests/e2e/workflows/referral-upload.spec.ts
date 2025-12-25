@@ -1,17 +1,21 @@
 // tests/e2e/workflows/referral-upload.spec.ts
 // E2E tests for the referral PDF upload and extraction workflow
 //
-// Tests the complete flow of uploading a referral PDF:
+// Tests the complete flow of uploading a referral:
 // 1. Login as test clinician
-// 2. Upload referral PDF
+// 2. Upload referral file (TXT in tests, PDF in production)
 // 3. System extracts patient/GP details automatically
 // 4. User reviews and confirms extracted data
 // 5. User edits extracted fields if needed
 // 6. Create consultation from referral context
 // 7. Generate letter with referral context
 // 8. Send letter to referrer
+//
+// NOTE: Tests use .txt files instead of PDFs to simplify CI setup.
+// The application accepts both formats; the extraction API works the same way.
+// To generate actual PDF fixtures, run: npm run generate:referral-pdfs
 
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import * as path from 'path';
 import { LoginPage } from '../page-objects/LoginPage';
 import { DashboardPage } from '../page-objects/DashboardPage';
@@ -20,21 +24,129 @@ import { NewConsultationPage } from '../page-objects/NewConsultationPage';
 import { LetterDetailPage } from '../page-objects/LetterDetailPage';
 import {
   EXPECTED_REFERRAL_EXTRACTIONS,
-  TEST_ROUTES,
   TEST_TIMEOUTS,
   SAMPLE_LETTER_CONTENT,
 } from '../fixtures/test-data';
 import {
-  mockReferralExtraction,
   mockLetterGeneration,
   mockTranscription,
   waitForNetworkIdle,
-  expectToast,
-  setupConsoleErrorCollection,
 } from '../utils/helpers';
 
-// Path to test referral PDFs (or txt files for testing)
+// Path to test referral files (TXT for CI, PDF optional)
 const REFERRAL_FIXTURES_PATH = path.join(__dirname, '../fixtures/referrals');
+
+// ============================================
+// Reusable Mock Setup Functions
+// ============================================
+
+interface ReferralMockOptions {
+  referralId?: string;
+  extractedData?: {
+    patient?: { name?: string; dateOfBirth?: string; mrn?: string };
+    referrer?: { name?: string; practice?: string; email?: string; phone?: string };
+    clinicalContext?: string;
+    reasonForReferral?: string;
+    urgency?: 'routine' | 'urgent';
+  };
+  confidence?: number;
+  uploadError?: boolean;
+  extractionError?: boolean;
+  extractionDelay?: number;
+  allowUpdates?: boolean;
+}
+
+/**
+ * Sets up all referral-related API mocks in one place.
+ * Reduces code duplication across tests.
+ */
+async function setupReferralMocks(page: Page, options: ReferralMockOptions = {}): Promise<void> {
+  const {
+    referralId = 'test-referral-001',
+    extractedData,
+    confidence = 0.92,
+    uploadError = false,
+    extractionError = false,
+    extractionDelay = 0,
+    allowUpdates = false,
+  } = options;
+
+  await page.route('**/api/referrals/**', async (route) => {
+    const url = route.request().url();
+    const method = route.request().method();
+
+    // Handle upload endpoint
+    if (url.includes('/upload')) {
+      if (uploadError) {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: false,
+            error: 'File upload failed. Please try again.',
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            referralId,
+            fileName: 'referral.pdf',
+            fileSize: 125000,
+          }),
+        });
+      }
+      return;
+    }
+
+    // Handle extraction endpoint
+    if (url.includes('/extract')) {
+      if (extractionDelay > 0) {
+        await new Promise((resolve) => setTimeout(resolve, extractionDelay));
+      }
+
+      if (extractionError) {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: false,
+            error: 'Failed to extract data from PDF. The document may be corrupted or unreadable.',
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            extractedData: extractedData ?? {
+              patient: { name: 'TEST Patient', dateOfBirth: '1960-01-01' },
+              referrer: { name: 'TEST Referrer' },
+            },
+            confidence,
+          }),
+        });
+      }
+      return;
+    }
+
+    // Handle update endpoints (PATCH/PUT)
+    if (allowUpdates && (method === 'PATCH' || method === 'PUT')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
+      return;
+    }
+
+    // Pass through other requests
+    await route.continue();
+  });
+}
 
 // Test configuration - serial execution to maintain state
 test.describe.configure({ mode: 'serial' });
