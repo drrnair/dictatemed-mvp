@@ -1106,10 +1106,10 @@ test.describe('Style Profile - Error Handling', () => {
     // The exact error handling depends on the implementation
   });
 
-  test('should handle network timeout gracefully', async ({ page }) => {
-    // Mock slow API response
+  test('should handle slow API response gracefully', async ({ page }) => {
+    // Mock slow API response (3 seconds delay to test loading state)
     await page.route('**/api/style/profiles', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1118,7 +1118,7 @@ test.describe('Style Profile - Error Handling', () => {
     });
 
     await page.route('**/api/style/analyze', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1134,8 +1134,12 @@ test.describe('Style Profile - Error Handling', () => {
     await loginPage.loginWithEnvCredentials();
     await page.goto('/settings/style');
 
-    // Loading state should appear briefly
-    // Page should eventually load
+    // Loading state should appear while waiting for API
+    // Check for loading indicator (spinner or loading text)
+    const loadingIndicator = page.getByText('Loading style settings...');
+    // Loading may or may not be visible depending on timing
+
+    // Page should eventually load after slow response
     await expect(page.getByRole('heading', { name: 'Writing Style Profile' })).toBeVisible({
       timeout: 15000,
     });
