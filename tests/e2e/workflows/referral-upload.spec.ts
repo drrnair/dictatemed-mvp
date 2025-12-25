@@ -30,7 +30,6 @@ import {
 import {
   mockLetterGeneration,
   mockTranscription,
-  mockReferralExtraction,
   waitForNetworkIdle,
 } from '../utils/helpers';
 
