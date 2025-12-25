@@ -23,9 +23,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Database configuration
-  DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/dictatemed_e2e_test"
-  E2E_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/dictatemed_e2e_test"
+  # Database configuration - Use Supabase from GitHub Secrets
+  DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+  E2E_DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
 
   # Auth0 test values
   AUTH0_SECRET: "e2e-test-secret-32-bytes-long!!"
@@ -71,20 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: dictatemed_e2e_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # Using Supabase cloud database - no local PostgreSQL needed
 
     steps:
       - name: Check required secrets
@@ -93,6 +80,11 @@ jobs:
             echo "❌ E2E_TEST_USER_PASSWORD secret is not configured"
             echo "Please add this secret in GitHub repository settings:"
             echo "  Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          if [ -z "${{ secrets.E2E_DATABASE_URL }}" ]; then
+            echo "❌ E2E_DATABASE_URL secret is not configured"
+            echo "Please add the Supabase connection string as a secret"
             exit 1
           fi
           echo "✅ Required secrets are configured"
@@ -162,20 +154,7 @@ jobs:
     # Only run Firefox on main branch pushes or if explicitly requested
     if: github.event_name == 'push' || github.event.inputs.browsers == 'chromium,firefox,webkit' || contains(github.event.inputs.browsers || '', 'firefox')
 
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: dictatemed_e2e_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # Using Supabase cloud database - no local PostgreSQL needed
 
     steps:
       - name: Checkout code
@@ -235,20 +214,7 @@ jobs:
     # Only run WebKit on main branch pushes or if explicitly requested
     if: github.event_name == 'push' || github.event.inputs.browsers == 'chromium,firefox,webkit' || contains(github.event.inputs.browsers || '', 'webkit')
 
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: dictatemed_e2e_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # Using Supabase cloud database - no local PostgreSQL needed
 
     steps:
       - name: Checkout code
