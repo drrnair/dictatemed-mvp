@@ -40,12 +40,13 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+    <aside className="flex h-full w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" data-testid="sidebar">
       {/* Logo */}
       <div className="flex h-16 items-center border-b border-slate-200 px-6 dark:border-slate-800">
         <Link
           href={'/dashboard' as Route}
           className="flex items-center gap-2 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+          data-testid="sidebar-logo"
         >
           <span className="text-xl font-semibold tracking-tight text-teal-600 dark:text-teal-400">
             DictateMED
@@ -54,7 +55,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-4" role="navigation" aria-label="Main">
+      <nav className="flex-1 space-y-1 p-4" role="navigation" aria-label="Main" data-testid="sidebar-navigation">
         {navigation.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -65,6 +66,7 @@ export function Sidebar() {
               key={item.name}
               href={item.href}
               aria-current={isActive ? 'page' : undefined}
+              data-testid={`sidebar-${item.name.toLowerCase()}-link`}
               className={cn(
                 // Base styles - 44px min height for touch targets
                 'relative flex items-center gap-3 rounded-r-xl px-3 py-2.5 min-h-[44px]',
@@ -93,7 +95,7 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-slate-200 p-4 dark:border-slate-800">
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400" data-testid="sidebar-version">
           DictateMED v0.1.0
         </p>
         <p className="text-xs text-slate-400 dark:text-slate-500">

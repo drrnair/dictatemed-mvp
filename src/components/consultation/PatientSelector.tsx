@@ -149,12 +149,12 @@ export function PatientSelector({ value, onChange, disabled }: PatientSelectorPr
   const showRecentLabel = searchQuery.trim().length < 2 && recentPatients.length > 0;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid="patient-selector">
       <Label>Patient</Label>
 
       {/* Selected patient display */}
       {value ? (
-        <div className="flex items-center gap-3 rounded-md border bg-muted/50 p-3">
+        <div className="flex items-center gap-3 rounded-md border bg-muted/50 p-3" data-testid="selected-patient-card">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
             <User className="h-5 w-5 text-primary" />
           </div>
@@ -171,6 +171,7 @@ export function PatientSelector({ value, onChange, disabled }: PatientSelectorPr
             size="sm"
             onClick={handleClearSelection}
             disabled={disabled}
+            data-testid="clear-patient-selection"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -188,6 +189,7 @@ export function PatientSelector({ value, onChange, disabled }: PatientSelectorPr
               onFocus={() => setShowDropdown(true)}
               disabled={disabled}
               className="pl-10 pr-10"
+              data-testid="patient-search-input"
             />
             {isSearching && (
               <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
@@ -196,19 +198,19 @@ export function PatientSelector({ value, onChange, disabled }: PatientSelectorPr
 
           {/* Dropdown */}
           {showDropdown && (
-            <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg">
+            <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg" data-testid="patient-search-dropdown">
               {error && (
                 <div className="p-3 text-sm text-destructive">{error}</div>
               )}
 
               {showRecentLabel && (
-                <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b">
+                <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b" data-testid="recent-patients-label">
                   Recent Patients
                 </div>
               )}
 
               {displayResults.length > 0 ? (
-                <ul className="max-h-60 overflow-auto py-1">
+                <ul className="max-h-60 overflow-auto py-1" data-testid="patient-search-results">
                   {displayResults.map((patient) => (
                     <li key={patient.id}>
                       <button
@@ -218,6 +220,7 @@ export function PatientSelector({ value, onChange, disabled }: PatientSelectorPr
                           'focus:bg-accent focus:outline-none'
                         )}
                         onClick={() => handleSelectPatient(patient)}
+                        data-testid={`patient-result-${patient.id}`}
                       >
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                           <User className="h-4 w-4 text-muted-foreground" />
@@ -235,7 +238,7 @@ export function PatientSelector({ value, onChange, disabled }: PatientSelectorPr
                   ))}
                 </ul>
               ) : searchQuery.trim().length >= 2 && !isSearching ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
+                <div className="p-4 text-center text-sm text-muted-foreground" data-testid="no-patients-message">
                   No patients found
                 </div>
               ) : null}
@@ -251,6 +254,7 @@ export function PatientSelector({ value, onChange, disabled }: PatientSelectorPr
                     setShowCreateDialog(true);
                   }}
                   disabled={disabled}
+                  data-testid="add-new-patient-button"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Add New Patient
@@ -348,7 +352,7 @@ function CreatePatientDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent data-testid="create-patient-dialog">
         <DialogHeader>
           <DialogTitle>Add New Patient</DialogTitle>
           <DialogDescription>
@@ -372,6 +376,7 @@ function CreatePatientDialog({
               placeholder="Enter patient's full name"
               // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
+              data-testid="create-patient-name-input"
             />
           </div>
 
@@ -383,6 +388,7 @@ function CreatePatientDialog({
               value={dateOfBirth}
               onChange={(e) => setDateOfBirth(e.target.value)}
               max={new Date().toISOString().split('T')[0]}
+              data-testid="create-patient-dob-input"
             />
           </div>
 
@@ -393,6 +399,7 @@ function CreatePatientDialog({
               value={mrn}
               onChange={(e) => setMrn(e.target.value)}
               placeholder="Medical record number"
+              data-testid="create-patient-mrn-input"
             />
           </div>
 
@@ -402,10 +409,11 @@ function CreatePatientDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={saving}
+              data-testid="create-patient-cancel"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving} data-testid="create-patient-submit">
               {saving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

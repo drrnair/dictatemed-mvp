@@ -441,9 +441,9 @@ export function ReferralUploader({
   // Render based on state
   if (state.status === 'idle') {
     return (
-      <div className={cn('space-y-3', className)}>
+      <div className={cn('space-y-3', className)} data-testid="referral-uploader">
         {/* Info text */}
-        <div className="flex items-start gap-2 text-sm text-muted-foreground">
+        <div className="flex items-start gap-2 text-sm text-muted-foreground" data-testid="referral-upload-info">
           <Info className="h-4 w-4 mt-0.5 shrink-0" />
           <p>
             Upload a referral letter and DictateMED will extract patient and GP details
@@ -472,6 +472,7 @@ export function ReferralUploader({
             }
           }}
           aria-label="Upload referral letter"
+          data-testid="referral-drop-zone"
         >
           <input
             ref={inputRef}
@@ -480,6 +481,7 @@ export function ReferralUploader({
             accept={ALLOWED_REFERRAL_MIME_TYPES.join(',')}
             onChange={handleInputChange}
             disabled={disabled}
+            data-testid="referral-file-input"
           />
 
           <div className="flex flex-col items-center text-center">
@@ -501,8 +503,8 @@ export function ReferralUploader({
 
   // Processing or complete state
   return (
-    <div className={cn('space-y-3', className)}>
-      <div className="rounded-lg border p-4">
+    <div className={cn('space-y-3', className)} data-testid="referral-uploader">
+      <div className="rounded-lg border p-4" data-testid="referral-file-card">
         <div className="flex items-start gap-3">
           {/* File icon */}
           <div className="rounded bg-muted p-2 shrink-0">
@@ -513,7 +515,7 @@ export function ReferralUploader({
           <div className="flex-1 min-w-0">
             {/* File name and status */}
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm truncate">
+              <span className="font-medium text-sm truncate" data-testid="referral-file-name">
                 {state.file?.name || 'Referral document'}
               </span>
               {state.status === 'ready' && (
@@ -526,7 +528,7 @@ export function ReferralUploader({
 
             {/* File size */}
             {state.file && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground" data-testid="referral-file-size">
                 {formatFileSize(state.file.size)}
               </p>
             )}
@@ -534,23 +536,23 @@ export function ReferralUploader({
             {/* Progress bar for processing states */}
             {['uploading', 'extracting_text', 'extracting_data'].includes(state.status) && (
               <div className="mt-2 space-y-1">
-                <Progress value={state.progress} className="h-1.5" />
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Progress value={state.progress} className="h-1.5" data-testid="referral-upload-progress" />
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5" data-testid="referral-extraction-status">
                   {state.status === 'uploading' && (
                     <>
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <Loader2 className="h-3 w-3 animate-spin" data-testid="referral-loading-spinner" />
                       Uploading...
                     </>
                   )}
                   {state.status === 'extracting_text' && (
                     <>
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <Loader2 className="h-3 w-3 animate-spin" data-testid="referral-loading-spinner" />
                       Reading document...
                     </>
                   )}
                   {state.status === 'extracting_data' && (
                     <>
-                      <Sparkles className="h-3 w-3 animate-pulse" />
+                      <Sparkles className="h-3 w-3 animate-pulse" data-testid="referral-loading-spinner" />
                       Extracting details...
                     </>
                   )}
@@ -560,14 +562,14 @@ export function ReferralUploader({
 
             {/* Success message */}
             {state.status === 'ready' && (
-              <p className="text-xs text-green-600 mt-1">
+              <p className="text-xs text-green-600 mt-1" data-testid="referral-success-message">
                 Extraction complete. Review the details below.
               </p>
             )}
 
             {/* Error message */}
             {state.status === 'error' && (
-              <div className="mt-2">
+              <div className="mt-2" data-testid="referral-error-message">
                 <p className="text-xs text-destructive">{state.error}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   You can still complete the form manually.
@@ -580,7 +582,7 @@ export function ReferralUploader({
           <div className="flex items-center gap-1 shrink-0">
             {/* Retry button for errors */}
             {state.status === 'error' && (
-              <Button variant="ghost" size="sm" onClick={handleRetry}>
+              <Button variant="ghost" size="sm" onClick={handleRetry} data-testid="referral-retry-button">
                 <RefreshCw className="h-4 w-4" />
                 <span className="sr-only">Retry</span>
               </Button>
@@ -590,7 +592,7 @@ export function ReferralUploader({
             {!['uploading', 'extracting_text', 'extracting_data', 'validating'].includes(
               state.status
             ) && (
-              <Button variant="ghost" size="sm" onClick={handleRemove}>
+              <Button variant="ghost" size="sm" onClick={handleRemove} data-testid="referral-remove-button">
                 <X className="h-4 w-4" />
                 <span className="sr-only">Remove</span>
               </Button>

@@ -46,7 +46,7 @@ export function RecordingModeSelector({
   disabled = false,
 }: RecordingModeSelectorProps) {
   return (
-    <div className="space-y-3" role="radiogroup" aria-label="Recording mode">
+    <div className="space-y-3" role="radiogroup" aria-label="Recording mode" data-testid="recording-mode-selector">
       {/* Pill-style mode toggle */}
       <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 w-full">
         {modes.map((mode) => {
@@ -61,6 +61,7 @@ export function RecordingModeSelector({
               aria-checked={isSelected}
               onClick={() => onChange(mode.value)}
               disabled={disabled}
+              data-testid={`recording-mode-${mode.value.toLowerCase()}`}
               className={cn(
                 'flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2',
@@ -81,7 +82,7 @@ export function RecordingModeSelector({
       </div>
 
       {/* Mode description */}
-      <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+      <p className="text-center text-sm text-slate-500 dark:text-slate-400" data-testid="recording-mode-description">
         {modes.find((m) => m.value === value)?.description}
       </p>
     </div>
