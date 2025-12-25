@@ -253,19 +253,46 @@ MOCK_SERVICES=false npm run test:e2e
 | `tests/e2e/global-setup.ts` | Fixed health check response parsing |
 | `src/components/letters/SendLetterDialog.tsx` | Fixed auto-select race condition (pre-existing bug) |
 
-### Next Steps for Full E2E Execution
+### Why Tests Cannot Run Without Secrets
 
-1. **Configure GitHub Secrets** - Required secrets must be set in repository settings:
-   - `E2E_DATABASE_URL` - Supabase connection string for E2E tests
-   - `E2E_TEST_USER_EMAIL` - Auth0 test user email
-   - `E2E_TEST_USER_PASSWORD` - Auth0 test user password
-   - `AUTH0_ISSUER_BASE_URL` - Auth0 domain
-   - `AUTH0_CLIENT_ID` - Auth0 application client ID
-   - `AUTH0_CLIENT_SECRET` - Auth0 application client secret
+E2E tests require authentication to interact with the application. The Auth0 integration means:
+- All dashboard routes require a valid session
+- Login flow uses Auth0 Universal Login (external OAuth)
+- Tests cannot bypass auth without valid credentials
 
-2. **Create Auth0 Test User** - A test user must exist in Auth0 for authentication tests
+**Blocker:** Without the secrets below configured in GitHub Actions, the tests will:
+1. Start the application successfully
+2. Attempt to log in
+3. Fail at Auth0 authentication (no valid credentials)
+4. Never reach the actual test scenarios
 
-3. **Push Changes and Verify CI** - Once secrets are configured, push changes to trigger CI workflow
+### Required GitHub Actions Secrets
+
+The following secrets must be configured in repository settings (Settings → Secrets and variables → Actions):
+
+| Secret | Description | Required |
+|--------|-------------|----------|
+| `E2E_DATABASE_URL` | Supabase connection string for E2E test database | Yes |
+| `E2E_TEST_USER_EMAIL` | Email for a pre-created Auth0 test user | Yes |
+| `E2E_TEST_USER_PASSWORD` | Password for the Auth0 test user | Yes |
+| `AUTH0_SECRET` | Random secret for session encryption | Yes |
+| `AUTH0_BASE_URL` | Base URL of the application (e.g., `http://localhost:3000`) | Yes |
+| `AUTH0_ISSUER_BASE_URL` | Auth0 tenant domain (e.g., `https://your-tenant.auth0.com`) | Yes |
+| `AUTH0_CLIENT_ID` | Auth0 application client ID | Yes |
+| `AUTH0_CLIENT_SECRET` | Auth0 application client secret | Yes |
+
+### Setup Steps
+
+1. **Create Auth0 Test User** - In Auth0 Dashboard:
+   - Navigate to User Management → Users
+   - Create a user with email/password authentication
+   - Note the email and password
+
+2. **Configure GitHub Secrets** - In repository settings, add all required secrets
+
+3. **Push Changes** - Once secrets are configured, push changes to trigger CI workflow
+
+4. **Verify Test Execution** - Check the GitHub Actions logs to confirm tests actually run
 
 ---
 
