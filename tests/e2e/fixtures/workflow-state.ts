@@ -132,7 +132,7 @@ export const workflowTest = base.extend<{
  */
 export function extractLetterIdFromUrl(url: string): string | null {
   const match = url.match(/\/letters\/([a-zA-Z0-9-]+)/);
-  return match ? match[1] : null;
+  return match?.[1] ?? null;
 }
 
 /**
@@ -140,7 +140,7 @@ export function extractLetterIdFromUrl(url: string): string | null {
  */
 export function extractConsultationIdFromUrl(url: string): string | null {
   const match = url.match(/\/consultations\/([a-zA-Z0-9-]+)/);
-  return match ? match[1] : null;
+  return match?.[1] ?? null;
 }
 
 /**
@@ -148,7 +148,7 @@ export function extractConsultationIdFromUrl(url: string): string | null {
  */
 export function extractReferralIdFromUrl(url: string): string | null {
   const match = url.match(/\/referrals\/([a-zA-Z0-9-]+)/);
-  return match ? match[1] : null;
+  return match?.[1] ?? null;
 }
 
 /**
