@@ -325,6 +325,7 @@ Do not make assumptions on important decisions — get clarification first.
 ---
 
 ### [ ] Step: Workflow 3 - Style Profile Tests
+<!-- chat-id: 137fb5e3-60f8-4249-9224-9de9048c8bf7 -->
 
 Implement the style profile E2E workflow:
 
