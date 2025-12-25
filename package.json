@@ -28,6 +28,8 @@
     "db:migrate:subspecialties": "npx tsx prisma/migrations/scripts/migrate-subspecialties.ts",
     "db:migrate:subspecialties:dry-run": "npx tsx prisma/migrations/scripts/migrate-subspecialties.ts --dry-run",
     "db:seed": "prisma db seed",
+    "db:seed:e2e": "npx tsx scripts/seed-e2e-test-data.ts",
+    "db:teardown:e2e": "npx tsx scripts/teardown-e2e-test-data.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {

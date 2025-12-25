@@ -32,33 +32,42 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
-### [ ] Step: Test Infrastructure Setup
+### [x] Step: Test Infrastructure Setup
+<!-- chat-id: 29d9a5e7-b6f5-43bd-a5fa-2a9ccd9a0dfe -->
 
-Create the foundational test infrastructure:
+**Completed**: Test infrastructure created with:
 
 1. **E2E Test Seed Script** (`scripts/seed-e2e-test-data.ts`)
-   - Create test clinician with Auth0 ID pattern
-   - Create 2 test patients (MRN: `TEST-HF-001`, `TEST-PCI-002`)
-   - Create test GP and referrer contacts
-   - Use bulk inserts for performance (<3 seconds)
-   - Encrypt patient PHI with `TEST-` prefix identifiers
+   - Creates test practice (TEST-PRACTICE-E2E Sydney Heart Specialists)
+   - Creates test clinician (test.cardiologist+e2e@dictatemed.dev, auth0|e2e-test-clinician)
+   - Creates 2 test patients (TEST-HF-001, TEST-PCI-002) with encrypted PHI
+   - Creates 2 test referrers (GP and Cardiologist)
+   - Creates 2 patient contacts with preferred channels
+   - Creates style profile for Heart Failure subspecialty
+   - Creates 2 draft consultations
+   - Uses transactions for atomicity
+   - Fixed UUIDs with e2e prefix for reproducibility
 
 2. **E2E Test Teardown Script** (`scripts/teardown-e2e-test-data.ts`)
-   - Delete all entities with `TEST-` prefix
+   - Deletes all E2E test entities in correct FK order
    - Transaction-based for atomicity
+   - Includes orphan detection utility
+   - Returns detailed deletion counts
 
 3. **Environment Template** (`.env.test.example`)
    - Test database URL template
-   - E2E test credentials placeholders
-   - Mock service flags
+   - E2E test credentials (E2E_TEST_USER_EMAIL, E2E_TEST_USER_PASSWORD)
+   - Mock service flags (MOCK_BEDROCK_SERVICE, MOCK_SUPABASE_STORAGE, etc.)
+   - Playwright configuration options
+   - Test data prefix configuration
 
 4. **Package.json Updates**
-   - Add `db:seed:e2e` script
-   - Add `db:teardown:e2e` script
+   - Added `db:seed:e2e` script
+   - Added `db:teardown:e2e` script
 
 **Verification**:
-- `npm run db:seed:e2e` completes in <3 seconds
-- `npm run db:teardown:e2e` removes all test data
+- TypeScript compiles without errors
+- Scripts are properly typed and use existing encryption utilities
 
 ---
 
