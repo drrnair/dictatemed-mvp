@@ -2,6 +2,7 @@
 // Base page object with common utilities for all page objects
 
 import { Page, Locator, expect } from '@playwright/test';
+import { MOCK_SERVICES } from '../utils/helpers';
 
 export class BasePage {
   readonly page: Page;
@@ -318,6 +319,7 @@ export class BasePage {
 
   /**
    * Mock an API response
+   * Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false.
    */
   async mockApiResponse(
     urlPattern: string | RegExp,
@@ -327,6 +329,7 @@ export class BasePage {
       contentType?: string;
     }
   ): Promise<void> {
+    if (!MOCK_SERVICES) return;
     await this.page.route(urlPattern, (route) => {
       route.fulfill({
         status: response.status ?? 200,

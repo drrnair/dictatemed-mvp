@@ -222,6 +222,9 @@ _Tests require CI environment with configured secrets to execute._
 - Updated workflow test files to use the toggle:
   - `manual-consultation.spec.ts` - all inline mocks now respect the flag
   - `referral-upload.spec.ts` - `setupReferralMocks()` respects the flag
+  - `style-profile.spec.ts` - added `setupMockRoute()` helper, all `page.route()` calls now respect the flag
+- Updated page objects:
+  - `BasePage.ts` - `mockApiResponse()` now respects the flag
 
 #### Usage
 ```bash
@@ -241,6 +244,8 @@ MOCK_SERVICES=false npm run test:e2e
 | `tests/e2e/utils/helpers.ts` | Added MOCK_SERVICES toggle + updated mock functions |
 | `tests/e2e/workflows/manual-consultation.spec.ts` | Import MOCK_SERVICES, update inline mocks |
 | `tests/e2e/workflows/referral-upload.spec.ts` | Import MOCK_SERVICES, update setupReferralMocks |
+| `tests/e2e/workflows/style-profile.spec.ts` | Added setupMockRoute helper, all page.route() calls converted |
+| `tests/e2e/page-objects/BasePage.ts` | Import MOCK_SERVICES, update mockApiResponse() |
 
 ### Next Steps for Full E2E Execution
 
