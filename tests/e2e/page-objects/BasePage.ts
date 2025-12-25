@@ -3,6 +3,7 @@
 
 import { Page, Locator, expect } from '@playwright/test';
 import { MOCK_SERVICES } from '../utils/helpers';
+import { TEST_TIMEOUTS } from '../fixtures/test-data';
 
 export class BasePage {
   readonly page: Page;
@@ -47,7 +48,7 @@ export class BasePage {
   /**
    * Wait for network to be idle (no pending requests)
    */
-  async waitForNetworkIdle(timeout = 5000): Promise<void> {
+  async waitForNetworkIdle(timeout = TEST_TIMEOUTS.networkIdle): Promise<void> {
     await this.page.waitForLoadState('networkidle', { timeout });
   }
 
@@ -56,7 +57,7 @@ export class BasePage {
    */
   async waitForVisible(
     selector: string | Locator,
-    timeout = 10000
+    timeout = TEST_TIMEOUTS.elementVisible
   ): Promise<Locator> {
     const locator =
       typeof selector === 'string' ? this.page.locator(selector) : selector;
@@ -67,7 +68,7 @@ export class BasePage {
   /**
    * Wait for an element to be hidden
    */
-  async waitForHidden(selector: string | Locator, timeout = 10000): Promise<void> {
+  async waitForHidden(selector: string | Locator, timeout = TEST_TIMEOUTS.elementHidden): Promise<void> {
     const locator =
       typeof selector === 'string' ? this.page.locator(selector) : selector;
     await locator.waitFor({ state: 'hidden', timeout });
@@ -76,7 +77,7 @@ export class BasePage {
   /**
    * Wait for element with text to appear
    */
-  async waitForText(text: string, timeout = 10000): Promise<Locator> {
+  async waitForText(text: string, timeout = TEST_TIMEOUTS.elementVisible): Promise<Locator> {
     const locator = this.page.getByText(text);
     await locator.waitFor({ state: 'visible', timeout });
     return locator;
@@ -102,7 +103,7 @@ export class BasePage {
     type?: 'success' | 'error' | 'warning' | 'info'
   ): Promise<void> {
     const toast = this.getToastContainer().filter({ hasText: message });
-    await expect(toast).toBeVisible({ timeout: 10000 });
+    await expect(toast).toBeVisible({ timeout: TEST_TIMEOUTS.toast });
 
     if (type) {
       // Toast types are often indicated by data attributes or class names
@@ -120,7 +121,7 @@ export class BasePage {
   /**
    * Wait for toast to disappear
    */
-  async waitForToastDismiss(timeout = 10000): Promise<void> {
+  async waitForToastDismiss(timeout = TEST_TIMEOUTS.toast): Promise<void> {
     await this.getToastContainer().waitFor({ state: 'hidden', timeout });
   }
 

@@ -3,6 +3,7 @@
 
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { TEST_TIMEOUTS } from '../fixtures/test-data';
 
 export class LoginPage extends BasePage {
   // Auth0 form selectors (Auth0 Universal Login)
@@ -94,10 +95,10 @@ export class LoginPage extends BasePage {
     await this.gotoLogin();
 
     // Wait for Auth0 login page to load
-    await this.page.waitForURL(/auth0\.com|\/login/, { timeout: 15000 });
+    await this.page.waitForURL(/auth0\.com|\/login/, { timeout: TEST_TIMEOUTS.auth0Redirect });
 
     // Fill credentials
-    await this.emailInput.waitFor({ state: 'visible', timeout: 10000 });
+    await this.emailInput.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.auth0Login });
     await this.emailInput.fill(email);
     await this.passwordInput.fill(password);
 
@@ -105,7 +106,7 @@ export class LoginPage extends BasePage {
     await this.submitButton.click();
 
     // Wait for redirect back to app
-    await this.page.waitForURL(/\/dashboard/, { timeout: 30000 });
+    await this.page.waitForURL(/\/dashboard/, { timeout: TEST_TIMEOUTS.auth0Redirect });
   }
 
   /**
@@ -155,7 +156,7 @@ export class LoginPage extends BasePage {
    * Assert login failed with error message
    */
   async expectLoginError(expectedMessage?: string | RegExp): Promise<void> {
-    await expect(this.errorMessage).toBeVisible({ timeout: 10000 });
+    await expect(this.errorMessage).toBeVisible({ timeout: TEST_TIMEOUTS.elementVisible });
     if (expectedMessage) {
       await expect(this.errorMessage).toHaveText(expectedMessage);
     }
@@ -180,7 +181,7 @@ export class LoginPage extends BasePage {
    * Assert user is not logged in (redirected to login)
    */
   async expectNotAuthenticated(): Promise<void> {
-    await this.page.waitForURL(/\/login|auth0\.com/, { timeout: 10000 });
+    await this.page.waitForURL(/\/login|auth0\.com/, { timeout: TEST_TIMEOUTS.navigation });
   }
 
   // ============================================
@@ -192,7 +193,7 @@ export class LoginPage extends BasePage {
    */
   async logout(): Promise<void> {
     await this.goto('/api/auth/logout');
-    await this.page.waitForURL(/\/|\/login/, { timeout: 10000 });
+    await this.page.waitForURL(/\/|\/login/, { timeout: TEST_TIMEOUTS.navigation });
   }
 
   /**
@@ -201,7 +202,7 @@ export class LoginPage extends BasePage {
   async isLoggedIn(): Promise<boolean> {
     try {
       await this.goto('/dashboard');
-      await this.page.waitForURL(/\/dashboard/, { timeout: 5000 });
+      await this.page.waitForURL(/\/dashboard/, { timeout: TEST_TIMEOUTS.networkIdle });
       return true;
     } catch {
       return false;

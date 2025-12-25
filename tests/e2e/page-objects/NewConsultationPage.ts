@@ -3,6 +3,7 @@
 
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { TEST_TIMEOUTS } from '../fixtures/test-data';
 
 // Letter type options
 export type LetterType = 'NEW_PATIENT' | 'FOLLOW_UP' | 'ANGIOGRAM_PROCEDURE' | 'ECHO_REPORT';
@@ -218,7 +219,7 @@ export class NewConsultationPage extends BasePage {
     // Wait for patient search or recording section to be visible
     await expect(
       this.patientSearchInput.or(this.recordingSection)
-    ).toBeVisible({ timeout: 10000 });
+    ).toBeVisible({ timeout: TEST_TIMEOUTS.elementVisible });
   }
 
   // ============================================
@@ -233,7 +234,7 @@ export class NewConsultationPage extends BasePage {
     await this.patientSearchInput.fill(query);
     // Wait for search results to appear or network to settle
     await Promise.race([
-      this.patientSearchResults.waitFor({ state: 'visible', timeout: 5000 }),
+      this.patientSearchResults.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.searchResults }),
       this.waitForNetworkIdle(),
     ]).catch(() => {
       // Results might not appear if no matches - that's okay
@@ -256,7 +257,7 @@ export class NewConsultationPage extends BasePage {
     await this.searchPatient(mrn);
     // Wait for search results to be visible with matching MRN
     const patientResult = this.patientSearchResults.filter({ hasText: mrn }).first();
-    await patientResult.waitFor({ state: 'visible', timeout: 10000 });
+    await patientResult.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.elementVisible });
     await patientResult.click();
     await expect(this.selectedPatientDisplay).toBeVisible();
   }
@@ -311,7 +312,7 @@ export class NewConsultationPage extends BasePage {
     await this.referrerSearchInput.fill(query);
     // Wait for search results to appear or network to settle
     await Promise.race([
-      this.referrerSearchResults.waitFor({ state: 'visible', timeout: 5000 }),
+      this.referrerSearchResults.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.searchResults }),
       this.waitForNetworkIdle(),
     ]).catch(() => {
       // Results might not appear if no matches - that's okay
@@ -418,7 +419,7 @@ export class NewConsultationPage extends BasePage {
     await this.startRecordingButton.click();
     // Wait for recording to start
     await expect(this.stopRecordingButton.or(this.pauseRecordingButton)).toBeVisible({
-      timeout: 5000,
+      timeout: TEST_TIMEOUTS.modalAppear,
     });
   }
 
@@ -476,21 +477,21 @@ export class NewConsultationPage extends BasePage {
   /**
    * Wait for letter generation to complete
    */
-  async waitForLetterGeneration(timeout = 60000): Promise<void> {
+  async waitForLetterGeneration(timeout = TEST_TIMEOUTS.letterGeneration): Promise<void> {
     // Wait for generating spinner to appear and then disappear
-    await this.generatingSpinner.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
+    await this.generatingSpinner.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.modalAppear }).catch(() => {
       // Spinner might not appear if generation is very fast
     });
     await this.generatingSpinner.waitFor({ state: 'hidden', timeout });
 
     // Should redirect to letter detail page
-    await this.page.waitForURL(/\/letters\/.+/, { timeout: 10000 });
+    await this.page.waitForURL(/\/letters\/.+/, { timeout: TEST_TIMEOUTS.navigation });
   }
 
   /**
    * Generate letter and wait for completion
    */
-  async generateLetterAndWait(timeout = 60000): Promise<void> {
+  async generateLetterAndWait(timeout = TEST_TIMEOUTS.letterGeneration): Promise<void> {
     await this.generateLetter();
     await this.waitForLetterGeneration(timeout);
   }

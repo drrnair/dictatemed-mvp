@@ -3,6 +3,7 @@
 
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { TEST_TIMEOUTS } from '../fixtures/test-data';
 
 // Extraction states from the application
 export type ExtractionState =
@@ -295,7 +296,7 @@ export class ReferralUploadPage extends BasePage {
     const data: ExtractedReferralData = {};
 
     // Wait for review panel to be visible
-    await expect(this.reviewPanel).toBeVisible({ timeout: 5000 });
+    await expect(this.reviewPanel).toBeVisible({ timeout: TEST_TIMEOUTS.modalAppear });
 
     // Extract patient info
     if (await this.patientSection.isVisible()) {
@@ -475,7 +476,7 @@ export class ReferralUploadPage extends BasePage {
    * Assert extraction completed successfully
    */
   async expectExtractionSuccess(): Promise<void> {
-    await expect(this.reviewPanel).toBeVisible({ timeout: 30000 });
+    await expect(this.reviewPanel).toBeVisible({ timeout: TEST_TIMEOUTS.referralExtraction });
   }
 
   /**
@@ -483,7 +484,7 @@ export class ReferralUploadPage extends BasePage {
    */
   async expectExtractionError(): Promise<void> {
     await expect(this.extractionErrorIcon.or(this.extractionErrorMessage)).toBeVisible({
-      timeout: 30000,
+      timeout: TEST_TIMEOUTS.referralExtraction,
     });
   }
 
