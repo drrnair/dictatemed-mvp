@@ -30,7 +30,8 @@
     "db:seed": "prisma db seed",
     "db:seed:e2e": "npx tsx scripts/seed-e2e-test-data.ts",
     "db:teardown:e2e": "npx tsx scripts/teardown-e2e-test-data.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "generate:referral-pdfs": "npx tsx scripts/generate-referral-pdfs.ts"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^3.5.0",

@@ -1,0 +1,102 @@
+TEST Melbourne Medical Centre
+456 Collins Street
+Melbourne VIC 3000
+Phone: +61 3 9000 0001
+Fax: +61 3 9000 0002
+Email: test.gp.melbourne@test.dictatemed.dev
+
+-------------------------------------------------------------------------------
+
+                           SPECIALIST REFERRAL
+
+-------------------------------------------------------------------------------
+
+Date: 15 December 2024
+
+To: Cardiology Department
+    TEST-PRACTICE-E2E Sydney Heart Specialists
+
+RE: TEST Patient - Referral HF
+    DOB: 20 March 1960
+    MRN: TEST-REF-HF-001
+    Medicare: TEST-9876543210
+    Address: TEST Address - 789 Bourke Street, Melbourne VIC 3000
+    Phone: +61 400 000 100
+
+-------------------------------------------------------------------------------
+
+REASON FOR REFERRAL:
+Progressive dyspnoea on exertion with ankle swelling for cardiology assessment
+
+URGENCY: Routine
+
+-------------------------------------------------------------------------------
+
+CLINICAL HISTORY:
+
+I am referring the above patient for cardiology review. They have been
+experiencing progressive shortness of breath on exertion over the past
+3-4 months, now limiting them to walking approximately 100 metres on
+the flat. They have also noticed bilateral ankle swelling, particularly
+towards the end of the day.
+
+PAST MEDICAL HISTORY:
+- Hypertension (diagnosed 2015) - currently on Perindopril 5mg daily
+- Type 2 Diabetes Mellitus (diagnosed 2018) - on Metformin 1g BD
+- Hyperlipidaemia - on Atorvastatin 20mg nocte
+- Obesity (BMI 32)
+
+SOCIAL HISTORY:
+- Ex-smoker (ceased 2010, 20 pack-year history)
+- Minimal alcohol intake
+- Retired, lives with spouse
+
+FAMILY HISTORY:
+- Father: MI at age 65
+- Mother: Hypertension
+
+CURRENT MEDICATIONS:
+1. Perindopril 5mg daily
+2. Metformin 1g BD
+3. Atorvastatin 20mg nocte
+4. Aspirin 100mg daily
+
+ALLERGIES: Nil known
+
+EXAMINATION:
+- BP: 145/90 mmHg
+- HR: 84 bpm, regular
+- Weight: 92 kg
+- JVP: Appeared elevated
+- Heart sounds: Dual, no murmurs heard
+- Chest: Scattered bibasal crackles
+- Peripheral oedema: Bilateral pitting oedema to mid-calf
+
+INVESTIGATIONS:
+- ECG (attached): Sinus rhythm, left axis deviation, possible LVH
+- Chest X-ray (attached): Cardiomegaly with upper lobe venous diversion
+- Bloods:
+  - Hb: 135 g/L
+  - Creatinine: 110 umol/L (eGFR 62)
+  - HbA1c: 7.2%
+  - BNP: 580 pg/mL
+
+CLINICAL IMPRESSION:
+Suspected new heart failure, likely HFrEF given clinical presentation.
+Would appreciate cardiology assessment including echocardiography and
+management recommendations.
+
+Please do not hesitate to contact me if you require any further information.
+
+Kind regards,
+
+
+Dr. TEST Referring GP Melbourne
+MBBS, FRACGP
+Provider Number: TEST-1234567
+TEST Melbourne Medical Centre
+
+-------------------------------------------------------------------------------
+This is a TEST referral document for E2E testing purposes only.
+All patient data is fictional and uses TEST- prefix identifiers.
+-------------------------------------------------------------------------------

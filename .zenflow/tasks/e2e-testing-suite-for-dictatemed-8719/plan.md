@@ -138,34 +138,83 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
-### [ ] Step: Test Utilities and Fixtures
+### [x] Step: Test Utilities and Fixtures
+<!-- chat-id: 4f3aba24-cca3-4b33-a9df-6e73667de47e -->
 
-Create helpers and test data:
+**Completed**: All test utilities and fixtures created:
 
 1. **Test Helpers** (`tests/e2e/utils/helpers.ts`)
    - `waitForNetworkIdle(page, timeout)` - Network idle wait
-   - `expectToast(page, message)` - Toast assertion
+   - `waitForApiResponse(page, urlPattern, timeout)` - Wait for API response
+   - `expectToast(page, message, options)` - Toast assertion with type support
+   - `waitForToastDismiss(page, timeout)` - Wait for toast to disappear
    - `assertNoConsoleErrors(page)` - Console error check
-   - `mockApiResponse(page, url, response)` - API mocking
+   - `setupConsoleErrorCollection(page)` - Collect errors for later assertion
+   - `mockApiResponse(page, urlPattern, response)` - API mocking with delay support
+   - `mockLetterGeneration(page, letterContent)` - Mock AI letter generation
+   - `mockTranscription(page, transcriptText)` - Mock transcription service
+   - `mockReferralExtraction(page, extractedData)` - Mock referral extraction
+   - `clearApiMocks(page)` - Clear all API mocks
+   - `debugScreenshot(page, name)` - Take debug screenshot
+   - `retryWithBackoff(action, options)` - Retry with exponential backoff
+   - `waitForStable(locator, timeout)` - Wait for element to stabilize
+   - `generateTestId(prefix)` - Generate unique test IDs
+   - `formatDateForInput(date)` - Format date for input fields
+   - `formatAustralianPhone(phone)` - Format AU phone numbers
+   - `validateClinicalContent(content, expectedValues)` - Validate letter content
+   - `waitForUrl(page, urlPattern, timeout)` - Wait for URL pattern
+   - `getCurrentSession(page)` - Get current session info
+   - `clearBrowserStorage(page)` - Clear browser storage
 
 2. **Test Data Factory** (`tests/e2e/utils/factory.ts`)
    - `createTestPatient(overrides)` - Generate patient data
+   - `createHeartFailurePatient(overrides)` - HF patient preset
+   - `createPCIPatient(overrides)` - PCI patient preset
+   - `createTestPatients(count)` - Batch patient creation
    - `createTestContact(overrides)` - Generate contact data
-   - `createTestClinicalContext(subspecialty)` - Generate clinical context
+   - `createGPContact(overrides)` - GP contact preset
+   - `createSpecialistContact(overrides)` - Specialist preset
+   - `createTestReferrer(overrides)` - Generate referrer data
+   - `createTestClinicalContext(subspecialty)` - Generate clinical context for 7 subspecialties
+   - `createTestLetterContent(overrides)` - Generate letter content
+   - `assembleLetterContent(content)` - Assemble full letter
+   - `createTestReferralDocument(overrides)` - Generate referral doc data
+   - `createConsultationTestData(subspecialty)` - Complete consultation dataset
 
-3. **Sample Referral PDFs** (`tests/e2e/fixtures/referrals/`)
-   - `cardiology-referral-001.pdf` - Heart failure referral
-   - `cardiology-referral-002.pdf` - PCI referral
-   - Create realistic cardiology referral documents
+3. **Sample Referral Documents** (`tests/e2e/fixtures/referrals/`)
+   - `cardiology-referral-001.txt` - Heart failure referral (routine)
+   - `cardiology-referral-002.txt` - Chest pain referral (urgent)
+   - `README.md` - Instructions for PDF generation
+   - `scripts/generate-referral-pdfs.ts` - PDF generation script
 
 4. **Test Data Constants** (`tests/e2e/fixtures/test-data.ts`)
-   - Test user credentials (from env)
-   - Test patient MRNs
-   - Expected extraction results
+   - `getTestCredentials()` - Get test user credentials from env
+   - `hasMockAuthToken()`, `getMockAuthToken()` - Mock auth token helpers
+   - `TEST_IDS` - Fixed UUIDs for all test entities
+   - `TEST_PRACTICE` - Practice constants
+   - `TEST_CLINICIAN` - Clinician constants
+   - `TEST_PATIENTS` - Patient constants (HF, PCI)
+   - `TEST_REFERRERS` - Referrer constants (GP, Cardiologist)
+   - `TEST_CONTACTS` - Patient contact constants
+   - `EXPECTED_REFERRAL_EXTRACTIONS` - Expected extraction results for PDFs
+   - `SAMPLE_LETTER_CONTENT` - Sample letter content by subspecialty
+   - `TEST_ROUTES` - Application route constants
+   - `TEST_TIMEOUTS` - Timeout constants
+   - `TEST_SELECTORS` - Common data-testid selectors
+   - `CLINICAL_PATTERNS` - Regex patterns for clinical validation
+   - `TEST_DATA` - Combined export of all constants
+
+5. **Index Export** (`tests/e2e/utils/index.ts`)
+   - Central export for all utilities and factories
+
+6. **Package.json Updates**
+   - Added `generate:referral-pdfs` script
 
 **Verification**:
-- Factory functions generate valid data
-- PDF fixtures are readable
+- TypeScript compiles without errors (`npx tsc --noEmit` passes)
+- Factory functions generate valid data with TEST- prefix
+- Clinical context factories cover all 7 subspecialties
+- All test data uses TEST- prefix for PHI compliance
 
 ---
 
