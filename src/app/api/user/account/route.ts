@@ -109,60 +109,53 @@ export async function DELETE() {
     }
 
     // Delete database records in order (respecting foreign keys)
-    // Use extended timeout for accounts with large amounts of data
-    await prisma.$transaction(
-      async (tx) => {
-        // Delete audit logs
-        await tx.auditLog.deleteMany({ where: { userId } });
+    await prisma.$transaction(async (tx) => {
+      // Delete audit logs
+      await tx.auditLog.deleteMany({ where: { userId } });
 
-        // Delete notifications
-        await tx.notification.deleteMany({ where: { userId } });
+      // Delete notifications
+      await tx.notification.deleteMany({ where: { userId } });
 
-        // Delete style edits
-        await tx.styleEdit.deleteMany({ where: { userId } });
+      // Delete style edits
+      await tx.styleEdit.deleteMany({ where: { userId } });
 
-        // Delete style profiles and seed letters
-        await tx.styleProfile.deleteMany({ where: { userId } });
-        await tx.styleSeedLetter.deleteMany({ where: { userId } });
+      // Delete style profiles and seed letters
+      await tx.styleProfile.deleteMany({ where: { userId } });
+      await tx.styleSeedLetter.deleteMany({ where: { userId } });
 
-        // Delete template preferences
-        await tx.userTemplatePreference.deleteMany({ where: { userId } });
+      // Delete template preferences
+      await tx.userTemplatePreference.deleteMany({ where: { userId } });
 
-        // Delete sent emails (must be before letters due to FK constraint)
-        await tx.sentEmail.deleteMany({ where: { userId } });
+      // Delete sent emails (must be before letters due to FK constraint)
+      await tx.sentEmail.deleteMany({ where: { userId } });
 
-        // Delete letter sends
-        await tx.letterSend.deleteMany({ where: { senderId: userId } });
+      // Delete letter sends
+      await tx.letterSend.deleteMany({ where: { senderId: userId } });
 
-        // Delete letters
-        await tx.letter.deleteMany({ where: { userId } });
+      // Delete letters
+      await tx.letter.deleteMany({ where: { userId } });
 
-        // Delete documents
-        await tx.document.deleteMany({ where: { userId } });
+      // Delete documents
+      await tx.document.deleteMany({ where: { userId } });
 
-        // Delete recordings
-        await tx.recording.deleteMany({ where: { userId } });
+      // Delete recordings
+      await tx.recording.deleteMany({ where: { userId } });
 
-        // Delete referral documents
-        await tx.referralDocument.deleteMany({ where: { userId } });
+      // Delete referral documents
+      await tx.referralDocument.deleteMany({ where: { userId } });
 
-        // Delete consultations
-        await tx.consultation.deleteMany({ where: { userId } });
+      // Delete consultations
+      await tx.consultation.deleteMany({ where: { userId } });
 
-        // Delete medical specialty selections
-        await tx.clinicianSubspecialty.deleteMany({ where: { userId } });
-        await tx.clinicianSpecialty.deleteMany({ where: { userId } });
-        await tx.customSubspecialty.deleteMany({ where: { userId } });
-        await tx.customSpecialty.deleteMany({ where: { userId } });
+      // Delete medical specialty selections
+      await tx.clinicianSubspecialty.deleteMany({ where: { userId } });
+      await tx.clinicianSpecialty.deleteMany({ where: { userId } });
+      await tx.customSubspecialty.deleteMany({ where: { userId } });
+      await tx.customSpecialty.deleteMany({ where: { userId } });
 
-        // Finally delete the user
-        await tx.user.delete({ where: { id: userId } });
-      },
-      {
-        maxWait: 30000, // 30 seconds max wait to acquire connection
-        timeout: 60000, // 60 seconds transaction timeout for large accounts
-      }
-    );
+      // Finally delete the user
+      await tx.user.delete({ where: { id: userId } });
+    });
 
     log.info('Account deleted successfully', {
       userId,
