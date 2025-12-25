@@ -1,6 +1,7 @@
 # DictateMED - Implemented Features Audit
 
 **Audit Date:** 2025-12-26
+**App Version:** 0.1.0
 **Pivot Status:** Transitioned from cardiology-only to all-clinician (doctor-focused)
 **Framework:** Next.js 14 (App Router) with TypeScript
 
@@ -25,12 +26,11 @@
 
 | Feature | Status | Implementation | Pivot Impact |
 |---------|--------|----------------|--------------|
-| Email/password login | ✅ Fully Implemented | Supabase Auth, `src/app/login/page.tsx`, `src/lib/auth.ts` | None - generic |
-| Magic link login | ✅ Fully Implemented | Supabase Auth | None - generic |
-| Social auth (Google) | ✅ Fully Implemented | `src/components/auth/SocialAuthButton.tsx` | None - generic |
+| Email/password login | ✅ Fully Implemented | Auth0, `src/app/login/page.tsx`, `src/lib/auth.ts` | None - generic |
+| Social auth (Google) | ✅ Fully Implemented | Auth0 social connections, `src/components/auth/SocialAuthButton.tsx` | None - generic |
 | User registration | ✅ Fully Implemented | `src/components/auth/SignupForm.tsx` | None - generic |
-| Session management | ✅ Fully Implemented | `src/lib/auth.ts`, middleware | None - generic |
-| Role-based access | ✅ Fully Implemented | `UserRole` enum (ADMIN, CLINICIAN, STAFF) | Generalized from "cardiologist" |
+| Session management | ✅ Fully Implemented | Auth0 SDK (`@auth0/nextjs-auth0`), `src/lib/auth.ts`, middleware | None - generic |
+| Role-based access | ✅ Fully Implemented | `UserRole` enum (ADMIN, SPECIALIST) | Generalized from "cardiologist" |
 | Practice/organization | ✅ Fully Implemented | `Practice` model, multi-tenant architecture | None - generic |
 | User profile settings | ✅ Fully Implemented | `src/app/(dashboard)/settings/profile/page.tsx` | None - generic |
 | Onboarding flow | ✅ Fully Implemented | `src/app/(dashboard)/onboarding/page.tsx` | Includes specialty selection |
