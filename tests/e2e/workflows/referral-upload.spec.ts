@@ -564,7 +564,7 @@ test.describe('Referral Upload Workflow', () => {
   });
 });
 
-// Urgent referral tests (cardiology-referral-002.pdf)
+// Urgent referral tests (cardiology-referral-002)
 test.describe('Urgent Referral Upload', () => {
   let loginPage: LoginPage;
   let referralPage: ReferralUploadPage;
@@ -577,33 +577,16 @@ test.describe('Urgent Referral Upload', () => {
   test('should extract urgent referral with correct priority', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-002'];
 
-    // Setup extraction mock for urgent referral
-    await page.route('**/api/referrals/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/upload')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, referralId: 'test-referral-002' }),
-        });
-      } else if (url.includes('/extract')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            extractedData: {
-              patient: expectedExtraction.patient,
-              referrer: expectedExtraction.referrer,
-              reasonForReferral: expectedExtraction.reasonForReferral,
-              urgency: 'urgent',
-            },
-            confidence: 0.95,
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+    // Use helper with urgency flag
+    await setupReferralMocks(page, {
+      referralId: 'test-referral-002',
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+        reasonForReferral: expectedExtraction.reasonForReferral,
+        urgency: 'urgent',
+      },
+      confidence: 0.95,
     });
 
     // Login and navigate
@@ -619,38 +602,30 @@ test.describe('Urgent Referral Upload', () => {
 
     // Verify referrer data is extracted
     expect(data.referrer?.name).toContain('TEST');
+
+    // Check for urgency badge display (UX improvement check)
+    const urgencyBadge = page.locator(
+      '[data-testid="urgency-badge"], [class*="urgent"], [aria-label*="urgent"]'
+    );
+    const hasUrgencyIndicator = await urgencyBadge.isVisible().catch(() => false);
+    if (!hasUrgencyIndicator) {
+      console.log('UX Note: Consider adding visual urgency badge for urgent referrals');
+    }
   });
 
   test('should extract chest pain clinical context correctly', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-002'];
 
-    // Setup extraction mock
-    await page.route('**/api/referrals/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/upload')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, referralId: 'test-referral-002' }),
-        });
-      } else if (url.includes('/extract')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            extractedData: {
-              patient: expectedExtraction.patient,
-              referrer: expectedExtraction.referrer,
-              clinicalContext: 'Exertional chest pain with positive stress test.',
-              reasonForReferral: expectedExtraction.reasonForReferral,
-              urgency: 'urgent',
-            },
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+    // Use helper for mock setup
+    await setupReferralMocks(page, {
+      referralId: 'test-referral-002',
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+        clinicalContext: 'Exertional chest pain with positive stress test.',
+        reasonForReferral: expectedExtraction.reasonForReferral,
+        urgency: 'urgent',
+      },
     });
 
     // Login and navigate
@@ -683,16 +658,9 @@ test.describe('Referral Upload - Error Handling', () => {
   });
 
   test('should handle upload failure gracefully', async ({ page }) => {
-    // Mock upload failure
-    await page.route('**/api/referrals/upload', async (route) => {
-      await route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: false,
-          error: 'File upload failed. Please try again.',
-        }),
-      });
+    // Use helper with upload error flag
+    await setupReferralMocks(page, {
+      uploadError: true,
     });
 
     // Login and navigate
@@ -715,24 +683,10 @@ test.describe('Referral Upload - Error Handling', () => {
   });
 
   test('should handle extraction failure gracefully', async ({ page }) => {
-    // Mock successful upload but failed extraction
-    await page.route('**/api/referrals/upload', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, referralId: 'test-referral-fail' }),
-      });
-    });
-
-    await page.route('**/api/referrals/**/extract', async (route) => {
-      await route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: false,
-          error: 'Failed to extract data from PDF. The document may be corrupted or unreadable.',
-        }),
-      });
+    // Use helper with extraction error flag
+    await setupReferralMocks(page, {
+      referralId: 'test-referral-fail',
+      extractionError: true,
     });
 
     // Login and navigate

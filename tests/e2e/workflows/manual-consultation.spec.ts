@@ -11,7 +11,7 @@
 // 7. Review and approve letter
 // 8. Send letter to GP and self
 
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { LoginPage } from '../page-objects/LoginPage';
 import { DashboardPage } from '../page-objects/DashboardPage';
 import { NewConsultationPage } from '../page-objects/NewConsultationPage';
@@ -20,7 +20,6 @@ import {
   TEST_PATIENTS,
   TEST_REFERRERS,
   TEST_CLINICIAN,
-  TEST_ROUTES,
   TEST_TIMEOUTS,
   SAMPLE_LETTER_CONTENT,
   CLINICAL_PATTERNS,
@@ -34,7 +33,114 @@ import {
   validateClinicalContent,
 } from '../utils/helpers';
 
-// Test configuration
+// ============================================
+// Centralized Mock Setup Functions
+// ============================================
+
+/**
+ * Sets up mock for letter detail page with test data.
+ * Used when the real letter generation workflow wasn't executed.
+ */
+async function setupLetterDetailMock(page: Page, letterId: string): Promise<void> {
+  await page.route(`**/api/letters/${letterId}`, async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: letterId,
+          content: SAMPLE_LETTER_CONTENT.heartFailure.body,
+          status: 'DRAFT',
+          letterType: 'NEW_PATIENT',
+          patientId: TEST_PATIENTS.heartFailure.id,
+          patientName: TEST_PATIENTS.heartFailure.name,
+          extractedValues: SAMPLE_LETTER_CONTENT.heartFailure.extractedValues,
+          hallucinationFlags: [],
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+}
+
+/**
+ * Sets up mock for letter send endpoint.
+ */
+async function setupLetterSendMock(page: Page): Promise<void> {
+  await page.route('**/api/letters/**/send', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        sentTo: [
+          {
+            name: TEST_REFERRERS.gp.name,
+            email: TEST_REFERRERS.gp.email,
+            status: 'sent',
+          },
+          {
+            name: TEST_CLINICIAN.name,
+            email: TEST_CLINICIAN.email,
+            status: 'sent',
+          },
+        ],
+      }),
+    });
+  });
+}
+
+/**
+ * Sets up mock for send history endpoint.
+ */
+async function setupSendHistoryMock(page: Page, letterId: string): Promise<void> {
+  await page.route(`**/api/letters/${letterId}/send-history`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        history: [
+          {
+            id: 'send-1',
+            recipient: TEST_REFERRERS.gp.name,
+            email: TEST_REFERRERS.gp.email,
+            status: 'delivered',
+            sentAt: new Date().toISOString(),
+            channel: 'email',
+          },
+          {
+            id: 'send-2',
+            recipient: TEST_CLINICIAN.name,
+            email: TEST_CLINICIAN.email,
+            status: 'delivered',
+            sentAt: new Date().toISOString(),
+            channel: 'email',
+          },
+        ],
+      }),
+    });
+  });
+}
+
+/**
+ * Sets up mock for recordings API.
+ */
+async function setupRecordingsMock(page: Page): Promise<void> {
+  await page.route('**/api/recordings/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        recordingId: 'test-recording-id',
+        transcript: 'Test transcription for heart failure patient',
+      }),
+    });
+  });
+}
+
+// Test configuration - serial execution to maintain state
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Manual Consultation Workflow', () => {
@@ -43,6 +149,7 @@ test.describe('Manual Consultation Workflow', () => {
   let consultationPage: NewConsultationPage;
   let letterDetailPage: LetterDetailPage;
   let generatedLetterId: string | null = null;
+  let getConsoleErrors: (() => string[]) | null = null;
 
   test.beforeEach(async ({ page }) => {
     // Initialize page objects
@@ -50,6 +157,19 @@ test.describe('Manual Consultation Workflow', () => {
     dashboardPage = new DashboardPage(page);
     consultationPage = new NewConsultationPage(page);
     letterDetailPage = new LetterDetailPage(page);
+
+    // Setup console error collection for debugging
+    getConsoleErrors = setupConsoleErrorCollection(page);
+  });
+
+  test.afterEach(async () => {
+    // Check for console errors after each test and log warnings
+    if (getConsoleErrors) {
+      const errors = getConsoleErrors();
+      if (errors.length > 0) {
+        console.warn('Console errors detected during test:', errors);
+      }
+    }
   });
 
   test('should login and navigate to dashboard', async ({ page }) => {
