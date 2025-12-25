@@ -60,12 +60,24 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
   // The /authorize endpoint redirects to the actual login page
   await page.waitForURL(/auth0\.com/, { timeout: TEST_TIMEOUTS.auth0Redirect });
 
-  // Wait for page to be fully loaded and all network requests to settle
-  await page.waitForLoadState('networkidle', { timeout: TEST_TIMEOUTS.pageLoad });
+  // Wait for page to be fully loaded - use 'load' then 'networkidle' for more reliability
+  await page.waitForLoadState('load', { timeout: TEST_TIMEOUTS.pageLoad });
+  await page.waitForLoadState('domcontentloaded', { timeout: TEST_TIMEOUTS.pageLoad });
+
+  // Additional wait for Auth0 to finish rendering the login form
+  // Auth0 Universal Login can take time to fully render after DOM is ready
+  await page.waitForTimeout(2000);
+
+  // Try to wait for networkidle, but don't fail if it times out (Auth0 may have long-polling)
+  await page.waitForLoadState('networkidle', { timeout: TEST_TIMEOUTS.networkIdle }).catch(() => {
+    console.log('Auth0: networkidle timeout - proceeding anyway');
+  });
 
   // Auth0 Universal Login uses various input selectors depending on version
   // Build a combined selector for all possible email/username inputs
+  // Including both New Universal Login and Classic Lock widget selectors
   const emailSelectorString = [
+    // Universal Login (New Experience)
     'input[name="email"]',
     'input[name="username"]',
     'input[id="username"]',
@@ -73,20 +85,33 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
     'input[data-testid="username-input"]',
     'input[autocomplete="username"]',
     'input[autocomplete="email"]',
-    // Auth0 Universal Login (New Experience) selectors
     'input[inputmode="email"]',
     '#1-email',
+    // Auth0 Lock widget (Classic)
+    '.auth0-lock-input[name="email"]',
+    '.auth0-lock-input[name="username"]',
+    'input.auth0-lock-input',
+    // Identifier-first variations
+    'input[aria-label*="email" i]',
+    'input[aria-label*="username" i]',
+    'input[placeholder*="email" i]',
+    'input[placeholder*="username" i]',
   ].join(', ');
 
   const passwordSelectorString = [
+    // Universal Login
     'input[name="password"]',
     'input[id="password"]',
     'input[type="password"]',
     'input[data-testid="password-input"]',
+    // Auth0 Lock widget
+    '.auth0-lock-input[name="password"]',
+    'input.auth0-lock-input[type="password"]',
   ].join(', ');
 
   // Submit button selector - used for both email and password steps
   const submitSelectorString = [
+    // Universal Login
     'button[type="submit"]',
     'button[name="action"]',
     'button[data-testid="submit-button"]',
@@ -95,6 +120,9 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
     'button:has-text("Log In")',
     'button:has-text("Sign In")',
     'button:has-text("Login")',
+    // Auth0 Lock widget
+    '.auth0-lock-submit',
+    'button.auth0-lock-submit',
   ].join(', ');
 
   // Wait for email/username input with combined selector (longer timeout)
@@ -108,16 +136,47 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
     const pageTitle = await page.title();
     const currentUrl = page.url();
     const bodyText = await page.locator('body').textContent().catch(() => 'Could not get body text');
+    const bodyHtml = await page.locator('body').innerHTML().catch(() => 'Could not get body HTML');
+
+    // Check how many input fields exist on the page
+    const allInputs = await page.locator('input').count();
+    const allButtons = await page.locator('button').count();
+    const allForms = await page.locator('form').count();
 
     console.error(`\n${'='.repeat(60)}`);
     console.error('AUTH0 LOGIN FAILED - Debug Information:');
     console.error(`${'='.repeat(60)}`);
     console.error(`URL: ${currentUrl}`);
     console.error(`Title: ${pageTitle}`);
+    console.error(`Page elements: ${allInputs} inputs, ${allButtons} buttons, ${allForms} forms`);
     console.error(`Body text preview: ${bodyText?.substring(0, 500)}`);
+    console.error(`Body HTML preview: ${bodyHtml?.substring(0, 1000)}`);
 
     // Check for common Auth0 configuration issues
-    if (currentUrl.includes('/authorize') && !bodyText?.includes('email') && !bodyText?.includes('password')) {
+    if (allInputs === 0) {
+      console.error(`\n${'!'.repeat(60)}`);
+      console.error('CRITICAL: No input fields found on the page!');
+      console.error(`${'!'.repeat(60)}`);
+      console.error('The Auth0 login form is not rendering at all. Possible causes:');
+      console.error('');
+      console.error('1. Auth0 Universal Login JavaScript not loading:');
+      console.error('   - Check browser console for JavaScript errors');
+      console.error('   - Ensure JavaScript is enabled in Playwright');
+      console.error('');
+      console.error('2. Auth0 tenant configuration issue:');
+      console.error('   - Go to Auth0 Dashboard → Branding → Universal Login');
+      console.error('   - Try switching between "New" and "Classic" experience');
+      console.error('   - Ensure the login page is not customized incorrectly');
+      console.error('');
+      console.error('3. Auth0 application settings:');
+      console.error('   - Go to Auth0 Dashboard → Applications → Your App → Settings');
+      console.error('   - Verify Allowed Callback URLs includes: http://localhost:3000/api/auth/callback');
+      console.error('   - Verify Allowed Web Origins includes: http://localhost:3000');
+      console.error('   - Verify Allowed Logout URLs includes: http://localhost:3000');
+      console.error('');
+      console.error('4. Try manually visiting the Auth0 login URL in a browser to see what loads');
+      console.error(`${'!'.repeat(60)}\n`);
+    } else if (currentUrl.includes('/authorize') && !bodyText?.includes('email') && !bodyText?.includes('password')) {
       console.error(`\n${'!'.repeat(60)}`);
       console.error('LIKELY CAUSE: Auth0 application misconfiguration');
       console.error(`${'!'.repeat(60)}`);
