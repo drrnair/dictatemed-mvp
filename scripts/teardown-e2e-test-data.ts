@@ -55,8 +55,10 @@ async function teardownE2ETestData(): Promise<TeardownResult> {
   const errors: string[] = [];
 
   try {
-    await prisma.$transaction(async (tx) => {
-      // 1. Delete audit logs for test user
+    // Increased timeout for CI environments where database operations may be slower
+    await prisma.$transaction(
+      async (tx) => {
+        // 1. Delete audit logs for test user
       console.log('  Deleting audit logs...');
       const auditResult = await tx.auditLog.deleteMany({
         where: { userId: TEST_IDS.clinician },
@@ -207,7 +209,12 @@ async function teardownE2ETestData(): Promise<TeardownResult> {
         where: { id: TEST_IDS.practice },
       });
       deletedCounts.practices = practiceResult.count;
-    });
+      },
+      {
+        maxWait: 30000, // 30 seconds max wait to acquire connection
+        timeout: 30000, // 30 seconds transaction timeout
+      }
+    );
 
     const duration = Date.now() - startTime;
     console.log(`\n✅ E2E test data teardown completed in ${duration}ms`);
