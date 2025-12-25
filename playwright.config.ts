@@ -94,6 +94,22 @@ export default defineConfig({
 
     // Ignore HTTPS errors (for local development)
     ignoreHTTPSErrors: true,
+
+    // Browser launch options for better Auth0 compatibility
+    launchOptions: {
+      args: [
+        // Enable JavaScript (should be default but be explicit)
+        '--enable-javascript',
+        // Disable web security for cross-origin Auth0 requests
+        '--disable-web-security',
+        // Allow running insecure content (for localhost)
+        '--allow-running-insecure-content',
+        // Disable site isolation for Auth0 iframes
+        '--disable-site-isolation-trials',
+        // Disable features that may block Auth0
+        '--disable-features=IsolateOrigins,site-per-process',
+      ],
+    },
   },
 
   // Configure projects for multi-browser testing

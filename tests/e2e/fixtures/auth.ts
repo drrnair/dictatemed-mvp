@@ -54,11 +54,16 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
   }
 
   // Navigate to login
+  console.log('Auth0: Navigating to /api/auth/login...');
   await page.goto('/api/auth/login');
 
   // Wait for Auth0 login page - we need to wait for actual login form, not just the URL
   // The /authorize endpoint redirects to the actual login page
+  console.log('Auth0: Waiting for redirect to Auth0...');
   await page.waitForURL(/auth0\.com/, { timeout: TEST_TIMEOUTS.auth0Redirect });
+
+  const initialUrl = page.url();
+  console.log(`Auth0: Reached Auth0 at URL: ${initialUrl}`);
 
   // Wait for page to be fully loaded - use 'load' then 'networkidle' for more reliability
   await page.waitForLoadState('load', { timeout: TEST_TIMEOUTS.pageLoad });
@@ -72,6 +77,59 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
   await page.waitForLoadState('networkidle', { timeout: TEST_TIMEOUTS.networkIdle }).catch(() => {
     console.log('Auth0: networkidle timeout - proceeding anyway');
   });
+
+  // Check if Auth0 is showing an error page instead of the login form
+  // Auth0 error pages typically have specific error classes or messages
+  const currentUrl = page.url();
+  console.log(`Auth0: Current URL after load: ${currentUrl}`);
+
+  // Check for Auth0 error indicators
+  const errorIndicators = await page.evaluate(() => {
+    // Look for common Auth0 error elements
+    const errorElement = document.querySelector('.ulp-error, .auth0-error, [class*="error"]');
+    const errorText = errorElement?.textContent || '';
+
+    // Check page title for error indicators
+    const title = document.title;
+
+    // Check body text for error messages
+    const bodyText = document.body?.textContent || '';
+    const hasError = bodyText.toLowerCase().includes('error') ||
+                     bodyText.toLowerCase().includes('invalid') ||
+                     bodyText.toLowerCase().includes('not allowed') ||
+                     bodyText.toLowerCase().includes('misconfigured');
+
+    return {
+      title,
+      hasErrorElement: !!errorElement,
+      errorText: errorText.substring(0, 500),
+      hasErrorKeywords: hasError,
+      bodyPreview: bodyText.substring(0, 300),
+    };
+  });
+
+  console.log(`Auth0: Page title: "${errorIndicators.title}"`);
+  if (errorIndicators.hasErrorElement || errorIndicators.hasErrorKeywords) {
+    console.error(`Auth0: ERROR DETECTED on page!`);
+    console.error(`Auth0: Error text: ${errorIndicators.errorText}`);
+    console.error(`Auth0: Body preview: ${errorIndicators.bodyPreview}`);
+  }
+
+  // If still on /authorize URL with no visible content, Auth0 might be stuck
+  // Try refreshing the page once
+  if (currentUrl.includes('/authorize') && !currentUrl.includes('/u/login')) {
+    console.log('Auth0: Still on /authorize URL - checking for redirect or trying refresh...');
+
+    // Wait a bit more for potential redirect
+    await page.waitForTimeout(TEST_TIMEOUTS.auth0Render);
+
+    const urlAfterWait = page.url();
+    if (urlAfterWait.includes('/authorize') && !urlAfterWait.includes('/u/login')) {
+      console.log('Auth0: Page still on /authorize - attempting page refresh...');
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(TEST_TIMEOUTS.auth0Render);
+    }
+  }
 
   // Auth0 Universal Login uses various input selectors depending on version
   // Build a combined selector for all possible email/username inputs
