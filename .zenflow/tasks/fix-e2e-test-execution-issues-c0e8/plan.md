@@ -60,3 +60,20 @@ If blocked or uncertain, ask the user for direction.
 **Changes made:**
 - `tests/e2e/fixtures/auth.ts` - Improved Auth0 login flow with better selectors
 - `tests/e2e/page-objects/LoginPage.ts` - Updated email/password/submit selectors
+
+### [x] Step: Fix Auth0 Wait States and PHI Scan
+<!-- chat-id: current -->
+
+**Completed:** 2024-12-26
+- Improved Auth0 login reliability:
+  - Changed from `waitForLoadState('domcontentloaded')` to `waitForLoadState('networkidle')`
+  - Added detailed debug logging on failure (page title, body text preview)
+  - This helps diagnose what Auth0 is actually showing when login fails
+- Fixed PHI scan false positives:
+  - Excluded `test-results`, `playwright-report`, `.auth` directories from scan
+  - Fixed grep exit code handling with `|| true` to prevent false positives
+  - Made patient name detection a warning only (as documented)
+
+**Changes made:**
+- `tests/e2e/fixtures/auth.ts` - Better wait states and debug logging
+- `.github/workflows/e2e-tests.yml` - Fixed PHI scan grep patterns
