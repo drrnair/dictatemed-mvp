@@ -978,8 +978,9 @@ test.describe('Style Profile - Seed Letter Upload', () => {
 
     // Switch to Per-Subspecialty tab and open dialog
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
-    await page.waitForTimeout(500);
-    await page.getByRole('button', { name: 'Upload Sample Letter' }).click();
+    const uploadBtn = page.getByRole('button', { name: 'Upload Sample Letter' });
+    await expect(uploadBtn).toBeVisible();
+    await uploadBtn.click();
     await expect(page.getByRole('dialog')).toBeVisible();
 
     // Select subspecialty
@@ -1040,8 +1041,9 @@ test.describe('Style Profile - Seed Letter Upload', () => {
 
     // Switch to Per-Subspecialty tab and open dialog
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
-    await page.waitForTimeout(500);
-    await page.getByRole('button', { name: 'Upload Sample Letter' }).click();
+    const uploadBtn = page.getByRole('button', { name: 'Upload Sample Letter' });
+    await expect(uploadBtn).toBeVisible();
+    await uploadBtn.click();
     await expect(page.getByRole('dialog')).toBeVisible();
 
     // Select subspecialty
@@ -1230,10 +1232,10 @@ test.describe('Style Profile - Accessibility', () => {
 
     // Switch to Per-Subspecialty tab
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
-    await page.waitForTimeout(500);
 
-    // Find the slider
+    // Find the slider - wait for card to be visible first
     const heartFailureCard = page.locator('[data-testid="subspecialty-card-HEART_FAILURE"]');
+    await expect(heartFailureCard).toBeVisible();
     const slider = heartFailureCard.getByRole('slider', { name: 'Learning strength' });
 
     await expect(slider).toBeVisible();
@@ -1281,10 +1283,10 @@ test.describe('Style Profile - Accessibility', () => {
 
     // Switch to Per-Subspecialty tab
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
-    await page.waitForTimeout(500);
 
-    // Click reset button
+    // Click reset button - wait for card to be visible first
     const heartFailureCard = page.locator('[data-testid="subspecialty-card-HEART_FAILURE"]');
+    await expect(heartFailureCard).toBeVisible();
     await heartFailureCard.getByRole('button', { name: 'Reset style profile' }).click();
 
     // Dialog should be accessible

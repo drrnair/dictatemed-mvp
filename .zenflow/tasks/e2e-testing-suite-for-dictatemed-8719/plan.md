@@ -429,34 +429,47 @@ Do not make assumptions on important decisions — get clarification first.
 **File**: `.github/workflows/e2e-tests.yml`
 
 1. **Triggers**
-   - Pull requests to main (with path filters for src/, tests/e2e/, playwright.config.ts)
+   - Pull requests to main
    - Pushes to main
-   - Manual workflow_dispatch with browser selection and debug mode
+   - Manual workflow_dispatch with browser selection and debug mode inputs
 
-2. **Jobs**
-   - `e2e-tests`: Multi-browser matrix (Chromium, Firefox, WebKit)
-   - `workflow-tests`: Main workflow tests (Chromium only, faster feedback)
-   - `phi-compliance`: Scans for real PHI patterns in test files
-   - `e2e-summary`: Aggregates results and fails if any job fails
+2. **Concurrency Control**
+   - Cancel in-progress runs for the same branch
+   - Group by `e2e-${{ github.head_ref || github.ref }}`
 
-3. **PostgreSQL Service**
-   - PostgreSQL 15-alpine with health checks
-   - Database: dictatemed_e2e
-   - Auto-migration and E2E seed data
+3. **Jobs (5 total)**
+   - `e2e-chromium`: Primary browser tests (always runs)
+   - `e2e-firefox`: Secondary browser tests (on push to main or when requested)
+   - `e2e-webkit`: Safari tests (on push to main or when requested)
+   - `quality-gates`: Pass rate check (≥95%), PHI scan, job status verification
+   - `e2e-status`: Combined status check for PR blocking
 
-4. **Quality Gates**
-   - PHI compliance check (no real MRNs, test email patterns)
-   - Artifact upload on failure (playwright-report, test-results)
-   - Test data teardown on completion
+4. **PostgreSQL Service** (per job)
+   - PostgreSQL 15 with health checks
+   - Database: `dictatemed_e2e_test`
+   - Auto-migration via `prisma migrate deploy`
+   - E2E seed data via `npm run db:seed:e2e`
 
-5. **Environment**
-   - Mock external services (Bedrock, Supabase, Resend, Deepgram)
-   - Secrets for E2E credentials and PHI encryption key
-   - Concurrency control to cancel in-progress runs
+5. **Quality Gates**
+   - **Pass Rate Check**: Parse JUnit XML, require ≥95% pass rate
+   - **PHI Scan**: Check for MRN patterns without TEST- prefix
+   - **Job Status**: Verify e2e-chromium succeeded
+
+6. **Artifacts**
+   - Playwright report and test results (always uploaded)
+   - Screenshots on failure (14-day retention)
+   - Debug mode extends retention to 14 days
+
+7. **Environment Configuration**
+   - Mock all external services (Bedrock, Supabase, Deepgram, Email)
+   - E2E credentials from GitHub Secrets with fallback defaults
+   - PHI encryption key for test data
+   - Feature flags enabled (hallucination check, style learning)
 
 **Verification**:
-- Workflow syntax is valid YAML
-- All required secrets documented in comments
+- Workflow syntax validated (YAML structure check passes)
+- 5 jobs defined with proper dependencies
+- Secrets fallback to safe defaults for initial testing
 
 ---
 
