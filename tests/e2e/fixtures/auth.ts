@@ -65,8 +65,8 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
   // Submit login
   await page.click('button[type="submit"]');
 
-  // Wait for redirect back to app
-  await page.waitForURL(/localhost:3000\/dashboard/, { timeout: 30000 });
+  // Wait for redirect back to app (base URL agnostic - matches any /dashboard path)
+  await page.waitForURL(/\/dashboard/, { timeout: 30000 });
 
   // Verify authentication
   await expect(page.locator('body')).not.toContainText('Login');
