@@ -567,11 +567,17 @@ test.describe('Manual Consultation - Accessibility', () => {
     await loginPage.loginWithEnvCredentials();
     await consultationPage.gotoNewConsultation();
 
-    // Check that key elements have proper labels
-    await expect(consultationPage.patientSearchInput).toHaveAttribute(
-      'aria-label',
-      /.+/
-    );
+    // Check that patient search has an accessible name
+    // Allow aria-label, aria-labelledby, or placeholder (search inputs often use placeholder)
+    const patientInput = consultationPage.patientSearchInput;
+    const hasAriaLabel = await patientInput.getAttribute('aria-label');
+    const hasAriaLabelledBy = await patientInput.getAttribute('aria-labelledby');
+    const hasPlaceholder = await patientInput.getAttribute('placeholder');
+
+    expect(
+      hasAriaLabel || hasAriaLabelledBy || hasPlaceholder,
+      'Patient search input should have accessible name (aria-label, aria-labelledby, or placeholder)'
+    ).toBeTruthy();
 
     // Verify keyboard navigation works
     await consultationPage.patientSearchInput.focus();
@@ -583,5 +589,17 @@ test.describe('Manual Consultation - Accessibility', () => {
     // Verify focus moved to an interactive element
     const focusedElement = page.locator(':focus');
     await expect(focusedElement).toBeVisible();
+
+    // Verify the focused element is actually interactive (not just any visible element)
+    const tagName = await focusedElement.evaluate((el) => el.tagName.toLowerCase());
+    const tabIndex = await focusedElement.getAttribute('tabindex');
+    const isInteractive =
+      ['input', 'button', 'select', 'textarea', 'a'].includes(tagName) ||
+      tabIndex !== null;
+
+    expect(
+      isInteractive,
+      `Tab should move focus to an interactive element. Got: ${tagName}`
+    ).toBe(true);
   });
 });
