@@ -35,8 +35,9 @@ env:
   AUTH0_CLIENT_SECRET: "e2e-test-client-secret"
 
   # E2E test credentials (stored in GitHub Secrets)
+  # NOTE: Email has a fallback for initial testing, but password MUST be in secrets
   E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL || 'test.cardiologist+e2e@dictatemed.dev' }}
-  E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD || 'TestPassword123!' }}
+  E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
 
   # PHI encryption key for E2E tests (32 bytes, base64-encoded)
   # This is a test-only key - NOT for production use
@@ -86,6 +87,16 @@ jobs:
           --health-retries 5
 
     steps:
+      - name: Check required secrets
+        run: |
+          if [ -z "${{ secrets.E2E_TEST_USER_PASSWORD }}" ]; then
+            echo "❌ E2E_TEST_USER_PASSWORD secret is not configured"
+            echo "Please add this secret in GitHub repository settings:"
+            echo "  Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          echo "✅ Required secrets are configured"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
