@@ -1,0 +1,134 @@
+TEST Brisbane Family Practice
+123 Queen Street
+Brisbane QLD 4000
+Phone: +61 7 9000 0001
+Fax: +61 7 9000 0002
+Email: test.gp.brisbane@test.dictatemed.dev
+
+-------------------------------------------------------------------------------
+
+                        URGENT SPECIALIST REFERRAL
+
+-------------------------------------------------------------------------------
+
+Date: 18 December 2024
+
+To: Cardiology Department
+    TEST-PRACTICE-E2E Sydney Heart Specialists
+
+RE: TEST Patient - Referral Chest Pain
+    DOB: 10 July 1955
+    MRN: TEST-REF-CP-002
+    Medicare: TEST-8765432109
+    Address: TEST Address - 321 Adelaide Street, Brisbane QLD 4000
+    Phone: +61 400 000 200
+
+-------------------------------------------------------------------------------
+
+*** URGENT REVIEW REQUESTED ***
+
+REASON FOR REFERRAL:
+Exertional chest pain with positive stress test for urgent cardiology review
+
+URGENCY: Urgent (please see within 2 weeks)
+
+-------------------------------------------------------------------------------
+
+CLINICAL HISTORY:
+
+I am urgently referring this patient following a positive stress test
+performed yesterday. The patient has been experiencing exertional chest
+pain for the past 6 weeks, described as a central heaviness radiating
+to the left arm, occurring when walking uphill or climbing stairs.
+Pain typically lasts 5-10 minutes and resolves with rest.
+
+No chest pain at rest, no associated dyspnoea, palpitations, or syncope.
+
+RISK FACTORS:
+- Hypertension (15 years)
+- Type 2 Diabetes (8 years)
+- Hyperlipidaemia
+- Current smoker (30 pack-years)
+- Family history: Brother with CABG at age 58
+
+PAST MEDICAL HISTORY:
+- Hypertension - on Amlodipine 10mg + Irbesartan 300mg
+- Type 2 Diabetes - on Metformin 1g BD + Gliclazide 60mg BD
+- Hyperlipidaemia - on Rosuvastatin 20mg
+- Osteoarthritis - knees
+
+CURRENT MEDICATIONS:
+1. Amlodipine 10mg daily
+2. Irbesartan 300mg daily
+3. Metformin 1g BD
+4. Gliclazide 60mg BD
+5. Rosuvastatin 20mg nocte
+6. Paracetamol 1g PRN
+
+ALLERGIES: Penicillin (rash)
+
+EXAMINATION:
+- BP: 155/95 mmHg
+- HR: 78 bpm, regular
+- Weight: 88 kg, Height: 175 cm (BMI 28.7)
+- JVP: Normal
+- Heart sounds: Dual, nil murmurs, nil added sounds
+- Chest: Clear
+- No peripheral oedema
+- Peripheral pulses: Present and equal
+
+INVESTIGATIONS:
+
+ECG (attached):
+- Sinus rhythm at 76 bpm
+- Normal axis
+- No acute ST-T changes at rest
+- Possible old inferior infarct (Q waves II, III, aVF)
+
+Exercise Stress Test (performed 17/12/2024):
+- Protocol: Bruce protocol
+- Duration: 5 minutes 30 seconds (Stage 2)
+- Reason for stopping: Chest pain and dyspnoea
+- Max HR achieved: 130 bpm (79% predicted)
+- BP response: 180/100 mmHg at peak
+- ECG changes: 2mm horizontal ST depression in V4-V6 and II, III, aVF
+- Chest pain: Reproduced at Stage 2, resolved 4 minutes into recovery
+- Recovery: ST changes resolved at 6 minutes
+- Interpretation: POSITIVE for ischaemia
+
+Bloods (18/12/2024):
+- Troponin I: <0.01 ng/mL (normal)
+- Hb: 148 g/L
+- Creatinine: 95 umol/L (eGFR 78)
+- HbA1c: 7.8%
+- Lipids: TC 5.8, LDL 3.6, HDL 1.1, TG 2.4
+
+CLINICAL IMPRESSION:
+High clinical suspicion for significant coronary artery disease given
+positive stress test with ischaemic ECG changes and typical anginal
+symptoms in a high-risk patient.
+
+REQUESTED:
+- Urgent cardiology review
+- Consideration for coronary angiography
+- Optimisation of medical therapy
+
+I have commenced the patient on:
+- Aspirin 100mg daily (started today)
+- GTN spray PRN (provided today with education)
+
+Please do not hesitate to contact me if you require any further information
+or wish to discuss this patient.
+
+Kind regards,
+
+
+Dr. TEST Referring GP Brisbane
+MBBS, FRACGP, Dip Child Health
+Provider Number: TEST-7654321
+TEST Brisbane Family Practice
+
+-------------------------------------------------------------------------------
+This is a TEST referral document for E2E testing purposes only.
+All patient data is fictional and uses TEST- prefix identifiers.
+-------------------------------------------------------------------------------
