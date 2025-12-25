@@ -93,9 +93,10 @@ async function seedE2ETestData(): Promise<void> {
     );
   }
 
-  // Use transaction for atomicity
-  await prisma.$transaction(async (tx) => {
-    // 1. Create test practice
+  // Use transaction for atomicity (increased timeout for CI environments)
+  await prisma.$transaction(
+    async (tx) => {
+      // 1. Create test practice
     console.log('  Creating test practice...');
     await tx.practice.upsert({
       where: { id: TEST_IDS.practice },
@@ -280,7 +281,12 @@ async function seedE2ETestData(): Promise<void> {
       ],
       skipDuplicates: true,
     });
-  });
+    },
+    {
+      maxWait: 30000, // 30 seconds max wait to acquire connection
+      timeout: 30000, // 30 seconds transaction timeout
+    }
+  );
 
   const duration = Date.now() - startTime;
   console.log(`\n✅ E2E test data seeded successfully in ${duration}ms`);
