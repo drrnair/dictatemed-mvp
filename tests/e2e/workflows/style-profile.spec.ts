@@ -747,7 +747,9 @@ test.describe('Style Profile Settings - UI', () => {
 
     // Switch to Per-Subspecialty tab
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
-    await page.waitForTimeout(500);
+
+    // Wait for first card to be visible before checking all
+    await expect(page.locator('[data-testid="subspecialty-card-HEART_FAILURE"]')).toBeVisible();
 
     // Verify all subspecialty cards are visible
     const subspecialties = [
