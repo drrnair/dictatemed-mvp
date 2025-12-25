@@ -923,9 +923,8 @@ test.describe('Style Profile - Seed Letter Upload', () => {
 
     // Switch to Per-Subspecialty tab
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
-    await page.waitForTimeout(500);
 
-    // Click Upload Sample Letter button
+    // Wait for the upload button to be visible
     const uploadButton = page.getByRole('button', { name: 'Upload Sample Letter' });
     await expect(uploadButton).toBeVisible();
     await uploadButton.click();
