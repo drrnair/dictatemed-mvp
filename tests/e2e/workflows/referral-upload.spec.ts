@@ -275,32 +275,14 @@ test.describe('Referral Upload Workflow', () => {
   test('should display review panel with extracted data', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
-    // Setup extraction mock
-    await page.route('**/api/referrals/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/upload')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, referralId: 'test-referral-001' }),
-        });
-      } else if (url.includes('/extract')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            extractedData: {
-              patient: expectedExtraction.patient,
-              referrer: expectedExtraction.referrer,
-              clinicalContext: 'Progressive dyspnoea on exertion with ankle swelling.',
-              reasonForReferral: expectedExtraction.reasonForReferral,
-            },
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+    // Use helper for mock setup
+    await setupReferralMocks(page, {
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+        clinicalContext: 'Progressive dyspnoea on exertion with ankle swelling.',
+        reasonForReferral: expectedExtraction.reasonForReferral,
+      },
     });
 
     // Login and navigate
@@ -324,38 +306,14 @@ test.describe('Referral Upload Workflow', () => {
   test('should allow editing extracted patient fields', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
-    // Setup extraction mock
-    await page.route('**/api/referrals/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/upload')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, referralId: 'test-referral-001' }),
-        });
-      } else if (url.includes('/extract')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            extractedData: {
-              patient: expectedExtraction.patient,
-              referrer: expectedExtraction.referrer,
-              reasonForReferral: expectedExtraction.reasonForReferral,
-            },
-          }),
-        });
-      } else if (route.request().method() === 'PATCH' || route.request().method() === 'PUT') {
-        // Mock update endpoint
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true }),
-        });
-      } else {
-        await route.continue();
-      }
+    // Use helper with update support enabled
+    await setupReferralMocks(page, {
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+        reasonForReferral: expectedExtraction.reasonForReferral,
+      },
+      allowUpdates: true,
     });
 
     // Login and navigate
@@ -380,39 +338,14 @@ test.describe('Referral Upload Workflow', () => {
   test('should allow editing extracted referrer fields', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
-    // Setup extraction and update mocks
-    await page.route('**/api/referrals/**', async (route) => {
-      const url = route.request().url();
-      const method = route.request().method();
-
-      if (url.includes('/upload')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, referralId: 'test-referral-001' }),
-        });
-      } else if (url.includes('/extract')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            extractedData: {
-              patient: expectedExtraction.patient,
-              referrer: expectedExtraction.referrer,
-              reasonForReferral: expectedExtraction.reasonForReferral,
-            },
-          }),
-        });
-      } else if (method === 'PATCH' || method === 'PUT') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true }),
-        });
-      } else {
-        await route.continue();
-      }
+    // Use helper with update support enabled
+    await setupReferralMocks(page, {
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+        reasonForReferral: expectedExtraction.reasonForReferral,
+      },
+      allowUpdates: true,
     });
 
     // Login and navigate
@@ -437,35 +370,17 @@ test.describe('Referral Upload Workflow', () => {
   test('should create consultation from referral', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
-    // Setup mocks for referral and consultation creation
-    await page.route('**/api/referrals/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/upload')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, referralId: 'test-referral-001' }),
-        });
-      } else if (url.includes('/extract')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            extractedData: {
-              patient: expectedExtraction.patient,
-              referrer: expectedExtraction.referrer,
-              clinicalContext: 'Progressive dyspnoea on exertion with ankle swelling.',
-              reasonForReferral: expectedExtraction.reasonForReferral,
-            },
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+    // Use helper for referral mocks
+    await setupReferralMocks(page, {
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+        clinicalContext: 'Progressive dyspnoea on exertion with ankle swelling.',
+        reasonForReferral: expectedExtraction.reasonForReferral,
+      },
     });
 
-    // Mock consultation creation
+    // Mock consultation creation (separate from referral mocks)
     await page.route('**/api/consultations', async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
@@ -503,34 +418,16 @@ test.describe('Referral Upload Workflow', () => {
   });
 
   test('should generate letter with referral context', async ({ page }) => {
-    // Setup mocks for the complete workflow
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
-    await page.route('**/api/referrals/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/upload')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, referralId: 'test-referral-001' }),
-        });
-      } else if (url.includes('/extract')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            extractedData: {
-              patient: expectedExtraction.patient,
-              referrer: expectedExtraction.referrer,
-              clinicalContext: 'Progressive dyspnoea on exertion.',
-              reasonForReferral: expectedExtraction.reasonForReferral,
-            },
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+    // Use helper for referral mocks
+    await setupReferralMocks(page, {
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+        clinicalContext: 'Progressive dyspnoea on exertion.',
+        reasonForReferral: expectedExtraction.reasonForReferral,
+      },
     });
 
     // Mock letter generation
