@@ -24,6 +24,10 @@ import * as path from 'path';
  */
 
 // Auth state storage path
+// Note: All browser projects share this auth state file, which is safe because:
+// 1. The 'setup' project runs first (before any browser tests) via `dependencies: ['setup']`
+// 2. Setup creates the auth state file before any browser project reads it
+// 3. No concurrent writes occur since setup is serialized
 const AUTH_STATE_PATH = path.join(__dirname, 'tests/e2e/.auth/user.json');
 
 export default defineConfig({
