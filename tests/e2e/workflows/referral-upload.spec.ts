@@ -1227,18 +1227,30 @@ test.describe('Referral Upload - Accessibility', () => {
     await loginPage.loginWithEnvCredentials();
     await referralPage.gotoReferralUpload();
 
-    // Verify dropzone is keyboard accessible
+    // Verify dropzone is visible
     const dropzone = referralPage.uploadDropzone;
     await expect(dropzone).toBeVisible();
 
-    // Check for aria-label or accessible name
+    // Check for proper accessible labeling (not just any role)
     const ariaLabel = await dropzone.getAttribute('aria-label');
     const ariaLabelledBy = await dropzone.getAttribute('aria-labelledby');
-    const role = await dropzone.getAttribute('role');
 
-    // Should have some form of accessible labeling
-    const hasAccessibleLabel = ariaLabel || ariaLabelledBy || role;
-    expect(hasAccessibleLabel).toBeTruthy();
+    // Should have an actual accessible name (aria-label or aria-labelledby)
+    // A role alone doesn't make something accessible - it needs a name
+    const hasAccessibleName = ariaLabel || ariaLabelledBy;
+    expect(hasAccessibleName).toBeTruthy();
+
+    // Verify keyboard focusability
+    const tabIndex = await dropzone.getAttribute('tabindex');
+    const isNativelyFocusable =
+      (await dropzone.evaluate((el) => el.tagName.toLowerCase())) === 'button';
+
+    // Element should be keyboard focusable (either native button or has tabindex)
+    expect(isNativelyFocusable || tabIndex !== null).toBe(true);
+
+    // Test actual keyboard focus
+    await dropzone.focus();
+    await expect(dropzone).toBeFocused();
   });
 
   test('should announce extraction status to screen readers', async ({ page }) => {
