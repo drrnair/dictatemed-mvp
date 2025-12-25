@@ -59,156 +59,156 @@ async function teardownE2ETestData(): Promise<TeardownResult> {
     await prisma.$transaction(
       async (tx) => {
         // 1. Delete audit logs for test user
-      console.log('  Deleting audit logs...');
-      const auditResult = await tx.auditLog.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.auditLogs = auditResult.count;
+        console.log('  Deleting audit logs...');
+        const auditResult = await tx.auditLog.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.auditLogs = auditResult.count;
 
-      // 2. Delete notifications for test user
-      console.log('  Deleting notifications...');
-      const notificationResult = await tx.notification.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.notifications = notificationResult.count;
+        // 2. Delete notifications for test user
+        console.log('  Deleting notifications...');
+        const notificationResult = await tx.notification.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.notifications = notificationResult.count;
 
-      // 3. Delete style data
-      console.log('  Deleting style data...');
-      const styleEditResult = await tx.styleEdit.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.styleEdits = styleEditResult.count;
+        // 3. Delete style data
+        console.log('  Deleting style data...');
+        const styleEditResult = await tx.styleEdit.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.styleEdits = styleEditResult.count;
 
-      const styleProfileResult = await tx.styleProfile.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.styleProfiles = styleProfileResult.count;
+        const styleProfileResult = await tx.styleProfile.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.styleProfiles = styleProfileResult.count;
 
-      const styleSeedResult = await tx.styleSeedLetter.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.styleSeedLetters = styleSeedResult.count;
+        const styleSeedResult = await tx.styleSeedLetter.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.styleSeedLetters = styleSeedResult.count;
 
-      // 4. Delete sent emails and letter sends
-      console.log('  Deleting sent emails and letter sends...');
-      const sentEmailResult = await tx.sentEmail.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.sentEmails = sentEmailResult.count;
+        // 4. Delete sent emails and letter sends
+        console.log('  Deleting sent emails and letter sends...');
+        const sentEmailResult = await tx.sentEmail.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.sentEmails = sentEmailResult.count;
 
-      const letterSendResult = await tx.letterSend.deleteMany({
-        where: { senderId: TEST_IDS.clinician },
-      });
-      deletedCounts.letterSends = letterSendResult.count;
+        const letterSendResult = await tx.letterSend.deleteMany({
+          where: { senderId: TEST_IDS.clinician },
+        });
+        deletedCounts.letterSends = letterSendResult.count;
 
-      // 5. Delete letter documents and provenance (via cascade from letters)
-      // Delete letters first
-      console.log('  Deleting letters...');
-      const letterResult = await tx.letter.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.letters = letterResult.count;
+        // 5. Delete letter documents and provenance (via cascade from letters)
+        // Delete letters first
+        console.log('  Deleting letters...');
+        const letterResult = await tx.letter.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.letters = letterResult.count;
 
-      // 6. Delete recordings
-      console.log('  Deleting recordings...');
-      const recordingResult = await tx.recording.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.recordings = recordingResult.count;
+        // 6. Delete recordings
+        console.log('  Deleting recordings...');
+        const recordingResult = await tx.recording.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.recordings = recordingResult.count;
 
-      // 7. Delete documents
-      console.log('  Deleting documents...');
-      const documentResult = await tx.document.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.documents = documentResult.count;
+        // 7. Delete documents
+        console.log('  Deleting documents...');
+        const documentResult = await tx.document.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.documents = documentResult.count;
 
-      // 8. Delete referral documents
-      console.log('  Deleting referral documents...');
-      const referralDocResult = await tx.referralDocument.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.referralDocuments = referralDocResult.count;
+        // 8. Delete referral documents
+        console.log('  Deleting referral documents...');
+        const referralDocResult = await tx.referralDocument.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.referralDocuments = referralDocResult.count;
 
-      // 9. Delete CC recipients (via cascade from consultations)
-      console.log('  Deleting CC recipients...');
-      const ccResult = await tx.cCRecipient.deleteMany({
-        where: { consultationId: { in: TEST_CONSULTATION_IDS } },
-      });
-      deletedCounts.ccRecipients = ccResult.count;
+        // 9. Delete CC recipients (via cascade from consultations)
+        console.log('  Deleting CC recipients...');
+        const ccResult = await tx.cCRecipient.deleteMany({
+          where: { consultationId: { in: TEST_CONSULTATION_IDS } },
+        });
+        deletedCounts.ccRecipients = ccResult.count;
 
-      // 10. Delete consultations
-      console.log('  Deleting consultations...');
-      const consultationResult = await tx.consultation.deleteMany({
-        where: { id: { in: TEST_CONSULTATION_IDS } },
-      });
-      deletedCounts.consultations = consultationResult.count;
+        // 10. Delete consultations
+        console.log('  Deleting consultations...');
+        const consultationResult = await tx.consultation.deleteMany({
+          where: { id: { in: TEST_CONSULTATION_IDS } },
+        });
+        deletedCounts.consultations = consultationResult.count;
 
-      // 11. Delete patient contacts
-      console.log('  Deleting patient contacts...');
-      const contactResult = await tx.patientContact.deleteMany({
-        where: { id: { in: TEST_CONTACT_IDS } },
-      });
-      deletedCounts.patientContacts = contactResult.count;
+        // 11. Delete patient contacts
+        console.log('  Deleting patient contacts...');
+        const contactResult = await tx.patientContact.deleteMany({
+          where: { id: { in: TEST_CONTACT_IDS } },
+        });
+        deletedCounts.patientContacts = contactResult.count;
 
-      // 12. Delete patients
-      console.log('  Deleting patients...');
-      const patientResult = await tx.patient.deleteMany({
-        where: { id: { in: TEST_PATIENT_IDS } },
-      });
-      deletedCounts.patients = patientResult.count;
+        // 12. Delete patients
+        console.log('  Deleting patients...');
+        const patientResult = await tx.patient.deleteMany({
+          where: { id: { in: TEST_PATIENT_IDS } },
+        });
+        deletedCounts.patients = patientResult.count;
 
-      // 13. Delete referrers
-      console.log('  Deleting referrers...');
-      const referrerResult = await tx.referrer.deleteMany({
-        where: { id: { in: TEST_REFERRER_IDS } },
-      });
-      deletedCounts.referrers = referrerResult.count;
+        // 13. Delete referrers
+        console.log('  Deleting referrers...');
+        const referrerResult = await tx.referrer.deleteMany({
+          where: { id: { in: TEST_REFERRER_IDS } },
+        });
+        deletedCounts.referrers = referrerResult.count;
 
-      // 14. Delete user template preferences
-      console.log('  Deleting user template preferences...');
-      const templatePrefResult = await tx.userTemplatePreference.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.templatePreferences = templatePrefResult.count;
+        // 14. Delete user template preferences
+        console.log('  Deleting user template preferences...');
+        const templatePrefResult = await tx.userTemplatePreference.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.templatePreferences = templatePrefResult.count;
 
-      // 15. Delete clinician specialties/subspecialties
-      console.log('  Deleting clinician specialties...');
-      const clinicianSpecResult = await tx.clinicianSpecialty.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.clinicianSpecialties = clinicianSpecResult.count;
+        // 15. Delete clinician specialties/subspecialties
+        console.log('  Deleting clinician specialties...');
+        const clinicianSpecResult = await tx.clinicianSpecialty.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.clinicianSpecialties = clinicianSpecResult.count;
 
-      const clinicianSubspecResult = await tx.clinicianSubspecialty.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.clinicianSubspecialties = clinicianSubspecResult.count;
+        const clinicianSubspecResult = await tx.clinicianSubspecialty.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.clinicianSubspecialties = clinicianSubspecResult.count;
 
-      // 16. Delete custom specialty requests
-      console.log('  Deleting custom specialty requests...');
-      const customSubspecResult = await tx.customSubspecialty.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.customSubspecialties = customSubspecResult.count;
+        // 16. Delete custom specialty requests
+        console.log('  Deleting custom specialty requests...');
+        const customSubspecResult = await tx.customSubspecialty.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.customSubspecialties = customSubspecResult.count;
 
-      const customSpecResult = await tx.customSpecialty.deleteMany({
-        where: { userId: TEST_IDS.clinician },
-      });
-      deletedCounts.customSpecialties = customSpecResult.count;
+        const customSpecResult = await tx.customSpecialty.deleteMany({
+          where: { userId: TEST_IDS.clinician },
+        });
+        deletedCounts.customSpecialties = customSpecResult.count;
 
-      // 17. Delete test clinician
-      console.log('  Deleting test clinician...');
-      const userResult = await tx.user.deleteMany({
-        where: { id: TEST_IDS.clinician },
-      });
-      deletedCounts.users = userResult.count;
+        // 17. Delete test clinician
+        console.log('  Deleting test clinician...');
+        const userResult = await tx.user.deleteMany({
+          where: { id: TEST_IDS.clinician },
+        });
+        deletedCounts.users = userResult.count;
 
-      // 18. Delete test practice
-      console.log('  Deleting test practice...');
-      const practiceResult = await tx.practice.deleteMany({
-        where: { id: TEST_IDS.practice },
-      });
-      deletedCounts.practices = practiceResult.count;
+        // 18. Delete test practice
+        console.log('  Deleting test practice...');
+        const practiceResult = await tx.practice.deleteMany({
+          where: { id: TEST_IDS.practice },
+        });
+        deletedCounts.practices = practiceResult.count;
       },
       {
         maxWait: 30000, // 30 seconds max wait to acquire connection

@@ -247,6 +247,11 @@ MOCK_SERVICES=false npm run test:e2e
 | `tests/e2e/workflows/style-profile.spec.ts` | Added setupMockRoute helper, all page.route() calls converted |
 | `tests/e2e/page-objects/BasePage.ts` | Import MOCK_SERVICES, update mockApiResponse() |
 | `prisma/scripts/migrate-subspecialties.ts` | Fixed import path (`../../seeds/` → `../seeds/`) |
+| `scripts/seed-e2e-test-data.ts` | Increased transaction timeout (5s → 30s) |
+| `scripts/teardown-e2e-test-data.ts` | Increased transaction timeout (5s → 30s) |
+| `package.json` | Added @vitest/coverage-v8 dependency |
+| `tests/e2e/global-setup.ts` | Fixed health check response parsing |
+| `src/components/letters/SendLetterDialog.tsx` | Fixed auto-select race condition (pre-existing bug) |
 
 ### Next Steps for Full E2E Execution
 
