@@ -3,6 +3,11 @@
 ## Bug Summary
 **Symptom**: User sees "Failed to delete account. Please contact support." error when attempting to delete their account from Profile Settings.
 
+**Screenshot Reference**: `.zenflow-images/16e3ee5c-760e-45f4-a76b-b84200745a89.png`
+- Shows Profile Settings page with error banner
+- User: Nila Nair (2nilanair@gmail.com)
+- Error appears after clicking "Delete Account" in "Danger Zone" section
+
 **Difficulty**: Medium - requires understanding of database foreign key constraints and transaction handling.
 
 ## Technical Context
@@ -13,19 +18,29 @@
 
 ## Root Cause Analysis
 
-### Primary Issue: Foreign Key Constraint on `sent_emails` Table
+### Primary Issue: Foreign Key Constraints on `sent_emails` Table
 
-**Location**: `prisma/migrations/20251224_add_sent_emails/migration.sql:32`
+**Location**: `prisma/migrations/20251224_add_sent_emails/migration.sql:32-33`
+
+The `sent_emails` table has **two** foreign key constraints with `ON DELETE RESTRICT`:
 
 ```sql
+-- Line 32: User FK constraint (PRIMARY BLOCKER)
 ALTER TABLE "sent_emails" ADD CONSTRAINT "sent_emails_userId_fkey"
   FOREIGN KEY ("userId") REFERENCES "users"("id")
   ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Line 33: Letter FK constraint (must delete sentEmails before letters)
+ALTER TABLE "sent_emails" ADD CONSTRAINT "sent_emails_letterId_fkey"
+  FOREIGN KEY ("letterId") REFERENCES "letters"("id")
+  ON DELETE RESTRICT ON UPDATE CASCADE;
 ```
 
-The `sent_emails` table has a foreign key constraint with `ON DELETE RESTRICT`, which prevents deleting a user if they have any sent email records.
+Both constraints prevent deletion:
+1. `sent_emails_userId_fkey` - blocks user deletion if sent emails exist
+2. `sent_emails_letterId_fkey` - blocks letter deletion if sent emails reference them
 
-**API Code Issue**: `src/app/api/user/account/route.ts:113-117`
+**API Code Issue**: `src/app/api/user/account/route.ts:111-117`
 
 ```typescript
 // Delete sent emails before transaction (table may not exist in all environments)
