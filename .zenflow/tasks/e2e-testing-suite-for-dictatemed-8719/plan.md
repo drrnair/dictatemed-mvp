@@ -71,51 +71,70 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
-### [ ] Step: Page Objects Implementation
+### [x] Step: Page Objects Implementation
+<!-- chat-id: 3ecfd967-1e69-4800-8079-671d6e2c95a2 -->
 
-Create reusable page object classes:
+**Completed**: All 6 page objects created with comprehensive methods:
 
-1. **Base Page Object** (`tests/e2e/page-objects/BasePage.ts`)
-   - Common wait helpers
-   - Navigation utilities
-   - Toast notification assertions
+1. **BasePage** (`tests/e2e/page-objects/BasePage.ts`)
+   - Navigation utilities: `goto()`, `waitForNavigation()`, `getCurrentPath()`
+   - Wait utilities: `waitForNetworkIdle()`, `waitForVisible()`, `waitForHidden()`, `waitForText()`
+   - Toast assertions: `expectToast()`, `waitForToastDismiss()`
+   - Form utilities: `fillByLabel()`, `clickButton()`, `selectByLabel()`, `setCheckbox()`
+   - Dialog utilities: `getDialog()`, `waitForDialogOpen()`, `waitForDialogClose()`, `closeDialog()`
+   - Data-testid helpers: `getByTestId()`, `clickByTestId()`
+   - Assertions: `assertUrl()`, `assertTitle()`, `assertTextVisible()`, `assertNoConsoleErrors()`
+   - API mocking: `mockApiResponse()`, `clearApiMocks()`
+   - Debug: `screenshot()`, `pause()`
 
 2. **LoginPage** (`tests/e2e/page-objects/LoginPage.ts`)
-   - `login(email, password)` - Auth0 login flow
-   - `expectLoginSuccess()` - Dashboard redirect assertion
-   - `expectLoginError(message)` - Error state assertion
+   - Auth0 Universal Login integration
+   - `login(email, password)` - Full Auth0 flow
+   - `loginWithEnvCredentials()` - Uses E2E_TEST_USER_EMAIL/PASSWORD
+   - `logout()` - Clear session
+   - `expectLoginSuccess()`, `expectLoginError()` - Assertions
+   - `isLoggedIn()`, `getSessionCookies()` - Status checks
 
 3. **DashboardPage** (`tests/e2e/page-objects/DashboardPage.ts`)
-   - `navigateToNewConsultation()` - Start new consultation
-   - `navigateToReferralUpload()` - Go to referral upload
-   - `getRecentLetters()` - Fetch letter list
-   - `searchPatient(query)` - Patient search
+   - Navigation: `navigateToNewConsultation()`, `navigateToLetters()`, `navigateToSettings()`
+   - Stats: `getStatValue()` for dashboard metrics
+   - Recent letters: `getRecentLetters()`, `openRecentLetter()`
+   - Assertions: `expectDashboardVisible()`, `expectCorrectGreeting()`, `expectNavigationVisible()`
 
 4. **NewConsultationPage** (`tests/e2e/page-objects/NewConsultationPage.ts`)
-   - `selectPatient(mrn)` - Patient selection
-   - `fillClinicalContext(context)` - Form filling
-   - `generateLetter()` - Trigger letter generation
-   - `waitForLetterGeneration()` - Poll for completion
+   - Patient selection: `searchPatient()`, `selectPatientByMrn()`, `createPatient()`
+   - Referrer selection: `selectReferrer()`, `createReferrer()`
+   - Letter type: `selectLetterType()` with typed enum (NEW_PATIENT, FOLLOW_UP, etc.)
+   - Recording: `selectRecordingMode()`, `startRecording()`, `pauseRecording()`, `stopRecording()`
+   - File upload: `uploadAudioFile()` for UPLOAD mode
+   - Generation: `generateLetter()`, `waitForLetterGeneration()`, `generateLetterAndWait()`
+   - Combined: `fillClinicalContext()` for full workflow
 
 5. **ReferralUploadPage** (`tests/e2e/page-objects/ReferralUploadPage.ts`)
-   - `uploadReferralPDF(filePath)` - File upload
-   - `waitForExtraction()` - Async extraction wait
-   - `reviewExtractedData()` - Get extracted fields
-   - `confirmAndProceed()` - Apply to consultation
+   - Upload: `uploadReferralPDF()`, `uploadViaDragDrop()`, `removeUploadedFile()`
+   - Extraction: `waitForExtraction()`, `getExtractionState()`, `getExtractionProgress()`
+   - Review: `getExtractedData()`, `reviewExtractedData()` with typed interface
+   - Edit: `editPatientData()`, `editReferrerData()`
+   - Actions: `confirmAndProceed()`, `applyToConsultation()`, `discardReferral()`
+   - Complete workflow: `uploadAndExtract()`, `completeReferralWorkflow()`
 
 6. **LetterDetailPage** (`tests/e2e/page-objects/LetterDetailPage.ts`)
-   - `getLetterContent()` - Read letter text
-   - `editLetter(content)` - Modify letter
-   - `approveLetter()` - Approve letter
-   - `openSendDialog()` - Open send modal
-   - `sendToRecipients(recipients)` - Send letter
+   - Uses existing data-testids from LetterEditor, VerificationPanel, SourcePanel, DifferentialView
+   - Content: `getLetterContent()`, `editLetter()`, `appendToLetter()`, `saveLetter()`
+   - Verification: `verifyValue()`, `verifyAll()`, `viewSource()`, `dismissFlag()`
+   - Diff view: `switchToSideBySideView()`, `acceptAllChanges()`, `revertAllChanges()`
+   - Actions: `approveLetter()`, `openSendDialog()`, `downloadPdf()`, `deleteLetter()`
+   - Send dialog: `selectRecipient()`, `addOneOffRecipient()`, `sendToRecipients()`
+   - History: `openSendHistory()`, `getSendHistory()`
 
 7. **Index Export** (`tests/e2e/page-objects/index.ts`)
-   - Export all page objects
+   - Exports all page objects and types
 
 **Verification**:
-- TypeScript compiles without errors
-- Page objects follow consistent patterns
+- TypeScript compiles without errors (`npx tsc --noEmit` passes)
+- Consistent patterns across all page objects
+- Proper typing for letter types, recording modes, extraction states
+- Integration with existing data-testid attributes in codebase
 
 ---
 
