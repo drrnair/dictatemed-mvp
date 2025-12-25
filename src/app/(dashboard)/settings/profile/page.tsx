@@ -239,8 +239,8 @@ export default function ProfileSettingsPage() {
         throw new Error('Failed to delete account');
       }
 
-      // Redirect to logout/goodbye page
-      window.location.href = '/auth/logout?deleted=true';
+      // Redirect to goodbye page with win-back offer
+      window.location.href = '/account-deleted';
     } catch (err) {
       log.error('Failed to delete account', {}, err instanceof Error ? err : undefined);
       setError('Failed to delete account. Please contact support.');
