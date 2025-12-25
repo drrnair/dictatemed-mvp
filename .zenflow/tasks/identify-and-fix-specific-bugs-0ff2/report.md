@@ -4,73 +4,107 @@
 
 Fixed the user account deletion failure that displayed "Failed to delete account. Please contact support." error.
 
+## Root Causes Found
+
+### Issue 1: Missing `sentEmail.deleteMany` in Transaction (Initial Fix)
+The `sent_emails` table has `ON DELETE RESTRICT` FK constraints. The original code attempted to delete sent emails via raw SQL **outside** the transaction, silently swallowing all errors.
+
+**Fixed by**: Adding `tx.sentEmail.deleteMany({ where: { userId } })` inside the transaction.
+
+### Issue 2: Schema Migration Not Applied (Real Blocker)
+After deploying the initial fix, Vercel logs revealed the **actual error**:
+
+```
+prisma:error
+Invalid 'prisma.user.findUnique()' invocation:
+The column 'recordings.storagePath' does not exist in the current database.
+```
+
+The Prisma schema includes `storagePath` and `audioDeletedAt` columns on `recordings`, and `storagePath` on `documents`, but **these migrations have not been applied to the production database**.
+
+**Fixed by**: Adding a fallback query that uses legacy column names (`s3AudioKey`, `s3Key`) if the new columns don't exist.
+
 ## Changes Made
 
 ### File Modified
 `src/app/api/user/account/route.ts`
 
-### Change Description
-
-**Removed** (lines 111-117 in original):
-```typescript
-// Delete sent emails before transaction (table may not exist in all environments)
-// This is done outside transaction to gracefully handle missing table
-try {
-  await prisma.$executeRaw`DELETE FROM sent_emails WHERE "userId" = ${userId}::text`;
-} catch {
-  // Table doesn't exist yet - skip silently
-}
-```
-
-**Added** (line 129-130 in updated file):
+### Change 1: SentEmail Deletion in Transaction
 ```typescript
 // Delete sent emails (must be before letters due to FK constraint)
 await tx.sentEmail.deleteMany({ where: { userId } });
 ```
 
-### Why This Fix Works
+### Change 2: Schema Migration Fallback
+```typescript
+// Query with fallback for unmigrated databases
+let user;
+try {
+  user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      recordings: { select: { id: true, storagePath: true, audioDeletedAt: true } },
+      documents: { select: { id: true, storagePath: true, deletedAt: true } },
+      letters: { select: { id: true } },
+    },
+  });
+} catch (schemaError) {
+  // Fallback: query without new columns if migration not applied yet
+  log.warn('Falling back to legacy schema query', { error: (schemaError as Error).message });
+  user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      recordings: { select: { id: true, s3AudioKey: true } },
+      documents: { select: { id: true, s3Key: true, deletedAt: true } },
+      letters: { select: { id: true } },
+    },
+  });
+}
+```
 
-1. **Transaction Safety**: The `sentEmail.deleteMany` is now inside the Prisma transaction, ensuring atomicity with all other deletions.
+### Change 3: Dual Column Name Support
+Storage deletion code now handles both new and legacy column names:
+```typescript
+const rec = recording as { id: string; storagePath?: string | null; s3AudioKey?: string | null; audioDeletedAt?: Date | null };
+const audioPath = rec.storagePath || rec.s3AudioKey;
+```
 
-2. **Correct Deletion Order**: Positioned before `letterSend.deleteMany` and `letter.deleteMany` to satisfy the FK constraints:
-   - `sent_emails.userId` → `users.id` (ON DELETE RESTRICT)
-   - `sent_emails.letterId` → `letters.id` (ON DELETE RESTRICT)
+### Change 4: Enhanced Error Logging
+```typescript
+} catch (error) {
+  const err = error as Error;
+  log.error('Failed to delete account', {
+    errorName: err.name,
+    errorMessage: err.message,
+    errorStack: err.stack,
+  }, err);
+  // ...
+}
+```
 
-3. **Prisma ORM**: Using Prisma's type-safe `deleteMany` instead of raw SQL eliminates the "table doesn't exist" error-swallowing that was masking real failures.
+## Recommended Follow-up Action
 
-4. **No Silent Failures**: Errors in `sentEmail.deleteMany` will now properly propagate and be caught by the outer try/catch, providing accurate error messages.
+**Run pending database migrations on production:**
+```bash
+npx prisma migrate deploy
+```
 
-## Root Cause
+Migrations that need to be applied:
+- `20251224_add_recording_storage_path` - Adds `storagePath`, `fileSizeBytes`, `audioDeletedAt` to recordings
+- `20251224_add_document_storage_path` - Adds `storagePath` to documents
 
-The `sent_emails` table has `ON DELETE RESTRICT` foreign key constraints. The original code attempted to delete sent emails via raw SQL **outside** the transaction, and silently swallowed **all** errors (not just "table doesn't exist"). When the raw SQL failed for any reason, the FK constraint blocked the subsequent user deletion inside the transaction.
-
-## Verification
-
-### Manual Verification
-- Code change reviewed for correctness
-- Deletion order verified against FK dependencies
-- Prisma ORM usage confirmed (type-safe)
-
-### Automated Testing
-- Linter/TypeScript checks could not be run (node_modules not installed in worktree)
-- Recommended to run `npm install && npm run lint && npm run type-check` in CI
-
-### Manual Testing Steps (Recommended)
-1. Create a test user account
-2. Create a letter and send it via email (creates `sent_emails` record)
-3. Navigate to Profile Settings → Danger Zone → Delete Account
-4. Verify successful deletion with no errors
-5. Confirm all related records are deleted from database
-
-## Risk Assessment
-
-**Low Risk**:
-- The fix is additive within an existing transaction pattern
-- Uses the same Prisma ORM pattern as other deletions in the transaction
-- Single-line rollback if issues arise
+Once migrations are applied, the fallback code will simply not be triggered (the primary query will succeed).
 
 ## Files Changed
 
 | File | Lines Changed | Description |
 |------|--------------|-------------|
-| `src/app/api/user/account/route.ts` | -7, +3 | Moved sentEmail deletion inside transaction |
+| `src/app/api/user/account/route.ts` | +40, -15 | Added sentEmail deletion, schema fallback, dual column support, error logging |
+
+## Testing Checklist
+
+- [ ] Test account deletion with new schema (after migration)
+- [ ] Test account deletion with legacy schema (before migration)
+- [ ] Test deletion with sent emails present
+- [ ] Test deletion with recordings and documents present
+- [ ] Verify all storage files are cleaned up
