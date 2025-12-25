@@ -55,11 +55,12 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
   // Navigate to login
   await page.goto('/api/auth/login');
 
-  // Wait for Auth0 login page
-  await page.waitForURL(/auth0\.com|\/login/, { timeout: 30000 });
+  // Wait for Auth0 login page - we need to wait for actual login form, not just the URL
+  // The /authorize endpoint redirects to the actual login page
+  await page.waitForURL(/auth0\.com/, { timeout: 30000 });
 
-  // Wait for page to be fully loaded before looking for inputs
-  await page.waitForLoadState('domcontentloaded');
+  // Wait for page to be fully loaded and all network requests to settle
+  await page.waitForLoadState('networkidle', { timeout: 30000 });
 
   // Auth0 Universal Login uses various input selectors depending on version
   // Build a combined selector for all possible email/username inputs
@@ -89,9 +90,14 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
     await emailInput.waitFor({ state: 'visible', timeout: 15000 });
     await emailInput.fill(email);
   } catch (error) {
-    // Take a screenshot to debug what the page looks like
+    // Take a screenshot and capture page info to debug what the page looks like
     await page.screenshot({ path: 'test-results/auth-debug-email-field.png', fullPage: true });
-    throw new Error(`Could not find email/username input field on Auth0 login page. URL: ${page.url()}`);
+    const pageTitle = await page.title();
+    const bodyText = await page.locator('body').textContent().catch(() => 'Could not get body text');
+    console.error(`Auth0 Debug - URL: ${page.url()}`);
+    console.error(`Auth0 Debug - Title: ${pageTitle}`);
+    console.error(`Auth0 Debug - Body text preview: ${bodyText?.substring(0, 500)}`);
+    throw new Error(`Could not find email/username input field on Auth0 login page. URL: ${page.url()}, Title: ${pageTitle}`);
   }
 
   // Wait for password field (may appear after email on some Auth0 configurations)
