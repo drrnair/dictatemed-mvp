@@ -755,8 +755,8 @@ test.describe('Referral Upload - Error Handling', () => {
   });
 
   test('should show progress during extraction', async ({ page }) => {
-    // Use helper with configurable extraction delay
-    const extractionDelayMs = TEST_TIMEOUTS.extractionSimulation ?? 1500;
+    // Use a fixed delay for extraction progress testing (1.5 seconds)
+    const extractionDelayMs = 1500;
     await setupReferralMocks(page, {
       referralId: 'test-referral-progress',
       extractionDelay: extractionDelayMs,

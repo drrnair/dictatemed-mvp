@@ -331,6 +331,7 @@ export const TEST_TIMEOUTS = {
   letterGeneration: 60000,
   transcription: 30000,
   referralExtraction: 30000,
+  extractionSimulation: 1500, // Configurable delay for simulating extraction in tests
   animation: 500,
   debounce: 300,
 } as const;
