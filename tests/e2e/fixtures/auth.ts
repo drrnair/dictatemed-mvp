@@ -66,7 +66,7 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
 
   // Additional wait for Auth0 to finish rendering the login form
   // Auth0 Universal Login can take time to fully render after DOM is ready
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(TEST_TIMEOUTS.auth0Render);
 
   // Try to wait for networkidle, but don't fail if it times out (Auth0 may have long-polling)
   await page.waitForLoadState('networkidle', { timeout: TEST_TIMEOUTS.networkIdle }).catch(() => {

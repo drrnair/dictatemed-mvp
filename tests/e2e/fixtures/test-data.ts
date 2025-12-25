@@ -347,6 +347,7 @@ export const TEST_TIMEOUTS = {
   auth0Login: 15000,        // Auth0 login form appearance
   auth0Submit: 10000,       // Auth0 form submission
   auth0Redirect: 30000,     // Post-auth redirect to app
+  auth0Render: 2000,        // Auth0 Universal Login JS rendering delay
 
   // Element visibility
   elementVisible: 10000,    // Standard element visibility
