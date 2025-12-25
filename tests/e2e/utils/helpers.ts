@@ -450,14 +450,62 @@ export async function waitForUrl(
 
 /**
  * Get current user session info (if available)
+ *
+ * Note: This function attempts to retrieve session data from browser storage.
+ * Auth0 typically stores session data in cookies rather than sessionStorage.
+ * This function checks multiple possible storage locations:
+ * 1. sessionStorage 'auth_session' key (custom app storage)
+ * 2. localStorage 'auth0.user' key (Auth0 SPA SDK pattern)
+ *
+ * If your app uses a different storage mechanism, modify this function accordingly.
  */
 export async function getCurrentSession(
   page: Page
 ): Promise<{ userId?: string; email?: string } | null> {
   try {
     const sessionData = await page.evaluate(() => {
-      const session = sessionStorage.getItem('auth_session');
-      return session ? JSON.parse(session) : null;
+      // Check sessionStorage first (custom app storage)
+      const sessionAuth = sessionStorage.getItem('auth_session');
+      if (sessionAuth) {
+        try {
+          return JSON.parse(sessionAuth);
+        } catch {
+          // Invalid JSON, continue checking
+        }
+      }
+
+      // Check localStorage for Auth0 SPA SDK pattern
+      const auth0User = localStorage.getItem('auth0.user');
+      if (auth0User) {
+        try {
+          return JSON.parse(auth0User);
+        } catch {
+          // Invalid JSON, continue checking
+        }
+      }
+
+      // Check for any key containing 'auth' or 'user' in localStorage
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('auth') || key.includes('user'))) {
+          const value = localStorage.getItem(key);
+          if (value) {
+            try {
+              const parsed = JSON.parse(value);
+              if (parsed.email || parsed.userId || parsed.sub) {
+                return {
+                  userId: parsed.userId || parsed.sub,
+                  email: parsed.email,
+                };
+              }
+            } catch {
+              // Not JSON, skip
+            }
+          }
+        }
+      }
+
+      return null;
     });
     return sessionData;
   } catch {

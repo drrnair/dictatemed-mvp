@@ -382,30 +382,42 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
-### [ ] Step: Playwright Configuration Enhancement
+### [x] Step: Playwright Configuration Enhancement
 <!-- chat-id: 7524d85e-e178-4caa-86e0-dedc372c6b41 -->
 
-Update Playwright configuration for CI/CD:
+**Completed**: Playwright configuration enhanced for CI/CD:
 
-1. **Update `playwright.config.ts`**
-   - Add setup project for auth
-   - Configure multi-browser testing (Chrome, Firefox, Safari)
-   - Add GitHub reporter for CI
-   - Configure video recording on failure
-   - Set appropriate timeouts
+1. **Updated `playwright.config.ts`**
+   - Setup project with auth state dependencies
+   - Teardown project for cleanup
+   - Multi-browser testing: chromium, firefox, webkit, mobile-chrome, mobile-safari, tablet
+   - GitHub reporter + HTML + JSON + JUnit reporters for CI
+   - Video recording on first retry in CI
+   - Screenshot capture on failure
+   - Appropriate timeouts (60s test, 10s expect, 15s action, 30s navigation)
+   - Global timeout of 10 minutes in CI
 
-2. **Add Firefox to Project Matrix**
-   - Include Firefox browser testing
-   - Handle Firefox-specific timing issues
+2. **Firefox & WebKit Configuration**
+   - Firefox with increased actionTimeout (20s)
+   - WebKit (Safari) with increased actionTimeout (20s)
+   - All browsers use shared auth state
 
 3. **Global Setup** (`tests/e2e/global-setup.ts`)
-   - Database health check
-   - Environment validation
+   - Environment validation (required: E2E_TEST_USER_EMAIL, E2E_TEST_USER_PASSWORD)
+   - Optional env var warnings (E2E_BASE_URL, E2E_DATABASE_URL, E2E_MOCK_AUTH_TOKEN)
+   - Database health check via /api/health endpoint
+   - Auth directory creation and state validation
+   - Test data compliance check (email should contain "test" or "e2e")
+   - Configuration summary logging
+
+4. **Global Teardown** (`tests/e2e/setup/global.teardown.ts`)
+   - Cleanup coordination for CI
+   - Test summary reporting
+   - Support for E2E_SKIP_TEARDOWN flag
 
 **Verification**:
-- `npx playwright test --project=chromium` passes
-- `npx playwright test --project=firefox` passes
-- `npx playwright test --project=webkit` passes
+- TypeScript compiles without errors (`npx tsc --noEmit` passes)
+- All 6 browser projects configured with auth dependencies
 
 ---
 

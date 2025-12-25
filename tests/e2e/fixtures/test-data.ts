@@ -179,11 +179,16 @@ export const TEST_CONTACTS = {
 // ============================================
 
 /**
- * Expected extraction results for sample referral PDFs
+ * Expected extraction results for sample referral files
  * Used to verify extraction accuracy in tests
+ *
+ * Note: Keys are the base filename without extension. The actual files are:
+ * - tests/e2e/fixtures/referrals/cardiology-referral-001.txt (source)
+ * - tests/e2e/fixtures/referrals/cardiology-referral-001.pdf (generated)
  */
 export const EXPECTED_REFERRAL_EXTRACTIONS = {
-  'cardiology-referral-001.pdf': {
+  // Heart failure referral (routine)
+  'cardiology-referral-001': {
     patient: {
       name: 'TEST Patient - Referral HF',
       dateOfBirth: '1960-03-20',
@@ -198,7 +203,8 @@ export const EXPECTED_REFERRAL_EXTRACTIONS = {
     reasonForReferral: 'Progressive dyspnoea on exertion with ankle swelling for cardiology assessment',
     urgency: 'routine',
   },
-  'cardiology-referral-002.pdf': {
+  // Chest pain referral (urgent)
+  'cardiology-referral-002': {
     patient: {
       name: 'TEST Patient - Referral Chest Pain',
       dateOfBirth: '1955-07-10',

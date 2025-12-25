@@ -30,6 +30,7 @@ import {
 import {
   mockLetterGeneration,
   mockTranscription,
+  mockReferralExtraction,
   waitForNetworkIdle,
 } from '../utils/helpers';
 
@@ -186,7 +187,7 @@ test.describe('Referral Upload Workflow', () => {
 
   test('should upload referral PDF successfully', async ({ page }) => {
     // Setup mock for referral upload and extraction
-    await mockReferralExtraction(page, EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001.pdf']);
+    await mockReferralExtraction(page, EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001']);
 
     // Mock the file upload endpoint
     await page.route('**/api/referrals/upload', async (route) => {
@@ -215,7 +216,7 @@ test.describe('Referral Upload Workflow', () => {
   });
 
   test('should extract patient information from referral', async ({ page }) => {
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Setup mock for extraction with expected data
     await page.route('**/api/referrals/upload', async (route) => {
@@ -268,7 +269,7 @@ test.describe('Referral Upload Workflow', () => {
   });
 
   test('should extract GP/referrer information', async ({ page }) => {
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Setup extraction mock
     await page.route('**/api/referrals/upload', async (route) => {
@@ -316,7 +317,7 @@ test.describe('Referral Upload Workflow', () => {
   });
 
   test('should display review panel with extracted data', async ({ page }) => {
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Setup extraction mock
     await page.route('**/api/referrals/**', async (route) => {
@@ -365,7 +366,7 @@ test.describe('Referral Upload Workflow', () => {
   });
 
   test('should allow editing extracted patient fields', async ({ page }) => {
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Setup extraction mock
     await page.route('**/api/referrals/**', async (route) => {
@@ -421,7 +422,7 @@ test.describe('Referral Upload Workflow', () => {
   });
 
   test('should allow editing extracted referrer fields', async ({ page }) => {
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Setup extraction and update mocks
     await page.route('**/api/referrals/**', async (route) => {
@@ -478,7 +479,7 @@ test.describe('Referral Upload Workflow', () => {
   });
 
   test('should create consultation from referral', async ({ page }) => {
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Setup mocks for referral and consultation creation
     await page.route('**/api/referrals/**', async (route) => {
@@ -547,7 +548,7 @@ test.describe('Referral Upload Workflow', () => {
 
   test('should generate letter with referral context', async ({ page }) => {
     // Setup mocks for the complete workflow
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     await page.route('**/api/referrals/**', async (route) => {
       const url = route.request().url();
@@ -629,7 +630,7 @@ test.describe('Referral Upload Workflow', () => {
   });
 
   test('should send letter to referrer', async ({ page }) => {
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Mock the letter API
     await page.route('**/api/letters/**', async (route) => {
@@ -721,7 +722,7 @@ test.describe('Urgent Referral Upload', () => {
   });
 
   test('should extract urgent referral with correct priority', async ({ page }) => {
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-002.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-002'];
 
     // Setup extraction mock for urgent referral
     await page.route('**/api/referrals/**', async (route) => {
@@ -768,7 +769,7 @@ test.describe('Urgent Referral Upload', () => {
   });
 
   test('should extract chest pain clinical context correctly', async ({ page }) => {
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-002.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-002'];
 
     // Setup extraction mock
     await page.route('**/api/referrals/**', async (route) => {
@@ -912,7 +913,7 @@ test.describe('Referral Upload - Error Handling', () => {
   });
 
   test('should allow discard and retry with different file', async ({ page }) => {
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Setup successful extraction mock
     await page.route('**/api/referrals/**', async (route) => {
@@ -1020,7 +1021,7 @@ test.describe('Referral Extraction - Accuracy Verification', () => {
   });
 
   test('should extract patient date of birth correctly', async ({ page }) => {
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Setup mock with specific DOB
     await page.route('**/api/referrals/**', async (route) => {
@@ -1063,7 +1064,7 @@ test.describe('Referral Extraction - Accuracy Verification', () => {
   });
 
   test('should extract referrer contact details correctly', async ({ page }) => {
-    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001.pdf'];
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Setup mock
     await page.route('**/api/referrals/**', async (route) => {
