@@ -122,10 +122,44 @@ If blocked or uncertain, ask the user for direction.
 - `tests/e2e/workflows/referral-upload.spec.ts` - Use workflowTest fixture
 - `tests/e2e/page-objects/*.ts` - All 6 page objects now use TEST_TIMEOUTS
 
-**Remaining Auth0 Issue:**
-The E2E tests still fail because Auth0 is misconfigured. The repository owner needs to:
-1. Go to Auth0 Dashboard → Applications → Your App → Settings
-2. Add `http://localhost:3000/api/auth/callback` to Allowed Callback URLs
-3. Add `http://localhost:3000` to Allowed Web Origins
+### [ ] Step: Test Execution and Documentation
+<!-- chat-id: current -->
 
-Until this is done, the auth setup will fail and tests cannot run.
+**Status:** Blocked by infrastructure requirements
+
+The E2E tests require the following infrastructure to run:
+1. **PostgreSQL Database**: Configured via `DATABASE_URL` environment variable
+2. **Seeded Test Data**: Run via `npm run db:seed:e2e` (requires database + `PHI_ENCRYPTION_KEY`)
+3. **Auth0 Credentials**: All Auth0 environment variables configured in GitHub Secrets
+4. **Built Next.js App**: The `npm run build` step compiles the application
+5. **Playwright Web Server**: Runs the app locally during test execution
+
+**Local Test Execution Attempt:**
+- `npm run db:seed:e2e`: ❌ Failed - requires `DATABASE_URL` and `PHI_ENCRYPTION_KEY`
+- `npx playwright test`: ❌ Cannot run - requires database and built application
+
+**Test Infrastructure Summary:**
+- Total tests discovered: ~127 (for Chromium project)
+- Test files in `flows/`: API health, auth, accessibility, letter-sending, style-profiles
+- Test files in `workflows/`: manual-consultation, referral-upload
+
+**CI Pipeline Status (Run #33):**
+- ✅ Install Playwright browsers
+- ✅ Generate Prisma client
+- ✅ Sync database schema
+- ✅ Seed E2E test data (passed in CI with proper secrets)
+- ❌ Build application (TypeScript error - FIXED in commit c8151bd)
+- Tests did not run due to build failure
+
+**Remaining Issue:**
+The tests should now run in CI after the TypeScript fix. The next CI run will verify:
+1. Build succeeds
+2. Auth0 login completes (requires properly configured Auth0 tenant)
+3. Tests execute and report pass/fail results
+
+**Repository Owner Actions Required:**
+1. Verify Auth0 application settings:
+   - Allowed Callback URLs: `http://localhost:3000/api/auth/callback`
+   - Allowed Web Origins: `http://localhost:3000`
+2. Re-run the CI workflow after the TypeScript fix is merged
+3. Review the test results in GitHub Actions artifacts
