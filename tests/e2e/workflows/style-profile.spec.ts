@@ -28,7 +28,21 @@ import {
   mockLetterGeneration,
   mockTranscription,
   waitForNetworkIdle,
+  MOCK_SERVICES,
 } from '../utils/helpers';
+
+/**
+ * Conditionally setup API route mock based on MOCK_SERVICES flag.
+ * Returns early if MOCK_SERVICES=false (integration mode).
+ */
+async function setupMockRoute(
+  page: import('@playwright/test').Page,
+  pattern: string | RegExp,
+  handler: Parameters<import('@playwright/test').Page['route']>[1]
+): Promise<void> {
+  if (!MOCK_SERVICES) return;
+  await page.route(pattern, handler);
+}
 
 // ============================================
 // Test Data for Style Profile Tests
@@ -146,7 +160,7 @@ test.describe('Style Profile Workflow', () => {
 
   test('should generate baseline letter without style profile', async ({ page }) => {
     // Mock no existing style profile
-    await page.route('**/api/style/profiles**', async (route) => {
+    await setupMockRoute(page, '**/api/style/profiles**', async (route) => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -177,7 +191,7 @@ test.describe('Style Profile Workflow', () => {
     await consultationPage.selectRecordingMode('UPLOAD');
 
     // Mock the recording/transcription flow
-    await page.route('**/api/recordings/**', async (route) => {
+    await setupMockRoute(page, '**/api/recordings/**', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -210,7 +224,7 @@ test.describe('Style Profile Workflow', () => {
     // Mock the letter edit API
     let capturedEdits: string[] = [];
 
-    await page.route('**/api/letters/**/edit', async (route) => {
+    await setupMockRoute(page, '**/api/letters/**/edit', async (route) => {
       const body = route.request().postDataJSON();
       if (body?.content) {
         capturedEdits.push(body.content);
@@ -223,7 +237,7 @@ test.describe('Style Profile Workflow', () => {
     });
 
     // Mock style analysis trigger
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page, '**/api/style/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -238,7 +252,7 @@ test.describe('Style Profile Workflow', () => {
     await loginPage.loginWithEnvCredentials();
 
     // Mock existing letter for editing
-    await page.route('**/api/letters/**', async (route) => {
+    await setupMockRoute(page, '**/api/letters/**', async (route) => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -280,7 +294,7 @@ test.describe('Style Profile Workflow', () => {
 
   test('should apply learned style to new letters', async ({ page }) => {
     // Mock style profile exists with learned preferences
-    await page.route('**/api/style/profiles**', async (route) => {
+    await setupMockRoute(page, '**/api/style/profiles**', async (route) => {
       const url = route.request().url();
       if (url.includes('HEART_FAILURE')) {
         await route.fulfill({
@@ -318,7 +332,7 @@ test.describe('Style Profile Workflow', () => {
     await consultationPage.selectRecordingMode('UPLOAD');
 
     // Mock recording
-    await page.route('**/api/recordings/**', async (route) => {
+    await setupMockRoute(page, '**/api/recordings/**', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -345,7 +359,7 @@ test.describe('Style Profile Workflow', () => {
 
   test('should display profile in settings', async ({ page }) => {
     // Mock style profiles API
-    await page.route('**/api/style/profiles**', async (route) => {
+    await setupMockRoute(page, '**/api/style/profiles**', async (route) => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -358,7 +372,7 @@ test.describe('Style Profile Workflow', () => {
     });
 
     // Mock style analyze API for statistics
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page, '**/api/style/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -376,7 +390,7 @@ test.describe('Style Profile Workflow', () => {
     });
 
     // Mock subspecialty-specific stats
-    await page.route('**/api/style/profiles/*/analyze', async (route) => {
+    await setupMockRoute(page, '**/api/style/profiles/*/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -421,7 +435,7 @@ test.describe('Style Profile Workflow', () => {
     let strengthUpdateRequests: number[] = [];
 
     // Mock style profiles
-    await page.route('**/api/style/profiles**', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles**', async (route) => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -434,7 +448,7 @@ test.describe('Style Profile Workflow', () => {
     });
 
     // Mock strength update
-    await page.route('**/api/style/profiles/*/strength', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles/*/strength', async (route) => {
       if (route.request().method() === 'PATCH') {
         const body = route.request().postDataJSON();
         strengthUpdateRequests.push(body?.learningStrength);
@@ -452,7 +466,7 @@ test.describe('Style Profile Workflow', () => {
     });
 
     // Mock analyze endpoints
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -464,7 +478,7 @@ test.describe('Style Profile Workflow', () => {
       });
     });
 
-    await page.route('**/api/style/profiles/*/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles/*/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -508,7 +522,7 @@ test.describe('Style Profile Workflow', () => {
 
   test('should persist style across sessions', async ({ page, context }) => {
     // Mock style profiles to persist
-    await page.route('**/api/style/profiles**', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles**', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -517,7 +531,7 @@ test.describe('Style Profile Workflow', () => {
     });
 
     // Mock analyze endpoints
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -529,7 +543,7 @@ test.describe('Style Profile Workflow', () => {
       });
     });
 
-    await page.route('**/api/style/profiles/*/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles/*/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -572,7 +586,7 @@ test.describe('Style Profile Workflow', () => {
     let deleteRequests: string[] = [];
 
     // Mock style profiles
-    await page.route('**/api/style/profiles**', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles**', async (route) => {
       if (route.request().method() === 'GET') {
         // Return profile if not deleted
         if (!deleteRequests.includes('HEART_FAILURE')) {
@@ -594,7 +608,7 @@ test.describe('Style Profile Workflow', () => {
     });
 
     // Mock DELETE for profile reset
-    await page.route('**/api/style/profiles/HEART_FAILURE', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles/HEART_FAILURE', async (route) => {
       if (route.request().method() === 'DELETE') {
         deleteRequests.push('HEART_FAILURE');
         await route.fulfill({
@@ -608,7 +622,7 @@ test.describe('Style Profile Workflow', () => {
     });
 
     // Mock analyze endpoints
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -620,7 +634,7 @@ test.describe('Style Profile Workflow', () => {
       });
     });
 
-    await page.route('**/api/style/profiles/*/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles/*/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -669,7 +683,7 @@ test.describe('Style Profile Settings - UI', () => {
 
   test('should display style mode selector', async ({ page }) => {
     // Mock APIs
-    await page.route('**/api/style/**', async (route) => {
+    await setupMockRoute(page,'**/api/style/**', async (route) => {
       if (route.request().url().includes('/profiles')) {
         await route.fulfill({
           status: 200,
@@ -711,7 +725,7 @@ test.describe('Style Profile Settings - UI', () => {
 
   test('should show all subspecialty cards in per-subspecialty mode', async ({ page }) => {
     // Mock APIs
-    await page.route('**/api/style/profiles', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles', async (route) => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -723,7 +737,7 @@ test.describe('Style Profile Settings - UI', () => {
       }
     });
 
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -735,7 +749,7 @@ test.describe('Style Profile Settings - UI', () => {
       });
     });
 
-    await page.route('**/api/style/profiles/*/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles/*/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -776,7 +790,7 @@ test.describe('Style Profile Settings - UI', () => {
 
   test('should show edit statistics in global style tab', async ({ page }) => {
     // Mock with some edit statistics
-    await page.route('**/api/style/profiles', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -784,7 +798,7 @@ test.describe('Style Profile Settings - UI', () => {
       });
     });
 
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -826,7 +840,7 @@ test.describe('Style Profile Settings - UI', () => {
 
   test('should disable analyze button without enough edits', async ({ page }) => {
     // Mock with insufficient edits
-    await page.route('**/api/style/profiles', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -834,7 +848,7 @@ test.describe('Style Profile Settings - UI', () => {
       });
     });
 
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -850,7 +864,7 @@ test.describe('Style Profile Settings - UI', () => {
       });
     });
 
-    await page.route('**/api/style/profiles/*/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles/*/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -882,7 +896,7 @@ test.describe('Style Profile - Seed Letter Upload', () => {
 
   test('should open seed letter upload dialog', async ({ page }) => {
     // Mock APIs
-    await page.route('**/api/style/profiles', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -890,7 +904,7 @@ test.describe('Style Profile - Seed Letter Upload', () => {
       });
     });
 
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -902,7 +916,7 @@ test.describe('Style Profile - Seed Letter Upload', () => {
       });
     });
 
-    await page.route('**/api/style/profiles/*/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles/*/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -910,7 +924,7 @@ test.describe('Style Profile - Seed Letter Upload', () => {
       });
     });
 
-    await page.route('**/api/style/seed', async (route) => {
+    await setupMockRoute(page,'**/api/style/seed', async (route) => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -948,7 +962,7 @@ test.describe('Style Profile - Seed Letter Upload', () => {
 
   test('should validate minimum letter length for seed upload', async ({ page }) => {
     // Mock APIs
-    await page.route('**/api/style/**', async (route) => {
+    await setupMockRoute(page,'**/api/style/**', async (route) => {
       const url = route.request().url();
       if (url.includes('/profiles') && route.request().method() === 'GET') {
         await route.fulfill({
@@ -1003,7 +1017,7 @@ test.describe('Style Profile - Seed Letter Upload', () => {
 
   test('should enable upload with valid content', async ({ page }) => {
     // Mock APIs
-    await page.route('**/api/style/**', async (route) => {
+    await setupMockRoute(page,'**/api/style/**', async (route) => {
       const url = route.request().url();
       if (url.includes('/profiles') && route.request().method() === 'GET') {
         await route.fulfill({
@@ -1088,7 +1102,7 @@ test.describe('Style Profile - Error Handling', () => {
 
   test('should handle API errors gracefully', async ({ page }) => {
     // Mock API failure
-    await page.route('**/api/style/profiles', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles', async (route) => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
@@ -1096,7 +1110,7 @@ test.describe('Style Profile - Error Handling', () => {
       });
     });
 
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/analyze', async (route) => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
@@ -1117,7 +1131,7 @@ test.describe('Style Profile - Error Handling', () => {
 
   test('should handle slow API response gracefully', async ({ page }) => {
     // Mock slow API response (3 seconds delay to test loading state)
-    await page.route('**/api/style/profiles', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles', async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 3000));
       await route.fulfill({
         status: 200,
@@ -1126,7 +1140,7 @@ test.describe('Style Profile - Error Handling', () => {
       });
     });
 
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/analyze', async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 3000));
       await route.fulfill({
         status: 200,
@@ -1165,7 +1179,7 @@ test.describe('Style Profile - Accessibility', () => {
 
   test('should have accessible tab navigation', async ({ page }) => {
     // Mock APIs
-    await page.route('**/api/style/**', async (route) => {
+    await setupMockRoute(page,'**/api/style/**', async (route) => {
       if (route.request().url().includes('/profiles')) {
         await route.fulfill({
           status: 200,
@@ -1213,7 +1227,7 @@ test.describe('Style Profile - Accessibility', () => {
 
   test('should have accessible slider controls', async ({ page }) => {
     // Mock APIs with active profile
-    await page.route('**/api/style/profiles', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1221,7 +1235,7 @@ test.describe('Style Profile - Accessibility', () => {
       });
     });
 
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1233,7 +1247,7 @@ test.describe('Style Profile - Accessibility', () => {
       });
     });
 
-    await page.route('**/api/style/profiles/*/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles/*/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1264,7 +1278,7 @@ test.describe('Style Profile - Accessibility', () => {
 
   test('should have accessible reset dialog', async ({ page }) => {
     // Mock APIs with active profile
-    await page.route('**/api/style/profiles', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1272,7 +1286,7 @@ test.describe('Style Profile - Accessibility', () => {
       });
     });
 
-    await page.route('**/api/style/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1284,7 +1298,7 @@ test.describe('Style Profile - Accessibility', () => {
       });
     });
 
-    await page.route('**/api/style/profiles/*/analyze', async (route) => {
+    await setupMockRoute(page,'**/api/style/profiles/*/analyze', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

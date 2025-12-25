@@ -114,7 +114,11 @@ async function checkDatabaseHealth(): Promise<void> {
     }
 
     const health = await response.json();
-    if (health.database === 'connected' || health.status === 'ok') {
+    // Health endpoint returns: { status: 'healthy'|'degraded'|'unhealthy', checks: { database: { status: 'up'|'down' } } }
+    const isHealthy = health.status === 'healthy' || health.status === 'degraded';
+    const isDatabaseUp = health.checks?.database?.status === 'up';
+
+    if (isHealthy && isDatabaseUp) {
       console.log('✅ Database health check passed');
     } else {
       const message = 'Database may not be fully connected';

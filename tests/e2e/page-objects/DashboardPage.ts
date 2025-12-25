@@ -3,6 +3,7 @@
 
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { TEST_TIMEOUTS } from '../fixtures/test-data';
 
 export class DashboardPage extends BasePage {
   // Navigation sidebar
@@ -83,7 +84,7 @@ export class DashboardPage extends BasePage {
     await this.waitForNetworkIdle();
     // Wait for main content to be visible
     await expect(this.greetingText.or(this.startRecordingCard)).toBeVisible({
-      timeout: 10000,
+      timeout: TEST_TIMEOUTS.elementVisible,
     });
   }
 

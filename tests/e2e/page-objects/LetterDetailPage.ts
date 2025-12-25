@@ -3,6 +3,7 @@
 
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './BasePage';
+import { TEST_TIMEOUTS } from '../fixtures/test-data';
 
 // Letter status types
 export type LetterStatus = 'draft' | 'pending_review' | 'approved' | 'sent' | 'failed';
@@ -203,7 +204,7 @@ export class LetterDetailPage extends BasePage {
     await this.page.waitForURL(/\/letters\/.+/);
     await this.waitForNetworkIdle();
     // Wait for editor or letter content to be visible
-    await expect(this.letterEditor.or(this.editorContent)).toBeVisible({ timeout: 10000 });
+    await expect(this.letterEditor.or(this.editorContent)).toBeVisible({ timeout: TEST_TIMEOUTS.elementVisible });
   }
 
   // ============================================
@@ -406,7 +407,7 @@ export class LetterDetailPage extends BasePage {
     // Confirm deletion dialog
     const confirmButton = this.page.getByRole('button', { name: /confirm|delete|yes/i });
     await confirmButton.click();
-    await this.page.waitForURL(/\/letters(?!\/)/, { timeout: 10000 });
+    await this.page.waitForURL(/\/letters(?!\/)/, { timeout: TEST_TIMEOUTS.navigation });
   }
 
   /**
@@ -486,7 +487,7 @@ export class LetterDetailPage extends BasePage {
     await this.sendDialogSendButton.click();
     // Wait for sending to complete
     await expect(this.sendSuccessMessage.or(this.sendErrorMessage)).toBeVisible({
-      timeout: 30000,
+      timeout: TEST_TIMEOUTS.pageLoad,
     });
   }
 

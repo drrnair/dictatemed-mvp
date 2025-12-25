@@ -327,15 +327,49 @@ export const TEST_ROUTES = {
 // Test Timeouts
 // ============================================
 
+/**
+ * Standardized timeouts for E2E tests.
+ * Use these instead of hardcoded numbers for consistency and easy tuning.
+ *
+ * Usage:
+ *   import { TEST_TIMEOUTS } from '../fixtures/test-data';
+ *   await page.waitForURL(/\/dashboard/, { timeout: TEST_TIMEOUTS.navigation });
+ *   await element.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.elementVisible });
+ */
 export const TEST_TIMEOUTS = {
-  navigation: 10000,
-  networkIdle: 5000,
-  letterGeneration: 60000,
-  transcription: 30000,
-  referralExtraction: 30000,
-  extractionSimulation: 1500, // Configurable delay for simulating extraction in tests
-  animation: 500,
-  debounce: 300,
+  // Navigation & Page Load
+  navigation: 10000,        // Standard page navigation
+  networkIdle: 5000,        // Wait for network to settle
+  pageLoad: 30000,          // Full page load with assets
+  redirect: 30000,          // Auth redirects, OAuth flows
+
+  // Auth0 specific
+  auth0Login: 15000,        // Auth0 login form appearance
+  auth0Submit: 10000,       // Auth0 form submission
+  auth0Redirect: 30000,     // Post-auth redirect to app
+  auth0Render: 2000,        // Auth0 Universal Login JS rendering delay
+
+  // Element visibility
+  elementVisible: 10000,    // Standard element visibility
+  elementHidden: 5000,      // Element disappearance
+  modalAppear: 5000,        // Modal/dialog appearance
+  modalDismiss: 3000,       // Modal/dialog dismissal
+  toast: 10000,             // Toast notification visibility
+
+  // Search & Selection
+  searchResults: 5000,      // Search results to appear
+  searchDebounce: 300,      // Input debounce time
+
+  // Long-running operations
+  letterGeneration: 60000,  // AI letter generation
+  transcription: 30000,     // Audio transcription
+  referralExtraction: 30000, // PDF extraction
+
+  // Short waits
+  extractionSimulation: 1500, // Simulated extraction delay
+  animation: 500,           // CSS animations
+  debounce: 300,            // Input debounce
+  stateUpdate: 1000,        // React state updates
 } as const;
 
 // ============================================

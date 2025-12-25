@@ -31,7 +31,13 @@ import {
   expectToast,
   setupConsoleErrorCollection,
   validateClinicalContent,
+  MOCK_SERVICES,
 } from '../utils/helpers';
+import {
+  workflowTest,
+  extractLetterIdFromUrl,
+  clearWorkflowState,
+} from '../fixtures/workflow-state';
 
 // ============================================
 // Centralized Mock Setup Functions
@@ -40,8 +46,10 @@ import {
 /**
  * Sets up mock for letter detail page with test data.
  * Used when the real letter generation workflow wasn't executed.
+ * Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false.
  */
 async function setupLetterDetailMock(page: Page, letterId: string): Promise<void> {
+  if (!MOCK_SERVICES) return;
   await page.route(`**/api/letters/${letterId}`, async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({
@@ -66,8 +74,10 @@ async function setupLetterDetailMock(page: Page, letterId: string): Promise<void
 
 /**
  * Sets up mock for letter send endpoint.
+ * Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false.
  */
 async function setupLetterSendMock(page: Page): Promise<void> {
+  if (!MOCK_SERVICES) return;
   await page.route('**/api/letters/**/send', async (route) => {
     await route.fulfill({
       status: 200,
@@ -93,8 +103,10 @@ async function setupLetterSendMock(page: Page): Promise<void> {
 
 /**
  * Sets up mock for send history endpoint.
+ * Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false.
  */
 async function setupSendHistoryMock(page: Page, letterId: string): Promise<void> {
+  if (!MOCK_SERVICES) return;
   await page.route(`**/api/letters/${letterId}/send-history`, async (route) => {
     await route.fulfill({
       status: 200,
@@ -125,8 +137,10 @@ async function setupSendHistoryMock(page: Page, letterId: string): Promise<void>
 
 /**
  * Sets up mock for recordings API.
+ * Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false.
  */
 async function setupRecordingsMock(page: Page): Promise<void> {
+  if (!MOCK_SERVICES) return;
   await page.route('**/api/recordings/**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -141,17 +155,21 @@ async function setupRecordingsMock(page: Page): Promise<void> {
 }
 
 // Test configuration - serial execution to maintain state
-test.describe.configure({ mode: 'serial' });
+workflowTest.describe.configure({ mode: 'serial' });
 
-test.describe('Manual Consultation Workflow', () => {
+workflowTest.describe('Manual Consultation Workflow', () => {
   let loginPage: LoginPage;
   let dashboardPage: DashboardPage;
   let consultationPage: NewConsultationPage;
   let letterDetailPage: LetterDetailPage;
-  let generatedLetterId: string | null = null;
   let getConsoleErrors: (() => string[]) | null = null;
 
-  test.beforeEach(async ({ page }) => {
+  // Clear workflow state before the test suite starts
+  workflowTest.beforeAll(async () => {
+    clearWorkflowState();
+  });
+
+  workflowTest.beforeEach(async ({ page }) => {
     // Initialize page objects
     loginPage = new LoginPage(page);
     dashboardPage = new DashboardPage(page);
@@ -162,7 +180,7 @@ test.describe('Manual Consultation Workflow', () => {
     getConsoleErrors = setupConsoleErrorCollection(page);
   });
 
-  test.afterEach(async () => {
+  workflowTest.afterEach(async () => {
     // Check for console errors after each test and log warnings
     if (getConsoleErrors) {
       const errors = getConsoleErrors();
@@ -172,7 +190,7 @@ test.describe('Manual Consultation Workflow', () => {
     }
   });
 
-  test('should login and navigate to dashboard', async ({ page }) => {
+  workflowTest('should login and navigate to dashboard', async ({ page }) => {
     // Login with test credentials
     await loginPage.loginWithEnvCredentials();
 
@@ -186,7 +204,7 @@ test.describe('Manual Consultation Workflow', () => {
     await dashboardPage.expectNavigationVisible();
   });
 
-  test('should navigate to new consultation page', async ({ page }) => {
+  workflowTest('should navigate to new consultation page', async ({ page }) => {
     // Login first
     await loginPage.loginWithEnvCredentials();
     await dashboardPage.waitForDashboardLoad();
@@ -201,7 +219,7 @@ test.describe('Manual Consultation Workflow', () => {
     await expect(consultationPage.patientSearchInput).toBeVisible();
   });
 
-  test('should search and select test patient by MRN', async ({ page }) => {
+  workflowTest('should search and select test patient by MRN', async ({ page }) => {
     // Login and navigate to consultation page
     await loginPage.loginWithEnvCredentials();
     await consultationPage.gotoNewConsultation();
@@ -215,7 +233,7 @@ test.describe('Manual Consultation Workflow', () => {
     await consultationPage.expectPatientSelected(patient.name);
   });
 
-  test('should select referrer and letter type', async ({ page }) => {
+  workflowTest('should select referrer and letter type', async ({ page }) => {
     // Login and navigate to consultation page
     await loginPage.loginWithEnvCredentials();
     await consultationPage.gotoNewConsultation();
@@ -239,7 +257,7 @@ test.describe('Manual Consultation Workflow', () => {
     expect(selectedType).toBe('NEW_PATIENT');
   });
 
-  test('should fill clinical context and prepare for recording', async ({ page }) => {
+  workflowTest('should fill clinical context and prepare for recording', async ({ page }) => {
     // Login and navigate to consultation page
     await loginPage.loginWithEnvCredentials();
     await consultationPage.gotoNewConsultation();
@@ -262,7 +280,7 @@ test.describe('Manual Consultation Workflow', () => {
     await expect(consultationPage.startRecordingButton).toBeVisible();
   });
 
-  test('should generate letter using AI after recording', async ({ page }) => {
+  workflowTest('should generate letter using AI after recording', async ({ page, workflowState }) => {
     // Setup mocks using centralized helpers
     await mockTranscription(page);
     await mockLetterGeneration(page, SAMPLE_LETTER_CONTENT.heartFailure.body);
@@ -289,27 +307,24 @@ test.describe('Manual Consultation Workflow', () => {
     // Generate the letter
     await consultationPage.generateLetterAndWait(TEST_TIMEOUTS.letterGeneration);
 
-    // Store the letter ID for subsequent tests
+    // Store the letter ID in workflow state for subsequent tests
     const url = page.url();
-    const match = url.match(/\/letters\/([a-zA-Z0-9-]+)/);
-    if (match && match[1]) {
-      generatedLetterId = match[1];
-    }
+    workflowState.letterId = extractLetterIdFromUrl(url);
 
     // Verify we're on the letter detail page
     await expect(page).toHaveURL(/\/letters\/.+/);
 
     // CRITICAL: Assert letter ID was captured - subsequent tests depend on this
     expect(
-      generatedLetterId,
+      workflowState.letterId,
       'Letter generation should produce a valid letter ID in the URL. ' +
       'Check if the letter generation workflow completed successfully.'
     ).not.toBeNull();
   });
 
-  test('should review and approve generated letter', async ({ page }) => {
+  workflowTest('should review and approve generated letter', async ({ page, workflowState }) => {
     // CRITICAL: Warn if falling back to mock (indicates previous test failure)
-    if (!generatedLetterId) {
+    if (!workflowState.letterId) {
       console.warn(
         'WARNING: No letter ID from previous test. Using mock data. ' +
         'This may indicate the letter generation workflow failed.'
@@ -319,7 +334,7 @@ test.describe('Manual Consultation Workflow', () => {
       await letterDetailPage.gotoLetter('test-letter-id');
     } else {
       await loginPage.loginWithEnvCredentials();
-      await letterDetailPage.gotoLetter(generatedLetterId);
+      await letterDetailPage.gotoLetter(workflowState.letterId);
     }
 
     // Verify letter is loaded
@@ -356,15 +371,15 @@ test.describe('Manual Consultation Workflow', () => {
     await expectToast(page, /approved/i, { timeout: TEST_TIMEOUTS.navigation });
   });
 
-  test('should send letter to GP and self', async ({ page }) => {
+  workflowTest('should send letter to GP and self', async ({ page, workflowState }) => {
     // Setup mock for letter sending using centralized helper
     await setupLetterSendMock(page);
 
     // Login and navigate to letter
     await loginPage.loginWithEnvCredentials();
 
-    const letterId = generatedLetterId ?? 'test-letter-id';
-    if (!generatedLetterId) {
+    const letterId = workflowState.letterId ?? 'test-letter-id';
+    if (!workflowState.letterId) {
       console.warn('WARNING: Using fallback letter ID. Real workflow was not tested.');
       await setupLetterDetailMock(page, letterId);
     }
@@ -401,16 +416,16 @@ test.describe('Manual Consultation Workflow', () => {
     await letterDetailPage.expectSendSuccess();
   });
 
-  test('should show letter in sent history', async ({ page }) => {
+  workflowTest('should show letter in sent history', async ({ page, workflowState }) => {
     // This test verifies the send history is populated after sending
     await loginPage.loginWithEnvCredentials();
 
-    const letterId = generatedLetterId ?? 'test-letter-id';
+    const letterId = workflowState.letterId ?? 'test-letter-id';
 
     // Setup mocks using centralized helpers
     await setupSendHistoryMock(page, letterId);
 
-    if (!generatedLetterId) {
+    if (!workflowState.letterId) {
       console.warn('WARNING: Using fallback letter ID for history test.');
       await setupLetterDetailMock(page, letterId);
     }
