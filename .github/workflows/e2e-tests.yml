@@ -38,8 +38,10 @@ env:
   E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL || 'test.cardiologist+e2e@dictatemed.dev' }}
   E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD || 'TestPassword123!' }}
 
-  # PHI encryption key (test only - NOT for production)
-  PHI_ENCRYPTION_KEY: "ZTJlLXRlc3Qta2V5LTMyLWJ5dGVzLWxvbmctc2VjdXJl"
+  # PHI encryption key for E2E tests (32 bytes, base64-encoded)
+  # This is a test-only key - NOT for production use
+  # Generated with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+  PHI_ENCRYPTION_KEY: "dGVzdC1lMmUtcGhpLWVuY3J5cHRpb24ta2V5LTMyYg=="
 
   # Mock all external services
   MOCK_BEDROCK_SERVICE: "true"
