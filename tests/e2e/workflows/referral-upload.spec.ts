@@ -722,30 +722,13 @@ test.describe('Referral Upload - Error Handling', () => {
   test('should allow discard and retry with different file', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
-    // Setup successful extraction mock
-    await page.route('**/api/referrals/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/upload')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, referralId: 'test-referral-retry' }),
-        });
-      } else if (url.includes('/extract')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            extractedData: {
-              patient: expectedExtraction.patient,
-              referrer: expectedExtraction.referrer,
-            },
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+    // Use helper for mock setup
+    await setupReferralMocks(page, {
+      referralId: 'test-referral-retry',
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+      },
     });
 
     // Login and navigate
@@ -772,29 +755,11 @@ test.describe('Referral Upload - Error Handling', () => {
   });
 
   test('should show progress during extraction', async ({ page }) => {
-    // Setup mock with delayed extraction
-    await page.route('**/api/referrals/upload', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, referralId: 'test-referral-progress' }),
-      });
-    });
-
-    await page.route('**/api/referrals/**/extract', async (route) => {
-      // Simulate longer extraction time
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          extractedData: {
-            patient: { name: 'TEST Patient', dateOfBirth: '1960-01-01' },
-            referrer: { name: 'TEST Referrer' },
-          },
-        }),
-      });
+    // Use helper with configurable extraction delay
+    const extractionDelayMs = TEST_TIMEOUTS.extractionSimulation ?? 1500;
+    await setupReferralMocks(page, {
+      referralId: 'test-referral-progress',
+      extractionDelay: extractionDelayMs,
     });
 
     // Login and navigate

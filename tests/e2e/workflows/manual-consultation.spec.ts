@@ -357,32 +357,18 @@ test.describe('Manual Consultation Workflow', () => {
   });
 
   test('should send letter to GP and self', async ({ page }) => {
-    // Setup mock for letter sending
-    await page.route('**/api/letters/**/send', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          sentTo: [
-            {
-              name: TEST_REFERRERS.gp.name,
-              email: TEST_REFERRERS.gp.email,
-              status: 'sent',
-            },
-            {
-              name: TEST_CLINICIAN.name,
-              email: TEST_CLINICIAN.email,
-              status: 'sent',
-            },
-          ],
-        }),
-      });
-    });
+    // Setup mock for letter sending using centralized helper
+    await setupLetterSendMock(page);
 
     // Login and navigate to letter
     await loginPage.loginWithEnvCredentials();
+
     const letterId = generatedLetterId ?? 'test-letter-id';
+    if (!generatedLetterId) {
+      console.warn('WARNING: Using fallback letter ID. Real workflow was not tested.');
+      await setupLetterDetailMock(page, letterId);
+    }
+
     await letterDetailPage.gotoLetter(letterId);
 
     // Open send dialog
