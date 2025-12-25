@@ -264,7 +264,7 @@ export class LetterDetailPage extends BasePage {
   async getWordCount(): Promise<number> {
     const statsText = (await this.readingStats.textContent()) ?? '';
     const match = statsText.match(/(\d+)\s*words?/i);
-    return match ? parseInt(match[1], 10) : 0;
+    return match && match[1] ? parseInt(match[1], 10) : 0;
   }
 
   // ============================================

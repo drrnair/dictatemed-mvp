@@ -59,13 +59,14 @@ export async function expectToast(
 
   if (type) {
     // Toast types are indicated by data attributes or class names
-    const typeSelectors: Record<string, string> = {
+    const typeSelectors: Record<'success' | 'error' | 'warning' | 'info', string> = {
       success: '[data-type="success"], .toast-success',
       error: '[data-type="error"], .toast-error',
       warning: '[data-type="warning"], .toast-warning',
       info: '[data-type="info"], .toast-info',
     };
-    await expect(toast.locator(typeSelectors[type]).or(toast)).toBeVisible();
+    const selector = typeSelectors[type];
+    await expect(toast.locator(selector).or(toast)).toBeVisible();
   }
 }
 
@@ -373,7 +374,8 @@ export function generateTestId(prefix = 'TEST'): string {
  * Format date as YYYY-MM-DD for input fields
  */
 export function formatDateForInput(date: Date): string {
-  return date.toISOString().split('T')[0];
+  const parts = date.toISOString().split('T');
+  return parts[0] ?? '';
 }
 
 /**

@@ -105,13 +105,14 @@ export class BasePage {
 
     if (type) {
       // Toast types are often indicated by data attributes or class names
-      const typeSelectors: Record<string, string> = {
+      const typeSelectors: Record<'success' | 'error' | 'warning' | 'info', string> = {
         success: '[data-type="success"], .toast-success',
         error: '[data-type="error"], .toast-error',
         warning: '[data-type="warning"], .toast-warning',
         info: '[data-type="info"], .toast-info',
       };
-      await expect(toast.locator(typeSelectors[type]).or(toast)).toBeVisible();
+      const selector = typeSelectors[type];
+      await expect(toast.locator(selector).or(toast)).toBeVisible();
     }
   }
 
