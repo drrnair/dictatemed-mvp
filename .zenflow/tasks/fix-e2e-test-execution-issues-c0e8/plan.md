@@ -99,6 +99,29 @@ If blocked or uncertain, ask the user for direction.
 - `tests/e2e/fixtures/auth.ts` - Use TEST_TIMEOUTS constants
 - `tests/e2e/fixtures/workflow-state.ts` - New fixture for serial test state
 
+### [x] Step: Apply Workflow Fixture and Timeout Constants
+<!-- chat-id: current -->
+
+**Completed:** 2025-12-26
+- Migrated workflow specs to use `workflowTest` fixture:
+  - `manual-consultation.spec.ts` - Uses workflowState for letterId
+  - `referral-upload.spec.ts` - Uses workflowState for letterId
+  - Both files now use `clearWorkflowState()` in beforeAll
+- Updated all page objects to use `TEST_TIMEOUTS`:
+  - `BasePage.ts` - networkIdle, elementVisible, elementHidden, toast
+  - `LoginPage.ts` - auth0Redirect, auth0Login, navigation
+  - `DashboardPage.ts` - elementVisible
+  - `NewConsultationPage.ts` - searchResults, modalAppear, letterGeneration, navigation
+  - `LetterDetailPage.ts` - elementVisible, navigation, pageLoad
+  - `ReferralUploadPage.ts` - modalAppear, referralExtraction
+- Added `.workflow-state.json` to `.gitignore`
+
+**Changes made:**
+- `.gitignore` - Added workflow state file
+- `tests/e2e/workflows/manual-consultation.spec.ts` - Use workflowTest fixture
+- `tests/e2e/workflows/referral-upload.spec.ts` - Use workflowTest fixture
+- `tests/e2e/page-objects/*.ts` - All 6 page objects now use TEST_TIMEOUTS
+
 **Remaining Auth0 Issue:**
 The E2E tests still fail because Auth0 is misconfigured. The repository owner needs to:
 1. Go to Auth0 Dashboard → Applications → Your App → Settings
