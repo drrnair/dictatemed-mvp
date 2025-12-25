@@ -34,23 +34,25 @@ const TEST_IDS = {
 } as const;
 
 // Test patient data with TEST- prefix for PHI compliance
+// NOTE: The API returns medicareNumber as the 'mrn' field in search results.
+// So we use the MRN value as medicareNumber to enable searching by MRN.
 const TEST_PATIENTS = [
   {
     id: TEST_IDS.patientHF,
-    mrn: 'TEST-HF-001',
     name: 'TEST Patient - Heart Failure',
     dateOfBirth: '1958-06-15',
-    medicareNumber: 'TEST-1234567890',
+    // Using MRN as medicareNumber since API returns medicareNumber as 'mrn'
+    medicareNumber: 'TEST-HF-001',
     address: 'TEST Address - 100 George Street, Sydney NSW 2000',
     phone: '+61 400 000 001',
     email: 'test.patient.hf@test.dictatemed.dev',
   },
   {
     id: TEST_IDS.patientPCI,
-    mrn: 'TEST-PCI-002',
     name: 'TEST Patient - PCI Intervention',
     dateOfBirth: '1965-11-22',
-    medicareNumber: 'TEST-2345678901',
+    // Using MRN as medicareNumber since API returns medicareNumber as 'mrn'
+    medicareNumber: 'TEST-PCI-002',
     address: 'TEST Address - 200 Pitt Street, Sydney NSW 2000',
     phone: '+61 400 000 002',
     email: 'test.patient.pci@test.dictatemed.dev',
@@ -140,9 +142,8 @@ async function seedE2ETestData(): Promise<void> {
     // 3. Create test patients (bulk insert with encrypted PHI)
     console.log('  Creating test patients...');
     for (const patientData of TEST_PATIENTS) {
-      const { id, mrn, ...phi } = patientData;
-      // Store MRN in name field as prefix for searchability (name already has TEST prefix)
-      // The mrn is kept separate in test data but not stored in encrypted PHI
+      const { id, ...phi } = patientData;
+      // medicareNumber is used as MRN - the API returns it as 'mrn' in search results
       const encryptedData = encryptPatientData(phi);
 
       await tx.patient.upsert({

@@ -93,23 +93,25 @@ export const TEST_CLINICIAN = {
 // Test Patients
 // ============================================
 
+// NOTE: The API returns medicareNumber as the 'mrn' field in search results.
+// So we use the MRN value as medicareNumber to enable searching by MRN.
 export const TEST_PATIENTS = {
   heartFailure: {
     id: TEST_IDS.patientHF,
-    mrn: 'TEST-HF-001',
+    mrn: 'TEST-HF-001', // This is what we search for - matches medicareNumber
     name: 'TEST Patient - Heart Failure',
     dateOfBirth: '1958-06-15',
-    medicareNumber: 'TEST-1234567890',
+    medicareNumber: 'TEST-HF-001', // API returns this as 'mrn'
     address: 'TEST Address - 100 George Street, Sydney NSW 2000',
     phone: '+61 400 000 001',
     email: 'test.patient.hf@test.dictatemed.dev',
   },
   pci: {
     id: TEST_IDS.patientPCI,
-    mrn: 'TEST-PCI-002',
+    mrn: 'TEST-PCI-002', // This is what we search for - matches medicareNumber
     name: 'TEST Patient - PCI Intervention',
     dateOfBirth: '1965-11-22',
-    medicareNumber: 'TEST-2345678901',
+    medicareNumber: 'TEST-PCI-002', // API returns this as 'mrn'
     address: 'TEST Address - 200 Pitt Street, Sydney NSW 2000',
     phone: '+61 400 000 002',
     email: 'test.patient.pci@test.dictatemed.dev',
