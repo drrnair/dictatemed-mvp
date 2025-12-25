@@ -20,7 +20,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { LEGACY_SUBSPECIALTY_MAPPING } from '../../seeds/medical-specialties';
+import { LEGACY_SUBSPECIALTY_MAPPING } from '../seeds/medical-specialties';
 
 const prisma = new PrismaClient();
 
