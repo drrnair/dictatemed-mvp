@@ -218,6 +218,20 @@ jobs:
     # Using Supabase cloud database - no local PostgreSQL needed
 
     steps:
+      - name: Check required secrets
+        run: |
+          MISSING=false
+          if [ -z "${{ secrets.E2E_DATABASE_URL }}" ] || \
+             [ -z "${{ secrets.E2E_TEST_USER_EMAIL }}" ] || \
+             [ -z "${{ secrets.E2E_TEST_USER_PASSWORD }}" ] || \
+             [ -z "${{ secrets.AUTH0_ISSUER_BASE_URL }}" ] || \
+             [ -z "${{ secrets.AUTH0_CLIENT_ID }}" ] || \
+             [ -z "${{ secrets.AUTH0_CLIENT_SECRET }}" ]; then
+            echo "❌ Required secrets are not configured. See Chromium job for details."
+            exit 1
+          fi
+          echo "✅ All required secrets are configured"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -278,6 +292,20 @@ jobs:
     # Using Supabase cloud database - no local PostgreSQL needed
 
     steps:
+      - name: Check required secrets
+        run: |
+          MISSING=false
+          if [ -z "${{ secrets.E2E_DATABASE_URL }}" ] || \
+             [ -z "${{ secrets.E2E_TEST_USER_EMAIL }}" ] || \
+             [ -z "${{ secrets.E2E_TEST_USER_PASSWORD }}" ] || \
+             [ -z "${{ secrets.AUTH0_ISSUER_BASE_URL }}" ] || \
+             [ -z "${{ secrets.AUTH0_CLIENT_ID }}" ] || \
+             [ -z "${{ secrets.AUTH0_CLIENT_SECRET }}" ]; then
+            echo "❌ Required secrets are not configured. See Chromium job for details."
+            exit 1
+          fi
+          echo "✅ All required secrets are configured"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
