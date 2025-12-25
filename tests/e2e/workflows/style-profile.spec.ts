@@ -28,9 +28,7 @@ import {
   mockLetterGeneration,
   mockTranscription,
   waitForNetworkIdle,
-  expectToast,
 } from '../utils/helpers';
-import { authenticatedTest, hasValidAuthState } from '../fixtures/auth';
 
 // ============================================
 // Test Data for Style Profile Tests
@@ -125,9 +123,6 @@ const MOCK_STYLE_PROFILE = {
     paragraphStructure: 0.7,
   },
 };
-
-// Check if authentication is available
-const canRunAuthenticatedTests = hasValidAuthState();
 
 // ============================================
 // Style Profile - Main Workflow Tests
@@ -484,9 +479,8 @@ test.describe('Style Profile Workflow', () => {
 
     // Switch to Per-Subspecialty tab
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
-    await page.waitForTimeout(500);
 
-    // Find the Heart Failure profile card
+    // Find the Heart Failure profile card - wait for it to be visible
     const heartFailureCard = page.locator('[data-testid="subspecialty-card-HEART_FAILURE"]');
     await expect(heartFailureCard).toBeVisible();
 
@@ -497,8 +491,13 @@ test.describe('Style Profile Workflow', () => {
     // Adjust the slider
     await slider.fill('0.5');
 
-    // Wait for debounced API call
-    await page.waitForTimeout(500);
+    // Wait for debounced API call by watching for the response
+    await page.waitForResponse(
+      (response) => response.url().includes('/api/style/profiles') && response.url().includes('strength'),
+      { timeout: 5000 }
+    ).catch(() => {
+      // API call may already have completed or debounce may not trigger
+    });
 
     // Verify strength was updated
     // Note: The actual value may depend on debouncing behavior
@@ -636,9 +635,8 @@ test.describe('Style Profile Workflow', () => {
 
     // Switch to Per-Subspecialty tab
     await page.getByRole('tab', { name: 'Per-Subspecialty' }).click();
-    await page.waitForTimeout(500);
 
-    // Find the Heart Failure profile card
+    // Find the Heart Failure profile card - wait for it to be visible
     const heartFailureCard = page.locator('[data-testid="subspecialty-card-HEART_FAILURE"]');
     await expect(heartFailureCard).toBeVisible();
 

@@ -1,0 +1,396 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      browsers:
+        description: 'Browsers to test (comma-separated: chromium,firefox,webkit)'
+        required: false
+        default: 'chromium'
+      debug:
+        description: 'Enable debug mode (keeps artifacts longer)'
+        required: false
+        type: boolean
+        default: false
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: e2e-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Database configuration
+  DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/dictatemed_e2e_test"
+  E2E_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/dictatemed_e2e_test"
+
+  # Auth0 test values
+  AUTH0_SECRET: "e2e-test-secret-32-bytes-long!!"
+  AUTH0_BASE_URL: "http://localhost:3000"
+  AUTH0_ISSUER_BASE_URL: "https://test.auth0.com"
+  AUTH0_CLIENT_ID: "e2e-test-client-id"
+  AUTH0_CLIENT_SECRET: "e2e-test-client-secret"
+
+  # E2E test credentials (stored in GitHub Secrets)
+  E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL || 'test.cardiologist+e2e@dictatemed.dev' }}
+  E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD || 'TestPassword123!' }}
+
+  # PHI encryption key (test only - NOT for production)
+  PHI_ENCRYPTION_KEY: "ZTJlLXRlc3Qta2V5LTMyLWJ5dGVzLWxvbmctc2VjdXJl"
+
+  # Mock all external services
+  MOCK_BEDROCK_SERVICE: "true"
+  MOCK_SUPABASE_STORAGE: "true"
+  MOCK_DEEPGRAM_SERVICE: "true"
+  MOCK_EMAIL_SERVICE: "true"
+
+  # AWS region (for Bedrock mock)
+  AWS_REGION: "ap-southeast-2"
+
+  # Feature flags
+  ENABLE_HALLUCINATION_CHECK: "true"
+  ENABLE_STYLE_LEARNING: "true"
+
+  # App config
+  NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+  E2E_BASE_URL: "http://localhost:3000"
+  NODE_ENV: "test"
+
+jobs:
+  # ====================
+  # E2E Tests - Chromium
+  # ====================
+  e2e-chromium:
+    name: E2E Tests (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dictatemed_e2e_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed E2E test data
+        run: npm run db:seed:e2e
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run E2E tests (Chromium)
+        run: npx playwright test --project=chromium
+        env:
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results-chromium
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: ${{ github.event.inputs.debug == 'true' && 14 || 7 }}
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-screenshots-chromium
+          path: test-results/**/*.png
+          retention-days: 14
+
+      - name: Cleanup E2E test data
+        if: always()
+        run: npm run db:teardown:e2e
+        continue-on-error: true
+
+  # ====================
+  # E2E Tests - Firefox
+  # ====================
+  e2e-firefox:
+    name: E2E Tests (Firefox)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Only run Firefox on main branch pushes or if explicitly requested
+    if: github.event_name == 'push' || github.event.inputs.browsers == 'chromium,firefox,webkit' || contains(github.event.inputs.browsers || '', 'firefox')
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dictatemed_e2e_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install firefox --with-deps
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed E2E test data
+        run: npm run db:seed:e2e
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run E2E tests (Firefox)
+        run: npx playwright test --project=firefox
+        env:
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results-firefox
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: ${{ github.event.inputs.debug == 'true' && 14 || 7 }}
+
+      - name: Cleanup E2E test data
+        if: always()
+        run: npm run db:teardown:e2e
+        continue-on-error: true
+
+  # ====================
+  # E2E Tests - WebKit (Safari)
+  # ====================
+  e2e-webkit:
+    name: E2E Tests (WebKit/Safari)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Only run WebKit on main branch pushes or if explicitly requested
+    if: github.event_name == 'push' || github.event.inputs.browsers == 'chromium,firefox,webkit' || contains(github.event.inputs.browsers || '', 'webkit')
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dictatemed_e2e_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install webkit --with-deps
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed E2E test data
+        run: npm run db:seed:e2e
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run E2E tests (WebKit)
+        run: npx playwright test --project=webkit
+        env:
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results-webkit
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: ${{ github.event.inputs.debug == 'true' && 14 || 7 }}
+
+      - name: Cleanup E2E test data
+        if: always()
+        run: npm run db:teardown:e2e
+        continue-on-error: true
+
+  # ====================
+  # Quality Gates
+  # ====================
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    needs: [e2e-chromium]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Chromium results
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-results-chromium
+          path: test-results/chromium
+        continue-on-error: true
+
+      - name: Check test pass rate
+        id: pass-rate
+        run: |
+          # Parse JUnit results if available
+          if [ -f "test-results/chromium/test-results/junit.xml" ]; then
+            TESTS=$(grep -oP 'tests="\K[0-9]+' test-results/chromium/test-results/junit.xml | head -1 || echo "0")
+            FAILURES=$(grep -oP 'failures="\K[0-9]+' test-results/chromium/test-results/junit.xml | head -1 || echo "0")
+            ERRORS=$(grep -oP 'errors="\K[0-9]+' test-results/chromium/test-results/junit.xml | head -1 || echo "0")
+
+            if [ -z "$TESTS" ] || [ "$TESTS" -eq 0 ]; then
+              echo "No tests found in results"
+              echo "pass_rate=0" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+
+            PASSED=$((TESTS - FAILURES - ERRORS))
+            PASS_RATE=$(echo "scale=2; $PASSED * 100 / $TESTS" | bc)
+            echo "pass_rate=$PASS_RATE" >> $GITHUB_OUTPUT
+            echo "Tests: $TESTS, Passed: $PASSED, Pass Rate: $PASS_RATE%"
+
+            # Require ≥95% pass rate
+            if (( $(echo "$PASS_RATE < 95" | bc -l) )); then
+              echo "❌ Pass rate ($PASS_RATE%) is below 95% threshold"
+              exit 1
+            else
+              echo "✅ Pass rate ($PASS_RATE%) meets 95% threshold"
+            fi
+          else
+            echo "JUnit results not found, checking job status"
+            exit 0
+          fi
+
+      - name: PHI scan - Check for real data
+        run: |
+          echo "Scanning for potential PHI in test files..."
+
+          # Check that all patient data uses TEST- prefix
+          FOUND_PHI=false
+          
+          # Look for MRN patterns without TEST- prefix in test files
+          if grep -rE 'mrn.*:.*"[A-Z0-9]+-[A-Z0-9]+"' tests/e2e scripts 2>/dev/null | grep -v "TEST-" | grep -v "node_modules" | head -5; then
+            echo "⚠️ Found MRN without TEST- prefix"
+            FOUND_PHI=true
+          fi
+
+          # Check for real-looking patient names (not obviously test data)
+          if grep -rE "firstName.*:.*\"(John|Jane|Mary|Robert|William|David)\"" tests/e2e scripts 2>/dev/null | grep -v "Test" | grep -v "node_modules" | head -5; then
+            echo "⚠️ Found potential real patient names"
+            # This is just a warning, not a failure
+          fi
+
+          if [ "$FOUND_PHI" = true ]; then
+            echo "❌ PHI scan failed - found potential real data"
+            exit 1
+          else
+            echo "✅ PHI scan passed - all test data uses TEST- prefix"
+          fi
+
+      - name: Check E2E job status
+        run: |
+          if [ "${{ needs.e2e-chromium.result }}" != "success" ]; then
+            echo "❌ E2E Chromium tests failed"
+            exit 1
+          fi
+          echo "✅ All quality gates passed"
+
+  # ====================
+  # Combined Status
+  # ====================
+  e2e-status:
+    name: E2E Status
+    runs-on: ubuntu-latest
+    needs: [e2e-chromium, quality-gates]
+    if: always()
+
+    steps:
+      - name: Check all jobs
+        run: |
+          echo "E2E Chromium: ${{ needs.e2e-chromium.result }}"
+          echo "Quality Gates: ${{ needs.quality-gates.result }}"
+
+          if [ "${{ needs.e2e-chromium.result }}" == "success" ] && \
+             [ "${{ needs.quality-gates.result }}" == "success" ]; then
+            echo "✅ All E2E checks passed"
+            exit 0
+          else
+            echo "❌ Some E2E checks failed"
+            exit 1
+          fi
