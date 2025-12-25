@@ -263,9 +263,10 @@ test.describe('Manual Consultation Workflow', () => {
   });
 
   test('should generate letter using AI after recording', async ({ page }) => {
-    // Setup mocks for transcription and letter generation
+    // Setup mocks using centralized helpers
     await mockTranscription(page);
     await mockLetterGeneration(page, SAMPLE_LETTER_CONTENT.heartFailure.body);
+    await setupRecordingsMock(page);
 
     // Login and setup consultation
     await loginPage.loginWithEnvCredentials();
@@ -282,23 +283,7 @@ test.describe('Manual Consultation Workflow', () => {
     // to avoid needing actual microphone permissions
     await consultationPage.selectRecordingMode('UPLOAD');
 
-    // Mock the file upload and transcription flow
-    // In real tests, this would upload an actual audio file
-    // For now, we'll mock the API response
-    await page.route('**/api/recordings/**', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          recordingId: 'test-recording-id',
-          transcript: 'Test transcription for heart failure patient',
-        }),
-      });
-    });
-
     // Verify generate button becomes available
-    // Note: This depends on the application's validation logic
     await waitForNetworkIdle(page);
 
     // Generate the letter
@@ -313,39 +298,24 @@ test.describe('Manual Consultation Workflow', () => {
 
     // Verify we're on the letter detail page
     await expect(page).toHaveURL(/\/letters\/.+/);
+
+    // CRITICAL: Assert letter ID was captured - subsequent tests depend on this
+    expect(
+      generatedLetterId,
+      'Letter generation should produce a valid letter ID in the URL. ' +
+      'Check if the letter generation workflow completed successfully.'
+    ).not.toBeNull();
   });
 
   test('should review and approve generated letter', async ({ page }) => {
-    // Mock letter API if we don't have a real letter from previous test
+    // CRITICAL: Warn if falling back to mock (indicates previous test failure)
     if (!generatedLetterId) {
-      // Navigate to letters list and find a draft letter
+      console.warn(
+        'WARNING: No letter ID from previous test. Using mock data. ' +
+        'This may indicate the letter generation workflow failed.'
+      );
+      await setupLetterDetailMock(page, 'test-letter-id');
       await loginPage.loginWithEnvCredentials();
-      await page.goto('/letters?status=draft');
-      await waitForNetworkIdle(page);
-
-      // If there are no draft letters, we need to create one
-      // For now, mock the letter detail page
-      await page.route('**/api/letters/**', async (route) => {
-        if (route.request().method() === 'GET') {
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              id: 'test-letter-id',
-              content: SAMPLE_LETTER_CONTENT.heartFailure.body,
-              status: 'DRAFT',
-              letterType: 'NEW_PATIENT',
-              patientId: TEST_PATIENTS.heartFailure.id,
-              patientName: TEST_PATIENTS.heartFailure.name,
-              extractedValues: SAMPLE_LETTER_CONTENT.heartFailure.extractedValues,
-              hallucinationFlags: [],
-            }),
-          });
-        } else {
-          await route.continue();
-        }
-      });
-
       await letterDetailPage.gotoLetter('test-letter-id');
     } else {
       await loginPage.loginWithEnvCredentials();
@@ -358,15 +328,18 @@ test.describe('Manual Consultation Workflow', () => {
     // Verify letter contains expected clinical content
     const letterContent = await letterDetailPage.getLetterContent();
 
-    // Check for clinical patterns
+    // Check for clinical patterns - important for medical content validation
     const validation = validateClinicalContent(letterContent, [
       { key: 'bloodPressure', pattern: CLINICAL_PATTERNS.bloodPressure },
     ]);
 
-    // Letter should contain clinical values (may not pass if using mock)
-    // This is a soft check - the mock content may not contain all patterns
+    // Log clinical validation results for visibility
+    // Using warn instead of log to make it visible in test output
     if (!validation.valid) {
-      console.log('Missing clinical patterns:', validation.missing);
+      console.warn(
+        `Clinical validation: Missing patterns: ${validation.missing.join(', ')}. ` +
+        'This may be expected with mock data but should pass with real letter generation.'
+      );
     }
 
     // Verify verification panel is visible if present
