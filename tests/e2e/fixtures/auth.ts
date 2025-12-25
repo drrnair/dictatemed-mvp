@@ -85,6 +85,18 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
     'input[data-testid="password-input"]',
   ].join(', ');
 
+  // Submit button selector - used for both email and password steps
+  const submitSelectorString = [
+    'button[type="submit"]',
+    'button[name="action"]',
+    'button[data-testid="submit-button"]',
+    'button[data-action-button-primary="true"]',
+    'button:has-text("Continue")',
+    'button:has-text("Log In")',
+    'button:has-text("Sign In")',
+    'button:has-text("Login")',
+  ].join(', ');
+
   // Wait for email/username input with combined selector (longer timeout)
   const emailInput = page.locator(emailSelectorString).first();
   try {
@@ -124,28 +136,34 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
     throw new Error(`Could not find email/username input field on Auth0 login page. URL: ${currentUrl}, Title: ${pageTitle}`);
   }
 
-  // Wait for password field (may appear after email on some Auth0 configurations)
+  // Check if password field is visible immediately (combined form) or if we need to click Continue first (Identifier First flow)
   const passwordInput = page.locator(passwordSelectorString).first();
+  const isPasswordVisible = await passwordInput.isVisible().catch(() => false);
+
+  if (!isPasswordVisible) {
+    // Identifier First flow - need to click Continue after email
+    console.log('Auth0: Password not visible, trying Identifier First flow...');
+    const continueButton = page.locator(submitSelectorString).first();
+    try {
+      await continueButton.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.auth0Submit });
+      await continueButton.click();
+      // Wait for password field to appear after clicking Continue
+      await passwordInput.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.auth0Submit });
+    } catch (error) {
+      await page.screenshot({ path: 'test-results/auth-debug-identifier-first.png', fullPage: true });
+      throw new Error(`Identifier First flow failed - could not proceed after email. URL: ${page.url()}`);
+    }
+  }
+
+  // Now fill password
   try {
-    await passwordInput.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.auth0Submit });
     await passwordInput.fill(password);
   } catch (error) {
     await page.screenshot({ path: 'test-results/auth-debug-password-field.png', fullPage: true });
-    throw new Error(`Could not find password input field on Auth0 login page. URL: ${page.url()}`);
+    throw new Error(`Could not fill password field on Auth0 login page. URL: ${page.url()}`);
   }
 
-  // Submit login - combined selector for submit button
-  const submitSelectorString = [
-    'button[type="submit"]',
-    'button[name="action"]',
-    'button[data-testid="submit-button"]',
-    'button[data-action-button-primary="true"]',
-    'button:has-text("Continue")',
-    'button:has-text("Log In")',
-    'button:has-text("Sign In")',
-    'button:has-text("Login")',
-  ].join(', ');
-
+  // Submit login
   const submitButton = page.locator(submitSelectorString).first();
   try {
     await submitButton.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.auth0Submit });
