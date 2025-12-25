@@ -50,6 +50,11 @@ env:
   MOCK_DEEPGRAM_SERVICE: "true"
   MOCK_EMAIL_SERVICE: "true"
 
+  # Enable mock authentication for E2E tests (bypasses Auth0)
+  # This is necessary because Auth0's Universal Login page doesn't render
+  # properly in headless Chromium CI environments
+  E2E_MOCK_AUTH: "true"
+
   # AWS region (for Bedrock mock)
   AWS_REGION: "ap-southeast-2"
 

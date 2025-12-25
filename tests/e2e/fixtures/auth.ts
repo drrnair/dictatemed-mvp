@@ -39,11 +39,82 @@ export function hasValidAuthState(): boolean {
 }
 
 /**
+ * Try mock authentication for CI environments.
+ * Returns true if mock auth succeeded, false if it should fall back to Auth0.
+ */
+async function tryMockAuthentication(page: Page): Promise<boolean> {
+  // Only try mock auth if E2E_MOCK_AUTH is enabled
+  if (process.env.E2E_MOCK_AUTH !== 'true') {
+    console.log('Mock auth: Disabled (E2E_MOCK_AUTH not set to true)');
+    return false;
+  }
+
+  console.log('Mock auth: Attempting mock authentication...');
+
+  try {
+    // Check if mock auth endpoint is available
+    const checkResponse = await page.request.get('/api/auth/mock-login');
+    const checkData = await checkResponse.json();
+
+    if (!checkData.mockAuthEnabled) {
+      console.log('Mock auth: Endpoint reports mock auth is disabled');
+      return false;
+    }
+
+    // Call mock login endpoint
+    const loginResponse = await page.request.post('/api/auth/mock-login?returnTo=/dashboard');
+    const loginData = await loginResponse.json();
+
+    if (!loginResponse.ok() || !loginData.success) {
+      console.log(`Mock auth: Login failed - ${loginData.error || 'Unknown error'}`);
+      return false;
+    }
+
+    console.log(`Mock auth: Success! Logged in as ${loginData.user?.email}`);
+
+    // Navigate to dashboard to verify auth works
+    await page.goto('/dashboard');
+    await page.waitForLoadState('domcontentloaded', { timeout: TEST_TIMEOUTS.pageLoad });
+
+    // Check if we're actually on dashboard (not redirected to login)
+    const currentUrl = page.url();
+    if (currentUrl.includes('/dashboard')) {
+      console.log('Mock auth: Verified - successfully reached dashboard');
+      return true;
+    } else {
+      console.log(`Mock auth: Verification failed - redirected to ${currentUrl}`);
+      return false;
+    }
+  } catch (error) {
+    console.log(`Mock auth: Error - ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return false;
+  }
+}
+
+/**
  * Setup: Login and save authentication state
  * Run this once before authenticated tests:
  *   npx playwright test tests/e2e/setup/auth.setup.ts --project=chromium
+ *
+ * In CI mode with E2E_MOCK_AUTH=true, uses mock authentication to bypass Auth0.
  */
 export async function authenticateAndSaveState(page: Page): Promise<void> {
+  // Try mock authentication first (for CI)
+  const mockAuthSucceeded = await tryMockAuthentication(page);
+  if (mockAuthSucceeded) {
+    // Save storage state from mock auth
+    const authDir = path.dirname(AUTH_STATE_PATH);
+    if (!fs.existsSync(authDir)) {
+      fs.mkdirSync(authDir, { recursive: true });
+    }
+    await page.context().storageState({ path: AUTH_STATE_PATH });
+    console.log('Mock auth: Auth state saved successfully');
+    return;
+  }
+
+  // Fall back to real Auth0 login
+  console.log('Auth0: Falling back to real Auth0 authentication...');
+
   const email = process.env.E2E_TEST_USER_EMAIL;
   const password = process.env.E2E_TEST_USER_PASSWORD;
 
