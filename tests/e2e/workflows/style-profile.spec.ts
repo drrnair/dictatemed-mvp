@@ -664,6 +664,9 @@ test.describe('Style Profile Workflow', () => {
 // ============================================
 
 test.describe('Style Profile Settings - UI', () => {
+  // These tests are independent and can run in parallel
+  test.describe.configure({ mode: 'parallel' });
+
   test('should display style mode selector', async ({ page }) => {
     // Mock APIs
     await page.route('**/api/style/**', async (route) => {
@@ -874,6 +877,9 @@ test.describe('Style Profile Settings - UI', () => {
 // ============================================
 
 test.describe('Style Profile - Seed Letter Upload', () => {
+  // These tests are independent and can run in parallel
+  test.describe.configure({ mode: 'parallel' });
+
   test('should open seed letter upload dialog', async ({ page }) => {
     // Mock APIs
     await page.route('**/api/style/profiles', async (route) => {
@@ -1077,6 +1083,9 @@ Dr. Jones`;
 // ============================================
 
 test.describe('Style Profile - Error Handling', () => {
+  // These tests are independent and can run in parallel
+  test.describe.configure({ mode: 'parallel' });
+
   test('should handle API errors gracefully', async ({ page }) => {
     // Mock API failure
     await page.route('**/api/style/profiles', async (route) => {
@@ -1151,6 +1160,9 @@ test.describe('Style Profile - Error Handling', () => {
 // ============================================
 
 test.describe('Style Profile - Accessibility', () => {
+  // These tests are independent and can run in parallel
+  test.describe.configure({ mode: 'parallel' });
+
   test('should have accessible tab navigation', async ({ page }) => {
     // Mock APIs
     await page.route('**/api/style/**', async (route) => {

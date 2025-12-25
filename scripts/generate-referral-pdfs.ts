@@ -2,14 +2,12 @@
 // Generates PDF files from text referral templates for E2E testing
 //
 // Usage: npx tsx scripts/generate-referral-pdfs.ts
+//        npm run generate:referral-pdfs
 //
 // This script converts the .txt referral templates in tests/e2e/fixtures/referrals/
 // to PDF files that can be used in E2E tests for the referral upload workflow.
 //
-// Note: This script requires `pdfkit` to be installed:
-//   npm install -D pdfkit @types/pdfkit
-//
-// Alternatively, use the existing pdf-lib dependency to create PDFs.
+// Note: This script uses pdf-lib (already a project dependency).
 
 import * as fs from 'fs';
 import * as path from 'path';
