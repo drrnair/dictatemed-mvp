@@ -28,6 +28,19 @@ try {
 await tx.sentEmail.deleteMany({ where: { userId } });
 ```
 
+**Added** (improved error logging):
+```typescript
+} catch (error) {
+  const err = error as Error;
+  log.error('Failed to delete account', {
+    errorName: err.name,
+    errorMessage: err.message,
+    errorStack: err.stack,
+  }, err);
+  // ...
+}
+```
+
 ### Why This Fix Works
 
 1. **Transaction Safety**: The `sentEmail.deleteMany` is now inside the Prisma transaction, ensuring atomicity with all other deletions.
@@ -44,23 +57,34 @@ await tx.sentEmail.deleteMany({ where: { userId } });
 
 The `sent_emails` table has `ON DELETE RESTRICT` foreign key constraints. The original code attempted to delete sent emails via raw SQL **outside** the transaction, and silently swallowed **all** errors (not just "table doesn't exist"). When the raw SQL failed for any reason, the FK constraint blocked the subsequent user deletion inside the transaction.
 
-## Verification
+## Post-Deployment Status (Updated)
 
-### Manual Verification
-- Code change reviewed for correctness
-- Deletion order verified against FK dependencies
-- Prisma ORM usage confirmed (type-safe)
+**Issue persists after initial deployment.** Screenshots show error still appearing ~11-13 minutes after PR #17 was merged.
 
-### Automated Testing
-- Linter/TypeScript checks could not be run (node_modules not installed in worktree)
-- Recommended to run `npm install && npm run lint && npm run type-check` in CI
+### Investigation Findings
 
-### Manual Testing Steps (Recommended)
-1. Create a test user account
-2. Create a letter and send it via email (creates `sent_emails` record)
-3. Navigate to Profile Settings → Danger Zone → Delete Account
-4. Verify successful deletion with no errors
-5. Confirm all related records are deleted from database
+All `ON DELETE RESTRICT` FK constraints that reference `users`:
+1. `sent_emails.userId` → `users.id` - **Now handled at line 130**
+2. `sent_emails.letterId` → `letters.id` - **Handled (sentEmails deleted before letters)**
+3. `letter_sends.senderId` → `users.id` - **Already handled at line 133**
+4. `referral_documents.userId` → `users.id` - **Already handled at line 145**
+
+The code deletion order is correct. Possible explanations:
+1. **Cache/propagation delay**: Vercel edge functions may need more time or cache invalidation
+2. **Different error source**: Error may be coming from a different operation
+3. **Prisma client mismatch**: If `prisma generate` wasn't run after schema changes
+
+### Next Steps
+
+**Check Vercel logs** to see the actual error:
+1. Go to Vercel Dashboard → dictatemed-mvp-ed61 → Logs
+2. Filter by `/api/user/account`
+3. Look for the `Failed to delete account` log entry with the detailed error info
+
+The enhanced error logging will now show:
+- `errorName`: The type of error (e.g., PrismaClientKnownRequestError)
+- `errorMessage`: The specific message (e.g., "Foreign key constraint failed")
+- `errorStack`: Full stack trace
 
 ## Risk Assessment
 
@@ -73,4 +97,4 @@ The `sent_emails` table has `ON DELETE RESTRICT` foreign key constraints. The or
 
 | File | Lines Changed | Description |
 |------|--------------|-------------|
-| `src/app/api/user/account/route.ts` | -7, +3 | Moved sentEmail deletion inside transaction |
+| `src/app/api/user/account/route.ts` | -7, +10 | Moved sentEmail deletion inside transaction, improved error logging |
