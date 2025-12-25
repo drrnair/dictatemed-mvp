@@ -795,30 +795,13 @@ test.describe('Referral Extraction - Accuracy Verification', () => {
   test('should extract patient date of birth correctly', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
-    // Setup mock with specific DOB
-    await page.route('**/api/referrals/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/upload')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, referralId: 'test-referral-dob' }),
-        });
-      } else if (url.includes('/extract')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            extractedData: {
-              patient: expectedExtraction.patient,
-              referrer: expectedExtraction.referrer,
-            },
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+    // Use helper for mock setup
+    await setupReferralMocks(page, {
+      referralId: 'test-referral-dob',
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+      },
     });
 
     // Login and navigate
@@ -838,30 +821,13 @@ test.describe('Referral Extraction - Accuracy Verification', () => {
   test('should extract referrer contact details correctly', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
-    // Setup mock
-    await page.route('**/api/referrals/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/upload')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, referralId: 'test-referral-contact' }),
-        });
-      } else if (url.includes('/extract')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            extractedData: {
-              patient: expectedExtraction.patient,
-              referrer: expectedExtraction.referrer,
-            },
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+    // Use helper for mock setup
+    await setupReferralMocks(page, {
+      referralId: 'test-referral-contact',
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+      },
     });
 
     // Login and navigate
@@ -884,40 +850,23 @@ test.describe('Referral Extraction - Accuracy Verification', () => {
   });
 
   test('should handle referrals with missing optional fields', async ({ page }) => {
-    // Setup mock with partial data (missing some optional fields)
-    await page.route('**/api/referrals/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/upload')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, referralId: 'test-referral-partial' }),
-        });
-      } else if (url.includes('/extract')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            extractedData: {
-              patient: {
-                name: 'TEST Patient - Partial Data',
-                dateOfBirth: '1970-05-15',
-                // MRN intentionally missing
-              },
-              referrer: {
-                name: 'Dr. TEST Referrer',
-                practice: 'TEST Practice',
-                // Email and phone intentionally missing
-              },
-              reasonForReferral: 'Cardiology review required',
-            },
-            confidence: 0.75, // Lower confidence due to missing data
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+    // Use helper with partial data
+    await setupReferralMocks(page, {
+      referralId: 'test-referral-partial',
+      extractedData: {
+        patient: {
+          name: 'TEST Patient - Partial Data',
+          dateOfBirth: '1970-05-15',
+          // MRN intentionally missing
+        },
+        referrer: {
+          name: 'Dr. TEST Referrer',
+          practice: 'TEST Practice',
+          // Email and phone intentionally missing
+        },
+        reasonForReferral: 'Cardiology review required',
+      },
+      confidence: 0.75, // Lower confidence due to missing data
     });
 
     // Login and navigate
@@ -935,6 +884,43 @@ test.describe('Referral Extraction - Accuracy Verification', () => {
     // Optional fields may be undefined
     // This should not cause the workflow to fail
     await referralPage.expectExtractionSuccess();
+  });
+
+  test('should handle zero-confidence extraction gracefully', async ({ page }) => {
+    // Edge case: extraction returns data but with zero confidence
+    // This simulates completely failed extraction that still returns partial data
+    await setupReferralMocks(page, {
+      referralId: 'test-referral-zero-confidence',
+      extractedData: {
+        patient: {
+          name: 'TEST Unknown Patient',
+          // No DOB, no MRN
+        },
+        referrer: {
+          name: 'Unknown Referrer',
+          // No practice, email, or phone
+        },
+        reasonForReferral: 'Unable to extract - document may be illegible',
+      },
+      confidence: 0.0, // Zero confidence
+    });
+
+    // Login and navigate
+    await loginPage.loginWithEnvCredentials();
+    await referralPage.gotoReferralUpload();
+
+    // Upload and extract
+    const referralFilePath = path.join(REFERRAL_FIXTURES_PATH, 'cardiology-referral-001.txt');
+    await referralPage.uploadReferralPDF(referralFilePath);
+    await referralPage.waitForExtraction(TEST_TIMEOUTS.referralExtraction);
+
+    // Even with zero confidence, extraction should not crash the UI
+    // The user should be able to manually enter data
+    await referralPage.expectExtractionSuccess();
+
+    // Check that extracted data is accessible for manual editing
+    const data = await referralPage.getExtractedData();
+    expect(data).toBeDefined();
   });
 
   test('should show warning indicators for low-confidence extraction', async ({ page }) => {
@@ -1029,30 +1015,13 @@ test.describe('Referral Upload - Accessibility', () => {
     const loginPage = new LoginPage(page);
     const referralPage = new ReferralUploadPage(page);
 
-    // Setup mock
-    await page.route('**/api/referrals/**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/upload')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true, referralId: 'test-referral-a11y' }),
-        });
-      } else if (url.includes('/extract')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            extractedData: {
-              patient: { name: 'TEST A11y Patient' },
-              referrer: { name: 'TEST A11y Referrer' },
-            },
-          }),
-        });
-      } else {
-        await route.continue();
-      }
+    // Use helper for mock setup
+    await setupReferralMocks(page, {
+      referralId: 'test-referral-a11y',
+      extractedData: {
+        patient: { name: 'TEST A11y Patient' },
+        referrer: { name: 'TEST A11y Referrer' },
+      },
     });
 
     await loginPage.loginWithEnvCredentials();
