@@ -95,7 +95,11 @@ export default defineConfig({
     // Ignore HTTPS errors (for local development)
     ignoreHTTPSErrors: true,
 
-    // Browser launch options for better Auth0 compatibility
+    // Browser launch options for better Auth0 compatibility in CI headless mode
+    // NOTE: These security-reducing flags are CI workarounds for Auth0 Universal Login.
+    // Auth0's login page uses cross-origin requests and iframes that can fail in headless
+    // Chromium without these flags. These do NOT reflect production browser behavior.
+    // Long-term solution: Consider mock authentication for CI to avoid these workarounds.
     launchOptions: {
       args: [
         // Enable JavaScript (should be default but be explicit)
