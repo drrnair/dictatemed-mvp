@@ -158,7 +158,7 @@ test.describe('Referral Upload Workflow', () => {
   let referralPage: ReferralUploadPage;
   let consultationPage: NewConsultationPage;
   let letterDetailPage: LetterDetailPage;
-  let extractedData: ExtractedReferralData | null = null;
+  // Shared state for letter ID across serial tests
   let generatedLetterId: string | null = null;
 
   test.beforeEach(async ({ page }) => {
@@ -185,29 +185,23 @@ test.describe('Referral Upload Workflow', () => {
     await referralPage.expectReadyForUpload();
   });
 
-  test('should upload referral PDF successfully', async ({ page }) => {
-    // Setup mock for referral upload and extraction
-    await mockReferralExtraction(page, EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001']);
+  test('should upload referral file successfully', async ({ page }) => {
+    const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
-    // Mock the file upload endpoint
-    await page.route('**/api/referrals/upload', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          referralId: 'test-referral-001',
-          fileName: 'cardiology-referral-001.pdf',
-          fileSize: 125000,
-        }),
-      });
+    // Use helper for mock setup
+    await setupReferralMocks(page, {
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+        reasonForReferral: expectedExtraction.reasonForReferral,
+      },
     });
 
     // Login and navigate
     await loginPage.loginWithEnvCredentials();
     await referralPage.gotoReferralUpload();
 
-    // Upload the referral file (using txt file for testing, PDF in production)
+    // Upload the referral file
     const referralFilePath = path.join(REFERRAL_FIXTURES_PATH, 'cardiology-referral-001.txt');
     await referralPage.uploadReferralPDF(referralFilePath);
 
@@ -218,35 +212,15 @@ test.describe('Referral Upload Workflow', () => {
   test('should extract patient information from referral', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
-    // Setup mock for extraction with expected data
-    await page.route('**/api/referrals/upload', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          referralId: 'test-referral-001',
-        }),
-      });
-    });
-
-    await page.route('**/api/referrals/**/extract', async (route) => {
-      // Simulate extraction delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          extractedData: {
-            patient: expectedExtraction.patient,
-            referrer: expectedExtraction.referrer,
-            clinicalContext: 'Patient referred for cardiology review.',
-            reasonForReferral: expectedExtraction.reasonForReferral,
-          },
-          confidence: 0.92,
-        }),
-      });
+    // Use helper with extraction delay
+    await setupReferralMocks(page, {
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+        clinicalContext: 'Patient referred for cardiology review.',
+        reasonForReferral: expectedExtraction.reasonForReferral,
+      },
+      extractionDelay: 500,
     });
 
     // Login and navigate
@@ -255,7 +229,7 @@ test.describe('Referral Upload Workflow', () => {
 
     // Upload and wait for extraction
     const referralFilePath = path.join(REFERRAL_FIXTURES_PATH, 'cardiology-referral-001.txt');
-    extractedData = await referralPage.uploadAndExtract(referralFilePath);
+    const extractedData = await referralPage.uploadAndExtract(referralFilePath);
 
     // Verify patient information is extracted correctly
     expect(extractedData.patient).toBeDefined();
@@ -271,32 +245,14 @@ test.describe('Referral Upload Workflow', () => {
   test('should extract GP/referrer information', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
-    // Setup extraction mock
-    await page.route('**/api/referrals/upload', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          referralId: 'test-referral-001',
-        }),
-      });
-    });
-
-    await page.route('**/api/referrals/**/extract', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          extractedData: {
-            patient: expectedExtraction.patient,
-            referrer: expectedExtraction.referrer,
-            reasonForReferral: expectedExtraction.reasonForReferral,
-          },
-          confidence: 0.94,
-        }),
-      });
+    // Use helper for mock setup
+    await setupReferralMocks(page, {
+      extractedData: {
+        patient: expectedExtraction.patient,
+        referrer: expectedExtraction.referrer,
+        reasonForReferral: expectedExtraction.reasonForReferral,
+      },
+      confidence: 0.94,
     });
 
     // Login and navigate

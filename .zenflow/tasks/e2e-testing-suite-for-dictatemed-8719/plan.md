@@ -520,6 +520,7 @@ Do not make assumptions on important decisions — get clarification first.
 ---
 
 ### [ ] Step: Implementation Report
+<!-- chat-id: b99fa453-d25c-475c-8958-3b7edf780924 -->
 
 Write final report to `.zenflow/tasks/e2e-testing-suite-for-dictatemed-8719/report.md`:
 

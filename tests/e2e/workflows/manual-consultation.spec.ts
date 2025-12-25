@@ -86,14 +86,9 @@ test.describe('Manual Consultation Workflow', () => {
     await loginPage.loginWithEnvCredentials();
     await consultationPage.gotoNewConsultation();
 
-    // Search for the heart failure test patient
+    // Select the heart failure test patient by MRN
+    // Note: selectPatientByMrn internally searches and waits for results
     const patient = TEST_PATIENTS.heartFailure;
-    await consultationPage.searchPatient(patient.mrn);
-
-    // Wait for search results
-    await page.waitForTimeout(TEST_TIMEOUTS.debounce);
-
-    // Select the patient from results
     await consultationPage.selectPatientByMrn(patient.mrn);
 
     // Verify patient is selected
