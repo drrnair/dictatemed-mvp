@@ -33,7 +33,7 @@ This task involves:
 ```
 
 ### Current Test Infrastructure
-- **E2E Tests**: `tests/e2e/` - 7 existing spec files
+- **E2E Tests**: `tests/e2e/` - 6 existing spec files
 - **Fixtures**: `tests/e2e/fixtures/auth.ts` - Auth state management
 - **Setup**: `tests/e2e/setup/auth.setup.ts` - Auth0 login automation
 - **Unit Tests**: `tests/unit/` - Domain and component tests
