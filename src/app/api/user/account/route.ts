@@ -30,14 +30,30 @@ export async function DELETE() {
     log.info('Starting account deletion', { userId });
 
     // Get user data before deletion for cleanup
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        recordings: { select: { id: true, storagePath: true, audioDeletedAt: true } },
-        documents: { select: { id: true, storagePath: true, deletedAt: true } },
-        letters: { select: { id: true } },
-      },
-    });
+    // Note: Using try/catch for recordings/documents to handle schema migration timing
+    // (storagePath columns may not exist in all environments yet)
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          recordings: { select: { id: true, storagePath: true, audioDeletedAt: true } },
+          documents: { select: { id: true, storagePath: true, deletedAt: true } },
+          letters: { select: { id: true } },
+        },
+      });
+    } catch (schemaError) {
+      // Fallback: query without new columns if migration not applied yet
+      log.warn('Falling back to legacy schema query', { error: (schemaError as Error).message });
+      user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          recordings: { select: { id: true, s3AudioKey: true } },
+          documents: { select: { id: true, s3Key: true, deletedAt: true } },
+          letters: { select: { id: true } },
+        },
+      });
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -65,41 +81,48 @@ export async function DELETE() {
     }
 
     // Delete recordings audio files (only those not already deleted after transcription)
+    // Handle both new (storagePath) and legacy (s3AudioKey) column names
     for (const recording of user.recordings) {
-      if (recording.storagePath && !recording.audioDeletedAt) {
+      const rec = recording as { id: string; storagePath?: string | null; s3AudioKey?: string | null; audioDeletedAt?: Date | null };
+      const audioPath = rec.storagePath || rec.s3AudioKey;
+      const isDeleted = rec.audioDeletedAt != null;
+      if (audioPath && !isDeleted) {
         try {
-          await deleteFile(STORAGE_BUCKETS.AUDIO_RECORDINGS, recording.storagePath);
+          await deleteFile(STORAGE_BUCKETS.AUDIO_RECORDINGS, audioPath);
           await createStorageAuditLog({
             userId,
             action: 'storage.delete',
             bucket: STORAGE_BUCKETS.AUDIO_RECORDINGS,
-            storagePath: recording.storagePath,
+            storagePath: audioPath,
             resourceType: 'audio_recording',
-            resourceId: recording.id,
+            resourceId: rec.id,
             metadata: { reason: 'account_deletion' },
           });
         } catch (err) {
-          storageDeletionErrors.push(`recording: ${recording.storagePath}`);
+          storageDeletionErrors.push(`recording: ${audioPath}`);
         }
       }
     }
 
     // Delete document files (only those not already soft-deleted)
+    // Handle both new (storagePath) and legacy (s3Key) column names
     for (const document of user.documents) {
-      if (document.storagePath && !document.deletedAt) {
+      const doc = document as { id: string; storagePath?: string | null; s3Key?: string | null; deletedAt?: Date | null };
+      const docPath = doc.storagePath || doc.s3Key;
+      if (docPath && !doc.deletedAt) {
         try {
-          await deleteFile(STORAGE_BUCKETS.CLINICAL_DOCUMENTS, document.storagePath);
+          await deleteFile(STORAGE_BUCKETS.CLINICAL_DOCUMENTS, docPath);
           await createStorageAuditLog({
             userId,
             action: 'storage.delete',
             bucket: STORAGE_BUCKETS.CLINICAL_DOCUMENTS,
-            storagePath: document.storagePath,
+            storagePath: docPath,
             resourceType: 'clinical_document',
-            resourceId: document.id,
+            resourceId: doc.id,
             metadata: { reason: 'account_deletion' },
           });
         } catch (err) {
-          storageDeletionErrors.push(`document: ${document.storagePath}`);
+          storageDeletionErrors.push(`document: ${docPath}`);
         }
       }
     }
