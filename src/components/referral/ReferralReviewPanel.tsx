@@ -241,7 +241,7 @@ export function ReferralReviewPanel({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0" data-testid="referral-review-panel">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -261,7 +261,7 @@ export function ReferralReviewPanel({
 
         {/* Low confidence warning */}
         {hasLowConfidence && (
-          <div className="mx-6 mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <div className="mx-6 mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3" data-testid="low-confidence-warning">
             <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
             <div className="text-sm">
               <p className="font-medium text-amber-800">
@@ -279,65 +279,73 @@ export function ReferralReviewPanel({
         <ScrollArea className="flex-1 px-6">
           <div className="space-y-4 pb-4">
             {/* Patient Section */}
-            <ReferralFieldGroup
-              title="Patient Details"
-              icon={<User className="h-4 w-4 text-primary" />}
-              confidence={patient.confidence}
-              fields={patientFields}
-              onFieldChange={handlePatientFieldChange}
-              onAccept={() => handleSectionAction('patient', 'accept')}
-              onClear={() => handleSectionAction('patient', 'clear')}
-              onRestore={() => handleSectionRestore('patient')}
-              isAccepted={sectionState.patient === 'accepted'}
-              isCleared={sectionState.patient === 'cleared'}
-            />
+            <div data-testid="patient-section">
+              <ReferralFieldGroup
+                title="Patient Details"
+                icon={<User className="h-4 w-4 text-primary" />}
+                confidence={patient.confidence}
+                fields={patientFields}
+                onFieldChange={handlePatientFieldChange}
+                onAccept={() => handleSectionAction('patient', 'accept')}
+                onClear={() => handleSectionAction('patient', 'clear')}
+                onRestore={() => handleSectionRestore('patient')}
+                isAccepted={sectionState.patient === 'accepted'}
+                isCleared={sectionState.patient === 'cleared'}
+              />
+            </div>
 
             {/* GP Section */}
-            <ReferralFieldGroup
-              title="GP Details"
-              icon={<Building2 className="h-4 w-4 text-primary" />}
-              confidence={gp.confidence}
-              fields={gpFields}
-              onFieldChange={handleGpFieldChange}
-              onAccept={() => handleSectionAction('gp', 'accept')}
-              onClear={() => handleSectionAction('gp', 'clear')}
-              onRestore={() => handleSectionRestore('gp')}
-              isAccepted={sectionState.gp === 'accepted'}
-              isCleared={sectionState.gp === 'cleared'}
-            />
+            <div data-testid="gp-section">
+              <ReferralFieldGroup
+                title="GP Details"
+                icon={<Building2 className="h-4 w-4 text-primary" />}
+                confidence={gp.confidence}
+                fields={gpFields}
+                onFieldChange={handleGpFieldChange}
+                onAccept={() => handleSectionAction('gp', 'accept')}
+                onClear={() => handleSectionAction('gp', 'clear')}
+                onRestore={() => handleSectionRestore('gp')}
+                isAccepted={sectionState.gp === 'accepted'}
+                isCleared={sectionState.gp === 'cleared'}
+              />
+            </div>
 
             {/* Referrer Section (if different from GP) */}
             {referrer && (
-              <ReferralFieldGroup
-                title="Referrer Details"
-                icon={<Stethoscope className="h-4 w-4 text-primary" />}
-                confidence={referrer.confidence}
-                fields={referrerFields}
-                onFieldChange={handleReferrerFieldChange}
-                onAccept={() => handleSectionAction('referrer', 'accept')}
-                onClear={() => handleSectionAction('referrer', 'clear')}
-                onRestore={() => handleSectionRestore('referrer')}
-                isAccepted={sectionState.referrer === 'accepted'}
-                isCleared={sectionState.referrer === 'cleared'}
-              />
+              <div data-testid="referrer-section">
+                <ReferralFieldGroup
+                  title="Referrer Details"
+                  icon={<Stethoscope className="h-4 w-4 text-primary" />}
+                  confidence={referrer.confidence}
+                  fields={referrerFields}
+                  onFieldChange={handleReferrerFieldChange}
+                  onAccept={() => handleSectionAction('referrer', 'accept')}
+                  onClear={() => handleSectionAction('referrer', 'clear')}
+                  onRestore={() => handleSectionRestore('referrer')}
+                  isAccepted={sectionState.referrer === 'accepted'}
+                  isCleared={sectionState.referrer === 'cleared'}
+                />
+              </div>
             )}
 
             {/* Referral Context Section */}
-            <ReferralContextFieldGroup
-              confidence={context.confidence}
-              reasonForReferral={context.reasonForReferral}
-              keyProblems={context.keyProblems}
-              investigationsMentioned={context.investigationsMentioned}
-              medicationsMentioned={context.medicationsMentioned}
-              urgency={context.urgency}
-              onReasonChange={handleReasonChange}
-              onProblemsChange={handleProblemsChange}
-              onAccept={() => handleSectionAction('context', 'accept')}
-              onClear={() => handleSectionAction('context', 'clear')}
-              onRestore={() => handleSectionRestore('context')}
-              isAccepted={sectionState.context === 'accepted'}
-              isCleared={sectionState.context === 'cleared'}
-            />
+            <div data-testid="context-section">
+              <ReferralContextFieldGroup
+                confidence={context.confidence}
+                reasonForReferral={context.reasonForReferral}
+                keyProblems={context.keyProblems}
+                investigationsMentioned={context.investigationsMentioned}
+                medicationsMentioned={context.medicationsMentioned}
+                urgency={context.urgency}
+                onReasonChange={handleReasonChange}
+                onProblemsChange={handleProblemsChange}
+                onAccept={() => handleSectionAction('context', 'accept')}
+                onClear={() => handleSectionAction('context', 'clear')}
+                onRestore={() => handleSectionRestore('context')}
+                isAccepted={sectionState.context === 'accepted'}
+                isCleared={sectionState.context === 'cleared'}
+              />
+            </div>
           </div>
         </ScrollArea>
 
@@ -350,13 +358,14 @@ export function ReferralReviewPanel({
                 : 'Click Apply to populate the consultation form'}
             </p>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={onCancel} disabled={isApplying}>
+              <Button variant="outline" onClick={onCancel} disabled={isApplying} data-testid="referral-cancel-button">
                 Cancel
               </Button>
               <Button
                 onClick={handleApply}
                 disabled={!canApply || isApplying}
                 className={cn(isApplying && 'opacity-70')}
+                data-testid="referral-apply-button"
               >
                 {isApplying ? 'Applying...' : 'Apply to Consultation'}
               </Button>

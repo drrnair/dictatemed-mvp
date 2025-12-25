@@ -78,6 +78,9 @@ export function ConfidenceIndicator({
             )}
             role="status"
             aria-label={`${label}: ${percentage}%`}
+            data-testid="confidence-indicator"
+            data-confidence-level={level}
+            data-confidence-value={percentage}
           >
             <Icon className={cn(iconSize, color)} />
             {showPercentage && (
