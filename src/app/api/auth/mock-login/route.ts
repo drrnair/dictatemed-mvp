@@ -105,15 +105,86 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/auth/mock-login
  *
- * Returns status of mock authentication availability.
+ * Creates a mock Auth0 session and redirects to the dashboard.
+ * This is the preferred method for E2E tests as it works with page.goto().
+ *
+ * Usage: page.goto('/api/auth/mock-login?redirect=/dashboard')
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const isEnabled = process.env.E2E_MOCK_AUTH === 'true';
+  const shouldRedirect = request.nextUrl.searchParams.get('redirect');
 
-  return NextResponse.json({
-    mockAuthEnabled: isEnabled,
-    message: isEnabled
-      ? 'Mock authentication is available. POST to this endpoint to create a session.'
-      : 'Mock authentication is disabled. Set E2E_MOCK_AUTH=true to enable.',
-  });
+  // If no redirect param, just return status (for checking availability)
+  if (!shouldRedirect) {
+    return NextResponse.json({
+      mockAuthEnabled: isEnabled,
+      message: isEnabled
+        ? 'Mock authentication is available. Add ?redirect=/dashboard to create session and redirect.'
+        : 'Mock authentication is disabled. Set E2E_MOCK_AUTH=true to enable.',
+    });
+  }
+
+  // Security check: Only allow mock auth in E2E test mode
+  if (!isEnabled) {
+    return NextResponse.json(
+      {
+        error: 'Mock authentication is disabled',
+        message: 'Set E2E_MOCK_AUTH=true to enable mock authentication for E2E tests',
+      },
+      { status: 403 }
+    );
+  }
+
+  try {
+    // Get the Auth0 secret for cookie encryption
+    const secret = process.env.AUTH0_SECRET;
+    if (!secret) {
+      return NextResponse.json(
+        { error: 'AUTH0_SECRET not configured' },
+        { status: 500 }
+      );
+    }
+
+    // Create session data matching Auth0's session structure
+    const sessionData = {
+      user: E2E_TEST_USER,
+      accessToken: 'mock-access-token-for-e2e-tests',
+      accessTokenExpiresAt: Math.floor(Date.now() / 1000) + 86400, // 24 hours
+      idToken: 'mock-id-token-for-e2e-tests',
+    };
+
+    // Encrypt the session using the same method as @auth0/nextjs-auth0
+    // The SDK uses JWE with A256GCM encryption
+    const secretKey = new TextEncoder().encode(secret.padEnd(32, '0').slice(0, 32));
+    const jwe = await new jose.EncryptJWT(sessionData)
+      .setProtectedHeader({ alg: 'dir', enc: 'A256GCM' })
+      .setIssuedAt()
+      .setExpirationTime('24h')
+      .encrypt(secretKey);
+
+    // Create redirect response with cookie
+    const redirectUrl = new URL(shouldRedirect, request.url);
+    const response = NextResponse.redirect(redirectUrl);
+
+    // Set the session cookie on the redirect response
+    response.cookies.set('appSession', jwe, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 86400, // 24 hours
+    });
+
+    console.log('Mock login: Session created, redirecting to', shouldRedirect);
+    return response;
+  } catch (error) {
+    console.error('Mock login error:', error);
+    return NextResponse.json(
+      {
+        error: 'Mock authentication failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
 }

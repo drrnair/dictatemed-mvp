@@ -52,56 +52,28 @@ async function tryMockAuthentication(page: Page): Promise<boolean> {
   console.log('Mock auth: Attempting mock authentication...');
 
   try {
-    // First, navigate to the app's homepage so we're on the correct origin
-    // This is required before we can make fetch requests from the browser context
-    console.log('Mock auth: Navigating to app homepage first...');
-    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: TEST_TIMEOUTS.pageLoad });
-
-    // Check if mock auth is available and create session from within the browser context
-    // This ensures cookies are properly set in the browser
-    const loginResult = await page.evaluate(async () => {
-      try {
-        // First check if mock auth is enabled
-        const checkResponse = await fetch('/api/auth/mock-login', {
-          method: 'GET',
-          credentials: 'include',
-        });
-        const checkData = await checkResponse.json();
-
-        if (!checkData.mockAuthEnabled) {
-          return { ok: false, data: { error: 'Mock auth is disabled on server' } };
-        }
-
-        // Now create the session
-        const response = await fetch('/api/auth/mock-login?returnTo=/dashboard', {
-          method: 'POST',
-          credentials: 'include', // Important: include cookies
-        });
-        const data = await response.json();
-        return { ok: response.ok, data };
-      } catch (error) {
-        return { ok: false, data: { error: String(error) } };
-      }
+    // Use the GET endpoint with redirect parameter
+    // This creates the session cookie and redirects to dashboard in one step
+    // Much simpler than trying to use fetch from browser context
+    console.log('Mock auth: Navigating to mock login endpoint...');
+    await page.goto('/api/auth/mock-login?redirect=/dashboard', {
+      waitUntil: 'domcontentloaded',
+      timeout: TEST_TIMEOUTS.pageLoad,
     });
 
-    if (!loginResult.ok || !loginResult.data.success) {
-      console.log(`Mock auth: Login failed - ${loginResult.data.error || 'Unknown error'}`);
-      return false;
-    }
-
-    console.log(`Mock auth: Success! Logged in as ${loginResult.data.user?.email}`);
-
-    // Navigate to dashboard to verify auth works
-    await page.goto('/dashboard');
-    await page.waitForLoadState('domcontentloaded', { timeout: TEST_TIMEOUTS.pageLoad });
-
-    // Check if we're actually on dashboard (not redirected to login)
+    // Check if we successfully landed on dashboard
     const currentUrl = page.url();
+    console.log(`Mock auth: Current URL after redirect: ${currentUrl}`);
+
     if (currentUrl.includes('/dashboard')) {
-      console.log('Mock auth: Verified - successfully reached dashboard');
+      console.log('Mock auth: Success! Reached dashboard');
       return true;
+    } else if (currentUrl.includes('/api/auth/login') || currentUrl.includes('auth0.com')) {
+      // We got redirected to login, which means the session cookie wasn't accepted
+      console.log('Mock auth: Session not accepted - redirected to login');
+      return false;
     } else {
-      console.log(`Mock auth: Verification failed - redirected to ${currentUrl}`);
+      console.log(`Mock auth: Unexpected redirect to ${currentUrl}`);
       return false;
     }
   } catch (error) {
