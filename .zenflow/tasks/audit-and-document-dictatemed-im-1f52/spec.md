@@ -43,7 +43,7 @@
 | 60+ subspecialties | ✅ Fully Implemented | `MedicalSubspecialty` model, linked to specialties | Priority: Cardiology, Neurology, GP, Surgery |
 | Specialty selection UI | ✅ Fully Implemented | `src/components/specialty/SpecialtyCombobox.tsx` | Searchable with synonyms |
 | Subspecialty selection | ✅ Fully Implemented | `src/components/specialty/SubspecialtyPanel.tsx` | Context-aware filtering |
-| User specialty assignment | ✅ Fully Implemented | `UserSpecialty` join table | Many-to-many relationship |
+| User specialty assignment | ✅ Fully Implemented | `ClinicianSpecialty` join table | Many-to-many relationship |
 | Legacy cardiology migration | ✅ Fully Implemented | `LEGACY_SUBSPECIALTY_MAPPING` | Maps old enum to new model |
 
 **Legacy Subspecialty Enum Values Migrated:**
@@ -64,7 +64,7 @@
 | Manual patient entry | ✅ Fully Implemented | `PatientSelector` component | None - generic |
 | Patient from referral | ✅ Fully Implemented | Auto-extraction and creation | None - generic |
 | Previous materials selection | ✅ Fully Implemented | `PreviousMaterialsPanel.tsx` | None - generic |
-| Letter type selection | ✅ Fully Implemented | `LetterTypeSelector.tsx` - NEW_PATIENT, FOLLOW_UP, PROCEDURE, DISCHARGE | None - generic |
+| Letter type selection | ✅ Fully Implemented | `LetterTypeSelector.tsx` - NEW_PATIENT, FOLLOW_UP, ANGIOGRAM_PROCEDURE, ECHO_REPORT | **Cardiology-specific types** |
 | Template selection | ✅ Fully Implemented | `TemplateSelector.tsx`, `LetterTemplate` model | Supports specialty-specific templates |
 | CC recipients | ✅ Fully Implemented | `CCRecipientsInput.tsx` | None - generic |
 
@@ -94,7 +94,7 @@
 | Image upload | ✅ Fully Implemented | Supported file types: PDF, PNG, JPG, HEIC | None - generic |
 | Document list | ✅ Fully Implemented | `DocumentList.tsx` | None - generic |
 | Document preview | ✅ Fully Implemented | `DocumentPreview.tsx` | None - generic |
-| Document types | ✅ Fully Implemented | REFERRAL_LETTER, ECHO_REPORT, ANGIOGRAM_REPORT, DISCHARGE_SUMMARY, PATHOLOGY, IMAGING, OTHER | **Cardiac-focused types** |
+| Document types | ✅ Fully Implemented | ECHO_REPORT, ANGIOGRAM_REPORT, ECG_REPORT, HOLTER_REPORT, LAB_RESULT, REFERRAL_LETTER, OTHER | **Cardiology-focused types** |
 | Echo report extraction | ✅ Fully Implemented | `src/domains/documents/extractors/echo-report.ts` | **Cardiology-specific** |
 | Angiogram extraction | ✅ Fully Implemented | `src/domains/documents/extractors/angiogram-report.ts` | **Cardiology-specific** |
 | Generic extraction | ✅ Fully Implemented | `src/domains/documents/extractors/generic.ts` | None - generic |
@@ -102,7 +102,7 @@
 **Cardiology Remnants:**
 - Echo report extractor is entirely cardiology-specific (LVEF, valve data, etc.)
 - Angiogram report extractor is entirely cardiology-specific
-- Document types include ECHO_REPORT and ANGIOGRAM_REPORT
+- Document types are cardiology-focused: ECHO_REPORT, ANGIOGRAM_REPORT, ECG_REPORT, HOLTER_REPORT
 
 ### 6. Referral Processing
 
@@ -153,7 +153,7 @@
 | Source panel | ✅ Fully Implemented | `SourcePanel.tsx` - view source documents | None - generic |
 | Differential view | ✅ Fully Implemented | `DifferentialView.tsx` - compare drafts | None - generic |
 | Letter approval | ✅ Fully Implemented | `approval.service.ts` with provenance | None - generic |
-| Letter status workflow | ✅ Fully Implemented | DRAFT → IN_REVIEW → APPROVED → SENT | None - generic |
+| Letter status workflow | ✅ Fully Implemented | GENERATING → DRAFT → IN_REVIEW → APPROVED (or FAILED) | None - generic |
 
 ### 9. Letter Sending & Delivery
 
@@ -172,12 +172,12 @@
 
 | Feature | Status | Implementation | Pivot Impact |
 |---------|--------|----------------|--------------|
-| Contact list | ✅ Fully Implemented | `Contact` model, practice-scoped | None - generic |
-| Contact types | ✅ Fully Implemented | GP, REFERRER, SPECIALIST, OTHER | None - generic |
-| Contact search | ✅ Fully Implemented | `ReferrerSelector.tsx` | None - generic |
-| Auto-create from referral | ✅ Fully Implemented | Creates contacts from extracted GP data | None - generic |
-| Manual contact creation | ✅ Fully Implemented | `ContactForm.tsx` | None - generic |
-| Patient contacts | ✅ Fully Implemented | `PatientContacts.tsx` | None - generic |
+| Referrer list | ✅ Fully Implemented | `Referrer` model, practice-scoped | None - generic |
+| Contact types | ✅ Fully Implemented | GP, SPECIALIST, OTHER (via `ReferrerType` enum) | None - generic |
+| Referrer search | ✅ Fully Implemented | `ReferrerSelector.tsx` | None - generic |
+| Auto-create from referral | ✅ Fully Implemented | Creates referrer from extracted GP data | None - generic |
+| Manual referrer creation | ✅ Fully Implemented | `ContactForm.tsx` | None - generic |
+| Patient contacts | ✅ Fully Implemented | `PatientContact` model, `PatientContacts.tsx` | None - generic |
 
 ### 11. Settings & Configuration
 
@@ -207,7 +207,7 @@
 | Feature | Status | Implementation | Pivot Impact |
 |---------|--------|----------------|--------------|
 | Audit logging | ✅ Fully Implemented | `AuditLog` model, comprehensive actions | None - generic |
-| Letter provenance | ✅ Fully Implemented | `provenance.service.ts`, `ContentHash` model | None - generic |
+| Letter provenance | ✅ Fully Implemented | `provenance.service.ts`, `Provenance` model (hash field) | None - generic |
 | Rate limiting | ✅ Fully Implemented | `src/lib/rate-limit.ts` | None - generic |
 | PHI encryption | ✅ Fully Implemented | `src/infrastructure/db/encryption.ts` | None - generic |
 | HIPAA-compliant logging | ✅ Fully Implemented | `src/lib/logger.ts` - PHI redaction | None - generic |
@@ -218,7 +218,7 @@
 
 | Service | Purpose | Status | Configuration |
 |---------|---------|--------|---------------|
-| Supabase Auth | Authentication | ✅ Active | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
+| Auth0 | Authentication | ✅ Active | `AUTH0_*` env vars, `@auth0/nextjs-auth0` SDK |
 | Supabase Storage | File storage | ✅ Active | Audio, documents, referrals buckets |
 | Supabase PostgreSQL | Database | ✅ Active | Via Prisma ORM |
 | Deepgram | Transcription | ✅ Active | `DEEPGRAM_API_KEY`, nova-2-medical model |
@@ -232,21 +232,23 @@
 
 | Model | Purpose | Key Fields | Specialty-Related? |
 |-------|---------|------------|-------------------|
-| User | Clinician accounts | email, role, name, practiceId | No |
+| User | Clinician accounts | email, role, name, practiceId, auth0Id | No |
 | Practice | Organization | name, settings, letterhead | No |
-| UserSpecialty | User-specialty link | userId, specialtyId, subspecialtyId, isPrimary | **Yes** |
+| ClinicianSpecialty | User-specialty link | userId, specialtyId, subspecialtyId | **Yes** |
 | MedicalSpecialty | Specialty reference | name, slug, synonyms, active | **Yes** |
 | MedicalSubspecialty | Subspecialty reference | name, slug, specialtyId | **Yes** |
 | Patient | Patient records | encryptedData (name, DOB, Medicare) | No |
 | Consultation | Consultation sessions | patientId, letterType, status, recordings | No |
 | Recording | Audio recordings | storagePath, mode, transcriptText | No |
-| Document | Uploaded documents | documentType, extractedData | Partially (echo/angio types) |
+| Document | Uploaded documents | documentType, extractedData | **Yes** (cardiology types) |
 | Letter | Generated letters | contentDraft, contentFinal, subspecialty | **Yes** (subspecialty field) |
-| LetterTemplate | Letter templates | promptTemplate, subspecialties | **Yes** |
-| Contact | GP/referrer contacts | name, email, type, practiceId | No |
+| LetterTemplate | Letter templates | promptTemplate, subspecialties, category | **Yes** |
+| Referrer | GP/referrer contacts | name, email, type, practiceId | No |
+| PatientContact | Patient-specific contacts | patientId, name, relationship | No |
 | LetterSend | Delivery records | letterId, recipientEmail, status | No |
 | Notification | User notifications | type, title, message | No |
 | AuditLog | Audit trail | action, resourceType, metadata | No |
+| Provenance | Letter version hashes | letterId, hash, editCount | No |
 | StyleProfile | Writing style | userId, subspecialty, styleData | **Yes** |
 
 ---
@@ -304,11 +306,20 @@
 - `angiogram-report.ts`: Extracts coronary lesions, stenosis percentages
 
 ### 4. Document Types (Prisma Enum)
-**Status:** Partially cardiology-specific
+**Status:** Cardiology-specific
 **Impact:** Low - Extra types don't break functionality
 - `ECHO_REPORT` - Cardiology-specific
 - `ANGIOGRAM_REPORT` - Cardiology-specific
-- Others are generic (REFERRAL_LETTER, DISCHARGE_SUMMARY, PATHOLOGY, IMAGING, OTHER)
+- `ECG_REPORT` - Cardiology-specific
+- `HOLTER_REPORT` - Cardiology-specific
+- Others are generic (REFERRAL_LETTER, LAB_RESULT, OTHER)
+
+### 5. Letter Types (Prisma Enum)
+**Status:** Cardiology-specific
+**Impact:** Medium - Limits letter type options for other specialties
+- `ANGIOGRAM_PROCEDURE` - Cardiology-specific
+- `ECHO_REPORT` - Cardiology-specific
+- Others are generic (NEW_PATIENT, FOLLOW_UP)
 
 ---
 
@@ -337,7 +348,8 @@
 1. **Deepgram keyterms** - Need multi-specialty term lists
 2. **Clinical extraction patterns** - Need specialty-aware extractors
 3. **Document extractors** - Need extractors for other specialties
-4. **Document type enum** - Minor, could add more types
+4. **Document type enum** - Cardiology-focused types (ECHO, ANGIOGRAM, ECG, HOLTER)
+5. **Letter type enum** - Contains ANGIOGRAM_PROCEDURE and ECHO_REPORT types
 
 ---
 
@@ -365,7 +377,7 @@
 - **Framework:** Next.js 14 (App Router)
 - **Language:** TypeScript
 - **Database:** PostgreSQL (Supabase) via Prisma ORM
-- **Auth:** Supabase Auth
+- **Auth:** Auth0 (`@auth0/nextjs-auth0`)
 - **Storage:** Supabase Storage
 - **AI:** AWS Bedrock (Claude Sonnet/Haiku)
 - **Transcription:** Deepgram (nova-2-medical)
@@ -404,7 +416,7 @@ src/
 ├── infrastructure/         # External services
 │   ├── bedrock/            # AWS Bedrock AI
 │   ├── deepgram/           # Transcription
-│   ├── supabase/           # Auth & Storage
+│   ├── supabase/           # Storage
 │   └── db/                 # Prisma client
 └── lib/                    # Utilities
     ├── auth.ts             # Auth helpers
