@@ -20,12 +20,30 @@ export class LoginPage extends BasePage {
   constructor(page: Page) {
     super(page);
 
-    // Auth0 Universal Login form elements
-    this.emailInput = page.locator(
-      'input[name="email"], input[name="username"], input[type="email"]'
-    );
-    this.passwordInput = page.locator('input[name="password"], input[type="password"]');
-    this.submitButton = page.locator('button[type="submit"]');
+    // Auth0 Universal Login form elements (comprehensive selectors for different Auth0 versions)
+    this.emailInput = page.locator([
+      'input[name="email"]',
+      'input[name="username"]',
+      'input[id="username"]',
+      'input[type="email"]',
+      'input[data-testid="username-input"]',
+      'input[autocomplete="username"]',
+      'input[autocomplete="email"]',
+      'input[inputmode="email"]',
+      '#1-email',
+    ].join(', '));
+    this.passwordInput = page.locator([
+      'input[name="password"]',
+      'input[id="password"]',
+      'input[type="password"]',
+      'input[data-testid="password-input"]',
+    ].join(', '));
+    this.submitButton = page.locator([
+      'button[type="submit"]',
+      'button[name="action"]',
+      'button[data-testid="submit-button"]',
+      'button[data-action-button-primary="true"]',
+    ].join(', '));
     this.googleButton = page.locator(
       'button[data-provider="google"], [data-connection="google-oauth2"]'
     );

@@ -44,3 +44,19 @@ If blocked or uncertain, ask the user for direction.
 - Updated all mock functions to respect `MOCK_SERVICES` flag
 - Updated workflow test files (`manual-consultation.spec.ts`, `referral-upload.spec.ts`)
 - Updated `investigation.md` with implementation notes
+
+### [x] Step: Fix Auth0 Login Selectors
+<!-- chat-id: current -->
+
+**Completed:** 2024-12-26
+- Fixed Auth0 login selectors in `tests/e2e/fixtures/auth.ts`:
+  - Changed from individual selector loops to combined CSS selector string
+  - Added more comprehensive selectors for Auth0 Universal Login
+  - Increased timeouts from 2s to 15s for email, 10s for password/submit
+  - Added debug screenshots on failure
+  - Added `waitForLoadState('domcontentloaded')` before looking for inputs
+- Updated `tests/e2e/page-objects/LoginPage.ts` with matching comprehensive selectors
+
+**Changes made:**
+- `tests/e2e/fixtures/auth.ts` - Improved Auth0 login flow with better selectors
+- `tests/e2e/page-objects/LoginPage.ts` - Updated email/password/submit selectors

@@ -58,88 +58,71 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
   // Wait for Auth0 login page
   await page.waitForURL(/auth0\.com|\/login/, { timeout: 30000 });
 
+  // Wait for page to be fully loaded before looking for inputs
+  await page.waitForLoadState('domcontentloaded');
+
   // Auth0 Universal Login uses various input selectors depending on version
-  // Try multiple selectors for compatibility
-  const emailSelectors = [
+  // Build a combined selector for all possible email/username inputs
+  const emailSelectorString = [
     'input[name="email"]',
     'input[name="username"]',
     'input[id="username"]',
     'input[type="email"]',
     'input[data-testid="username-input"]',
     'input[autocomplete="username"]',
-  ];
+    'input[autocomplete="email"]',
+    // Auth0 Universal Login (New Experience) selectors
+    'input[inputmode="email"]',
+    '#1-email',
+  ].join(', ');
 
-  const passwordSelectors = [
+  const passwordSelectorString = [
     'input[name="password"]',
     'input[id="password"]',
     'input[type="password"]',
     'input[data-testid="password-input"]',
-  ];
+  ].join(', ');
 
-  // Find and fill email/username field
-  let emailFilled = false;
-  for (const selector of emailSelectors) {
-    try {
-      const emailInput = page.locator(selector).first();
-      if (await emailInput.isVisible({ timeout: 2000 })) {
-        await emailInput.fill(email);
-        emailFilled = true;
-        break;
-      }
-    } catch {
-      // Try next selector
-    }
+  // Wait for email/username input with combined selector (longer timeout)
+  const emailInput = page.locator(emailSelectorString).first();
+  try {
+    await emailInput.waitFor({ state: 'visible', timeout: 15000 });
+    await emailInput.fill(email);
+  } catch (error) {
+    // Take a screenshot to debug what the page looks like
+    await page.screenshot({ path: 'test-results/auth-debug-email-field.png', fullPage: true });
+    throw new Error(`Could not find email/username input field on Auth0 login page. URL: ${page.url()}`);
   }
 
-  if (!emailFilled) {
-    throw new Error('Could not find email/username input field on Auth0 login page');
+  // Wait for password field (may appear after email on some Auth0 configurations)
+  const passwordInput = page.locator(passwordSelectorString).first();
+  try {
+    await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
+    await passwordInput.fill(password);
+  } catch (error) {
+    await page.screenshot({ path: 'test-results/auth-debug-password-field.png', fullPage: true });
+    throw new Error(`Could not find password input field on Auth0 login page. URL: ${page.url()}`);
   }
 
-  // Find and fill password field
-  let passwordFilled = false;
-  for (const selector of passwordSelectors) {
-    try {
-      const passwordInput = page.locator(selector).first();
-      if (await passwordInput.isVisible({ timeout: 2000 })) {
-        await passwordInput.fill(password);
-        passwordFilled = true;
-        break;
-      }
-    } catch {
-      // Try next selector
-    }
-  }
-
-  if (!passwordFilled) {
-    throw new Error('Could not find password input field on Auth0 login page');
-  }
-
-  // Submit login - try multiple selectors for the submit button
-  const submitSelectors = [
+  // Submit login - combined selector for submit button
+  const submitSelectorString = [
     'button[type="submit"]',
     'button[name="action"]',
     'button[data-testid="submit-button"]',
+    'button[data-action-button-primary="true"]',
     'button:has-text("Continue")',
     'button:has-text("Log In")',
     'button:has-text("Sign In")',
-  ];
+    'button:has-text("Login")',
+  ].join(', ');
 
-  let submitted = false;
-  for (const selector of submitSelectors) {
-    try {
-      const submitButton = page.locator(selector).first();
-      if (await submitButton.isVisible({ timeout: 2000 })) {
-        await submitButton.click();
-        submitted = true;
-        break;
-      }
-    } catch {
-      // Try next selector
-    }
-  }
-
-  if (!submitted) {
-    throw new Error('Could not find submit button on Auth0 login page');
+  const submitButton = page.locator(submitSelectorString).first();
+  try {
+    await submitButton.waitFor({ state: 'visible', timeout: 10000 });
+    await submitButton.click();
+  } catch (error) {
+    await page.screenshot({ path: 'test-results/auth-debug-submit-button.png', fullPage: true });
+    throw new Error(`Could not find submit button on Auth0 login page. URL: ${page.url()}`);
   }
 
   // Wait for redirect back to app (base URL agnostic - matches any /dashboard path)
