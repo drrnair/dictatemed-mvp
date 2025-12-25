@@ -93,11 +93,34 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
     // Take a screenshot and capture page info to debug what the page looks like
     await page.screenshot({ path: 'test-results/auth-debug-email-field.png', fullPage: true });
     const pageTitle = await page.title();
+    const currentUrl = page.url();
     const bodyText = await page.locator('body').textContent().catch(() => 'Could not get body text');
-    console.error(`Auth0 Debug - URL: ${page.url()}`);
-    console.error(`Auth0 Debug - Title: ${pageTitle}`);
-    console.error(`Auth0 Debug - Body text preview: ${bodyText?.substring(0, 500)}`);
-    throw new Error(`Could not find email/username input field on Auth0 login page. URL: ${page.url()}, Title: ${pageTitle}`);
+
+    console.error(`\n${'='.repeat(60)}`);
+    console.error('AUTH0 LOGIN FAILED - Debug Information:');
+    console.error(`${'='.repeat(60)}`);
+    console.error(`URL: ${currentUrl}`);
+    console.error(`Title: ${pageTitle}`);
+    console.error(`Body text preview: ${bodyText?.substring(0, 500)}`);
+
+    // Check for common Auth0 configuration issues
+    if (currentUrl.includes('/authorize') && !bodyText?.includes('email') && !bodyText?.includes('password')) {
+      console.error(`\n${'!'.repeat(60)}`);
+      console.error('LIKELY CAUSE: Auth0 application misconfiguration');
+      console.error(`${'!'.repeat(60)}`);
+      console.error('The Auth0 login form is not rendering. This usually means:');
+      console.error('1. Callback URL not configured in Auth0:');
+      console.error('   - Go to Auth0 Dashboard → Applications → Your App → Settings');
+      console.error('   - Add "http://localhost:3000/api/auth/callback" to Allowed Callback URLs');
+      console.error('2. Application URLs not configured:');
+      console.error('   - Add "http://localhost:3000" to Allowed Web Origins');
+      console.error('3. Universal Login not enabled:');
+      console.error('   - Go to Auth0 Dashboard → Branding → Universal Login');
+      console.error('   - Ensure "New Universal Login Experience" is selected');
+      console.error(`${'!'.repeat(60)}\n`);
+    }
+
+    throw new Error(`Could not find email/username input field on Auth0 login page. URL: ${currentUrl}, Title: ${pageTitle}`);
   }
 
   // Wait for password field (may appear after email on some Auth0 configurations)
