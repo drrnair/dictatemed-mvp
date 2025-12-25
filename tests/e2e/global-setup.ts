@@ -72,10 +72,14 @@ function validateEnvironment(): void {
 /**
  * Check database connectivity
  * Uses a simple fetch to the health endpoint instead of direct DB connection
+ *
+ * In CI mode, this is stricter and will fail if the health check fails
+ * (since in CI, the server should already be running before tests start)
  */
 async function checkDatabaseHealth(): Promise<void> {
   const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:3000';
   const healthUrl = `${baseUrl}/api/health`;
+  const isCI = !!process.env.CI;
 
   try {
     // Skip health check if server isn't running yet (webServer will start it)
@@ -89,12 +93,23 @@ async function checkDatabaseHealth(): Promise<void> {
     clearTimeout(timeoutId);
 
     if (response === null) {
+      if (isCI) {
+        // In CI, the server should be running - this is an error
+        console.error('❌ Server not reachable in CI mode');
+        console.error('   Ensure the server is started before running tests');
+        throw new Error('Health check failed: Server not reachable in CI mode');
+      }
       console.log('⏳ Server not running yet - will be started by Playwright');
       return;
     }
 
     if (!response.ok) {
-      console.warn(`⚠️  Health check returned ${response.status}`);
+      const message = `Health check returned ${response.status}`;
+      if (isCI) {
+        console.error(`❌ ${message}`);
+        throw new Error(`Health check failed: ${message}`);
+      }
+      console.warn(`⚠️  ${message}`);
       return;
     }
 
@@ -102,10 +117,24 @@ async function checkDatabaseHealth(): Promise<void> {
     if (health.database === 'connected' || health.status === 'ok') {
       console.log('✅ Database health check passed');
     } else {
-      console.warn('⚠️  Database may not be fully connected');
+      const message = 'Database may not be fully connected';
+      if (isCI) {
+        console.error(`❌ ${message}`);
+        console.error('   Health response:', JSON.stringify(health, null, 2));
+        throw new Error(`Health check failed: ${message}`);
+      }
+      console.warn(`⚠️  ${message}`);
     }
   } catch (error) {
-    // Don't fail - the webServer config will start the server
+    if (error instanceof Error && error.message.startsWith('Health check failed')) {
+      throw error; // Re-throw our own errors
+    }
+    // Network error
+    if (isCI) {
+      console.error('❌ Health check failed with error:', error);
+      throw new Error('Health check failed: Network error in CI mode');
+    }
+    // Don't fail locally - the webServer config will start the server
     console.log('⏳ Server not available - will be started by Playwright webServer');
   }
 }
