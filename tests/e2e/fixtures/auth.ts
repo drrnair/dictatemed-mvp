@@ -16,6 +16,7 @@
 import { test as base, expect, Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { TEST_TIMEOUTS } from './test-data';
 
 // Path to store authenticated state
 export const AUTH_STATE_PATH = path.join(__dirname, '../.auth/user.json');
@@ -57,10 +58,10 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
 
   // Wait for Auth0 login page - we need to wait for actual login form, not just the URL
   // The /authorize endpoint redirects to the actual login page
-  await page.waitForURL(/auth0\.com/, { timeout: 30000 });
+  await page.waitForURL(/auth0\.com/, { timeout: TEST_TIMEOUTS.auth0Redirect });
 
   // Wait for page to be fully loaded and all network requests to settle
-  await page.waitForLoadState('networkidle', { timeout: 30000 });
+  await page.waitForLoadState('networkidle', { timeout: TEST_TIMEOUTS.pageLoad });
 
   // Auth0 Universal Login uses various input selectors depending on version
   // Build a combined selector for all possible email/username inputs
@@ -87,7 +88,7 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
   // Wait for email/username input with combined selector (longer timeout)
   const emailInput = page.locator(emailSelectorString).first();
   try {
-    await emailInput.waitFor({ state: 'visible', timeout: 15000 });
+    await emailInput.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.auth0Login });
     await emailInput.fill(email);
   } catch (error) {
     // Take a screenshot and capture page info to debug what the page looks like
@@ -126,7 +127,7 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
   // Wait for password field (may appear after email on some Auth0 configurations)
   const passwordInput = page.locator(passwordSelectorString).first();
   try {
-    await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
+    await passwordInput.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.auth0Submit });
     await passwordInput.fill(password);
   } catch (error) {
     await page.screenshot({ path: 'test-results/auth-debug-password-field.png', fullPage: true });
@@ -147,7 +148,7 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
 
   const submitButton = page.locator(submitSelectorString).first();
   try {
-    await submitButton.waitFor({ state: 'visible', timeout: 10000 });
+    await submitButton.waitFor({ state: 'visible', timeout: TEST_TIMEOUTS.auth0Submit });
     await submitButton.click();
   } catch (error) {
     await page.screenshot({ path: 'test-results/auth-debug-submit-button.png', fullPage: true });
@@ -155,7 +156,7 @@ export async function authenticateAndSaveState(page: Page): Promise<void> {
   }
 
   // Wait for redirect back to app (base URL agnostic - matches any /dashboard path)
-  await page.waitForURL(/\/dashboard/, { timeout: 30000 });
+  await page.waitForURL(/\/dashboard/, { timeout: TEST_TIMEOUTS.auth0Redirect });
 
   // Verify authentication
   await expect(page.locator('body')).not.toContainText('Login');

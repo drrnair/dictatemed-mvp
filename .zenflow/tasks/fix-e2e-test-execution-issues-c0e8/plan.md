@@ -77,3 +77,32 @@ If blocked or uncertain, ask the user for direction.
 **Changes made:**
 - `tests/e2e/fixtures/auth.ts` - Better wait states and debug logging
 - `.github/workflows/e2e-tests.yml` - Fixed PHI scan grep patterns
+
+### [x] Step: Secondary Fixes - Timeouts and Workflow State
+<!-- chat-id: current -->
+
+**Completed:** 2025-12-26
+- Expanded `TEST_TIMEOUTS` constants with semantic names:
+  - Added auth0-specific timeouts: `auth0Login`, `auth0Submit`, `auth0Redirect`
+  - Added element visibility timeouts: `elementVisible`, `elementHidden`, `modalAppear`, `modalDismiss`
+  - Added search timeouts: `searchResults`, `searchDebounce`
+  - Added documentation with usage examples
+- Updated `auth.ts` to use `TEST_TIMEOUTS` instead of hardcoded values
+- Created `workflow-state.ts` fixture to replace mutable `generatedLetterId`:
+  - File-based state persistence for cross-test communication
+  - Helper functions: `extractLetterIdFromUrl`, `extractConsultationIdFromUrl`, `extractReferralIdFromUrl`
+  - `workflowTest` fixture that provides `workflowState` object
+  - Ready for workflow specs to migrate to (manual migration needed)
+
+**Changes made:**
+- `tests/e2e/fixtures/test-data.ts` - Expanded TEST_TIMEOUTS
+- `tests/e2e/fixtures/auth.ts` - Use TEST_TIMEOUTS constants
+- `tests/e2e/fixtures/workflow-state.ts` - New fixture for serial test state
+
+**Remaining Auth0 Issue:**
+The E2E tests still fail because Auth0 is misconfigured. The repository owner needs to:
+1. Go to Auth0 Dashboard → Applications → Your App → Settings
+2. Add `http://localhost:3000/api/auth/callback` to Allowed Callback URLs
+3. Add `http://localhost:3000` to Allowed Web Origins
+
+Until this is done, the auth setup will fail and tests cannot run.
