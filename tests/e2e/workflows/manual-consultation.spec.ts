@@ -31,6 +31,7 @@ import {
   expectToast,
   setupConsoleErrorCollection,
   validateClinicalContent,
+  MOCK_SERVICES,
 } from '../utils/helpers';
 
 // ============================================
@@ -40,8 +41,10 @@ import {
 /**
  * Sets up mock for letter detail page with test data.
  * Used when the real letter generation workflow wasn't executed.
+ * Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false.
  */
 async function setupLetterDetailMock(page: Page, letterId: string): Promise<void> {
+  if (!MOCK_SERVICES) return;
   await page.route(`**/api/letters/${letterId}`, async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({
@@ -66,8 +69,10 @@ async function setupLetterDetailMock(page: Page, letterId: string): Promise<void
 
 /**
  * Sets up mock for letter send endpoint.
+ * Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false.
  */
 async function setupLetterSendMock(page: Page): Promise<void> {
+  if (!MOCK_SERVICES) return;
   await page.route('**/api/letters/**/send', async (route) => {
     await route.fulfill({
       status: 200,
@@ -93,8 +98,10 @@ async function setupLetterSendMock(page: Page): Promise<void> {
 
 /**
  * Sets up mock for send history endpoint.
+ * Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false.
  */
 async function setupSendHistoryMock(page: Page, letterId: string): Promise<void> {
+  if (!MOCK_SERVICES) return;
   await page.route(`**/api/letters/${letterId}/send-history`, async (route) => {
     await route.fulfill({
       status: 200,
@@ -125,8 +132,10 @@ async function setupSendHistoryMock(page: Page, letterId: string): Promise<void>
 
 /**
  * Sets up mock for recordings API.
+ * Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false.
  */
 async function setupRecordingsMock(page: Page): Promise<void> {
+  if (!MOCK_SERVICES) return;
   await page.route('**/api/recordings/**', async (route) => {
     await route.fulfill({
       status: 200,

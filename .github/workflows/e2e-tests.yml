@@ -168,8 +168,8 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      - name: Run database migrations
-        run: npx prisma migrate deploy
+      - name: Sync database schema
+        run: npx prisma db push --accept-data-loss
 
       - name: Seed E2E test data
         run: npm run db:seed:e2e
@@ -250,8 +250,8 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      - name: Run database migrations
-        run: npx prisma migrate deploy
+      - name: Sync database schema
+        run: npx prisma db push --accept-data-loss
 
       - name: Seed E2E test data
         run: npm run db:seed:e2e
@@ -324,8 +324,8 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      - name: Run database migrations
-        run: npx prisma migrate deploy
+      - name: Sync database schema
+        run: npx prisma db push --accept-data-loss
 
       - name: Seed E2E test data
         run: npm run db:seed:e2e

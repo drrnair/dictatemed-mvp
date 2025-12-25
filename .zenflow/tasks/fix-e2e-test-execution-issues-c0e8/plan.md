@@ -25,7 +25,8 @@ Save findings to `{@artifacts_path}/investigation.md` with:
 - Affected components
 - Proposed solution
 
-### [ ] Step: Implementation
+### [x] Step: Implementation
+<!-- chat-id: bed06be7-2158-43e9-8f7f-411da106b7ed -->
 Read `{@artifacts_path}/investigation.md`
 Implement the bug fix.
 
@@ -35,3 +36,11 @@ Implement the bug fix.
 4. Update `{@artifacts_path}/investigation.md` with implementation notes and test results
 
 If blocked or uncertain, ask the user for direction.
+
+**Completed:** 2024-12-25
+- Created `prisma/migrations/migration_lock.toml` (PostgreSQL provider)
+- Updated `.github/workflows/e2e-tests.yml` to use `prisma db push` instead of `migrate deploy`
+- Added `MOCK_SERVICES` toggle to `tests/e2e/utils/helpers.ts`
+- Updated all mock functions to respect `MOCK_SERVICES` flag
+- Updated workflow test files (`manual-consultation.spec.ts`, `referral-upload.spec.ts`)
+- Updated `investigation.md` with implementation notes

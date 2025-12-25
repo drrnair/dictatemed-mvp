@@ -31,6 +31,7 @@ import {
   mockLetterGeneration,
   mockTranscription,
   waitForNetworkIdle,
+  MOCK_SERVICES,
 } from '../utils/helpers';
 
 // Path to test referral files (TXT for CI, PDF optional)
@@ -59,8 +60,11 @@ interface ReferralMockOptions {
 /**
  * Sets up all referral-related API mocks in one place.
  * Reduces code duplication across tests.
+ * Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false.
  */
 async function setupReferralMocks(page: Page, options: ReferralMockOptions = {}): Promise<void> {
+  if (!MOCK_SERVICES) return;
+
   const {
     referralId = 'test-referral-001',
     extractedData,

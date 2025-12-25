@@ -4,6 +4,17 @@
 import { Page, expect, Locator } from '@playwright/test';
 
 /**
+ * Toggle for mocking external services.
+ * - Set MOCK_SERVICES=false to run tests against real APIs (integration mode)
+ * - Default: true (mocked mode for CI)
+ *
+ * Usage:
+ *   MOCK_SERVICES=false npm run test:e2e  # Real API integration
+ *   npm run test:e2e                       # Mocked (default)
+ */
+export const MOCK_SERVICES = process.env.MOCK_SERVICES !== 'false';
+
+/**
  * Wait for network to become idle (no pending requests)
  * Uses Playwright's built-in networkidle state
  */
@@ -150,6 +161,8 @@ export function setupConsoleErrorCollection(page: Page): () => string[] {
 /**
  * Mock an API response
  * Intercepts requests matching the pattern and returns mock response
+ *
+ * Note: Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false
  */
 export async function mockApiResponse(
   page: Page,
@@ -161,6 +174,10 @@ export async function mockApiResponse(
     delay?: number;
   }
 ): Promise<void> {
+  if (!MOCK_SERVICES) {
+    return; // Skip mocking - use real API
+  }
+
   await page.route(urlPattern, async (route) => {
     if (response.delay) {
       await new Promise((resolve) => setTimeout(resolve, response.delay));
@@ -177,11 +194,17 @@ export async function mockApiResponse(
 /**
  * Mock AI letter generation response
  * Provides consistent mock response for letter generation tests
+ *
+ * Note: Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false
  */
 export async function mockLetterGeneration(
   page: Page,
   letterContent?: string
 ): Promise<void> {
+  if (!MOCK_SERVICES) {
+    return; // Skip mocking - use real API
+  }
+
   const defaultContent = `Dear Dr. TEST GP Smith,
 
 Thank you for referring TEST Patient - Heart Failure for cardiology review.
@@ -234,11 +257,17 @@ Cardiologist`;
 
 /**
  * Mock transcription service response
+ *
+ * Note: Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false
  */
 export async function mockTranscription(
   page: Page,
   transcriptText?: string
 ): Promise<void> {
+  if (!MOCK_SERVICES) {
+    return; // Skip mocking - use real API
+  }
+
   const defaultTranscript =
     'This is a test transcription for the E2E test patient with heart failure. ' +
     'Blood pressure is 130 over 80. Ejection fraction is 35 percent.';
@@ -256,11 +285,17 @@ export async function mockTranscription(
 
 /**
  * Mock referral PDF extraction response
+ *
+ * Note: Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false
  */
 export async function mockReferralExtraction(
   page: Page,
   extractedData?: Record<string, unknown>
 ): Promise<void> {
+  if (!MOCK_SERVICES) {
+    return; // Skip mocking - use real API
+  }
+
   const defaultData = {
     patient: {
       name: 'TEST Patient - Referral',

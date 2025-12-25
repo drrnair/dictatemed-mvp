@@ -187,15 +187,74 @@ MOCK_SERVICES=false npm run test:e2e
 
 ## Test Results
 
-_To be updated after implementation_
+_Tests require CI environment with configured secrets to execute._
 
 | Test Suite | Status | Pass | Fail | Notes |
 |------------|--------|------|------|-------|
-| auth.spec.ts | Pending | - | - | - |
-| manual-consultation.spec.ts | Pending | - | - | - |
-| referral-upload.spec.ts | Pending | - | - | - |
-| style-profile.spec.ts | Pending | - | - | - |
-| accessibility.spec.ts | Pending | - | - | - |
+| auth.spec.ts | Ready | - | - | Requires Auth0 secrets |
+| manual-consultation.spec.ts | Ready | - | - | Requires Auth0 secrets |
+| referral-upload.spec.ts | Ready | - | - | Requires Auth0 secrets |
+| style-profile.spec.ts | Ready | - | - | Requires Auth0 secrets |
+| accessibility.spec.ts | Ready | - | - | Requires Auth0 secrets |
+
+---
+
+## Implementation Notes (2024-12-25)
+
+### Changes Made
+
+#### 1. Created `migration_lock.toml`
+- Added `prisma/migrations/migration_lock.toml` with PostgreSQL provider
+- This file is required by Prisma for migration tracking
+
+#### 2. Updated CI Workflow
+- Changed from `prisma migrate deploy` to `prisma db push --accept-data-loss` in all three browser jobs (Chromium, Firefox, WebKit)
+- `db push` syncs the schema directly without requiring migration history
+- This is appropriate for E2E test environments where data is ephemeral
+
+#### 3. Added `MOCK_SERVICES` Toggle
+- Added `MOCK_SERVICES` constant to `tests/e2e/utils/helpers.ts`
+- Updated all mocking functions to check this flag:
+  - `mockApiResponse()`
+  - `mockLetterGeneration()`
+  - `mockTranscription()`
+  - `mockReferralExtraction()`
+- Updated workflow test files to use the toggle:
+  - `manual-consultation.spec.ts` - all inline mocks now respect the flag
+  - `referral-upload.spec.ts` - `setupReferralMocks()` respects the flag
+
+#### Usage
+```bash
+# CI mode (mocked, default)
+npm run test:e2e
+
+# Integration mode (real APIs)
+MOCK_SERVICES=false npm run test:e2e
+```
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `prisma/migrations/migration_lock.toml` | Created - PostgreSQL provider lock |
+| `.github/workflows/e2e-tests.yml` | Changed migrate deploy → db push (3 locations) |
+| `tests/e2e/utils/helpers.ts` | Added MOCK_SERVICES toggle + updated mock functions |
+| `tests/e2e/workflows/manual-consultation.spec.ts` | Import MOCK_SERVICES, update inline mocks |
+| `tests/e2e/workflows/referral-upload.spec.ts` | Import MOCK_SERVICES, update setupReferralMocks |
+
+### Next Steps for Full E2E Execution
+
+1. **Configure GitHub Secrets** - Required secrets must be set in repository settings:
+   - `E2E_DATABASE_URL` - Supabase connection string for E2E tests
+   - `E2E_TEST_USER_EMAIL` - Auth0 test user email
+   - `E2E_TEST_USER_PASSWORD` - Auth0 test user password
+   - `AUTH0_ISSUER_BASE_URL` - Auth0 domain
+   - `AUTH0_CLIENT_ID` - Auth0 application client ID
+   - `AUTH0_CLIENT_SECRET` - Auth0 application client secret
+
+2. **Create Auth0 Test User** - A test user must exist in Auth0 for authentication tests
+
+3. **Push Changes and Verify CI** - Once secrets are configured, push changes to trigger CI workflow
 
 ---
 
@@ -205,3 +264,4 @@ _To be updated after implementation_
 - Test architecture (page objects, fixtures, helpers) is solid
 - Auth setup depends on real Auth0 - need secrets configured in CI
 - Focus on getting tests running first, then improve pass rate
+- The `MOCK_SERVICES` toggle allows running tests in both mocked (CI) and real (integration) modes
