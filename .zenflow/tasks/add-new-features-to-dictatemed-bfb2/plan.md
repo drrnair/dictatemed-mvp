@@ -192,6 +192,7 @@ npm run test:integration -- tests/integration/api/referrals.test.ts  # ✅ 20 te
 ---
 
 ### [ ] Step: Update Referral Service Text Extraction
+<!-- chat-id: 19dad28b-97a7-48c0-9572-df6da0c23698 -->
 
 Extend the text extraction logic to handle new file types.
 

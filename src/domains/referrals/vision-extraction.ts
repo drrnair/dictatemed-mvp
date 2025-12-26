@@ -3,6 +3,9 @@
 //
 // Uses Claude Sonnet 4 for accurate OCR of medical referral documents,
 // including handwritten notes and scanned letters.
+//
+// NOTE: This module is SERVER-SIDE ONLY. It uses Node.js Buffer and AWS Bedrock.
+// Do not import in client-side code or browser bundles.
 
 import { analyzeImage, type VisionRequest } from '@/infrastructure/bedrock/vision';
 import { logger } from '@/lib/logger';
@@ -119,17 +122,6 @@ export async function extractTextFromImageVision(
 ): Promise<VisionExtractionResult> {
   const log = logger.child({ action: 'extractTextFromImageVision', mimeType });
 
-  // Validate MIME type
-  if (!isVisionSupportedMimeType(mimeType)) {
-    return {
-      text: '',
-      success: false,
-      error: `Unsupported MIME type for vision extraction: ${mimeType}. Supported types: ${VISION_SUPPORTED_MIME_TYPES.join(', ')}`,
-      inputTokens: 0,
-      outputTokens: 0,
-    };
-  }
-
   try {
     log.info('Starting vision text extraction');
 
@@ -192,8 +184,9 @@ export async function extractTextFromImageVision(
  * Extract text from a referral document image buffer.
  *
  * Convenience wrapper that handles Buffer to base64 conversion.
+ * This is a server-side only function (uses Node.js Buffer).
  *
- * @param imageBuffer - Raw image buffer
+ * @param imageBuffer - Raw image buffer (Node.js Buffer)
  * @param mimeType - MIME type of the image
  * @returns Extraction result with text or error
  */

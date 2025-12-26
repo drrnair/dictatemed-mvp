@@ -106,7 +106,9 @@ describe('vision-extraction', () => {
   });
 
   describe('extractTextFromImageVision', () => {
-    const sampleBase64 = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // 1x1 transparent GIF
+    // Minimal valid 1x1 transparent GIF in base64 format.
+    // Used as sample image data for tests - actual content doesn't matter since analyzeImage is mocked.
+    const sampleBase64 = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
     it('should successfully extract text from an image', async () => {
       const mockText = `Dear Dr. Smith,

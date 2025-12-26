@@ -16,6 +16,9 @@ import {
 } from '@/infrastructure/supabase';
 import { logger } from '@/lib/logger';
 import { extractPdfText } from './pdf-utils';
+import { isImageMimeType, isHeicMimeType, convertToJpeg, validateImageByType } from './image-utils';
+import { isDocxMimeType, validateAndExtractDocx } from './docx-utils';
+import { extractTextFromImageBufferVision, isVisionSupportedMimeType } from './vision-extraction';
 import type {
   ReferralDocument,
   ReferralDocumentStatus,
@@ -42,17 +45,29 @@ const REFERRAL_BUCKET_PATH = 'referrals';
 
 /**
  * Get file extension from MIME type.
- * Note: Includes docx for future support even though it's not currently
- * in ALLOWED_REFERRAL_MIME_TYPES.
+ * Maps all supported referral document MIME types to their file extensions.
  */
 function getExtensionFromMimeType(mimeType: string): string {
   switch (mimeType) {
+    // Base types (always supported)
     case 'application/pdf':
       return 'pdf';
     case 'text/plain':
       return 'txt';
+    // Extended types (when FEATURE_EXTENDED_UPLOAD_TYPES is enabled)
+    case 'image/jpeg':
+      return 'jpg';
+    case 'image/png':
+      return 'png';
+    case 'image/heic':
+      return 'heic';
+    case 'image/heif':
+      return 'heif';
     case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
       return 'docx';
+    case 'application/rtf':
+    case 'text/rtf':
+      return 'rtf';
     default:
       return 'bin';
   }
@@ -512,7 +527,14 @@ export async function getReferralDocumentForProcessing(
 const MIN_EXTRACTED_TEXT_LENGTH = 100;
 
 /**
- * Extract text from a referral document (PDF or plain text).
+ * Extract text from a referral document.
+ *
+ * Supported file types:
+ * - PDF: Text extraction via pdf-parse
+ * - Plain text: Direct UTF-8 decoding
+ * - Images (JPEG, PNG, HEIC, HEIF): Claude Vision API for OCR
+ * - Word documents (DOCX): Mammoth text extraction
+ * - RTF: Simple text extraction
  *
  * This function:
  * 1. Fetches the file from S3
@@ -553,24 +575,16 @@ export async function extractTextFromDocument(
     const { content } = await getFileContent(STORAGE_BUCKETS.CLINICAL_DOCUMENTS, document.s3Key);
 
     // Extract text based on MIME type
-    let extractedText: string;
-
-    if (document.mimeType === 'application/pdf') {
-      extractedText = await extractTextFromPdfBuffer(content, log);
-    } else if (document.mimeType === 'text/plain') {
-      extractedText = content.toString('utf-8');
-    } else {
-      throw new Error(`Unsupported MIME type for text extraction: ${document.mimeType}`);
-    }
+    const extractedText = await extractTextByMimeType(content, document.mimeType, log);
 
     // Trim and normalize whitespace (preserve paragraph structure)
-    extractedText = extractedText.trim().replace(/[ \t]+/g, ' ').replace(/ *\n+ */g, '\n');
+    const normalizedText = extractedText.trim().replace(/[ \t]+/g, ' ').replace(/ *\n+ */g, '\n');
 
     // Check if we got meaningful text
-    const isShortText = extractedText.length < MIN_EXTRACTED_TEXT_LENGTH;
+    const isShortText = normalizedText.length < MIN_EXTRACTED_TEXT_LENGTH;
     if (isShortText) {
       log.warn('Extracted text is very short', {
-        textLength: extractedText.length,
+        textLength: normalizedText.length,
         minRequired: MIN_EXTRACTED_TEXT_LENGTH,
       });
       // We still proceed but flag this - the AI extraction step can decide
@@ -581,13 +595,13 @@ export async function extractTextFromDocument(
     await prisma.referralDocument.update({
       where: { id: documentId },
       data: {
-        contentText: extractedText,
+        contentText: normalizedText,
         status: 'TEXT_EXTRACTED',
         updatedAt: new Date(),
       },
     });
 
-    log.info('Text extraction complete', { textLength: extractedText.length });
+    log.info('Text extraction complete', { textLength: normalizedText.length });
 
     // Create audit log
     await prisma.auditLog.create({
@@ -597,7 +611,7 @@ export async function extractTextFromDocument(
         resourceType: 'referral_document',
         resourceId: documentId,
         metadata: {
-          textLength: extractedText.length,
+          textLength: normalizedText.length,
           mimeType: document.mimeType,
           isShortText,
         },
@@ -605,12 +619,12 @@ export async function extractTextFromDocument(
     });
 
     // Return result with preview
-    const preview = extractedText.substring(0, 500) + (extractedText.length > 500 ? '...' : '');
+    const preview = normalizedText.substring(0, 500) + (normalizedText.length > 500 ? '...' : '');
 
     return {
       id: documentId,
       status: 'TEXT_EXTRACTED',
-      textLength: extractedText.length,
+      textLength: normalizedText.length,
       preview,
       isShortText,
     };
@@ -646,6 +660,180 @@ export async function extractTextFromDocument(
 
     throw error;
   }
+}
+
+/**
+ * Extract text from a buffer based on its MIME type.
+ *
+ * Routes to the appropriate extraction method for each file type.
+ */
+async function extractTextByMimeType(
+  content: Buffer,
+  mimeType: string,
+  log: ReturnType<typeof logger.child>
+): Promise<string> {
+  // PDF extraction
+  if (mimeType === 'application/pdf') {
+    return extractTextFromPdfBuffer(content, log);
+  }
+
+  // Plain text - direct decode
+  if (mimeType === 'text/plain') {
+    return content.toString('utf-8');
+  }
+
+  // Image extraction via Claude Vision
+  if (isImageMimeType(mimeType)) {
+    return extractTextFromImageBuffer(content, mimeType, log);
+  }
+
+  // Word document extraction via Mammoth
+  if (isDocxMimeType(mimeType)) {
+    return extractTextFromDocxBuffer(content, log);
+  }
+
+  // RTF extraction - extract plain text content
+  if (mimeType === 'application/rtf' || mimeType === 'text/rtf') {
+    return extractTextFromRtfBuffer(content, log);
+  }
+
+  throw new Error(`Unsupported MIME type for text extraction: ${mimeType}`);
+}
+
+/**
+ * Extract text from an image buffer using Claude Vision.
+ *
+ * Handles HEIC/HEIF conversion for iPhone photos before vision extraction.
+ */
+async function extractTextFromImageBuffer(
+  content: Buffer,
+  mimeType: string,
+  log: ReturnType<typeof logger.child>
+): Promise<string> {
+  // Validate image first
+  const validation = await validateImageByType(content, mimeType);
+  if (!validation.valid) {
+    throw new Error(`Invalid image: ${validation.error}`);
+  }
+
+  log.info('Image validated', {
+    width: validation.width,
+    height: validation.height,
+    format: validation.format,
+  });
+
+  // Convert HEIC/HEIF to JPEG for vision API (which doesn't support HEIC)
+  let processedBuffer = content;
+  let processedMimeType = mimeType;
+
+  if (isHeicMimeType(mimeType)) {
+    log.info('Converting HEIC to JPEG for vision extraction');
+    const converted = await convertToJpeg(content, mimeType);
+    processedBuffer = converted.buffer;
+    processedMimeType = converted.mimeType;
+  }
+
+  // Check if the processed type is supported by vision API
+  if (!isVisionSupportedMimeType(processedMimeType)) {
+    // Convert non-supported formats (like PNG) to JPEG
+    // Note: PNG is actually supported, but we keep this for safety
+    const converted = await convertToJpeg(content, mimeType);
+    processedBuffer = converted.buffer;
+    processedMimeType = converted.mimeType;
+  }
+
+  // Extract text using Claude Vision
+  log.info('Extracting text via vision API');
+  const result = await extractTextFromImageBufferVision(
+    processedBuffer,
+    processedMimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+  );
+
+  if (!result.success) {
+    throw new Error(result.error || 'Vision extraction failed');
+  }
+
+  log.info('Vision extraction complete', {
+    textLength: result.text.length,
+    inputTokens: result.inputTokens,
+    outputTokens: result.outputTokens,
+  });
+
+  return result.text;
+}
+
+/**
+ * Extract text from a Word document buffer using Mammoth.
+ */
+async function extractTextFromDocxBuffer(
+  content: Buffer,
+  log: ReturnType<typeof logger.child>
+): Promise<string> {
+  const result = await validateAndExtractDocx(content);
+
+  if (!result.success) {
+    throw new Error(result.error || 'Word document extraction failed');
+  }
+
+  // Log any warnings from mammoth
+  if (result.messages.length > 0) {
+    log.warn('Word document extraction warnings', {
+      messages: result.messages.map((m) => m.message),
+    });
+  }
+
+  log.info('Word document text extracted', { textLength: result.text.length });
+  return result.text;
+}
+
+/**
+ * Extract text from an RTF buffer.
+ *
+ * RTF is a complex format, but for referral letters we typically just need
+ * to extract the plain text content. This uses a simple approach of stripping
+ * RTF control codes while preserving the text content.
+ */
+async function extractTextFromRtfBuffer(
+  content: Buffer,
+  log: ReturnType<typeof logger.child>
+): Promise<string> {
+  // Decode as UTF-8 (or Latin-1 for older RTF files)
+  let rtfContent = content.toString('utf-8');
+
+  // If it doesn't start with RTF header, try Latin-1
+  if (!rtfContent.startsWith('{\\rtf')) {
+    rtfContent = content.toString('latin1');
+  }
+
+  // Validate RTF header
+  if (!rtfContent.startsWith('{\\rtf')) {
+    throw new Error('Invalid RTF file: Missing RTF header');
+  }
+
+  // Extract plain text from RTF
+  // This is a simplified extraction that handles common RTF patterns
+  let text = rtfContent
+    // Remove RTF header and font tables
+    .replace(/\{\\rtf[^}]*\}/g, '')
+    // Handle line breaks
+    .replace(/\\par\b/g, '\n')
+    .replace(/\\line\b/g, '\n')
+    // Handle tabs
+    .replace(/\\tab\b/g, '\t')
+    // Handle special characters
+    .replace(/\\'([0-9a-f]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/\\u(\d+)\?/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    // Remove other control words (keep the space after if present)
+    .replace(/\\[a-z]+\d*\s?/gi, '')
+    // Remove group markers
+    .replace(/[{}]/g, '')
+    // Clean up extra whitespace
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  log.info('RTF text extracted', { textLength: text.length });
+  return text;
 }
 
 /**

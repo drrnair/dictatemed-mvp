@@ -4,8 +4,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ReferralDocumentStatus } from '@/domains/referrals/referral.types';
 
-// Hoist mock to top level so it's available for vi.mock calls
+// Hoist mocks to top level so they're available for vi.mock calls
 const mockExtractPdfText = vi.hoisted(() => vi.fn());
+const mockIsImageMimeType = vi.hoisted(() => vi.fn());
+const mockIsHeicMimeType = vi.hoisted(() => vi.fn());
+const mockConvertToJpeg = vi.hoisted(() => vi.fn());
+const mockValidateImageByType = vi.hoisted(() => vi.fn());
+const mockIsDocxMimeType = vi.hoisted(() => vi.fn());
+const mockValidateAndExtractDocx = vi.hoisted(() => vi.fn());
+const mockExtractTextFromImageBufferVision = vi.hoisted(() => vi.fn());
+const mockIsVisionSupportedMimeType = vi.hoisted(() => vi.fn());
 
 // Mock Prisma
 vi.mock('@/infrastructure/db/client', () => ({
@@ -53,6 +61,26 @@ vi.mock('@/infrastructure/supabase', () => ({
 // Mock pdf-utils module
 vi.mock('@/domains/referrals/pdf-utils', () => ({
   extractPdfText: mockExtractPdfText,
+}));
+
+// Mock image-utils module
+vi.mock('@/domains/referrals/image-utils', () => ({
+  isImageMimeType: mockIsImageMimeType,
+  isHeicMimeType: mockIsHeicMimeType,
+  convertToJpeg: mockConvertToJpeg,
+  validateImageByType: mockValidateImageByType,
+}));
+
+// Mock docx-utils module
+vi.mock('@/domains/referrals/docx-utils', () => ({
+  isDocxMimeType: mockIsDocxMimeType,
+  validateAndExtractDocx: mockValidateAndExtractDocx,
+}));
+
+// Mock vision-extraction module
+vi.mock('@/domains/referrals/vision-extraction', () => ({
+  extractTextFromImageBufferVision: mockExtractTextFromImageBufferVision,
+  isVisionSupportedMimeType: mockIsVisionSupportedMimeType,
 }));
 
 // Mock encryption functions
