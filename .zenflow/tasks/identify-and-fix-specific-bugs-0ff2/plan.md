@@ -54,46 +54,27 @@ See full specification: `.zenflow/tasks/identify-and-fix-specific-bugs-0ff2/spec
 
 ---
 
-### [ ] Step: Bug 3 - PDF Upload Error
+### [x] Step: Bug 3 - PDF Upload Error
 <!-- chat-id: current -->
 
 **Error**: "Unable to prepare document upload. Please try again."
 **File**: "Reports from 02122025.pdf" (53.1 KB)
 
-**Root Cause Analysis**:
-The error occurs at `POST /api/referrals` when `createReferralDocument()` fails. Three likely causes:
-
-1. **Supabase Storage Bucket Not Created** (Most Likely)
-   - The `clinical-documents` bucket must exist in Supabase Storage
-   - Verify: Supabase Dashboard → Storage → Buckets
-
-2. **Missing/Invalid Service Role Key**
-   - `SUPABASE_SERVICE_ROLE_KEY` env var required for signed URL generation
-   - Must be a valid service role key from Supabase Dashboard → Settings → API
-
-3. **Bucket RLS/Permission Issues**
-   - Even with service role key, restrictive policies can block operations
+**Root Cause**: Storage buckets were not created in Supabase. The `storage.buckets` table was empty.
 
 **Fix Applied**:
-- File: `src/app/api/referrals/route.ts`
-- Added specific error handling for bucket/auth errors with actionable messages
-- Improved error logging to capture actual Supabase error details
 
-**Required Infrastructure Fix** (user action needed):
-```sql
--- Run in Supabase SQL Editor to create storage bucket
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'clinical-documents',
-  'clinical-documents',
-  false,
-  10485760,
-  ARRAY['application/pdf', 'text/plain']::text[]
-)
-ON CONFLICT (id) DO NOTHING;
-```
+1. **Created all 3 required storage buckets**:
+   - `clinical-documents` (10 MB, PDF/text) - for referral documents
+   - `audio-recordings` (100 MB, audio formats) - for consultation recordings
+   - `user-assets` (5 MB, images/PDF) - for signatures and letterheads
 
-**Verification Steps**:
-1. Check Supabase Dashboard → Storage for `clinical-documents` bucket
-2. Verify `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`
-3. Try upload again - error message will now indicate specific cause
+2. **Created storage access policies**:
+   - Service role full access (for API operations)
+   - Authenticated users: upload, read, delete permissions
+
+3. **Improved error handling** in `src/app/api/referrals/route.ts`:
+   - Added specific error messages for bucket/auth issues
+   - Better error logging for debugging
+
+**Verification**: PDF upload should now work. Try uploading again.
