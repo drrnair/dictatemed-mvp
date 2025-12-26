@@ -3,7 +3,7 @@
 // src/components/referral/BackgroundProcessingIndicator.tsx
 // Shows status of background document processing (full extraction)
 
-import { Loader2, CheckCircle2, AlertCircle, FileText, Info } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FullExtractionStatus } from '@/domains/referrals';
 
