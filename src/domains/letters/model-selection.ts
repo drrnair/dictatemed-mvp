@@ -169,7 +169,7 @@ function estimateSourceTokens(sources: LetterSources): number {
     // Add speaker segments if available
     if (sources.transcript.speakers) {
       for (const segment of sources.transcript.speakers) {
-        totalChars += segment.text.length + 50; // +50 for formatting
+        totalChars += segment.text.length + TOKEN_ESTIMATION.SPEAKER_SEGMENT_OVERHEAD; // overhead for formatting
       }
     }
   }
@@ -181,12 +181,12 @@ function estimateSourceTokens(sources: LetterSources): number {
       const extractedDataStr = JSON.stringify(doc.extractedData);
       totalChars += extractedDataStr.length;
 
-      // Raw text (if available, capped at 500 chars as per generation.ts)
+      // Raw text (if available, capped as per generation.ts)
       if (doc.rawText) {
-        totalChars += Math.min(doc.rawText.length, 500);
+        totalChars += Math.min(doc.rawText.length, TOKEN_ESTIMATION.DOCUMENT_TEXT_CAP);
       }
 
-      totalChars += 200; // Overhead for document metadata
+      totalChars += TOKEN_ESTIMATION.DOCUMENT_METADATA_OVERHEAD; // Overhead for document metadata
     }
   }
 
@@ -196,11 +196,11 @@ function estimateSourceTokens(sources: LetterSources): number {
   }
 
   // Add prompt overhead (base prompt + letter-specific instructions)
-  totalChars += 3000; // Approximate size of prompt template
+  totalChars += AI_MODEL.PROMPT_TEMPLATE_SIZE; // Approximate size of prompt template
 
-  // Direct calculation: 1 token ≈ 3.5 characters for medical text
+  // Direct calculation using chars-per-token ratio for medical text
   // This is more efficient than creating a large string just to estimate
-  return Math.ceil(totalChars / 3.5);
+  return Math.ceil(totalChars / AI_MODEL.CHARS_PER_TOKEN);
 }
 
 /**
@@ -213,7 +213,7 @@ export function getRecommendedModel(letterType: LetterType): {
 } {
   const complexity = LETTER_COMPLEXITY_SCORES[letterType] ?? 5;
 
-  if (complexity >= 7) {
+  if (complexity >= LETTER_COMPLEXITY.OPUS_THRESHOLD) {
     return {
       modelId: MODELS.OPUS,
       reason: `${letterType} letters are complex and benefit from Opus quality`,

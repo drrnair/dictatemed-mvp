@@ -4,6 +4,7 @@
 import { createClient, type DeepgramClient } from '@deepgram/sdk';
 import { logger } from '@/lib/logger';
 import { getDeepgramKeyterms } from './keyterms';
+import { TRANSCRIPTION } from '@/lib/constants';
 import type {
   TranscriptionRequest,
   TranscriptionOptions,
