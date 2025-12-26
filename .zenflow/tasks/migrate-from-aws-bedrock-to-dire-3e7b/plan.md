@@ -141,6 +141,7 @@ Update all domain services to use the unified AI layer.
 ---
 
 ### [ ] Step 5: Update Tests
+<!-- chat-id: 2bee8144-c2ee-471e-b60b-0a43b68a4049 -->
 
 Update all test files to mock the new unified AI layer.
 
