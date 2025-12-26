@@ -51,3 +51,38 @@ See full specification: `.zenflow/tasks/identify-and-fix-specific-bugs-0ff2/spec
 1. Run `npx prisma generate` to regenerate Prisma client
 2. Check server logs for actual error message
 3. Verify database migrations are applied
+
+---
+
+### [x] Step: Bug 3 - PDF Upload Error
+<!-- chat-id: current -->
+
+**Error**: "Unable to prepare document upload. Please try again."
+**File**: "Reports from 02122025.pdf" (53.1 KB)
+
+**Root Cause**: The Supabase storage migration (`supabase/migrations/001_create_storage_buckets.sql`) was never run on the production database. The `storage.buckets` table was empty.
+
+**Fix Applied**:
+
+1. **Ran the official storage migration** on Supabase:
+   - `audio-recordings` (500 MB, audio formats) - for consultation recordings
+   - `clinical-documents` (50 MB, PDF/images/text) - for referral documents
+   - `user-assets` (5 MB, images) - for signatures and letterheads
+
+2. **Created storage RLS policies** (16 policies total):
+   - Service role full access (for API operations)
+   - Per-bucket authenticated user policies (select/insert/update/delete)
+
+3. **Updated migration file** (`001_create_storage_buckets.sql`):
+   - Added `text/plain` to `clinical-documents` allowed MIME types
+
+4. **Improved error handling** in `src/app/api/referrals/route.ts`:
+   - Added specific error messages for bucket/auth issues
+   - Better error logging for debugging
+
+**Note for deployments**: The Supabase storage migration must be run manually:
+```bash
+psql $SUPABASE_DB_URL -f supabase/migrations/001_create_storage_buckets.sql
+```
+
+**Verification**: PDF upload should now work. Try uploading again.
