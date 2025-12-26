@@ -40,45 +40,45 @@ vi.mock('@/infrastructure/db/encryption', () => ({
   decryptPatientData: vi.fn(),
 }));
 
-// Test fixtures
+// Test fixtures - Using valid UUIDs
 const mockUserPracticeA = {
-  id: 'user-a-id',
+  id: '11111111-1111-1111-1111-111111111111',
   auth0Id: 'auth0|user-a',
   email: 'user-a@practice-a.com',
   name: 'Dr. Alice',
   role: 'SPECIALIST' as const,
   clinicianRole: 'MEDICAL' as const,
-  practiceId: 'practice-a-id',
+  practiceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   subspecialties: ['Cardiology'],
   onboardingCompleted: true,
   onboardingCompletedAt: new Date(),
 };
 
 const mockUserPracticeB = {
-  id: 'user-b-id',
+  id: '22222222-2222-2222-2222-222222222222',
   auth0Id: 'auth0|user-b',
   email: 'user-b@practice-b.com',
   name: 'Dr. Bob',
   role: 'SPECIALIST' as const,
   clinicianRole: 'MEDICAL' as const,
-  practiceId: 'practice-b-id',
+  practiceId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
   subspecialties: ['Cardiology'],
   onboardingCompleted: true,
   onboardingCompletedAt: new Date(),
 };
 
 const mockPatientPracticeA = {
-  id: 'patient-a-id',
+  id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
   encryptedData: 'encrypted-data-a',
-  practiceId: 'practice-a-id',
+  practiceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 };
 
 const mockPatientPracticeB = {
-  id: 'patient-b-id',
+  id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
   encryptedData: 'encrypted-data-b',
-  practiceId: 'practice-b-id',
+  practiceId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 };
@@ -143,7 +143,7 @@ describe('Patients API', () => {
       // Verify practice scoping
       expect(prisma.patient.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { practiceId: 'practice-a-id' },
+          where: { practiceId: mockUserPracticeA.practiceId },
         })
       );
     });
@@ -268,9 +268,11 @@ describe('Patients API', () => {
     it('should return 404 when patient does not exist', async () => {
       vi.mocked(prisma.patient.findUnique).mockResolvedValue(null);
 
-      const request = createRequest('/api/patients/non-existent-id');
+      // Use a valid UUID that doesn't exist
+      const nonExistentId = '00000000-0000-0000-0000-000000000000';
+      const request = createRequest('/api/patients/' + nonExistentId);
       const response = await GET_BY_ID(request, {
-        params: Promise.resolve({ id: 'non-existent-id' }),
+        params: Promise.resolve({ id: nonExistentId }),
       });
 
       expect(response.status).toBe(404);
@@ -611,7 +613,7 @@ describe('Patients API', () => {
 
       expect(prisma.patient.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { practiceId: 'practice-b-id' },
+          where: { practiceId: mockUserPracticeB.practiceId },
         })
       );
     });

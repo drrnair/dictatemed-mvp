@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import type { Prisma, Subspecialty } from '@prisma/client';
+import type { Prisma, Subspecialty, LetterStatus, LetterType as PrismaLetterType } from '@prisma/client';
 import { getSession } from '@/lib/auth';
 import { generateLetter, listLetters } from '@/domains/letters/letter.service';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
@@ -165,8 +165,8 @@ export async function GET(request: NextRequest) {
     // Build where clause dynamically with proper Prisma types
     const where: Prisma.LetterWhereInput = {
       userId: session.user.id,
-      ...(status && { status: status as Prisma.EnumLetterStatusFilter }),
-      ...(letterType && { letterType: letterType as Prisma.EnumLetterTypeFilter }),
+      ...(status && { status: status as LetterStatus }),
+      ...(letterType && { letterType: letterType as PrismaLetterType }),
       ...((startDate || endDate) && {
         createdAt: {
           ...(startDate && { gte: new Date(startDate) }),
