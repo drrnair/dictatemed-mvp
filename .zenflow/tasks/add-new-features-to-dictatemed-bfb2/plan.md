@@ -461,6 +461,7 @@ npm run test:coverage    # ✅ New code >95% coverage
 ---
 
 ### [ ] Step: Create Implementation Report
+<!-- chat-id: edb460f8-300b-4bf0-902a-b8040d52ea22 -->
 
 Document what was implemented and tested.
 
