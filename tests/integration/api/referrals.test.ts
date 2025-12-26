@@ -93,11 +93,12 @@ vi.mock('@/lib/logger', () => ({
   },
 }));
 
-// Mock bedrock for fast extraction
-vi.mock('@/infrastructure/bedrock/text-generation', () => ({
+// Mock AI for fast extraction (unified layer)
+vi.mock('@/infrastructure/ai', () => ({
   generateTextWithRetry: vi.fn(),
   MODELS: {
-    SONNET: 'anthropic.claude-sonnet-4-20250514-v1:0',
+    SONNET: 'sonnet',
+    OPUS: 'opus',
   },
 }));
 
@@ -105,7 +106,7 @@ vi.mock('@/infrastructure/bedrock/text-generation', () => ({
 import * as auth from '@/lib/auth';
 import { prisma } from '@/infrastructure/db/client';
 import * as supabaseStorage from '@/infrastructure/supabase';
-import * as textGeneration from '@/infrastructure/bedrock/text-generation';
+import * as textGeneration from '@/infrastructure/ai';
 import { GET, POST } from '@/app/api/referrals/route';
 import { GET as GET_BY_ID, DELETE } from '@/app/api/referrals/[id]/route';
 import { POST as APPLY_REFERRAL } from '@/app/api/referrals/[id]/apply/route';

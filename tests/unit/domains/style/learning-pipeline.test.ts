@@ -54,7 +54,7 @@ vi.mock('@/domains/style/subspecialty-profile.service', () => ({
 }));
 
 // Import after mocking
-import { generateTextWithRetry } from '@/infrastructure/bedrock';
+import { generateTextWithRetry } from '@/infrastructure/ai';
 
 describe('learning-pipeline', () => {
   beforeEach(() => {

@@ -82,11 +82,11 @@ vi.mock('@/infrastructure/db/client', () => ({
   },
 }));
 
-vi.mock('@/infrastructure/bedrock', () => ({
+vi.mock('@/infrastructure/ai', () => ({
   generateTextWithRetry: vi.fn(),
   MODELS: {
-    SONNET: 'claude-sonnet',
-    OPUS: 'claude-opus',
+    SONNET: 'sonnet',
+    OPUS: 'opus',
   },
 }));
 
@@ -110,7 +110,7 @@ vi.mock('@/domains/audit/provenance.service', () => ({
 
 // Import after mocks
 import { prisma } from '@/infrastructure/db/client';
-import { generateTextWithRetry } from '@/infrastructure/bedrock';
+import { generateTextWithRetry } from '@/infrastructure/ai';
 import * as learningPipeline from '@/domains/style/learning-pipeline';
 import * as profileService from '@/domains/style/subspecialty-profile.service';
 import { analyzeDiff } from '@/domains/style/diff-analyzer';
