@@ -4,10 +4,11 @@
 
 Successfully implemented support for expanded file upload types in the DictateMED referral upload system. The feature extends the platform from accepting only PDF and TXT files to supporting **9 file types** including images (JPEG, PNG, HEIC/HEIF), Word documents (.docx), and RTF files.
 
-**Feature Flag**: `FEATURE_EXTENDED_UPLOAD_TYPES`
+**Feature Flag**: `NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES`
 - Set to `false` by default for safe rollout
 - When disabled, only PDF and TXT uploads are accepted (existing behavior)
 - When enabled, all 9 file types are accepted
+- Uses `NEXT_PUBLIC_` prefix to work in both client and server components
 
 ---
 
@@ -47,7 +48,7 @@ Successfully implemented support for expanded file upload types in the DictateME
 | `tests/unit/domains/referrals/docx-utils.test.ts` | Unit tests for DOCX utilities |
 | `tests/unit/domains/referrals/vision-extraction.test.ts` | Unit tests for vision extraction |
 | `tests/unit/domains/referrals/referral.types.test.ts` | Unit tests for MIME type helpers |
-| `tests/e2e/flows/extended-upload-types.spec.ts` | E2E tests for new file types (40 tests) |
+| `tests/e2e/flows/extended-upload-types.spec.ts` | E2E tests for new file types (20 tests) |
 | `scripts/generate-test-fixtures.ts` | Test fixture generation script |
 | `tests/e2e/fixtures/referrals/image-referral-001.jpg` | Test JPEG fixture |
 | `tests/e2e/fixtures/referrals/image-referral-001.png` | Test PNG fixture |
@@ -128,14 +129,14 @@ Status:   Validated via --list (syntax verified, not executed)
 
 ## Feature Flag Behavior
 
-### When `FEATURE_EXTENDED_UPLOAD_TYPES=false` (default):
+### When `NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES=false` (default):
 
 - **Allowed types**: PDF, TXT only
 - **UI shows**: `.pdf, .txt`
 - **Extended types**: Rejected with clear error message
 - **Existing functionality**: 100% unchanged
 
-### When `FEATURE_EXTENDED_UPLOAD_TYPES=true`:
+### When `NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES=true`:
 
 - **Allowed types**: All 9 types
 - **UI shows**: `.pdf, .txt, .jpg, .jpeg, .png, .heic, .heif, .docx, .rtf`
@@ -174,7 +175,7 @@ If issues are discovered after deployment:
 
 1. Set environment variable:
    ```bash
-   FEATURE_EXTENDED_UPLOAD_TYPES=false
+   NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES=false
    ```
 
 2. Restart the application
