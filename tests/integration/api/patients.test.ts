@@ -441,12 +441,13 @@ describe('Patients API', () => {
     });
 
     it('should return 409 when patient has related records', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(prisma.patient.findUnique).mockResolvedValue({
         ...mockPatientPracticeA,
         recordings: [{ id: 'rec-1' }],
         documents: [],
         letters: [],
-      });
+      } as any);
 
       const request = createRequest('/api/patients/' + mockPatientPracticeA.id, {
         method: 'DELETE',
@@ -461,12 +462,13 @@ describe('Patients API', () => {
     });
 
     it('should delete patient when authorized and no related records', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(prisma.patient.findUnique).mockResolvedValue({
         ...mockPatientPracticeA,
         recordings: [],
         documents: [],
         letters: [],
-      });
+      } as any);
       vi.mocked(prisma.patient.delete).mockResolvedValue(mockPatientPracticeA);
 
       const request = createRequest('/api/patients/' + mockPatientPracticeA.id, {
@@ -583,12 +585,13 @@ describe('Patients API', () => {
 
     it('Practice A user cannot delete Practice B patients', async () => {
       vi.mocked(auth.getSession).mockResolvedValue({ user: mockUserPracticeA });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(prisma.patient.findUnique).mockResolvedValue({
         ...mockPatientPracticeB,
         recordings: [],
         documents: [],
         letters: [],
-      });
+      } as any);
 
       const request = createRequest('/api/patients/' + mockPatientPracticeB.id, {
         method: 'DELETE',

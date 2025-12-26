@@ -71,12 +71,12 @@ const mockRecordingUserA = {
   userId: '11111111-1111-1111-1111-111111111111',
   consultationId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
   patientId: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
-  mode: 'DICTATION',
-  status: 'PENDING',
+  mode: 'DICTATION' as const,
+  status: 'UPLOADING' as const,
   consentType: 'VERBAL' as const,
-  durationSeconds: null,
-  s3Path: null,
-  transcription: null,
+  durationSeconds: undefined,
+  audioUrl: undefined,
+  transcriptId: undefined,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 };
@@ -86,12 +86,12 @@ const mockRecordingUserB = {
   userId: '22222222-2222-2222-2222-222222222222',
   consultationId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
   patientId: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
-  mode: 'AMBIENT',
-  status: 'PENDING',
+  mode: 'AMBIENT' as const,
+  status: 'UPLOADING' as const,
   consentType: 'VERBAL' as const,
-  durationSeconds: null,
-  s3Path: null,
-  transcription: null,
+  durationSeconds: undefined,
+  audioUrl: undefined,
+  transcriptId: undefined,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 };
@@ -202,6 +202,7 @@ describe('Recordings API', () => {
         total: 100,
         page: 3,
         limit: 10,
+        hasMore: true,
       });
 
       const request = createRequest('/api/recordings?page=3&limit=10');
@@ -258,8 +259,9 @@ describe('Recordings API', () => {
 
     it('should create recording with correct userId', async () => {
       vi.mocked(recordingService.createRecording).mockResolvedValue({
-        recording: mockRecordingUserA,
+        id: mockRecordingUserA.id,
         uploadUrl: 'https://upload.example.com/recording',
+        expiresAt: new Date('2024-01-02'),
       });
 
       const request = createRequest('/api/recordings', {

@@ -527,7 +527,8 @@ describe('Letters API', () => {
     });
 
     it('should return 400 when patching approved letter', async () => {
-      vi.mocked(prisma.letter.findFirst).mockResolvedValue(mockApprovedLetter);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.mocked(prisma.letter.findFirst).mockResolvedValue(mockApprovedLetter as any);
 
       const request = createRequest('/api/letters/' + mockApprovedLetter.id, {
         method: 'PATCH',
@@ -572,9 +573,12 @@ describe('Letters API', () => {
     });
 
     it('should delete letter when user is owner', async () => {
-      vi.mocked(prisma.letter.findFirst).mockResolvedValue(mockLetterUserA);
-      vi.mocked(prisma.letter.delete).mockResolvedValue(mockLetterUserA);
-      vi.mocked(prisma.auditLog.create).mockResolvedValue({});
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.mocked(prisma.letter.findFirst).mockResolvedValue(mockLetterUserA as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.mocked(prisma.letter.delete).mockResolvedValue(mockLetterUserA as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
       const request = createRequest('/api/letters/' + mockLetterUserA.id, {
         method: 'DELETE',
@@ -592,7 +596,8 @@ describe('Letters API', () => {
     });
 
     it('should return 400 when deleting approved letter', async () => {
-      vi.mocked(prisma.letter.findFirst).mockResolvedValue(mockApprovedLetter);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.mocked(prisma.letter.findFirst).mockResolvedValue(mockApprovedLetter as any);
 
       const request = createRequest('/api/letters/' + mockApprovedLetter.id, {
         method: 'DELETE',
@@ -607,9 +612,12 @@ describe('Letters API', () => {
     });
 
     it('should create audit log on deletion', async () => {
-      vi.mocked(prisma.letter.findFirst).mockResolvedValue(mockLetterUserA);
-      vi.mocked(prisma.letter.delete).mockResolvedValue(mockLetterUserA);
-      vi.mocked(prisma.auditLog.create).mockResolvedValue({});
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.mocked(prisma.letter.findFirst).mockResolvedValue(mockLetterUserA as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.mocked(prisma.letter.delete).mockResolvedValue(mockLetterUserA as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
 
       const request = createRequest('/api/letters/' + mockLetterUserA.id, {
         method: 'DELETE',
