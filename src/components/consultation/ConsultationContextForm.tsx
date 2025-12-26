@@ -3,6 +3,7 @@
 // src/components/consultation/ConsultationContextForm.tsx
 // Main form combining patient, referrer, CC recipients, and letter type selection
 // Now includes optional referral upload for auto-population
+// Supports multi-document upload with fast extraction and background processing
 
 import { useCallback, useState } from 'react';
 import { logger } from '@/lib/logger';
@@ -18,11 +19,12 @@ import { PatientContacts } from './PatientContacts';
 import {
   ReferralUploader,
   ReferralReviewPanel,
+  BackgroundProcessingIndicator,
 } from '@/components/referral';
 import { toast } from '@/hooks/use-toast';
 import type { PatientSummary, ReferrerInfo, CCRecipientInfo } from '@/domains/consultation';
 import type { LetterType } from '@prisma/client';
-import type { ReferralExtractedData, ApplyReferralInput } from '@/domains/referrals';
+import type { ReferralExtractedData, ApplyReferralInput, FastExtractedData } from '@/domains/referrals';
 
 export interface ConsultationFormData {
   patient?: PatientSummary;
@@ -36,6 +38,10 @@ export interface ConsultationFormData {
     keyProblems?: string[];
   };
   referralDocumentId?: string;
+  // Multi-document upload: IDs of all uploaded documents
+  referralDocumentIds?: string[];
+  // Fast extraction data from multi-document upload
+  fastExtractionData?: FastExtractedData;
 }
 
 interface ConsultationContextFormProps {
@@ -47,6 +53,12 @@ interface ConsultationContextFormProps {
     referrer?: string;
     letterType?: string;
   };
+  /** Enable multi-document upload with fast extraction and background processing */
+  multiDocumentUpload?: boolean;
+  /** Show background processing indicator (when documents are being processed) */
+  showBackgroundProcessing?: boolean;
+  /** Number of documents being processed in background */
+  processingDocumentCount?: number;
 }
 
 export function ConsultationContextForm({
@@ -54,6 +66,9 @@ export function ConsultationContextForm({
   onChange,
   disabled,
   errors,
+  multiDocumentUpload = false,
+  showBackgroundProcessing = false,
+  processingDocumentCount = 0,
 }: ConsultationContextFormProps) {
   const [showContacts, setShowContacts] = useState(false);
 
@@ -63,7 +78,11 @@ export function ConsultationContextForm({
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
 
-  // Handle successful extraction
+  // Multi-document upload state
+  const [uploadedDocumentIds, setUploadedDocumentIds] = useState<string[]>([]);
+  const [isMultiDocProcessing, setIsMultiDocProcessing] = useState(false);
+
+  // Handle successful extraction (single-file mode)
   const handleExtractionComplete = useCallback(
     (id: string, data: ReferralExtractedData) => {
       setReferralId(id);
@@ -71,6 +90,52 @@ export function ConsultationContextForm({
       setShowReviewPanel(true);
     },
     []
+  );
+
+  // Handle fast extraction complete (multi-document mode)
+  const handleFastExtractionComplete = useCallback(
+    (data: FastExtractedData, documentIds: string[]) => {
+      setUploadedDocumentIds(documentIds);
+
+      // Pre-fill patient name from fast extraction if available
+      const patientName = data.patientName?.value;
+
+      // Update form with fast extraction data
+      onChange({
+        ...value,
+        fastExtractionData: data,
+        referralDocumentIds: documentIds,
+      });
+
+      // Show toast with extracted info
+      if (patientName) {
+        toast({
+          title: 'Patient identified',
+          description: `Found: ${patientName}. Search for this patient below.`,
+        });
+      }
+    },
+    [value, onChange]
+  );
+
+  // Handle continue from multi-document upload
+  const handleMultiDocContinue = useCallback(
+    (documentIds: string[]) => {
+      setUploadedDocumentIds(documentIds);
+      setIsMultiDocProcessing(true); // Background processing started
+
+      // Update form with document IDs
+      onChange({
+        ...value,
+        referralDocumentIds: documentIds,
+      });
+
+      toast({
+        title: 'Documents uploaded',
+        description: `${documentIds.length} document${documentIds.length !== 1 ? 's' : ''} processing in background.`,
+      });
+    },
+    [value, onChange]
   );
 
   // Handle apply from review panel

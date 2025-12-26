@@ -18,11 +18,19 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { formatFileSize, type QueuedFile } from '@/domains/referrals';
 
+/**
+ * Props for the DocumentUploadQueue component.
+ */
 export interface DocumentUploadQueueProps {
+  /** List of files in the upload queue with their current status */
   files: QueuedFile[];
+  /** Callback when user clicks remove on a file (by client-side ID) */
   onRemoveFile: (clientId: string) => void;
+  /** Callback when user clicks retry on a failed file (by client-side ID) */
   onRetryFile: (clientId: string) => void;
+  /** Callback when user clicks cancel on an in-progress file (by client-side ID) */
   onCancelFile: (clientId: string) => void;
+  /** Additional CSS classes to apply to the container */
   className?: string;
 }
 
@@ -116,13 +124,15 @@ function QueuedFileItem({
         {/* File size and status */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
           <span>{formatFileSize(file.file.size)}</span>
-          <span>•</span>
+          <span aria-hidden="true">•</span>
           <span
             className={cn(
               isFailed && 'text-red-600',
               isComplete && 'text-green-600'
             )}
             data-testid="file-status"
+            aria-live="polite"
+            aria-atomic="true"
           >
             {getStatusText(file.status)}
           </span>

@@ -1,5 +1,6 @@
 // src/app/api/referrals/[id]/extract-structured/route.ts
 // Structured data extraction endpoint for referral documents
+// This performs the "full extraction" (Phase 2) - complete context extraction in background
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -7,6 +8,7 @@ import { getSession } from '@/lib/auth';
 import { extractStructuredData } from '@/domains/referrals/referral-extraction.service';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, createRateLimitKey } from '@/lib/rate-limit';
+import { prisma } from '@/infrastructure/db/client';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -72,10 +74,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
     const { id } = validation;
 
-    log.info('Starting structured extraction', {
+    log.info('Starting structured extraction (full extraction phase)', {
       documentId: id,
       userId: session.user.id,
       practiceId: session.user.practiceId,
+    });
+
+    // Mark full extraction as started
+    await prisma.referralDocument.update({
+      where: { id },
+      data: {
+        fullExtractionStatus: 'PROCESSING',
+        fullExtractionStartedAt: new Date(),
+        fullExtractionError: null,
+      },
     });
 
     const result = await extractStructuredData(
@@ -84,7 +96,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       id
     );
 
-    log.info('Structured extraction complete', {
+    // Mark full extraction as complete
+    await prisma.referralDocument.update({
+      where: { id },
+      data: {
+        fullExtractionStatus: 'COMPLETE',
+        fullExtractionCompletedAt: new Date(),
+      },
+    });
+
+    log.info('Structured extraction complete (full extraction phase)', {
       documentId: id,
       overallConfidence: result.extractedData.overallConfidence,
     });
@@ -92,6 +113,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
+    const { id: rawId } = await params;
+    const idValidation = idParamSchema.safeParse(rawId);
+
+    // Mark full extraction as failed if we have a valid document ID
+    if (idValidation.success) {
+      try {
+        await prisma.referralDocument.update({
+          where: { id: idValidation.data },
+          data: {
+            fullExtractionStatus: 'FAILED',
+            fullExtractionCompletedAt: new Date(),
+            fullExtractionError: message,
+          },
+        });
+      } catch {
+        // Ignore error from updating status - document may not exist
+      }
+    }
 
     if (message === 'Referral document not found') {
       return NextResponse.json({ error: message }, { status: 404 });

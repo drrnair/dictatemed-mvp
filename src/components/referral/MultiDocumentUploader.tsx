@@ -24,10 +24,17 @@ import {
   type FastExtractedData,
 } from '@/domains/referrals';
 
+/**
+ * Props for the MultiDocumentUploader component.
+ */
 export interface MultiDocumentUploaderProps {
+  /** Callback when fast extraction completes with patient identifiers */
   onFastExtractionComplete?: (data: FastExtractedData) => void;
+  /** Callback when user clicks "Continue to Recording" with document IDs */
   onContinue?: (documentIds: string[]) => void;
+  /** Whether the uploader is disabled */
   disabled?: boolean;
+  /** Additional CSS classes to apply to the container */
   className?: string;
 }
 
@@ -59,13 +66,20 @@ export function MultiDocumentUploader({
 
   // Handle file validation errors
   const handleValidationErrors = useCallback((errors: FileValidationError[]) => {
-    if (errors.length > 0) {
-      toast({
-        title: 'Some files could not be added',
-        description: errors.map((e) => `${e.filename}: ${e.error}`).join('\n'),
-        variant: 'destructive',
-      });
-    }
+    if (errors.length === 0) return;
+
+    // Show first error with count if multiple
+    const firstError = errors[0]!;
+    const description =
+      errors.length === 1
+        ? `${firstError.filename}: ${firstError.error}`
+        : `${firstError.filename}: ${firstError.error} (+${errors.length - 1} more)`;
+
+    toast({
+      title: 'Some files could not be added',
+      description,
+      variant: 'destructive',
+    });
   }, []);
 
   // Handle file selection
@@ -200,6 +214,7 @@ export function MultiDocumentUploader({
             }
           }}
           aria-label="Upload documents"
+          aria-describedby="upload-restrictions"
           data-testid="drop-zone"
         >
           <input
@@ -221,11 +236,9 @@ export function MultiDocumentUploader({
               Drop documents here or{' '}
               <span className="text-primary">browse</span>
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {getAcceptedExtensions()} up to {formatFileSize(MAX_REFERRAL_FILE_SIZE)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Maximum {MAX_BATCH_FILES} files
+            <p id="upload-restrictions" className="text-xs text-muted-foreground mt-1">
+              {getAcceptedExtensions()} up to {formatFileSize(MAX_REFERRAL_FILE_SIZE)}.
+              Maximum {MAX_BATCH_FILES} files.
             </p>
           </div>
         </div>
