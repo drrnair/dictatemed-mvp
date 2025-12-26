@@ -60,21 +60,29 @@ See full specification: `.zenflow/tasks/identify-and-fix-specific-bugs-0ff2/spec
 **Error**: "Unable to prepare document upload. Please try again."
 **File**: "Reports from 02122025.pdf" (53.1 KB)
 
-**Root Cause**: Storage buckets were not created in Supabase. The `storage.buckets` table was empty.
+**Root Cause**: The Supabase storage migration (`supabase/migrations/001_create_storage_buckets.sql`) was never run on the production database. The `storage.buckets` table was empty.
 
 **Fix Applied**:
 
-1. **Created all 3 required storage buckets**:
-   - `clinical-documents` (10 MB, PDF/text) - for referral documents
-   - `audio-recordings` (100 MB, audio formats) - for consultation recordings
-   - `user-assets` (5 MB, images/PDF) - for signatures and letterheads
+1. **Ran the official storage migration** on Supabase:
+   - `audio-recordings` (500 MB, audio formats) - for consultation recordings
+   - `clinical-documents` (50 MB, PDF/images/text) - for referral documents
+   - `user-assets` (5 MB, images) - for signatures and letterheads
 
-2. **Created storage access policies**:
+2. **Created storage RLS policies** (16 policies total):
    - Service role full access (for API operations)
-   - Authenticated users: upload, read, delete permissions
+   - Per-bucket authenticated user policies (select/insert/update/delete)
 
-3. **Improved error handling** in `src/app/api/referrals/route.ts`:
+3. **Updated migration file** (`001_create_storage_buckets.sql`):
+   - Added `text/plain` to `clinical-documents` allowed MIME types
+
+4. **Improved error handling** in `src/app/api/referrals/route.ts`:
    - Added specific error messages for bucket/auth issues
    - Better error logging for debugging
+
+**Note for deployments**: The Supabase storage migration must be run manually:
+```bash
+psql $SUPABASE_DB_URL -f supabase/migrations/001_create_storage_buckets.sql
+```
 
 **Verification**: PDF upload should now work. Try uploading again.
