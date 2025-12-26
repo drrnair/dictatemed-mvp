@@ -7,7 +7,7 @@
 This migration involves:
 - Creating a new Anthropic client alongside existing Bedrock infrastructure
 - Building a unified abstraction layer for provider switching
-- Updating 6 domain service files to use the new unified interface
+- Updating 8 domain service files to use the new unified interface
 - Adding feature flag support for zero-downtime migration
 - Updating 7+ test files with new mocks
 
@@ -91,16 +91,18 @@ interface VisionResponse {
 }
 ```
 
-### Services Using Bedrock (6 files)
+### Services Using Bedrock (8 files)
 
 | Service | Import | Usage |
 |---------|--------|-------|
 | `src/domains/letters/letter.service.ts` | `generateTextWithRetry`, `ModelId` | Letter generation pipeline |
 | `src/domains/letters/model-selection.ts` | `MODELS`, `estimateCost`, `estimateTokenCount` | Intelligent model routing |
-| `src/domains/referrals/vision-extraction.ts` | `analyzeImage` | OCR from referral images |
+| `src/domains/referrals/vision-extraction.ts` | `analyzeImage`, `VisionRequest` | OCR from referral images |
 | `src/domains/referrals/referral-extraction.service.ts` | `generateTextWithRetry`, `MODELS` | Structured data extraction |
 | `src/domains/referrals/referral-fast-extraction.service.ts` | `generateTextWithRetry`, `MODELS` | Fast patient ID extraction |
 | `src/domains/style/style-analyzer.ts` | `generateTextWithRetry`, `MODELS` | Writing style analysis |
+| `src/domains/style/learning-pipeline.ts` | `generateTextWithRetry`, `MODELS` | Style learning pipeline |
+| `src/domains/documents/extraction.service.ts` | `analyzeImage`, `analyzeMultipleImages`, `fetchImageAsBase64` | Document extraction |
 
 ---
 
@@ -179,6 +181,8 @@ src/infrastructure/
 | `src/domains/referrals/referral-extraction.service.ts` | Update import path |
 | `src/domains/referrals/referral-fast-extraction.service.ts` | Update import path |
 | `src/domains/style/style-analyzer.ts` | Update import path |
+| `src/domains/style/learning-pipeline.ts` | Update import path |
+| `src/domains/documents/extraction.service.ts` | Update import path |
 | `tests/unit/domains/letters/model-selection.test.ts` | Update mock path |
 | `tests/unit/domains/referrals/vision-extraction.test.ts` | Update mock path |
 | `tests/unit/domains/referrals/referral-extraction.test.ts` | Update mock path |
@@ -235,6 +239,7 @@ export function generateTextStream(request: TextGenerationRequest): AsyncGenerat
 export function generateTextWithRetry(request: TextGenerationRequest, options?: RetryOptions): Promise<TextGenerationResponse>;
 export function analyzeImage(request: VisionRequest): Promise<VisionResponse>;
 export function analyzeMultipleImages(images: ImageInput[], prompt: string, options?: VisionOptions): Promise<VisionResponse>;
+export function fetchImageAsBase64(url: string): Promise<{ base64: string; mimeType: MimeType }>;
 export function estimateTokenCount(text: string): number;
 export function estimateCost(modelId: ModelId, inputTokens: number, outputTokens: number): CostEstimate;
 ```
@@ -307,6 +312,8 @@ npm run lint
 - [ ] Update `src/domains/referrals/referral-extraction.service.ts` imports
 - [ ] Update `src/domains/referrals/referral-fast-extraction.service.ts` imports
 - [ ] Update `src/domains/style/style-analyzer.ts` imports
+- [ ] Update `src/domains/style/learning-pipeline.ts` imports
+- [ ] Update `src/domains/documents/extraction.service.ts` imports
 
 ### Step 5: Update Tests
 - [ ] Update all test mocks to use `@/infrastructure/ai`

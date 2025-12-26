@@ -49,7 +49,7 @@ Install the Anthropic SDK and update environment configuration.
 
 ---
 
-### [ ] Step 2: Create Anthropic Client Module
+### [x] Step 2: Create Anthropic Client Module
 <!-- chat-id: 3cdd8e76-fb68-44fb-95a4-7de6dc730de6 -->
 
 Create the direct Anthropic API client in `src/infrastructure/anthropic/`.
@@ -64,6 +64,15 @@ Create the direct Anthropic API client in `src/infrastructure/anthropic/`.
 **Verification:**
 - `npm run typecheck` passes
 - `npm run lint` passes
+
+**Completed:**
+- Created all 5 files in `src/infrastructure/anthropic/`:
+  - `types.ts` - AnthropicError types, RetryConfig, parseAnthropicError(), calculateBackoffDelay()
+  - `client.ts` - Singleton Anthropic SDK client with getAnthropicClient(), verifyAnthropicConnection()
+  - `text-generation.ts` - generateText(), generateTextStream(), generateTextWithRetry(), estimateTokenCount(), estimateCost()
+  - `vision.ts` - analyzeImage(), analyzeMultipleImages(), fetchImageAsBase64()
+  - `index.ts` - Unified exports matching Bedrock interface pattern
+- All verifications passed: `npm run typecheck` and `npm run lint` succeed
 
 ---
 
