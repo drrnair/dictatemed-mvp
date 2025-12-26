@@ -224,7 +224,7 @@ export type ExtendedReferralMimeType = (typeof EXTENDED_REFERRAL_MIME_TYPES)[num
 export type AllowedReferralMimeType = (typeof ALLOWED_REFERRAL_MIME_TYPES)[number];
 
 // File extensions for display in UI (when extended uploads enabled)
-export const ACCEPTED_REFERRAL_EXTENSIONS = '.pdf, .txt, .jpg, .jpeg, .png, .heic, .docx, .rtf';
+export const ACCEPTED_REFERRAL_EXTENSIONS = '.pdf, .txt, .jpg, .jpeg, .png, .heic, .heif, .docx, .rtf';
 
 // File extensions for display in UI (base types only)
 export const BASE_ACCEPTED_EXTENSIONS = '.pdf, .txt';

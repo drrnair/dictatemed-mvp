@@ -31,7 +31,8 @@
     "db:seed:e2e": "npx tsx scripts/seed-e2e-test-data.ts",
     "db:teardown:e2e": "npx tsx scripts/teardown-e2e-test-data.ts",
     "db:studio": "prisma studio",
-    "generate:referral-pdfs": "npx tsx scripts/generate-referral-pdfs.ts"
+    "generate:referral-pdfs": "npx tsx scripts/generate-referral-pdfs.ts",
+    "generate:test-fixtures": "npx tsx scripts/generate-test-fixtures.ts"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^3.5.0",
@@ -88,6 +89,7 @@
     "@vitejs/plugin-react": "^4.2.1",
     "@vitest/coverage-v8": "^1.6.1",
     "autoprefixer": "^10.4.17",
+    "docx": "^9.5.1",
     "dotenv": "^17.2.3",
     "eslint": "^8.56.0",
     "eslint-config-next": "^14.2.0",

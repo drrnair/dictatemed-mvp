@@ -789,9 +789,9 @@ async function extractTextFromDocxBuffer(
 /**
  * Extract text from an RTF buffer.
  *
- * RTF is a complex format, but for referral letters we typically just need
- * to extract the plain text content. This uses a simple approach of stripping
- * RTF control codes while preserving the text content.
+ * RTF is a complex format with nested brace structures for font tables,
+ * color tables, style sheets, etc. This parser uses a stack-based approach
+ * to properly handle nested groups and extract only the visible text content.
  */
 async function extractTextFromRtfBuffer(
   content: Buffer,
@@ -810,30 +810,203 @@ async function extractTextFromRtfBuffer(
     throw new Error('Invalid RTF file: Missing RTF header');
   }
 
-  // Extract plain text from RTF
-  // This is a simplified extraction that handles common RTF patterns
-  let text = rtfContent
-    // Remove RTF header and font tables
-    .replace(/\{\\rtf[^}]*\}/g, '')
-    // Handle line breaks
-    .replace(/\\par\b/g, '\n')
-    .replace(/\\line\b/g, '\n')
-    // Handle tabs
-    .replace(/\\tab\b/g, '\t')
-    // Handle special characters
-    .replace(/\\'([0-9a-f]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-    .replace(/\\u(\d+)\?/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
-    // Remove other control words (keep the space after if present)
-    .replace(/\\[a-z]+\d*\s?/gi, '')
-    // Remove group markers
-    .replace(/[{}]/g, '')
-    // Clean up extra whitespace
-    .replace(/\r\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  // Parse RTF using a stack-based approach to handle nested groups
+  const text = parseRtfContent(rtfContent);
 
   log.info('RTF text extracted', { textLength: text.length });
   return text;
+}
+
+/**
+ * Parse RTF content using a stack-based approach.
+ *
+ * RTF structure:
+ * - Groups are delimited by { and }
+ * - Control words start with \ followed by letters, optionally followed by a number
+ * - Control symbols are \ followed by a non-letter character
+ * - Destinations (like \fonttbl, \colortbl) should be skipped
+ */
+function parseRtfContent(rtf: string): string {
+  const output: string[] = [];
+  let i = 0;
+  let depth = 0;
+  let skipGroup = 0; // Depth at which we started skipping (0 = not skipping)
+
+  // Destination control words whose content should be skipped
+  const destinationKeywords = new Set([
+    'fonttbl', 'colortbl', 'stylesheet', 'listtable', 'listoverridetable',
+    'info', 'docvar', 'pict', 'object', 'datafield', 'fldinst',
+    'header', 'footer', 'headerl', 'headerr', 'headerf',
+    'footerl', 'footerr', 'footerf', 'footnote', 'annotation',
+  ]);
+
+  while (i < rtf.length) {
+    const char = rtf[i];
+
+    if (char === '{') {
+      depth++;
+      i++;
+      continue;
+    }
+
+    if (char === '}') {
+      // If we were skipping this group, check if we're exiting it
+      if (skipGroup > 0 && depth === skipGroup) {
+        skipGroup = 0;
+      }
+      depth--;
+      i++;
+      continue;
+    }
+
+    // If we're in a skipped group, just advance
+    if (skipGroup > 0) {
+      i++;
+      continue;
+    }
+
+    if (char === '\\') {
+      // Control word or control symbol
+      i++;
+      if (i >= rtf.length) break;
+
+      const nextChar = rtf[i];
+
+      // Control symbol (non-letter after backslash)
+      if (!/[a-zA-Z]/.test(nextChar)) {
+        // Handle special control symbols
+        if (nextChar === "'") {
+          // Hex character: \'XX
+          i++;
+          if (i + 1 < rtf.length) {
+            const hex = rtf.substring(i, i + 2);
+            const code = parseInt(hex, 16);
+            if (!isNaN(code)) {
+              output.push(String.fromCharCode(code));
+            }
+            i += 2;
+          }
+        } else if (nextChar === '\\' || nextChar === '{' || nextChar === '}') {
+          // Escaped literal characters
+          output.push(nextChar);
+          i++;
+        } else if (nextChar === '~') {
+          // Non-breaking space
+          output.push('\u00A0');
+          i++;
+        } else if (nextChar === '-') {
+          // Optional hyphen (soft hyphen)
+          output.push('\u00AD');
+          i++;
+        } else if (nextChar === '_') {
+          // Non-breaking hyphen
+          output.push('\u2011');
+          i++;
+        } else if (nextChar === '\n' || nextChar === '\r') {
+          // Line break in RTF source - treat as paragraph break
+          output.push('\n');
+          i++;
+        } else {
+          // Other control symbols - skip
+          i++;
+        }
+        continue;
+      }
+
+      // Control word: read letters
+      let word = '';
+      while (i < rtf.length && /[a-zA-Z]/.test(rtf[i])) {
+        word += rtf[i];
+        i++;
+      }
+
+      // Read optional numeric parameter (can be negative)
+      let param = '';
+      if (i < rtf.length && (rtf[i] === '-' || /[0-9]/.test(rtf[i]))) {
+        if (rtf[i] === '-') {
+          param += '-';
+          i++;
+        }
+        while (i < rtf.length && /[0-9]/.test(rtf[i])) {
+          param += rtf[i];
+          i++;
+        }
+      }
+
+      // Consume optional trailing space (delimiter)
+      if (i < rtf.length && rtf[i] === ' ') {
+        i++;
+      }
+
+      // Handle control words
+      if (destinationKeywords.has(word)) {
+        // Skip this entire group
+        skipGroup = depth;
+        continue;
+      }
+
+      // Handle text-producing control words
+      if (word === 'par' || word === 'pard') {
+        output.push('\n');
+      } else if (word === 'line') {
+        output.push('\n');
+      } else if (word === 'tab') {
+        output.push('\t');
+      } else if (word === 'u' && param) {
+        // Unicode character: \uN with optional replacement char after
+        const code = parseInt(param, 10);
+        if (!isNaN(code)) {
+          // Handle negative values (RTF uses signed 16-bit)
+          const actualCode = code < 0 ? code + 65536 : code;
+          output.push(String.fromCharCode(actualCode));
+        }
+        // Skip the replacement character (usually ?)
+        if (i < rtf.length && rtf[i] === '?') {
+          i++;
+        }
+      } else if (word === 'emdash') {
+        output.push('\u2014');
+      } else if (word === 'endash') {
+        output.push('\u2013');
+      } else if (word === 'bullet') {
+        output.push('\u2022');
+      } else if (word === 'lquote') {
+        output.push('\u2018');
+      } else if (word === 'rquote') {
+        output.push('\u2019');
+      } else if (word === 'ldblquote') {
+        output.push('\u201C');
+      } else if (word === 'rdblquote') {
+        output.push('\u201D');
+      }
+      // Other control words are ignored (formatting like \b, \i, etc.)
+
+      continue;
+    }
+
+    // Regular character - but skip if at depth 0 (outside document)
+    if (depth > 0) {
+      // Handle Windows line endings in text
+      if (char === '\r') {
+        i++;
+        continue;
+      }
+      if (char === '\n') {
+        i++;
+        continue;
+      }
+      output.push(char);
+    }
+    i++;
+  }
+
+  // Clean up the result
+  return output
+    .join('')
+    .replace(/\n{3,}/g, '\n\n') // Max 2 consecutive newlines
+    .replace(/[ \t]+/g, ' ') // Collapse spaces
+    .replace(/ *\n */g, '\n') // Remove spaces around newlines
+    .trim();
 }
 
 /**
