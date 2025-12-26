@@ -55,7 +55,7 @@ interface ReferralUploaderProps {
 }
 
 // File extensions for display (PDF, images for photographed documents, text)
-const ACCEPTED_EXTENSIONS = 'PDF, PNG, JPEG, HEIC';
+const ACCEPTED_EXTENSIONS = 'PDF, PNG, JPEG, HEIC, TXT';
 
 // Progress values for each stage of the upload/extraction workflow
 const PROGRESS = {
