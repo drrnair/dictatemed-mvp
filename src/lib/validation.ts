@@ -33,9 +33,17 @@ const nullToUndefined = (val: unknown) => (val === null || val === '' ? undefine
 const nullableOptional = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess(nullToUndefined, schema.optional());
 
+// Create a typed preprocess helper for number fields with defaults
+const coerceNumber = (defaultValue: number, min: number, max?: number) => {
+  const schema = max !== undefined
+    ? z.coerce.number().int().min(min).max(max).default(defaultValue)
+    : z.coerce.number().int().min(min).default(defaultValue);
+  return z.preprocess(nullToUndefined, schema) as z.ZodEffects<z.ZodDefault<z.ZodNumber>, number, unknown>;
+};
+
 export const paginationSchema = z.object({
-  page: z.preprocess(nullToUndefined, z.coerce.number().int().min(1).default(1)),
-  limit: z.preprocess(nullToUndefined, z.coerce.number().int().min(1).max(100).default(20)),
+  page: coerceNumber(1, 1),
+  limit: coerceNumber(20, 1, 100),
 });
 
 // ============ Recording Schemas ============

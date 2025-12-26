@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { page = 1, limit = 20 } = validation.data;
+    const { page, limit } = validation.data as { page: number; limit: number };
     const skip = (page - 1) * limit;
 
     // Fetch patients with pagination
