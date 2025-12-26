@@ -108,8 +108,8 @@ Duration: 772ms
 
 ### E2E Tests
 ```
-Tests:    120 defined (40 tests × 3 browsers)
-Browsers: Chromium, Firefox, WebKit
+Tests:    120 defined (20 tests × 6 browser/device configurations)
+Configs:  Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari, Tablet
 Status:   Validated via --list (syntax verified, not executed)
 ```
 *Note: E2E tests were validated for syntax but not executed due to credential requirements (E2E_TEST_USER_EMAIL/PASSWORD). Tests will run in CI with proper credentials.*

@@ -402,7 +402,7 @@ Created comprehensive E2E tests for extended file upload types (JPEG, PNG, DOCX)
 npm run typecheck  # ✅ Passes
 npm run lint  # ✅ No warnings or errors
 npm run test -- tests/unit/domains/referrals/  # ✅ 242 tests pass (no regressions)
-npx playwright test tests/e2e/flows/extended-upload-types.spec.ts --list  # ✅ 22 tests recognized
+npx playwright test tests/e2e/flows/extended-upload-types.spec.ts --list  # ✅ 20 tests recognized
 npm run generate:test-fixtures  # ✅ Fixtures generated successfully
 ```
 
@@ -418,7 +418,7 @@ npm run generate:test-fixtures  # ✅ Fixtures generated successfully
    - `should still accept TXT when feature flag is disabled`
 
 **Files Created**:
-- `tests/e2e/flows/extended-upload-types.spec.ts` (22 tests total)
+- `tests/e2e/flows/extended-upload-types.spec.ts` (20 tests total)
 - `scripts/generate-test-fixtures.ts`
 - `tests/e2e/fixtures/referrals/image-referral-001.jpg`
 - `tests/e2e/fixtures/referrals/image-referral-001.png`
@@ -444,8 +444,8 @@ Ran comprehensive verification across all test types.
 2. ✅ ESLint linting: 0 errors or warnings
 3. ✅ Unit tests: **1206 tests pass** (all 39 test files)
 4. ✅ Integration tests: **232 tests pass** (all 9 test files)
-5. ✅ E2E tests: **860 tests defined** (12 test files × 3 browsers)
-   - Includes 120 new tests for extended upload types (40 tests × 3 browsers)
+5. ✅ E2E tests: **860 tests defined** (12 test files × 6 browser/device configurations)
+   - Includes 120 new tests for extended upload types (20 tests × 6 configurations)
    - E2E tests require credentials - syntax verified via `--list`
    - Tests will run in CI with proper E2E_TEST_USER_EMAIL/PASSWORD
 6. ✅ Test coverage for new modules:
