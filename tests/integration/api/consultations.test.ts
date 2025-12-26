@@ -61,44 +61,44 @@ vi.mock('@/infrastructure/db/encryption', () => ({
   decryptPatientData: vi.fn(),
 }));
 
-// Test fixtures
+// Test fixtures - Using valid UUIDs for consistency
 const mockUserA = {
-  id: 'user-a-id',
+  id: '11111111-1111-1111-1111-111111111111',
   auth0Id: 'auth0|user-a',
   email: 'user-a@example.com',
   name: 'Dr. Alice',
   role: 'SPECIALIST' as const,
   clinicianRole: 'MEDICAL' as const,
-  practiceId: 'practice-a-id',
+  practiceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   subspecialties: ['Cardiology'],
   onboardingCompleted: true,
   onboardingCompletedAt: new Date(),
 };
 
 const mockUserB = {
-  id: 'user-b-id',
+  id: '22222222-2222-2222-2222-222222222222',
   auth0Id: 'auth0|user-b',
   email: 'user-b@example.com',
   name: 'Dr. Bob',
   role: 'SPECIALIST' as const,
   clinicianRole: 'MEDICAL' as const,
-  practiceId: 'practice-a-id', // Same practice, different user
+  practiceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', // Same practice, different user
   subspecialties: ['Cardiology'],
   onboardingCompleted: true,
   onboardingCompletedAt: new Date(),
 };
 
 const mockPatient = {
-  id: 'patient-id',
+  id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
   encryptedData: 'encrypted-data',
-  practiceId: 'practice-a-id',
+  practiceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 };
 
 const mockReferrer = {
-  id: 'referrer-id',
-  practiceId: 'practice-a-id',
+  id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+  practiceId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   name: 'Dr. Referring',
   practiceName: 'GP Clinic',
   email: 'gp@clinic.com',
@@ -110,10 +110,10 @@ const mockReferrer = {
 };
 
 const mockConsultationUserA: MockConsultation = {
-  id: 'consultation-a-id',
-  userId: 'user-a-id',
-  patientId: 'patient-id',
-  referrerId: 'referrer-id',
+  id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+  userId: '11111111-1111-1111-1111-111111111111',
+  patientId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  referrerId: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
   templateId: null,
   letterType: 'NEW_PATIENT' as LetterType,
   status: 'DRAFT' as ConsultationStatus,
@@ -133,10 +133,10 @@ const mockConsultationUserA: MockConsultation = {
 };
 
 const mockConsultationUserB: MockConsultation = {
-  id: 'consultation-b-id',
-  userId: 'user-b-id', // Different user
-  patientId: 'patient-id',
-  referrerId: 'referrer-id',
+  id: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
+  userId: '22222222-2222-2222-2222-222222222222', // Different user
+  patientId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  referrerId: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
   templateId: null,
   letterType: 'FOLLOW_UP' as LetterType,
   status: 'DRAFT' as ConsultationStatus,

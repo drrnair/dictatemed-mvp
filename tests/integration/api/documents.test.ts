@@ -131,6 +131,87 @@ describe('Documents API', () => {
       expect(json.error).toBe('Unauthorized');
     });
 
+    it('should return documents for authenticated user only', async () => {
+      vi.mocked(documentService.listDocuments).mockResolvedValue({
+        documents: [mockDocumentUserA],
+        total: 1,
+        page: 1,
+        limit: 20,
+        hasMore: false,
+      });
+
+      const request = createRequest('/api/documents');
+      const response = await GET(request);
+
+      expect(response.status).toBe(200);
+
+      // Verify user scoping
+      expect(documentService.listDocuments).toHaveBeenCalledWith(
+        mockUserA.id,
+        expect.any(Object)
+      );
+    });
+
+    it('should filter by type', async () => {
+      vi.mocked(documentService.listDocuments).mockResolvedValue({
+        documents: [],
+        total: 0,
+        page: 1,
+        limit: 20,
+        hasMore: false,
+      });
+
+      const request = createRequest('/api/documents?type=ECHO_REPORT');
+      await GET(request);
+
+      expect(documentService.listDocuments).toHaveBeenCalledWith(
+        mockUserA.id,
+        expect.objectContaining({
+          type: 'ECHO_REPORT',
+        })
+      );
+    });
+
+    it('should filter by status', async () => {
+      vi.mocked(documentService.listDocuments).mockResolvedValue({
+        documents: [],
+        total: 0,
+        page: 1,
+        limit: 20,
+        hasMore: false,
+      });
+
+      const request = createRequest('/api/documents?status=PROCESSED');
+      await GET(request);
+
+      expect(documentService.listDocuments).toHaveBeenCalledWith(
+        mockUserA.id,
+        expect.objectContaining({
+          status: 'PROCESSED',
+        })
+      );
+    });
+
+    it('should handle pagination', async () => {
+      vi.mocked(documentService.listDocuments).mockResolvedValue({
+        documents: [],
+        total: 100,
+        page: 3,
+        limit: 10,
+        hasMore: true,
+      });
+
+      const request = createRequest('/api/documents?page=3&limit=10');
+      await GET(request);
+
+      expect(documentService.listDocuments).toHaveBeenCalledWith(
+        mockUserA.id,
+        expect.objectContaining({
+          page: 3,
+          limit: 10,
+        })
+      );
+    });
   });
 
   describe('POST /api/documents', () => {
