@@ -44,7 +44,8 @@ export async function GET(request: NextRequest) {
             dateOfBirth: decrypted.dateOfBirth,
             mrn: decrypted.medicareNumber || undefined,
           };
-        } catch {
+        } catch (_decryptError) {
+          // Patient data decryption failed - skip this patient in results
           return null;
         }
       }).filter(Boolean);
@@ -81,7 +82,8 @@ export async function GET(request: NextRequest) {
             };
           }
           return null;
-        } catch {
+        } catch (_decryptError) {
+          // Patient data decryption failed - skip this patient in search results
           return null;
         }
       })

@@ -35,6 +35,24 @@ const eventToStatus: Record<string, EmailStatus> = {
 };
 
 /**
+ * Parse webhook body as JSON
+ * Returns the parsed event or null if parsing fails
+ */
+function parseWebhookBody(
+  body: string,
+  log: ReturnType<typeof logger.child>
+): ResendWebhookEvent | null {
+  try {
+    return JSON.parse(body) as ResendWebhookEvent;
+  } catch (error) {
+    log.warn('Invalid JSON in webhook payload', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+/**
  * Verify webhook signature using Svix
  * Returns the verified event payload or null if verification fails
  */
@@ -86,8 +104,9 @@ function verifyWebhookSignature(
  * Receives delivery status updates from Resend and updates
  * the sent_emails table accordingly.
  *
- * Security: Verifies webhook signatures using Svix when
- * RESEND_WEBHOOK_SECRET is configured (required in production).
+ * Security:
+ * - Production: RESEND_WEBHOOK_SECRET is REQUIRED. Invalid/missing signatures return 401.
+ * - Development: Logs warnings but processes unsigned webhooks for testing.
  */
 export async function POST(request: NextRequest) {
   const log = logger.child({ action: 'resendWebhook' });
@@ -98,17 +117,13 @@ export async function POST(request: NextRequest) {
     // Get the raw body for signature verification
     const body = await request.text();
 
-    let event: ResendWebhookEvent;
+    let event: ResendWebhookEvent | null = null;
 
     // Verify signature when secret is configured
     if (webhookSecret) {
-      const verifiedEvent = verifyWebhookSignature(
-        body,
-        request.headers,
-        webhookSecret
-      );
+      event = verifyWebhookSignature(body, request.headers, webhookSecret);
 
-      if (!verifiedEvent) {
+      if (!event) {
         // In production, reject invalid signatures
         if (isProduction) {
           return NextResponse.json(
@@ -118,17 +133,10 @@ export async function POST(request: NextRequest) {
         }
         // In development, log warning but parse manually
         log.warn('Webhook signature verification failed, allowing in dev mode');
-        try {
-          event = JSON.parse(body) as ResendWebhookEvent;
-        } catch (parseError) {
-          log.warn('Invalid JSON in webhook payload', {
-            error:
-              parseError instanceof Error ? parseError.message : String(parseError),
-          });
+        event = parseWebhookBody(body, log);
+        if (!event) {
           return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
         }
-      } else {
-        event = verifiedEvent;
       }
     } else {
       // No secret configured
@@ -141,13 +149,8 @@ export async function POST(request: NextRequest) {
       }
       // Development: parse without verification
       log.warn('RESEND_WEBHOOK_SECRET not configured, skipping verification');
-      try {
-        event = JSON.parse(body) as ResendWebhookEvent;
-      } catch (parseError) {
-        log.warn('Invalid JSON in webhook payload', {
-          error:
-            parseError instanceof Error ? parseError.message : String(parseError),
-        });
+      event = parseWebhookBody(body, log);
+      if (!event) {
         return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
       }
     }

@@ -124,9 +124,11 @@ export default function StyleSettingsPage() {
     try {
       const letters = await listSeedLetters();
       setExistingSeedLetters(letters);
-    } catch {
-      // Non-critical, just log and continue
-      console.error('Failed to fetch seed letters');
+    } catch (error) {
+      // Non-critical - seed letters can be fetched on retry
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to fetch seed letters:', error);
+      }
     }
   };
 

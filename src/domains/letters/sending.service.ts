@@ -284,8 +284,12 @@ export async function retrySend(input: RetrySendInput): Promise<RecipientSendRes
     try {
       const patientData = decryptPatientData(letterSend.letter.patient.encryptedData);
       patientName = patientData.name || 'Patient';
-    } catch {
-      // Continue with default name
+    } catch (error) {
+      // Continue with default name but log the decryption issue
+      log.warn('Failed to decrypt patient name for retry', {
+        sendId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 

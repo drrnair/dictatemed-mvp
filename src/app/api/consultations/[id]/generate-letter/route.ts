@@ -59,7 +59,11 @@ export async function POST(
     let patientData: { name: string; dateOfBirth: string; medicareNumber?: string; gender?: string };
     try {
       patientData = decryptPatientData(consultation.patient.encryptedData);
-    } catch {
+    } catch (decryptError) {
+      log.error('Failed to decrypt patient data', {
+        patientId: consultation.patient.id,
+        error: decryptError instanceof Error ? decryptError.message : String(decryptError),
+      });
       return NextResponse.json({ error: 'Failed to decrypt patient data' }, { status: 500 });
     }
 

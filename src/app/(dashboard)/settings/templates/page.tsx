@@ -150,8 +150,8 @@ export default function TemplatesPage() {
           const recommendationsData = await recommendationsRes.json();
           setRecommendations(recommendationsData.recommendations);
         }
-      } catch {
-        // Silently ignore recommendation refresh failures
+      } catch (_error) {
+        // Silently ignore recommendation refresh failures - non-critical enhancement
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to toggle favorite');

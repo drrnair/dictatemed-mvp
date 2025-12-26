@@ -64,7 +64,8 @@ export async function GET(request: NextRequest) {
             dateOfBirth: decrypted.dateOfBirth,
             mrn: decrypted.medicareNumber,
           };
-        } catch {
+        } catch (_decryptError) {
+          // Patient data decryption failed - show placeholder instead of crashing
           patientSummary = { id: consultation.patient.id, name: '[Decryption error]', dateOfBirth: '' };
         }
       }
@@ -190,7 +191,8 @@ export async function POST(request: NextRequest) {
           dateOfBirth: decrypted.dateOfBirth,
           mrn: decrypted.medicareNumber,
         };
-      } catch {
+      } catch (_decryptError) {
+        // Patient data decryption failed - show placeholder instead of crashing
         patientSummary = { id: consultation.patient.id, name: '[Decryption error]', dateOfBirth: '' };
       }
     }

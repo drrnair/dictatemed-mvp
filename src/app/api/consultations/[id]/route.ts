@@ -226,7 +226,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           dateOfBirth: decrypted.dateOfBirth,
           mrn: decrypted.medicareNumber,
         };
-      } catch {
+      } catch (decryptError) {
+        log.warn('Patient decryption failed in consultation update', {
+          patientId: consultation.patient.id,
+          error: decryptError instanceof Error ? decryptError.message : String(decryptError),
+        });
         patientSummary = { id: consultation.patient.id, name: '[Decryption error]', dateOfBirth: '' };
       }
     }
