@@ -375,25 +375,63 @@ Add integration tests for critical paths to achieve >30% coverage.
 
 ## Phase 4: Technical Debt (As Time Permits)
 
-### [ ] Step: Issue 10 - Deprecated Schema Fields Analysis
+### [x] Step: Issue 10 - Deprecated Schema Fields Analysis
 
-Analyze and clean up deprecated schema fields.
+Analyzed deprecated schema fields and documented migration strategy.
 
-**Files to analyze:**
-- `prisma/schema.prisma` - s3AudioKey, s3Key marked @deprecated
+**Deprecated fields in Prisma schema:**
 
-**Implementation:**
-1. Search codebase for usage
-2. If unused, plan migration to remove
-3. If used, update to use new fields
+1. **`Recording.s3AudioKey`** (line 144 in schema.prisma)
+   - Comment: `// @deprecated - use storagePath for Supabase Storage`
+   - Replacement: `storagePath` field on same model
+
+2. **`Document.s3Key`** (line 205 in schema.prisma)
+   - Comment: `// @deprecated - use storagePath for Supabase Storage`
+   - Replacement: `storagePath` field on same model
+
+**NOT deprecated (still active):**
+- `ReferralDocument.s3Key` (line 909) - This is NOT deprecated. Referral documents use S3/Supabase storage actively.
+
+**Current usage analysis:**
+
+| Location | Field | Status | Notes |
+|----------|-------|--------|-------|
+| `src/domains/recording/recording.service.ts:412` | s3AudioKey | Type definition only | PrismaRecording interface includes for backward compat |
+| `src/domains/documents/document.service.ts:499,523` | s3Key | Type + mapping | PrismaDocument interface + mapDocument() |
+| `src/domains/documents/document.types.ts:17` | s3Key | Type definition | Document interface - marked @deprecated |
+| `src/app/api/user/account/route.ts:51,52,86,87,110,111` | Both | Fallback logic | Account deletion handles both old and new fields |
+| `src/domains/referrals/*` | s3Key | **ACTIVE** | NOT deprecated - used throughout referral domain |
+
+**Migration status:**
+The codebase has already migrated to `storagePath` as the primary field. The deprecated fields are only used:
+1. In type definitions for backward compatibility with existing database records
+2. In account deletion fallback logic (`rec.storagePath || rec.s3AudioKey`)
+
+**Recommendation: NO CODE CHANGES REQUIRED**
+
+The deprecated fields should remain in the schema because:
+1. **Data migration needed first**: Existing database records may still have data in `s3AudioKey`/`s3Key` columns
+2. **Fallback logic is correct**: The code correctly prefers `storagePath` and falls back to legacy fields
+3. **Breaking change risk**: Removing these fields before data migration would break account deletion for old records
+
+**Future migration plan (out of scope for this task):**
+1. Create a database migration script to copy `s3AudioKey` → `storagePath` for all Recordings
+2. Create a database migration script to copy `s3Key` → `storagePath` for all Documents
+3. Verify no null storagePath values remain
+4. Remove fallback logic from `src/app/api/user/account/route.ts`
+5. Remove deprecated fields from Prisma schema
+6. Run `prisma migrate dev` to create migration
 
 **Verification:**
-- Deprecated fields usage documented
-- Migration plan created (if applicable)
+- Usage documented ✅
+- No code changes needed - fallback logic is correct ✅
+- Migration plan documented for future work ✅
+- ReferralDocument.s3Key confirmed as ACTIVE (not deprecated) ✅
 
 ---
 
 ### [ ] Step: Issue 11 - Extract Magic Numbers
+<!-- chat-id: 2406e982-a3a6-46ba-a991-15284422b305 -->
 
 Create constants file and extract magic numbers.
 
