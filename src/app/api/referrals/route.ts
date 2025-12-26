@@ -90,12 +90,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
-    log.error('Failed to create referral document', {}, error instanceof Error ? error : undefined);
+    // Handle Supabase storage errors with specific guidance
+    if (message.includes('Bucket not found') || message.includes('bucket')) {
+      log.error('Storage bucket not configured', { errorMessage: message }, error instanceof Error ? error : undefined);
+      return NextResponse.json(
+        {
+          error: 'Document storage is not configured. Please contact support.',
+          details: 'The clinical-documents storage bucket may not exist.',
+        },
+        { status: 503 }
+      );
+    }
+
+    // Handle authentication/permission errors
+    if (message.includes('Invalid API key') || message.includes('JWT') || message.includes('unauthorized')) {
+      log.error('Storage authentication failed', { errorMessage: message }, error instanceof Error ? error : undefined);
+      return NextResponse.json(
+        {
+          error: 'Document storage authentication failed. Please contact support.',
+          details: 'Service role key may be invalid or missing.',
+        },
+        { status: 503 }
+      );
+    }
+
+    log.error('Failed to create referral document', { errorMessage: message }, error instanceof Error ? error : undefined);
 
     return NextResponse.json(
       {
         error: 'Unable to prepare document upload. Please try again.',
-        details: 'If the problem persists, refresh the page and try again.',
+        details: message.includes('SIGNED_URL_FAILED')
+          ? 'Could not generate upload URL. Please try again later.'
+          : 'If the problem persists, refresh the page and try again.',
       },
       { status: 500 }
     );
