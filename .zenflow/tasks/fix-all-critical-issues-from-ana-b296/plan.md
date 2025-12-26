@@ -218,6 +218,7 @@ logger.error('Error saving draft', { letterId: letter.id, error });
 ---
 
 ### [ ] Step: Issue 8 - Error Tracking Preparation
+<!-- chat-id: e6197209-75fb-4a89-9cb7-10d8f6a4d363 -->
 
 Prepare error logger for Sentry integration.
 

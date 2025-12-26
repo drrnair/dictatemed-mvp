@@ -1,6 +1,35 @@
 // src/lib/rate-limit.ts
 // Rate limiting service per spec section 1.4
 // Supports both in-memory (development) and Redis (production) stores.
+//
+// ## Usage
+//
+// For synchronous rate limiting (in-memory only):
+//   const result = checkRateLimit(key, 'letters');
+//
+// For distributed rate limiting with Redis (falls back to in-memory):
+//   const result = await checkRateLimitAsync(key, 'letters');
+//
+// ## Production Configuration
+//
+// To enable Redis-based distributed rate limiting in production:
+// 1. Create a free Upstash Redis database at https://console.upstash.com/redis
+// 2. Set environment variables:
+//    - UPSTASH_REDIS_REST_URL=https://...
+//    - UPSTASH_REDIS_REST_TOKEN=...
+//
+// ## Migration Guide for API Endpoints
+//
+// To migrate an endpoint from in-memory to distributed rate limiting:
+//
+// Before:
+//   const rateLimitResult = checkRateLimit(key, 'letters');
+//
+// After:
+//   const rateLimitResult = await checkRateLimitAsync(key, 'letters');
+//
+// Note: The async function gracefully falls back to in-memory if Redis
+// is not configured, so it's safe to use in all environments.
 
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
