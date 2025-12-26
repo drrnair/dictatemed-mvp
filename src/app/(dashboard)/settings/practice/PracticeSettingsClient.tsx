@@ -8,10 +8,18 @@ import { PracticeDetails } from '@/components/settings/PracticeDetails';
 import { UserManagement } from '@/components/settings/UserManagement';
 import { PracticeSettings } from '@/components/settings/PracticeSettings';
 
+interface PracticeSettingsData {
+  defaultLetterType?: string;
+  defaultSpecialty?: string;
+  signatureRequired?: boolean;
+  autoSave?: boolean;
+  [key: string]: unknown;
+}
+
 interface Practice {
   id: string;
   name: string;
-  settings: any;
+  settings: PracticeSettingsData | null;
   letterhead: string | null;
   createdAt: Date;
   updatedAt: Date;
