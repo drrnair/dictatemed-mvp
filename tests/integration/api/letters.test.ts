@@ -1,5 +1,6 @@
 // tests/integration/api/letters.test.ts
 // Integration tests for letter API endpoints with user-scoped access
+// @ts-nocheck - Integration tests use partial mocks for Prisma models
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -503,12 +504,14 @@ describe('Letters API', () => {
     });
 
     it('should update draft when user is owner', async () => {
-      vi.mocked(prisma.letter.findFirst).mockResolvedValue(mockLetterUserA);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.mocked(prisma.letter.findFirst).mockResolvedValue(mockLetterUserA as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(prisma.letter.update).mockResolvedValue({
         ...mockLetterUserA,
         contentFinal: patchInput.contentFinal,
         status: 'IN_REVIEW',
-      });
+      } as any);
 
       const request = createRequest('/api/letters/' + mockLetterUserA.id, {
         method: 'PATCH',

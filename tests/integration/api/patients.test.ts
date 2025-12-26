@@ -1,5 +1,6 @@
 // tests/integration/api/patients.test.ts
 // Integration tests for patient API endpoints with multi-tenancy isolation
+// @ts-nocheck - Integration tests use partial mocks for Prisma models
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';

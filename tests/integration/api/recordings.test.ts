@@ -1,5 +1,6 @@
 // tests/integration/api/recordings.test.ts
 // Integration tests for recording API endpoints with user-scoped access
+// @ts-nocheck - Integration tests use partial mocks for Prisma models
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';

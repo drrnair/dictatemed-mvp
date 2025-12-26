@@ -1,5 +1,6 @@
 // tests/integration/api/documents.test.ts
 // Integration tests for document API endpoints with user-scoped access
+// @ts-nocheck - Integration tests use partial mocks for Prisma models
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -73,7 +74,7 @@ const mockDocumentUserA = {
   mimeType: 'application/pdf',
   size: 1024 * 1024,
   s3Key: 's3://bucket/documents/abc.pdf',
-  patientId: null,
+  patientId: undefined,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 };
@@ -87,7 +88,7 @@ const mockDocumentUserB = {
   mimeType: 'application/pdf',
   size: 512 * 1024,
   s3Key: 's3://bucket/documents/def.pdf',
-  patientId: null,
+  patientId: undefined,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
 };
