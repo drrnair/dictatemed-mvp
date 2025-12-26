@@ -27,28 +27,33 @@
 
 ---
 
-### [ ] Step 1: Database Schema & Dependencies
+### [x] Step 1: Database Schema & Dependencies
 
 **Goal**: Add database models and install new dependencies
 
-**Tasks**:
-1. Add new models to `prisma/schema.prisma`:
-   - `UpToDateConnection` - OAuth token storage
-   - `LibraryDocument` - User's uploaded documents
-   - `DocumentChunk` - Vector embeddings for similarity search
-   - `LiteratureQuery` - Query logging for analytics
-   - Update `User` model with new relations
-2. Create migration with pgvector extension
-3. Add dependencies to `package.json`:
-   - `openai` for embeddings
-   - `react-hotkeys-hook` for keyboard shortcuts
-4. Update `.env.example` with new environment variables
+**Completed**:
+1. Added new models to `prisma/schema.prisma`:
+   - `UpToDateConnection` - OAuth token storage (encrypted tokens, subscription tracking)
+   - `LibraryDocument` - User's uploaded documents (title, category, pageCount, storagePath)
+   - `DocumentChunk` - Vector embeddings for similarity search (pgvector 1536 dimensions)
+   - `LiteratureQuery` - Query logging for analytics (sources, confidence, caching)
+   - Updated `User` model with new relations
+2. Created migration `20251227_add_clinical_literature_chat/migration.sql`:
+   - Enables pgvector extension
+   - Creates all tables with indexes
+   - Adds IVFFlat index for fast vector similarity search
+3. Added dependencies to `package.json`:
+   - `openai@^4.77.0` for embeddings
+   - `react-hotkeys-hook@^4.6.1` for keyboard shortcuts
+4. Updated `.env.example` with:
+   - `OPENAI_API_KEY` for embeddings
+   - `UPTODATE_CLIENT_ID`, `UPTODATE_CLIENT_SECRET`, `UPTODATE_REDIRECT_URI` (optional)
 
-**Verification**:
+**Verification**: ✅
 ```bash
-npm install
-npx prisma generate
-npm run typecheck
+npm install          # ✅ Success
+npx prisma generate  # ✅ Success
+npm run typecheck    # ✅ No errors
 ```
 
 ---

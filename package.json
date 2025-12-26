@@ -36,6 +36,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "openai": "^4.77.0",
+    "react-hotkeys-hook": "^4.6.1",
     "@auth0/nextjs-auth0": "^3.5.0",
     "@aws-sdk/client-bedrock-runtime": "^3.500.0",
     "@deepgram/sdk": "^3.13.0",

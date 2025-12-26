@@ -76,6 +76,11 @@ model User {
   // Referral documents
   referralDocuments ReferralDocument[]
 
+  // Clinical literature chat
+  upToDateConnection UpToDateConnection?
+  libraryDocuments   LibraryDocument[]
+  literatureQueries  LiteratureQuery[]
+
   @@map("users")
 }
 
@@ -199,10 +204,10 @@ model Document {
   consultationId String?
   consultation   Consultation? @relation(fields: [consultationId], references: [id])
 
-  filename  String
-  mimeType  String
-  sizeBytes Int
-  s3Key     String? // @deprecated - use storagePath for Supabase Storage
+  filename    String
+  mimeType    String
+  sizeBytes   Int
+  s3Key       String? // @deprecated - use storagePath for Supabase Storage
   storagePath String? // Supabase Storage path: {userId}/{patientId}/{docType}/{filename}_{timestamp}.{ext}
 
   documentType DocumentType?
@@ -211,7 +216,7 @@ model Document {
   // Retention and soft delete
   retentionUntil DateTime? // When the document should be deleted (retention policy)
   deletedAt      DateTime? // When the document was deleted from storage
-  deletionReason String?   // Reason for deletion (retention_expired, user_requested, etc.)
+  deletionReason String? // Reason for deletion (retention_expired, user_requested, etc.)
 
   // Extraction results
   extractedData   Json? // Structured clinical data
@@ -599,7 +604,7 @@ model CustomSpecialty {
   updatedAt DateTime            @updatedAt @map("updated_at")
 
   // If approved, link to the created MedicalSpecialty
-  approvedSpecialtyId String?   @map("approved_specialty_id")
+  approvedSpecialtyId String? @map("approved_specialty_id")
 
   // Custom subspecialties linked to this custom specialty
   customSubspecialties CustomSubspecialty[]
@@ -628,7 +633,7 @@ model CustomSubspecialty {
   customSpecialty   CustomSpecialty?  @relation(fields: [customSpecialtyId], references: [id], onDelete: SetNull)
 
   // If approved, link to the created MedicalSubspecialty
-  approvedSubspecialtyId String?      @map("approved_subspecialty_id")
+  approvedSubspecialtyId String? @map("approved_subspecialty_id")
 
   @@unique([userId, specialtyId, name])
   @@index([userId])
@@ -801,9 +806,9 @@ model Consultation {
   // Relations
   ccRecipients     CCRecipient[]
   recordings       Recording[]
-  documents        Document[]         // Documents uploaded during this consultation
-  letters          Letter[]           // Generated letters from this consultation
-  referralDocument ReferralDocument?  // Uploaded referral that populated context
+  documents        Document[] // Documents uploaded during this consultation
+  letters          Letter[] // Generated letters from this consultation
+  referralDocument ReferralDocument? // Uploaded referral that populated context
 
   @@index([userId, createdAt])
   @@index([patientId])
@@ -822,31 +827,31 @@ enum ConsultationStatus {
 // ============ Sent Emails (Resend Integration) ============
 
 model SentEmail {
-  id                String      @id @default(uuid())
-  userId            String
-  user              User        @relation(fields: [userId], references: [id])
-  letterId          String
-  letter            Letter      @relation(fields: [letterId], references: [id])
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+  letterId String
+  letter   Letter @relation(fields: [letterId], references: [id])
 
   // Recipient information
-  recipientEmail    String
-  recipientName     String
-  ccEmails          String[]    @default([])
-  subject           String
+  recipientEmail String
+  recipientName  String
+  ccEmails       String[] @default([])
+  subject        String
 
   // Provider tracking
-  providerMessageId String?     // Resend message ID for tracking
-  status            String      @default("pending") // pending, sent, delivered, bounced, failed
-  errorMessage      String?     // Error message if failed
+  providerMessageId String? // Resend message ID for tracking
+  status            String  @default("pending") // pending, sent, delivered, bounced, failed
+  errorMessage      String? // Error message if failed
 
   // Timestamps
-  sentAt            DateTime?   // When email was accepted by provider
-  lastEventAt       DateTime?   // Last webhook event timestamp
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  sentAt      DateTime? // When email was accepted by provider
+  lastEventAt DateTime? // Last webhook event timestamp
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Webhook data (for debugging)
-  webhookPayload    String?     @db.Text
+  webhookPayload String? @db.Text
 
   @@index([userId, createdAt])
   @@index([letterId])
@@ -882,35 +887,35 @@ enum SendStatus {
 // ============ Referral Documents ============
 
 enum ReferralDocumentStatus {
-  UPLOADED        // File stored, awaiting text extraction
-  TEXT_EXTRACTED  // Text extracted from PDF
-  EXTRACTED       // AI structured extraction complete
-  APPLIED         // Data applied to consultation
-  FAILED          // Processing failed
+  UPLOADED // File stored, awaiting text extraction
+  TEXT_EXTRACTED // Text extracted from PDF
+  EXTRACTED // AI structured extraction complete
+  APPLIED // Data applied to consultation
+  FAILED // Processing failed
 }
 
 // Fast extraction status for two-phase processing
 enum FastExtractionStatus {
-  PENDING     // Not yet started
-  PROCESSING  // Currently extracting patient identifiers
-  COMPLETE    // Fast extraction successful
-  FAILED      // Fast extraction failed
+  PENDING // Not yet started
+  PROCESSING // Currently extracting patient identifiers
+  COMPLETE // Fast extraction successful
+  FAILED // Fast extraction failed
 }
 
 // Full extraction status for background processing
 enum FullExtractionStatus {
-  PENDING     // Not yet started (waiting for fast extraction)
-  PROCESSING  // Currently extracting full context
-  COMPLETE    // Full extraction successful
-  FAILED      // Full extraction failed
+  PENDING // Not yet started (waiting for fast extraction)
+  PROCESSING // Currently extracting full context
+  COMPLETE // Full extraction successful
+  FAILED // Full extraction failed
 }
 
 model ReferralDocument {
-  id         String                 @id @default(uuid())
+  id         String   @id @default(uuid())
   userId     String
-  user       User                   @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
   practiceId String
-  practice   Practice               @relation(fields: [practiceId], references: [id])
+  practice   Practice @relation(fields: [practiceId], references: [id])
 
   // Optional links (set after extraction/review)
   patientId      String?
@@ -932,7 +937,7 @@ model ReferralDocument {
   // extractedData stores the full structured extraction result (ReferralExtractedData)
   // This is populated by full extraction (background processing)
   // Fast extraction data is stored separately in fastExtractionData
-  extractedData Json?            // Full structured extraction: { patient, gp, referrer, referralContext }
+  extractedData Json? // Full structured extraction: { patient, gp, referrer, referralContext }
 
   // === Two-Phase Extraction (Fast + Background) ===
   //
@@ -959,8 +964,8 @@ model ReferralDocument {
   // Metadata
   processingError String?
   processedAt     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([userId, createdAt])
   @@index([practiceId])
@@ -1050,4 +1055,121 @@ model LetterSend {
   @@index([senderId])
   @@index([status])
   @@map("letter_sends")
+}
+
+// ============ Clinical Literature Chat ============
+
+// UpToDate OAuth connection (one per user)
+model UpToDateConnection {
+  id                String  @id @default(uuid())
+  userId            String  @unique
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  upToDateAccountId String?
+
+  // OAuth tokens (encrypted with PHI_ENCRYPTION_KEY)
+  accessToken  String // Encrypted
+  refreshToken String // Encrypted
+  tokenExpiry  DateTime
+
+  // Subscription info
+  subscriptionType  String  @default("personal") // 'personal' | 'institutional'
+  subscriptionValid Boolean @default(true)
+
+  // Usage tracking
+  queriesThisMonth Int       @default(0)
+  lastUsed         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("uptodate_connections")
+}
+
+// User's uploaded clinical reference library
+model LibraryDocument {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Document metadata
+  title         String
+  category      String? // 'guideline' | 'textbook' | 'reference' | 'protocol'
+  pageCount     Int
+  fileSizeBytes Int
+
+  // Storage
+  storagePath String // Supabase Storage path
+
+  // Processing status
+  status          LibraryDocumentStatus @default(UPLOADING)
+  processingError String?
+  processedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  chunks DocumentChunk[]
+
+  @@index([userId])
+  @@index([userId, category])
+  @@map("library_documents")
+}
+
+enum LibraryDocumentStatus {
+  UPLOADING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+// Document chunks with vector embeddings for similarity search
+model DocumentChunk {
+  id         String          @id @default(uuid())
+  documentId String
+  document   LibraryDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex Int
+
+  // Content
+  content String @db.Text
+
+  // Vector embedding (OpenAI text-embedding-3-small: 1536 dimensions)
+  // Uses pgvector extension for similarity search
+  embedding Unsupported("vector(1536)")
+
+  createdAt DateTime @default(now())
+
+  @@index([documentId])
+  @@map("document_chunks")
+}
+
+// Literature query log for analytics and caching
+model LiteratureQuery {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Query details
+  query   String  @db.Text
+  context String? @db.Text // Letter excerpt for context-aware search
+
+  // Search results
+  sources          Json // Array of source types used: ['uptodate', 'pubmed', 'user_library']
+  confidence       String // 'high' | 'medium' | 'low'
+  citationInserted Boolean @default(false)
+
+  // Response caching (JSON of LiteratureSearchResult)
+  cachedResponse Json?
+  cacheExpiry    DateTime?
+
+  // Performance
+  responseTimeMs Int // milliseconds
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([cacheExpiry])
+  @@map("literature_queries")
 }
