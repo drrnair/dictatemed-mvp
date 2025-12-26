@@ -297,6 +297,7 @@ Replaced all `any` types with proper TypeScript types.
 ---
 
 ### [ ] Step: Issue 7 - Dashboard Real Data
+<!-- chat-id: de3a5481-1c21-49e1-b746-a79b50f36ee2 -->
 
 Create API endpoint and update dashboard to show real data.
 
