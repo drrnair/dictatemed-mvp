@@ -308,6 +308,7 @@ Signed: Dr. Jane Doe`;
         inputTokens: 200,
         outputTokens: 100,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision(sampleBase64, 'image/jpeg');
@@ -329,6 +330,7 @@ Please advise.`;
         inputTokens: 150,
         outputTokens: 50,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision(sampleBase64, 'image/jpeg');
@@ -347,6 +349,7 @@ Please advise.`;
         inputTokens: 100,
         outputTokens: 20,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       // Create a simple buffer (doesn't need to be a valid image for the mock)
@@ -383,6 +386,7 @@ Please advise.`;
         inputTokens: 50,
         outputTokens: 5,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const emptyBuffer = Buffer.from([]);
@@ -428,6 +432,7 @@ Please advise.`;
         inputTokens: 5000, // Large input for image
         outputTokens: 200, // Text output
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision('base64data', 'image/jpeg');
@@ -451,6 +456,7 @@ Please advise.`;
         inputTokens: 3000,
         outputTokens: 5,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision('base64data', 'image/png');

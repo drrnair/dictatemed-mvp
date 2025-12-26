@@ -542,6 +542,7 @@ describe('referral-fast-extraction.service', () => {
     outputTokens: 50,
     stopReason: 'end_turn',
     modelId: MODELS.SONNET,
+    provider: 'anthropic' as const,
   };
 
   describe('extractFastPatientData', () => {

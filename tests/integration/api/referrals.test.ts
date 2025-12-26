@@ -988,7 +988,8 @@ describe('Referrals API', () => {
         inputTokens: 100,
         outputTokens: 50,
         stopReason: 'end_turn',
-        modelId: 'anthropic.claude-sonnet-4-20250514-v1:0',
+        modelId: 'sonnet',
+        provider: 'anthropic',
       });
 
       const request = createRequest(`http://localhost:3000/api/referrals/${mockReferralDocument.id}/extract-fast`, {
@@ -1363,7 +1364,8 @@ describe('Referrals API', () => {
           inputTokens: 100,
           outputTokens: 50,
           stopReason: 'end_turn',
-          modelId: 'anthropic.claude-sonnet-4-20250514-v1:0',
+          modelId: 'sonnet',
+          provider: 'anthropic',
         });
 
         const request = createRequest(`http://localhost:3000/api/referrals/${mockReferralDocument.id}/extract-fast`, {

@@ -25,7 +25,7 @@ Do not make assumptions on important decisions — get clarification first.
 **Assessment:** Medium difficulty
 - Creating a new Anthropic client alongside existing Bedrock infrastructure
 - Building a unified abstraction layer for provider switching
-- Updating 6 domain service files
+- Updating 8 domain service files
 - Adding feature flag support for zero-downtime migration
 
 ---
@@ -168,13 +168,20 @@ Update all test files to mock the new unified AI layer.
   - `tests/integration/style/learning-flow.test.ts` - Changed mock and import from `@/infrastructure/bedrock` to `@/infrastructure/ai`
   - `tests/integration/api/referrals.test.ts` - Changed mock and import from `@/infrastructure/bedrock/text-generation` to `@/infrastructure/ai`
 - Updated mock MODELS to use abstract IDs (`'sonnet'`, `'opus'`) instead of Bedrock-specific model IDs
+- Added `provider: 'anthropic'` to all mock responses to match new unified layer interface:
+  - `vision-extraction.test.ts` - 10 mock responses updated
+  - `referral-extraction.test.ts` - 1 mockLLMResponse updated
+  - `fast-patient-extraction.test.ts` - 1 mockLLMResponse updated (was already done)
+  - `referrals.test.ts` - 2 mock responses updated
 - All verifications passed:
-  - `npm run test`: 61 test files, 1783 tests passed
-  - `npm run test:integration`: 15 test files, 414 tests passed
+  - `npm run typecheck`: passes
+  - `npm run test`: passes
+  - `npm run test:integration`: passes
 
 ---
 
 ### [ ] Step 6: Final Verification & Report
+<!-- chat-id: 3391ad2d-8223-44bc-9ba6-cf5f2cab889e -->
 
 Run full verification and create implementation report.
 

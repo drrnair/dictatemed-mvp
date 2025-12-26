@@ -411,6 +411,7 @@ describe('referral-extraction.service', () => {
     outputTokens: 200,
     stopReason: 'end_turn',
     modelId: MODELS.SONNET,
+    provider: 'anthropic' as const,
   };
 
   describe('extractStructuredData', () => {
