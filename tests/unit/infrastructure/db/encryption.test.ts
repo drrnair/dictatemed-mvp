@@ -129,6 +129,33 @@ describe('PHI Encryption Service', () => {
       ).toThrow('Invalid IV length');
     });
 
+    it('should throw if auth tag length is invalid', () => {
+      const validIv = Buffer.from('0123456789abcdef').toString('base64'); // 16 bytes
+      const shortAuthTag = Buffer.from('short').toString('base64'); // Less than 16 bytes
+      const validCiphertext = Buffer.from('ciphertext').toString('base64');
+
+      expect(() =>
+        decryptPatientData(`${validIv}:${shortAuthTag}:${validCiphertext}`)
+      ).toThrow('Invalid auth tag length');
+    });
+
+    it('should throw if any part is empty after split', () => {
+      // Empty IV
+      expect(() =>
+        decryptPatientData(`:${Buffer.from('authtag1234567').toString('base64')}:${Buffer.from('cipher').toString('base64')}`)
+      ).toThrow('Invalid encrypted data format');
+
+      // Empty authTag
+      expect(() =>
+        decryptPatientData(`${Buffer.from('iv12345678901234').toString('base64')}::${Buffer.from('cipher').toString('base64')}`)
+      ).toThrow('Invalid encrypted data format');
+
+      // Empty ciphertext
+      expect(() =>
+        decryptPatientData(`${Buffer.from('iv12345678901234').toString('base64')}:${Buffer.from('authtag1234567').toString('base64')}:`)
+      ).toThrow('Invalid encrypted data format');
+    });
+
     it('should throw if data has been tampered with', () => {
       const encrypted = encryptPatientData(testPatientData);
       const parts = encrypted.split(':');

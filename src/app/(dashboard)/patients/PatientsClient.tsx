@@ -244,7 +244,8 @@ export function PatientsClient() {
         month: 'short',
         year: 'numeric',
       });
-    } catch {
+    } catch (_error) {
+      // Return original string if date parsing fails
       return dateString;
     }
   };

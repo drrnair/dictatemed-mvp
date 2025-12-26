@@ -15,9 +15,7 @@ import {
   formatZodErrors,
 } from '@/lib/validation';
 import { logger } from '@/lib/logger';
-
-// TODO: Replace with actual auth once implemented
-const PLACEHOLDER_PRACTICE_ID = 'placeholder-practice-id';
+import { getSession } from '@/lib/auth';
 
 /**
  * Decrypted patient response type
@@ -64,8 +62,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // TODO: Get practiceId from authenticated session
-    const practiceId = PLACEHOLDER_PRACTICE_ID;
+    // Get authenticated user session
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const practiceId = session.user.practiceId;
 
     // Await params to get the id
     const { id } = await params;
@@ -131,8 +133,12 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // TODO: Get practiceId from authenticated session
-    const practiceId = PLACEHOLDER_PRACTICE_ID;
+    // Get authenticated user session
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const practiceId = session.user.practiceId;
 
     // Await params to get the id
     const { id } = await params;
@@ -266,8 +272,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // TODO: Get practiceId from authenticated session
-    const practiceId = PLACEHOLDER_PRACTICE_ID;
+    // Get authenticated user session
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const practiceId = session.user.practiceId;
 
     // Await params to get the id
     const { id } = await params;

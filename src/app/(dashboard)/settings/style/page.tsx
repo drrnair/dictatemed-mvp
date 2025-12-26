@@ -21,6 +21,7 @@ import {
   StyleSummary,
   type StyleMode,
 } from './components';
+import { logger } from '@/lib/logger';
 import {
   Upload,
   FileText,
@@ -124,9 +125,9 @@ export default function StyleSettingsPage() {
     try {
       const letters = await listSeedLetters();
       setExistingSeedLetters(letters);
-    } catch {
-      // Non-critical, just log and continue
-      console.error('Failed to fetch seed letters');
+    } catch (error) {
+      // Non-critical - seed letters can be fetched on retry
+      logger.warn('Failed to fetch seed letters', { error });
     }
   };
 

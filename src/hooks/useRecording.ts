@@ -4,6 +4,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import { AUDIO, AUDIO_QUALITY_THRESHOLDS } from '@/lib/constants';
 
 export type RecordingMode = 'AMBIENT' | 'DICTATION';
 export type ConsentType = 'VERBAL' | 'WRITTEN' | 'STANDING';
@@ -41,21 +42,14 @@ const AUDIO_CONSTRAINTS: MediaTrackConstraints = {
   echoCancellation: true,
   noiseSuppression: true,
   autoGainControl: true,
-  sampleRate: 48000,
-  channelCount: 1,
+  sampleRate: AUDIO.SAMPLE_RATE,
+  channelCount: AUDIO.CHANNEL_COUNT,
 };
 
 // MediaRecorder options
 const RECORDER_OPTIONS: MediaRecorderOptions = {
   mimeType: 'audio/webm;codecs=opus',
-  audioBitsPerSecond: 64000,
-};
-
-// Quality thresholds based on audio level variance
-const QUALITY_THRESHOLDS = {
-  excellent: 0.7,
-  good: 0.4,
-  fair: 0.2,
+  audioBitsPerSecond: AUDIO.BITS_PER_SECOND,
 };
 
 export function useRecording(): UseRecordingReturn {
@@ -101,14 +95,14 @@ export function useRecording(): UseRecordingReturn {
   // Calculate audio quality from samples
   const calculateQuality = useCallback((): AudioQuality => {
     const samples = audioLevelSamplesRef.current;
-    if (samples.length < 10) return 'good';
+    if (samples.length < AUDIO.MIN_QUALITY_SAMPLES) return 'good';
 
     const avgLevel =
       samples.reduce((sum, val) => sum + val, 0) / samples.length;
 
-    if (avgLevel >= QUALITY_THRESHOLDS.excellent) return 'excellent';
-    if (avgLevel >= QUALITY_THRESHOLDS.good) return 'good';
-    if (avgLevel >= QUALITY_THRESHOLDS.fair) return 'fair';
+    if (avgLevel >= AUDIO_QUALITY_THRESHOLDS.EXCELLENT) return 'excellent';
+    if (avgLevel >= AUDIO_QUALITY_THRESHOLDS.GOOD) return 'good';
+    if (avgLevel >= AUDIO_QUALITY_THRESHOLDS.FAIR) return 'fair';
     return 'poor';
   }, []);
 
@@ -121,7 +115,7 @@ export function useRecording(): UseRecordingReturn {
 
     // Calculate RMS level
     const sum = dataArray.reduce(
-      (acc, val) => acc + (val / 255) * (val / 255),
+      (acc, val) => acc + (val / AUDIO.MAX_BYTE_VALUE) * (val / AUDIO.MAX_BYTE_VALUE),
       0
     );
     const rms = Math.sqrt(sum / dataArray.length);
@@ -129,7 +123,7 @@ export function useRecording(): UseRecordingReturn {
 
     // Store sample for quality calculation
     audioLevelSamplesRef.current.push(rms);
-    if (audioLevelSamplesRef.current.length > 100) {
+    if (audioLevelSamplesRef.current.length > AUDIO.MAX_LEVEL_SAMPLES) {
       audioLevelSamplesRef.current.shift();
     }
 
@@ -155,7 +149,7 @@ export function useRecording(): UseRecordingReturn {
         audioContextRef.current = new AudioContext();
         const source = audioContextRef.current.createMediaStreamSource(stream);
         analyserRef.current = audioContextRef.current.createAnalyser();
-        analyserRef.current.fftSize = 256;
+        analyserRef.current.fftSize = AUDIO.FFT_SIZE;
         source.connect(analyserRef.current);
 
         // Check MediaRecorder support
@@ -184,15 +178,15 @@ export function useRecording(): UseRecordingReturn {
         };
 
         // Start recording
-        recorder.start(1000); // Collect data every second
+        recorder.start(AUDIO.DATA_COLLECTION_INTERVAL_MS); // Collect data every second
         startTimeRef.current = Date.now();
         setState('recording');
 
         // Start timer
         timerRef.current = setInterval(() => {
-          const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+          const elapsed = Math.floor((Date.now() - startTimeRef.current) / AUDIO.TIMER_UPDATE_INTERVAL_MS);
           setDurationSeconds(elapsed);
-        }, 1000);
+        }, AUDIO.TIMER_UPDATE_INTERVAL_MS);
 
         // Start audio level monitoring
         updateAudioLevel();
@@ -231,11 +225,11 @@ export function useRecording(): UseRecordingReturn {
 
       // Resume timer from current duration
       const pausedDuration = durationSeconds;
-      startTimeRef.current = Date.now() - pausedDuration * 1000;
+      startTimeRef.current = Date.now() - pausedDuration * AUDIO.TIMER_UPDATE_INTERVAL_MS;
       timerRef.current = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / AUDIO.TIMER_UPDATE_INTERVAL_MS);
         setDurationSeconds(elapsed);
-      }, 1000);
+      }, AUDIO.TIMER_UPDATE_INTERVAL_MS);
 
       updateAudioLevel();
     }

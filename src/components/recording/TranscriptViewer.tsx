@@ -60,8 +60,8 @@ export function TranscriptViewer({
       await navigator.clipboard.writeText(transcript.fullText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard API not available
+    } catch (_error) {
+      // Clipboard API not available or permission denied - fail silently for UX
     }
   }, [transcript.fullText]);
 

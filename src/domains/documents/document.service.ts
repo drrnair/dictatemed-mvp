@@ -342,8 +342,12 @@ export async function listDocuments(
             doc.storagePath
           );
           url = result.signedUrl;
-        } catch {
-          // Silently skip URL generation failures for list operations
+        } catch (error) {
+          // Log but skip URL generation failures for list operations (non-critical)
+          logger.debug('URL generation failed in document list', {
+            documentId: doc.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       }
       return mapDocument(doc, url);
@@ -469,8 +473,12 @@ export async function getPatientDocuments(
             doc.storagePath
           );
           url = result.signedUrl;
-        } catch {
-          // Silently skip URL generation failures
+        } catch (error) {
+          // Log but skip URL generation failures for patient documents (non-critical)
+          logger.debug('URL generation failed for patient document', {
+            documentId: doc.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       }
       return mapDocument(doc, url);

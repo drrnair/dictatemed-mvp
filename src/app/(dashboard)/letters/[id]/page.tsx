@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/infrastructure/db/client';
 import { requireAuth } from '@/lib/auth';
 import { decryptPatientData } from '@/infrastructure/db/encryption';
+import { logger } from '@/lib/logger';
 import { LetterReviewClient } from './LetterReviewClient';
 import { LetterReviewSkeleton } from './LetterReviewSkeleton';
 
@@ -76,7 +77,7 @@ async function getLetterForReview(letterId: string, userId: string) {
     try {
       patientData = decryptPatientData(letter.patient.encryptedData);
     } catch (error) {
-      console.error('Failed to decrypt patient data:', error);
+      logger.error('Failed to decrypt patient data', { letterId, error });
       // Continue without patient data rather than failing
     }
   }

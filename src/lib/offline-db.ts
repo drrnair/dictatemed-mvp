@@ -3,6 +3,7 @@
 // Provides typed collections for recordings, documents, and pending operations
 
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { logger } from '@/lib/logger';
 
 // ============ Schema Types ============
 
@@ -133,7 +134,7 @@ export function getDB(): Promise<IDBPDatabase<DictateMEDDBSchema>> {
         }
       },
       blocked() {
-        console.warn('IndexedDB blocked - close other tabs to continue');
+        logger.warn('IndexedDB blocked - close other tabs to continue');
       },
       blocking() {
         // Another version upgrade is waiting

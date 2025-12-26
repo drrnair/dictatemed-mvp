@@ -100,8 +100,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const query = {
       patientId: searchParams.get('patientId') ?? undefined,
-      type: searchParams.get('type') as DocumentType | undefined,
-      status: searchParams.get('status') as DocumentStatus | undefined,
+      type: (searchParams.get('type') ?? undefined) as DocumentType | undefined,
+      status: (searchParams.get('status') ?? undefined) as DocumentStatus | undefined,
       page: searchParams.get('page') ?? undefined,
       limit: searchParams.get('limit') ?? undefined,
     };

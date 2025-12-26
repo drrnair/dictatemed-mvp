@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Send, History } from 'lucide-react';
+import { logger } from '@/lib/logger';
 import type { SendStatus, ContactType } from '@prisma/client';
 
 // Proper type definitions instead of `any`
@@ -210,10 +211,7 @@ export function LetterReviewClient({
         return;
       }
       // Log non-abort errors
-      if (typeof window !== 'undefined') {
-        // eslint-disable-next-line no-console
-        console.error('Error saving draft:', error);
-      }
+      logger.error('Error saving draft', { letterId: letter.id, error });
     } finally {
       // Only clear saving state if this is still the active request
       if (saveAbortControllerRef.current === abortController) {
@@ -262,7 +260,7 @@ export function LetterReviewClient({
         setHistoryError(errorData.error || 'Failed to load send history');
       }
     } catch (error) {
-      console.error('Failed to fetch send history:', error);
+      logger.error('Failed to fetch send history', { letterId: letter.id, error });
       setHistoryError('Failed to load send history');
     } finally {
       setIsLoadingHistory(false);
@@ -378,7 +376,7 @@ export function LetterReviewClient({
       router.push('/letters?approved=true');
       router.refresh();
     } catch (error) {
-      console.error('Error approving letter:', error);
+      logger.error('Error approving letter', { letterId: letter.id, error });
     } finally {
       setIsApproving(false);
       setShowApprovalDialog(false);

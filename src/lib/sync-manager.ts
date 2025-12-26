@@ -2,6 +2,8 @@
 // Base sync manager for offline-first background synchronization
 
 import { offlineDetection, type NetworkStatus } from './offline-detection';
+import { logger } from '@/lib/logger';
+import { SYNC } from '@/lib/constants';
 
 export interface SyncResult {
   success: boolean;
@@ -38,9 +40,9 @@ export interface SyncManagerOptions {
 }
 
 const DEFAULT_OPTIONS: SyncManagerOptions = {
-  maxRetries: 3,
-  retryDelayMs: 1000,
-  concurrency: 2,
+  maxRetries: SYNC.MAX_RETRIES,
+  retryDelayMs: SYNC.BASE_RETRY_DELAY_MS,
+  concurrency: SYNC.CONCURRENCY_LIMIT,
   minConnectionQuality: 'online',
 };
 
@@ -190,7 +192,7 @@ export abstract class BaseSyncManager<T extends SyncableItem> {
       try {
         listener(event);
       } catch (error) {
-        console.error('Error in sync event listener:', error);
+        logger.error('Error in sync event listener', { error, eventType: event.type });
       }
     });
   }
@@ -264,7 +266,7 @@ export abstract class BaseSyncManager<T extends SyncableItem> {
       } as Partial<T>);
     } else {
       // Schedule retry with exponential backoff
-      const delay = this.options.retryDelayMs * Math.pow(2, newRetryCount - 1);
+      const delay = this.options.retryDelayMs * Math.pow(SYNC.BACKOFF_MULTIPLIER, newRetryCount - 1);
       await this.updateItem(item.id, {
         retryCount: newRetryCount,
         lastError: error,
@@ -289,7 +291,7 @@ class AutoSyncManager {
   private syncManagers: BaseSyncManager<SyncableItem>[] = [];
   private syncInterval: ReturnType<typeof setInterval> | null = null;
   private networkUnsubscribe: (() => void) | null = null;
-  private intervalMs = 30000; // 30 seconds
+  private intervalMs: number = SYNC.AUTO_SYNC_INTERVAL_MS;
 
   /**
    * Register a sync manager for automatic syncing.
@@ -313,7 +315,7 @@ class AutoSyncManager {
   /**
    * Start automatic background syncing.
    */
-  start(intervalMs: number = 30000): void {
+  start(intervalMs: number = SYNC.AUTO_SYNC_INTERVAL_MS): void {
     if (typeof window === 'undefined') {
       return;
     }
@@ -362,7 +364,7 @@ class AutoSyncManager {
   async syncAll(): Promise<void> {
     const promises = this.syncManagers.map((manager) =>
       manager.sync().catch((error) => {
-        console.error('Sync manager error:', error);
+        logger.error('Sync manager error', { error });
       })
     );
 

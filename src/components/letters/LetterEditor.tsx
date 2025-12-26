@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface SourceAnchor {
   id: string;
@@ -178,7 +179,7 @@ export function LetterEditor({
         await onSave();
         setLastSaved(new Date());
       } catch (error) {
-        console.error('Auto-save failed:', error);
+        logger.error('Auto-save failed', { letterId, error });
       } finally {
         setIsAutoSaving(false);
       }

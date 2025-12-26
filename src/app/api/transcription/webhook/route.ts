@@ -118,7 +118,8 @@ function verifySignature(
       Buffer.from(signature),
       Buffer.from(expectedSignature)
     );
-  } catch {
+  } catch (_signatureError) {
+    // Signature verification failed - could be invalid format or mismatched signature
     return false;
   }
 }

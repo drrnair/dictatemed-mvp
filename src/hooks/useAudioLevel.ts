@@ -4,6 +4,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AUDIO } from '@/lib/constants';
 
 interface UseAudioLevelOptions {
   /** FFT size for frequency analysis (default: 256) */
@@ -24,9 +25,9 @@ interface UseAudioLevelReturn {
 }
 
 const DEFAULT_OPTIONS: Required<UseAudioLevelOptions> = {
-  fftSize: 256,
-  updateInterval: 50,
-  smoothingTimeConstant: 0.8,
+  fftSize: AUDIO.FFT_SIZE,
+  updateInterval: AUDIO.LEVEL_UPDATE_INTERVAL_MS,
+  smoothingTimeConstant: AUDIO.SMOOTHING_TIME_CONSTANT,
 };
 
 export function useAudioLevel(
@@ -69,7 +70,7 @@ export function useAudioLevel(
     // Calculate RMS (root mean square) level
     let sum = 0;
     for (let i = 0; i < dataArray.length; i++) {
-      const normalized = (dataArray[i] ?? 0) / 255;
+      const normalized = (dataArray[i] ?? 0) / AUDIO.MAX_BYTE_VALUE;
       sum += normalized * normalized;
     }
     const rms = Math.sqrt(sum / dataArray.length);

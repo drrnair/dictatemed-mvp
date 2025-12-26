@@ -117,7 +117,7 @@ export function parseReferralExtraction(jsonString: string, modelUsed: string): 
   let data: unknown;
   try {
     data = JSON.parse(cleaned);
-  } catch {
+  } catch (parseError) {
     // Try to extract JSON from response (LLM may have added commentary)
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
@@ -125,8 +125,10 @@ export function parseReferralExtraction(jsonString: string, modelUsed: string): 
     }
     try {
       data = JSON.parse(jsonMatch[0]);
-    } catch {
-      throw new ReferralExtractionError('Failed to parse extracted JSON', 'PARSE_ERROR');
+    } catch (extractError) {
+      // Log both errors for debugging
+      const errorMsg = extractError instanceof Error ? extractError.message : String(extractError);
+      throw new ReferralExtractionError(`Failed to parse extracted JSON: ${errorMsg}`, 'PARSE_ERROR');
     }
   }
 
@@ -377,8 +379,8 @@ function parseDateString(value: unknown): string | undefined {
     if (!isNaN(date.getTime())) {
       return date.toISOString().split('T')[0];
     }
-  } catch {
-    // If parsing fails, return undefined
+  } catch (_dateParseError) {
+    // If parsing fails, return undefined - date format not recognized
   }
 
   return undefined;

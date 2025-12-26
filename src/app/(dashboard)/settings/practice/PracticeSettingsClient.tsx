@@ -7,11 +7,29 @@ import { useState } from 'react';
 import { PracticeDetails } from '@/components/settings/PracticeDetails';
 import { UserManagement } from '@/components/settings/UserManagement';
 import { PracticeSettings } from '@/components/settings/PracticeSettings';
+import { logger } from '@/lib/logger';
+
+import type { JsonValue } from '@prisma/client/runtime/library';
+
+/** Practice settings configuration values */
+type SettingValue = string | number | boolean | undefined;
+
+interface SettingsData {
+  defaultLetterType?: string;
+  autoSaveInterval?: number;
+  reviewReminderDays?: number;
+  enableHallucinationCheck?: boolean;
+  enableStyleLearning?: boolean;
+  requireSourceAnchors?: boolean;
+  minVerificationRate?: number;
+  [key: string]: SettingValue;
+}
 
 interface Practice {
   id: string;
   name: string;
-  settings: any;
+  /** Settings from Prisma (JsonValue) - normalized to SettingsData in component */
+  settings: JsonValue;
   letterhead: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -54,7 +72,7 @@ export function PracticeSettingsClient({
         setUsers(updatedUsers);
       }
     } catch (error) {
-      console.error('Error refreshing users:', error);
+      logger.error('Error refreshing users', { error });
     } finally {
       setIsRefreshing(false);
     }
@@ -82,8 +100,8 @@ export function PracticeSettingsClient({
 
       {/* Practice Settings */}
       <PracticeSettings
-        initialSettings={practice.settings as Record<string, any>}
-        onUpdate={handlePracticeUpdate}
+        initialSettings={(practice.settings as SettingsData | null) || {}}
+        onUpdate={(settings) => handlePracticeUpdate({ settings })}
       />
     </div>
   );

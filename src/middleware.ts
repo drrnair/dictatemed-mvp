@@ -3,6 +3,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0/edge';
+import { logger } from '@/lib/logger';
 
 // Routes that don't require authentication
 const publicPaths = [
@@ -60,7 +61,13 @@ export async function middleware(request: NextRequest) {
     }
 
     return response;
-  } catch {
+  } catch (error) {
+    // Log the authentication error
+    logger.warn('Middleware auth error', {
+      path: pathname,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     // On error, redirect to login
     if (!pathname.startsWith('/api/')) {
       const loginUrl = new URL('/api/auth/login', request.url);

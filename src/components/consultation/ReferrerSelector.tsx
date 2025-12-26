@@ -17,6 +17,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 import type { ReferrerInfo } from '@/domains/consultation';
 
 interface ReferrerSelectorProps {
@@ -47,8 +48,11 @@ export function ReferrerSelector({ value, onChange, disabled }: ReferrerSelector
         const data = await response.json();
         setRecentReferrers(data.referrers || []);
       }
-    } catch {
-      // Silently fail for recent referrers
+    } catch (error) {
+      // Log but don't block UI - recent referrers are not critical
+      logger.warn('Failed to load recent referrers', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }, []);
 

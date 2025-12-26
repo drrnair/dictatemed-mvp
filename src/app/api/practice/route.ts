@@ -11,9 +11,17 @@ import { z } from 'zod';
 
 const log = logger.child({ module: 'practice-api' });
 
+/** Zod schema for practice settings values */
+const settingValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.undefined(),
+]);
+
 const updatePracticeSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  settings: z.record(z.any()).optional(),
+  settings: z.record(settingValueSchema).optional(),
 });
 
 /**

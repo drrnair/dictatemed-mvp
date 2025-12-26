@@ -4,6 +4,7 @@
 import { createClient, type DeepgramClient } from '@deepgram/sdk';
 import { logger } from '@/lib/logger';
 import { getDeepgramKeyterms } from './keyterms';
+import { TRANSCRIPTION } from '@/lib/constants';
 import type {
   TranscriptionRequest,
   TranscriptionOptions,
@@ -36,7 +37,7 @@ export function getDeepgramClient(): DeepgramClient {
 function getDefaultOptions(mode: 'AMBIENT' | 'DICTATION'): TranscriptionOptions {
   return {
     diarize: mode === 'AMBIENT', // Only for ambient (conversation) mode
-    speakerCount: mode === 'AMBIENT' ? 2 : undefined, // Doctor + patient
+    speakerCount: mode === 'AMBIENT' ? TRANSCRIPTION.AMBIENT_SPEAKER_COUNT : undefined, // Doctor + patient
     redact: true, // PHI redaction enabled
     keywords: getDeepgramKeyterms().map((k) =>
       typeof k === 'string' ? k : k.term
@@ -78,8 +79,8 @@ export async function submitTranscription(
     callback: request.callbackUrl,
   });
 
-  // Add keywords
-  for (const keyword of options.keywords.slice(0, 100)) {
+  // Add keywords (limited to MAX_KEYWORDS)
+  for (const keyword of options.keywords.slice(0, TRANSCRIPTION.MAX_KEYWORDS)) {
     params.append('keywords', keyword);
   }
 

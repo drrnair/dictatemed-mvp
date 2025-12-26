@@ -6,6 +6,7 @@
 import { useCallback, useState } from 'react';
 import { logHandledError } from '@/lib/error-logger';
 import { isAppError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 interface UseErrorHandlerOptions {
   onError?: (error: Error) => void;
@@ -187,9 +188,9 @@ function showErrorToast(error: Error): void {
 
   // TODO: Replace with actual toast implementation (e.g., react-hot-toast, sonner)
   if (typeof window !== 'undefined') {
-    // Fallback to console in development
+    // Fallback to logger in development
     if (process.env.NODE_ENV === 'development') {
-      console.error('Toast:', message);
+      logger.error('Toast notification', { message });
     }
 
     // You can integrate with a toast library here:

@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { createRecording, listRecordings } from '@/domains/recording/recording.service';
+import type { RecordingListQuery } from '@/domains/recording/recording.types';
 import {
   createRecordingSchema,
   recordingQuerySchema,
@@ -101,7 +102,7 @@ export async function GET(request: NextRequest) {
     }
 
     // List recordings
-    const result = await listRecordings(userId, validation.data);
+    const result = await listRecordings(userId, validation.data as RecordingListQuery);
 
     return NextResponse.json(result);
   } catch (error) {

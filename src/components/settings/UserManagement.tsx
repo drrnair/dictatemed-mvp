@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { logger } from '@/lib/logger';
 
 interface User {
   id: string;
@@ -76,7 +77,7 @@ export function UserManagement({ users, currentUserId, onUserUpdate }: UserManag
       setInviteName('');
       setInviteRole('SPECIALIST');
     } catch (error) {
-      console.error('Error inviting user:', error);
+      logger.error('Error inviting user', { email: inviteEmail, error });
       alert(error instanceof Error ? error.message : 'Failed to invite user. Please try again.');
     } finally {
       setIsInviting(false);
@@ -118,7 +119,7 @@ export function UserManagement({ users, currentUserId, onUserUpdate }: UserManag
 
       onUserUpdate();
     } catch (error) {
-      console.error('Error changing user role:', error);
+      logger.error('Error changing user role', { userId, newRole, error });
       alert(error instanceof Error ? error.message : 'Failed to change user role. Please try again.');
     } finally {
       setChangingRoleUserId(null);
@@ -147,7 +148,7 @@ export function UserManagement({ users, currentUserId, onUserUpdate }: UserManag
 
       onUserUpdate();
     } catch (error) {
-      console.error('Error removing user:', error);
+      logger.error('Error removing user', { userId, userName, error });
       alert(error instanceof Error ? error.message : 'Failed to remove user. Please try again.');
     } finally {
       setRemovingUserId(null);

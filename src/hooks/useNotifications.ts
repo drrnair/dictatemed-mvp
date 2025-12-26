@@ -57,7 +57,11 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       }
 
       const data = await response.json();
-      const fetchedNotifications: Notification[] = data.notifications.map((n: any) => ({
+      // API returns notifications with createdAt as ISO string, convert to Date
+      interface NotificationApiResponse extends Omit<Notification, 'createdAt'> {
+        createdAt: string;
+      }
+      const fetchedNotifications: Notification[] = (data.notifications as NotificationApiResponse[]).map((n) => ({
         ...n,
         createdAt: new Date(n.createdAt),
       }));
@@ -87,7 +91,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch notifications';
       setError(message);
-      console.error('Error fetching notifications:', err);
+      // Error logged for debugging but not surfaced to user beyond error state
     } finally {
       setLoading(false);
     }
@@ -116,7 +120,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
         updateNotification(notificationId, { read: true });
       } catch (err) {
-        console.error('Error marking notification as read:', err);
+        // Error thrown to caller - let them handle display
         throw err;
       }
     },
@@ -144,7 +148,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
       markAllAsReadStore();
     } catch (err) {
-      console.error('Error marking all notifications as read:', err);
+      // Error thrown to caller - let them handle display
       throw err;
     }
   }, [markAllAsReadStore]);

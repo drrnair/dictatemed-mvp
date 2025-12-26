@@ -75,7 +75,7 @@ export async function DELETE() {
           resourceId: userId,
           metadata: { reason: 'account_deletion' },
         });
-      } catch (err) {
+      } catch (_deleteError) {
         storageDeletionErrors.push(`signature: ${user.signature}`);
       }
     }
@@ -98,7 +98,7 @@ export async function DELETE() {
             resourceId: rec.id,
             metadata: { reason: 'account_deletion' },
           });
-        } catch (err) {
+        } catch (_deleteError) {
           storageDeletionErrors.push(`recording: ${audioPath}`);
         }
       }
@@ -121,7 +121,7 @@ export async function DELETE() {
             resourceId: doc.id,
             metadata: { reason: 'account_deletion' },
           });
-        } catch (err) {
+        } catch (_deleteError) {
           storageDeletionErrors.push(`document: ${docPath}`);
         }
       }
@@ -205,8 +205,12 @@ export async function DELETE() {
           },
         },
       });
-    } catch {
+    } catch (auditError) {
       // Best effort - audit log failure shouldn't block deletion confirmation
+      log.warn('Failed to create deletion audit log', {
+        userId,
+        error: auditError instanceof Error ? auditError.message : String(auditError),
+      });
     }
 
     return NextResponse.json({

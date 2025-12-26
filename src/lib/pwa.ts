@@ -291,11 +291,21 @@ export function canInstall(): boolean {
 }
 
 /**
+ * BeforeInstallPrompt event interface for PWA installation
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/BeforeInstallPromptEvent
+ */
+export interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+  prompt(): Promise<void>;
+}
+
+/**
  * Get install prompt (must be stored from beforeinstallprompt event)
  */
-let deferredPrompt: any = null;
+let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
-export function storeDeferredPrompt(prompt: any): void {
+export function storeDeferredPrompt(prompt: BeforeInstallPromptEvent): void {
   deferredPrompt = prompt;
 }
 

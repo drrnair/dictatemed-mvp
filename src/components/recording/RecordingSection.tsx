@@ -5,6 +5,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { Upload, Loader2, FileAudio, AlertCircle } from 'lucide-react';
+import { AUDIO } from '@/lib/constants';
 import { RecordingModeSelector, type RecordingMode } from './RecordingModeSelector';
 import { RecordingControls, RecordingTimer } from './RecordingControls';
 import { WaveformVisualizer } from './WaveformVisualizer';
@@ -60,7 +61,7 @@ export function RecordingSection({
       audioContextRef.current = new AudioContext();
       const source = audioContextRef.current.createMediaStreamSource(stream);
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 256;
+      analyserRef.current.fftSize = AUDIO.FFT_SIZE;
       source.connect(analyserRef.current);
 
       // Set up media recorder
@@ -80,9 +81,9 @@ export function RecordingSection({
           const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
           analyserRef.current.getByteFrequencyData(dataArray);
           const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-          setAudioLevel(average / 255);
+          setAudioLevel(average / AUDIO.MAX_BYTE_VALUE);
         }
-      }, 1000);
+      }, AUDIO.TIMER_UPDATE_INTERVAL_MS);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start recording');
     }
@@ -105,7 +106,7 @@ export function RecordingSection({
 
       timerRef.current = setInterval(() => {
         setDuration((d) => d + 1);
-      }, 1000);
+      }, AUDIO.TIMER_UPDATE_INTERVAL_MS);
     }
   }, []);
 

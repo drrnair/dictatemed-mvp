@@ -6,13 +6,14 @@
 import { useCallback } from 'react';
 import { Sparkles } from 'lucide-react';
 import { PracticeProfileForm } from '@/components/specialty';
+import { logger } from '@/lib/logger';
 
 export default function OnboardingPage() {
   // Handle save completion - redirect to dashboard
   const handleSave = useCallback(() => {
     // Seed templates if not already done (fire and forget)
-    fetch('/api/templates', { method: 'POST' }).catch(() => {
-      // Ignore template seeding errors - non-blocking
+    fetch('/api/templates', { method: 'POST' }).catch((_templateError) => {
+      // Template seeding errors are non-blocking - templates can be seeded later
     });
 
     // Use full page navigation to ensure server state is refreshed
@@ -25,13 +26,15 @@ export default function OnboardingPage() {
     // Mark onboarding as complete (even without specialty selection)
     try {
       await fetch('/api/user/onboarding/complete', { method: 'POST' });
-    } catch {
+    } catch (error) {
       // Continue even if the API call fails - user wants to skip
+      // Log for debugging but don't block user flow
+      logger.warn('Failed to mark onboarding complete', { error });
     }
 
     // Seed templates if not already done (fire and forget)
-    fetch('/api/templates', { method: 'POST' }).catch(() => {
-      // Ignore template seeding errors - non-blocking
+    fetch('/api/templates', { method: 'POST' }).catch((_templateError) => {
+      // Template seeding errors are non-blocking - templates can be seeded later
     });
 
     // Use full page navigation to ensure server state is refreshed

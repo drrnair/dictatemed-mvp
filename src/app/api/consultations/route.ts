@@ -2,6 +2,7 @@
 // API endpoints for managing consultations
 
 import { NextRequest, NextResponse } from 'next/server';
+import type { ConsultationStatus } from '@prisma/client';
 import { prisma } from '@/infrastructure/db/client';
 import { getSession } from '@/lib/auth';
 import { encryptPatientData, decryptPatientData } from '@/infrastructure/db/encryption';
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     const consultations = await prisma.consultation.findMany({
       where: {
         userId: session.user.id,
-        ...(status && { status: status as any }),
+        ...(status && { status: status as ConsultationStatus }),
       },
       include: {
         patient: true,
@@ -64,7 +65,8 @@ export async function GET(request: NextRequest) {
             dateOfBirth: decrypted.dateOfBirth,
             mrn: decrypted.medicareNumber,
           };
-        } catch {
+        } catch (_decryptError) {
+          // Patient data decryption failed - show placeholder instead of crashing
           patientSummary = { id: consultation.patient.id, name: '[Decryption error]', dateOfBirth: '' };
         }
       }
@@ -190,7 +192,8 @@ export async function POST(request: NextRequest) {
           dateOfBirth: decrypted.dateOfBirth,
           mrn: decrypted.medicareNumber,
         };
-      } catch {
+      } catch (_decryptError) {
+        // Patient data decryption failed - show placeholder instead of crashing
         patientSummary = { id: consultation.patient.id, name: '[Decryption error]', dateOfBirth: '' };
       }
     }

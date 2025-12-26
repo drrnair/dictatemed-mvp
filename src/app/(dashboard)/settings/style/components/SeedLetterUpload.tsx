@@ -119,7 +119,7 @@ export function SeedLetterUpload({
           return;
         }
         setLetterText(text);
-      } catch {
+      } catch (_error) {
         setError('Failed to read file. Please try again.');
       }
     } else {
@@ -150,7 +150,7 @@ export function SeedLetterUpload({
         setLetterText(text);
         setError(null);
       }
-    } catch {
+    } catch (_error) {
       setError('Failed to read clipboard. Please paste manually into the text area.');
     }
   }, []);

@@ -8,10 +8,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { logger } from '@/lib/logger';
+
+type SettingValue = string | number | boolean | undefined;
+
+interface SettingsData {
+  defaultLetterType?: string;
+  autoSaveInterval?: number;
+  reviewReminderDays?: number;
+  enableHallucinationCheck?: boolean;
+  enableStyleLearning?: boolean;
+  requireSourceAnchors?: boolean;
+  minVerificationRate?: number;
+  [key: string]: SettingValue;
+}
 
 interface PracticeSettingsProps {
-  initialSettings: Record<string, any>;
-  onUpdate: (settings: Record<string, any>) => void;
+  initialSettings: SettingsData;
+  onUpdate: (settings: SettingsData) => void;
 }
 
 export function PracticeSettings({ initialSettings, onUpdate }: PracticeSettingsProps) {
@@ -28,7 +42,7 @@ export function PracticeSettings({ initialSettings, onUpdate }: PracticeSettings
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const handleSettingChange = (key: string, value: any) => {
+  const handleSettingChange = (key: string, value: SettingValue) => {
     setSettings((prev) => ({
       ...prev,
       [key]: value,
@@ -53,7 +67,7 @@ export function PracticeSettings({ initialSettings, onUpdate }: PracticeSettings
       onUpdate(practice);
       setHasChanges(false);
     } catch (error) {
-      console.error('Error saving settings:', error);
+      logger.error('Error saving settings', { error });
       alert('Failed to save settings. Please try again.');
     } finally {
       setIsSaving(false);

@@ -20,9 +20,30 @@ export const booleanString = z.preprocess(
   z.boolean().optional()
 );
 
+/**
+ * Helper to convert null/empty strings to undefined for use with zod default values.
+ * This is needed because URLSearchParams.get() returns null for missing params.
+ */
+const nullToUndefined = (val: unknown) => (val === null || val === '' ? undefined : val);
+
+/**
+ * Helper to create nullable optional schema for query params.
+ * Converts null/empty strings to undefined so zod.optional() works correctly.
+ */
+const nullableOptional = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(nullToUndefined, schema.optional());
+
+// Create a typed preprocess helper for number fields with defaults
+const coerceNumber = (defaultValue: number, min: number, max?: number) => {
+  const schema = max !== undefined
+    ? z.coerce.number().int().min(min).max(max).default(defaultValue)
+    : z.coerce.number().int().min(min).default(defaultValue);
+  return z.preprocess(nullToUndefined, schema) as z.ZodEffects<z.ZodDefault<z.ZodNumber>, number, unknown>;
+};
+
 export const paginationSchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  page: coerceNumber(1, 1),
+  limit: coerceNumber(20, 1, 100),
 });
 
 // ============ Recording Schemas ============
@@ -53,11 +74,11 @@ export const updateRecordingSchema = z.object({
 });
 
 export const recordingQuerySchema = paginationSchema.extend({
-  status: z
-    .enum(['UPLOADING', 'UPLOADED', 'TRANSCRIBING', 'TRANSCRIBED', 'FAILED'])
-    .optional(),
-  patientId: uuidSchema.optional(),
-  mode: recordingModeSchema.optional(),
+  status: nullableOptional(
+    z.enum(['UPLOADING', 'UPLOADED', 'TRANSCRIBING', 'TRANSCRIBED', 'FAILED'])
+  ),
+  patientId: nullableOptional(uuidSchema),
+  mode: nullableOptional(recordingModeSchema),
 });
 
 // ============ Document Schemas ============
@@ -81,11 +102,11 @@ export const createDocumentSchema = z.object({
 });
 
 export const documentQuerySchema = paginationSchema.extend({
-  status: z
-    .enum(['UPLOADING', 'UPLOADED', 'PROCESSING', 'PROCESSED', 'FAILED'])
-    .optional(),
-  documentType: documentTypeSchema.optional(),
-  patientId: uuidSchema.optional(),
+  status: nullableOptional(
+    z.enum(['UPLOADING', 'UPLOADED', 'PROCESSING', 'PROCESSED', 'FAILED'])
+  ),
+  documentType: nullableOptional(documentTypeSchema),
+  patientId: nullableOptional(uuidSchema),
 });
 
 // ============ Letter Schemas ============
@@ -114,11 +135,11 @@ export const approveLetterSchema = z.object({
 });
 
 export const letterQuerySchema = paginationSchema.extend({
-  status: z
-    .enum(['GENERATING', 'DRAFT', 'IN_REVIEW', 'APPROVED', 'FAILED'])
-    .optional(),
-  letterType: letterTypeSchema.optional(),
-  patientId: uuidSchema.optional(),
+  status: nullableOptional(
+    z.enum(['GENERATING', 'DRAFT', 'IN_REVIEW', 'APPROVED', 'FAILED'])
+  ),
+  letterType: nullableOptional(letterTypeSchema),
+  patientId: nullableOptional(uuidSchema),
 });
 
 // ============ Patient Schemas ============

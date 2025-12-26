@@ -1,7 +1,39 @@
 // src/lib/rate-limit.ts
 // Rate limiting service per spec section 1.4
-// Note: This is a placeholder using in-memory store for MVP.
-// For production, migrate to Redis/Upstash for distributed rate limiting.
+// Supports both in-memory (development) and Redis (production) stores.
+//
+// ## Usage
+//
+// For synchronous rate limiting (in-memory only):
+//   const result = checkRateLimit(key, 'letters');
+//
+// For distributed rate limiting with Redis (falls back to in-memory):
+//   const result = await checkRateLimitAsync(key, 'letters');
+//
+// ## Production Configuration
+//
+// To enable Redis-based distributed rate limiting in production:
+// 1. Create a free Upstash Redis database at https://console.upstash.com/redis
+// 2. Set environment variables:
+//    - UPSTASH_REDIS_REST_URL=https://...
+//    - UPSTASH_REDIS_REST_TOKEN=...
+//
+// ## Migration Guide for API Endpoints
+//
+// To migrate an endpoint from in-memory to distributed rate limiting:
+//
+// Before:
+//   const rateLimitResult = checkRateLimit(key, 'letters');
+//
+// After:
+//   const rateLimitResult = await checkRateLimitAsync(key, 'letters');
+//
+// Note: The async function gracefully falls back to in-memory if Redis
+// is not configured, so it's safe to use in all environments.
+
+import { Redis } from '@upstash/redis';
+import { Ratelimit } from '@upstash/ratelimit';
+import { logger } from '@/lib/logger';
 
 interface RateLimitConfig {
   requests: number;
@@ -29,8 +61,76 @@ interface RateLimitEntry {
   resetTime: number;
 }
 
-// In-memory store - replace with Redis for production
-const store = new Map<string, RateLimitEntry>();
+// In-memory store - used as fallback when Redis is not configured
+const inMemoryStore = new Map<string, RateLimitEntry>();
+
+// Redis client singleton - only created if environment variables are set
+let redisClient: Redis | null = null;
+let redisLimiters: Map<string, Ratelimit> | null = null;
+// Track whether we've already checked for Redis config (to avoid log spam)
+let redisInitAttempted = false;
+
+/**
+ * Initialize Redis client and rate limiters if configured.
+ * This is lazy-initialized on first use.
+ */
+function initializeRedis(): boolean {
+  // Already successfully initialized
+  if (redisClient !== null) {
+    return true;
+  }
+
+  // Already attempted but Redis not configured - skip without logging again
+  if (redisInitAttempted) {
+    return false;
+  }
+
+  redisInitAttempted = true;
+
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!redisUrl || !redisToken) {
+    logger.debug('Upstash Redis not configured, using in-memory rate limiting');
+    return false;
+  }
+
+  try {
+    redisClient = new Redis({
+      url: redisUrl,
+      token: redisToken,
+    });
+
+    // Create rate limiters for each resource type
+    redisLimiters = new Map();
+
+    for (const [resource, config] of Object.entries(RATE_LIMITS)) {
+      // Convert windowMs to seconds for Upstash
+      const windowSec = Math.ceil(config.windowMs / 1000);
+      const windowStr = `${windowSec} s` as `${number} s`;
+
+      redisLimiters.set(
+        resource,
+        new Ratelimit({
+          redis: redisClient,
+          limiter: Ratelimit.slidingWindow(config.requests, windowStr),
+          prefix: `ratelimit:${resource}`,
+          analytics: true,
+        })
+      );
+    }
+
+    logger.info('Upstash Redis rate limiting initialized');
+    return true;
+  } catch (error) {
+    logger.error('Failed to initialize Upstash Redis', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    redisClient = null;
+    redisLimiters = null;
+    return false;
+  }
+}
 
 /**
  * Rate limit result
@@ -43,7 +143,49 @@ export interface RateLimitResult {
 }
 
 /**
- * Check if a request should be rate limited.
+ * Check if a request should be rate limited using Redis (if available) or in-memory fallback.
+ *
+ * @param key - Unique key for the rate limit bucket (e.g., `${userId}:${resource}`)
+ * @param resource - Resource type for limit lookup
+ * @returns Rate limit result with remaining quota and reset time
+ */
+export async function checkRateLimitAsync(
+  key: string,
+  resource: keyof typeof RATE_LIMITS = 'default'
+): Promise<RateLimitResult> {
+  // Try to use Redis first
+  const redisInitialized = initializeRedis();
+
+  if (redisInitialized && redisLimiters) {
+    const limiter = redisLimiters.get(resource) ?? redisLimiters.get('default');
+    if (limiter) {
+      try {
+        const result = await limiter.limit(key);
+
+        return {
+          allowed: result.success,
+          remaining: result.remaining,
+          resetAt: new Date(result.reset),
+          retryAfterMs: result.success ? undefined : result.reset - Date.now(),
+        };
+      } catch (error) {
+        logger.warn('Redis rate limit check failed, falling back to in-memory', {
+          error: error instanceof Error ? error.message : String(error),
+          key,
+          resource,
+        });
+        // Fall through to in-memory check
+      }
+    }
+  }
+
+  // Fall back to in-memory rate limiting
+  return checkRateLimit(key, resource);
+}
+
+/**
+ * Check if a request should be rate limited (synchronous, in-memory only).
+ * Use checkRateLimitAsync for Redis-backed rate limiting.
  *
  * @param key - Unique key for the rate limit bucket (e.g., `${userId}:${resource}`)
  * @param resource - Resource type for limit lookup
@@ -59,12 +201,12 @@ export function checkRateLimit(
   }
   const now = Date.now();
 
-  const entry = store.get(key);
+  const entry = inMemoryStore.get(key);
 
   // New window or expired
   if (!entry || now >= entry.resetTime) {
     const resetTime = now + config.windowMs;
-    store.set(key, { count: 1, resetTime });
+    inMemoryStore.set(key, { count: 1, resetTime });
     return {
       allowed: true,
       remaining: config.requests - 1,
@@ -84,7 +226,7 @@ export function checkRateLimit(
 
   // Increment counter
   entry.count++;
-  store.set(key, entry);
+  inMemoryStore.set(key, entry);
 
   return {
     allowed: true,
@@ -104,7 +246,22 @@ export function createRateLimitKey(userId: string, resource: string): string {
  * Clear rate limit for a specific key (for testing).
  */
 export function clearRateLimit(key: string): void {
-  store.delete(key);
+  inMemoryStore.delete(key);
+}
+
+/**
+ * Clear all in-memory rate limits (for testing).
+ */
+export function clearAllRateLimits(): void {
+  inMemoryStore.clear();
+}
+
+/**
+ * Check if Redis rate limiting is active.
+ */
+export function isRedisRateLimitingActive(): boolean {
+  initializeRedis();
+  return redisClient !== null && redisLimiters !== null;
 }
 
 /**
@@ -119,9 +276,3 @@ export function getRateLimitHeaders(result: RateLimitResult): HeadersInit {
     }),
   };
 }
-
-// TODO: Production improvements
-// 1. Replace in-memory store with Redis/Upstash for distributed rate limiting
-// 2. Add sliding window algorithm for smoother rate limiting
-// 3. Add IP-based rate limiting for unauthenticated endpoints
-// 4. Add burst allowance for temporary spikes

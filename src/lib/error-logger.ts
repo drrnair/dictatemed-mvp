@@ -1,5 +1,134 @@
 // src/lib/error-logger.ts
 // Structured error logging with context and external service integration
+// Prepared for Sentry integration - install @sentry/nextjs when ready
+
+/**
+ * SENTRY INTEGRATION GUIDE
+ * ========================
+ * To enable Sentry error tracking in production:
+ *
+ * 1. Install Sentry: npm install @sentry/nextjs
+ * 2. Run setup wizard: npx @sentry/wizard@latest -i nextjs
+ * 3. Set NEXT_PUBLIC_SENTRY_DSN in .env
+ * 4. Uncomment Sentry imports and calls below
+ *
+ * The error logger will automatically detect Sentry and send errors.
+ * Without Sentry, errors are logged to console and queued for batch sending.
+ */
+
+// Uncomment when Sentry is installed:
+// import * as Sentry from '@sentry/nextjs';
+
+/**
+ * Check if Sentry is available and configured
+ */
+function isSentryAvailable(): boolean {
+  // Check for Sentry DSN in environment
+  // When @sentry/nextjs is installed, it auto-initializes from sentry.client.config.ts
+  return !!(
+    typeof process !== 'undefined' &&
+    process.env.NEXT_PUBLIC_SENTRY_DSN &&
+    process.env.NODE_ENV === 'production'
+  );
+}
+
+/**
+ * Send error to Sentry if available
+ * Filters PHI (Protected Health Information) before sending
+ */
+function captureToSentry(error: Error, context: Record<string, unknown>, severity: string): void {
+  if (!isSentryAvailable()) return;
+
+  // PHI filtering - never send patient data to external services
+  const _sanitizedContext = filterPHI(context);
+
+  // Uncomment when Sentry is installed:
+  // Sentry.withScope((scope) => {
+  //   scope.setLevel(mapSeverityToSentryLevel(severity));
+  //   scope.setExtras(_sanitizedContext);
+  //   if (context.userId) {
+  //     scope.setUser({ id: String(context.userId) });
+  //   }
+  //   Sentry.captureException(error);
+  // });
+
+  // Suppress unused variable warnings until Sentry is installed
+  void error;
+  void severity;
+}
+
+/**
+ * PHI keys to filter from error context before sending to external services.
+ * Uses substring matching intentionally as a fail-safe approach:
+ * - Prefers over-filtering to under-filtering for healthcare compliance
+ * - Keys like "hasPhoneCapability" will be filtered (acceptable false positive)
+ * - Ensures patient data never leaks even with non-standard key names
+ */
+const PHI_KEYS = [
+  'patientname',
+  'patientid',
+  'dateofbirth',
+  'dob',
+  'nhsnumber',
+  'medicarenumber',
+  'mrn',
+  'medicalrecordnumber',
+  'address',
+  'phone',
+  'email',
+  'ssn',
+  'socialsecuritynumber',
+  'diagnosis',
+  'medication',
+  'prescription',
+] as const;
+
+/**
+ * Filter PHI from error context before sending to external services.
+ * Exported for testing.
+ */
+export function filterPHI(context: Record<string, unknown>): Record<string, unknown> {
+  const filtered: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(context)) {
+    const lowerKey = key.toLowerCase();
+    const isPHI = PHI_KEYS.some(phiKey => lowerKey.includes(phiKey));
+
+    if (isPHI) {
+      filtered[key] = '[REDACTED]';
+    } else if (Array.isArray(value)) {
+      // Handle arrays - filter each element if it's an object
+      filtered[key] = value.map(item =>
+        typeof item === 'object' && item !== null
+          ? filterPHI(item as Record<string, unknown>)
+          : item
+      );
+    } else if (typeof value === 'object' && value !== null) {
+      // Recursively filter nested objects
+      filtered[key] = filterPHI(value as Record<string, unknown>);
+    } else {
+      filtered[key] = value;
+    }
+  }
+
+  return filtered;
+}
+
+// Uncomment when Sentry is installed:
+// function mapSeverityToSentryLevel(severity: string): Sentry.SeverityLevel {
+//   switch (severity) {
+//     case 'critical':
+//       return 'fatal';
+//     case 'high':
+//       return 'error';
+//     case 'medium':
+//       return 'warning';
+//     case 'low':
+//       return 'info';
+//     default:
+//       return 'error';
+//   }
+// }
 
 interface ErrorContext {
   userId?: string;
@@ -62,7 +191,10 @@ class ErrorLogger {
     // Console logging
     this.logToConsole(loggedError);
 
-    // Queue for external service
+    // Send to Sentry if available (PHI is filtered automatically)
+    captureToSentry(error, fullContext, severity);
+
+    // Queue for external service (fallback batch sending)
     this.logQueue.push(loggedError);
 
     // In production, send critical errors immediately
@@ -126,25 +258,31 @@ class ErrorLogger {
   }
 
   /**
-   * Send errors to external logging service (placeholder)
+   * Send errors to external logging service (batch fallback)
+   * Note: If Sentry is configured, errors are sent immediately via captureToSentry.
+   * This method is a fallback for custom logging endpoints.
    */
   private async sendToExternalService(errors: LoggedError[]): Promise<void> {
-    // TODO: Integrate with external service (e.g., Sentry, DataDog, CloudWatch)
+    // If Sentry is available, errors are already sent - skip batch endpoint
+    if (isSentryAvailable()) {
+      return;
+    }
 
     // Only attempt to send in browser and production
     if (typeof window === 'undefined' || process.env.NODE_ENV !== 'production') {
       return;
     }
 
-    // Example integration point
+    // Custom logging endpoint (fallback when Sentry not configured)
     const endpoint = process.env.NEXT_PUBLIC_ERROR_LOGGING_ENDPOINT;
     if (!endpoint) return;
 
+    // Filter PHI before sending to any external service
     const payload = errors.map(({ error, context, severity }) => ({
       name: error.name,
       message: error.message,
       stack: error.stack,
-      context,
+      context: filterPHI(context),
       severity,
     }));
 

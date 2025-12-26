@@ -297,8 +297,12 @@ export async function listRecordings(
             r.storagePath
           );
           audioUrl = result.signedUrl;
-        } catch {
-          // Silently skip URL generation failures for list operations
+        } catch (error) {
+          // Log but skip URL generation failures for list operations (non-critical)
+          logger.debug('URL generation failed in list', {
+            recordingId: r.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       }
       return mapRecording(r, audioUrl);
