@@ -126,6 +126,7 @@ npm run test -- pubmed  # ✅ 18 tests passed
 ---
 
 ### [ ] Step 4: User Library Service (Vector Search)
+<!-- chat-id: c29b3d62-6e27-4409-8f35-53a0fb8fb176 -->
 
 **Goal**: PDF upload with embedding-based search
 
