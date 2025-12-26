@@ -53,6 +53,8 @@
     "@radix-ui/react-tooltip": "^1.0.7",
     "@react-email/render": "^2.0.0",
     "@supabase/supabase-js": "^2.89.0",
+    "@upstash/ratelimit": "^2.0.7",
+    "@upstash/redis": "^1.36.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.0",

@@ -62,20 +62,34 @@ Implemented Svix signature verification for Resend webhooks.
 - `src/app/api/webhooks/resend/route.ts` - Added signature verification logic
 - `package.json` - Added svix dependency (^1.82.0)
 - `.env.example` - Documented RESEND_WEBHOOK_SECRET with setup instructions
+- `tests/integration/api/webhooks-resend.test.ts` - Added 19 unit tests
 
 **Implementation completed:**
 1. Installed `svix` package
-2. Created `verifyWebhookSignature()` function that:
+2. Created `parseWebhookBody()` helper function to reduce code duplication
+3. Created `verifyWebhookSignature()` function that:
    - Extracts svix-id, svix-timestamp, svix-signature headers
    - Uses Svix Webhook class to verify signature
    - Returns verified event or null on failure
-3. Production behavior: Rejects invalid signatures with 401
-4. Development behavior: Logs warning but allows for testing
-5. Missing secret in production returns 500 error
-6. All verification failures are logged with context
+4. Production behavior: Rejects invalid signatures with 401
+5. Development behavior: Logs warning but allows for testing
+6. Missing secret in production returns 500 error
+7. All verification failures are logged with context
+8. Updated doc comment to clearly document security behavior
+
+**Review feedback addressed:**
+- Extracted duplicate JSON parsing code into `parseWebhookBody()` helper
+- Changed .env.example to use empty value with format documented in comments
+- Added comprehensive test suite (19 tests) covering:
+  - Health check endpoint
+  - Production mode (500 without secret, 401 for invalid/missing signatures)
+  - Development mode (allows unsigned webhooks with warning)
+  - Event handling (all event types, malformed events, unknown types)
+  - Signature header validation (missing individual headers)
 
 **Verification:**
 - `npm run typecheck` passes
+- `npm run test:integration -- --testNamePattern="Resend"` - 19 tests pass
 - svix package added to dependencies
 - .env.example documents required secret format (whsec_xxx)
 
@@ -122,6 +136,7 @@ Fixed all 24 empty catch blocks across the codebase.
 ## Phase 2: Production Readiness (Days 3-5)
 
 ### [ ] Step: Issue 4 - Distributed Rate Limiting
+<!-- chat-id: c7303b6d-1f92-46f5-88d8-c1ec4f9e3701 -->
 
 Add Upstash Redis support for distributed rate limiting.
 
