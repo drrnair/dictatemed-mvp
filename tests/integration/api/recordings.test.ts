@@ -1,6 +1,16 @@
 // tests/integration/api/recordings.test.ts
 // Integration tests for recording API endpoints with user-scoped access
-// @ts-nocheck - Integration tests use partial mocks for Prisma models
+//
+// @ts-nocheck is used because these integration tests use partial mock objects
+// that don't include all required Prisma model fields. This is intentional:
+// - Tests only specify fields relevant to the behavior being tested
+// - Full Prisma types have 30+ required fields, making fixtures verbose
+//
+// TODO: Replace with properly typed test fixtures when test infrastructure is improved.
+// Options: (1) Create factory functions that generate full mock objects
+//          (2) Use prisma-mock or similar library for type-safe mocking
+//          (3) Define Partial<T> test fixture types
+// @ts-nocheck
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
