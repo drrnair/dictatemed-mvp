@@ -4,7 +4,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireAdmin } from '@/lib/auth';
 import { prisma } from '@/infrastructure/db/client';
+import { logger } from '@/lib/logger';
 import { z } from 'zod';
+
+const log = logger.child({ module: 'practice-users-api' });
 
 const inviteUserSchema = z.object({
   email: z.string().email(),
@@ -43,7 +46,10 @@ export async function GET() {
 
     return NextResponse.json({ users });
   } catch (error) {
-    console.error('Error fetching users:', error);
+    log.error('Error fetching users', {
+      action: 'listUsers',
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       { error: 'Failed to fetch users' },
       { status: 500 }
@@ -113,7 +119,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Error inviting user:', error);
+    log.error('Error inviting user', {
+      action: 'inviteUser',
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       { error: 'Failed to invite user' },
       { status: 500 }
@@ -182,7 +191,10 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    console.error('Error updating user role:', error);
+    log.error('Error updating user role', {
+      action: 'updateUserRole',
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       { error: 'Failed to update user role' },
       { status: 500 }
@@ -272,7 +284,10 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    console.error('Error removing user:', error);
+    log.error('Error removing user', {
+      action: 'removeUser',
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       { error: 'Failed to remove user' },
       { status: 500 }
