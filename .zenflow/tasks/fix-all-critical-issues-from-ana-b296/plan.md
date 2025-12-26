@@ -311,10 +311,18 @@ Replaced all `any` types with proper TypeScript types.
 1. Fixed Prisma type casting: Changed `Prisma.EnumLetterStatusFilter` to `LetterStatus` and `Prisma.EnumLetterTypeFilter` to `PrismaLetterType` (actual enum types, not filter object types)
 2. Consolidated `BeforeInstallPromptEvent` interface: Now exported from `@/lib/pwa.ts` (canonical definition), imported in `UpdatePrompt.tsx`
 
+**Additional test cleanup:**
+3. Fixed TypeScript errors in `tests/integration/api/consultations.test.ts`:
+   - Added `ConsultationStatus`, `LetterType`, `Consultation` imports from `@prisma/client`
+   - Created `MockConsultation` type to properly type mock objects with relations
+   - Added proper type assertions for enum values in mock data
+4. Removed obsolete `tests/unit/api/dashboard-stats.test.ts` (referenced non-existent API route; dashboard uses Server Components)
+
 **Verification:**
-- `npm run typecheck` passes for modified source files ✅
-- (Pre-existing errors in patients/route.ts and recordings/route.ts unrelated to these changes)
+- `npm run typecheck` passes ✅ (0 errors in source and test files)
 - `npm run lint` passes (only pre-existing warning) ✅
+- `npm run test` passes ✅ (1391 tests)
+- `npm run test:integration` passes ✅ (371 tests including 25 consultation tests)
 - `grep -rn ": any" src/` returns 0 results ✅
 - `grep -rn "eslint-disable.*no-explicit-any" src/` returns 0 results ✅
 - `grep -rn "z\.any()" src/` returns 0 results ✅

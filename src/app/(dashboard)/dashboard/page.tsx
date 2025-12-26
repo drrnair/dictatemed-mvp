@@ -81,10 +81,14 @@ async function getDashboardStats(userId: string, practiceId: string): Promise<Da
   const timeSavedHours = Math.round((approvedThisMonth * 15) / 60);
 
   const recentActivity = recentLetters.map((letter) => {
-    // Patient data is encrypted - use patientId for initials or fallback
-    const patientInitials = letter.patientId
-      ? letter.patientId.substring(0, 2).toUpperCase()
-      : '??';
+    // Patient data is encrypted - use letter type abbreviation instead
+    const letterTypeAbbreviations: Record<string, string> = {
+      'NEW_PATIENT': 'NP',
+      'FOLLOW_UP': 'FU',
+      'ECHO_REPORT': 'ER',
+      'ANGIOGRAM_PROCEDURE': 'AP',
+    };
+    const patientInitials = letterTypeAbbreviations[letter.letterType] || '??';
 
     const letterType = letter.letterType
       .replace(/_/g, ' ')
