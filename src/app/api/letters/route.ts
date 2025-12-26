@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import type { Subspecialty } from '@prisma/client';
+import type { Prisma, Subspecialty } from '@prisma/client';
 import { getSession } from '@/lib/auth';
 import { generateLetter, listLetters } from '@/domains/letters/letter.service';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
@@ -162,41 +162,27 @@ export async function GET(request: NextRequest) {
     const { prisma } = await import('@/infrastructure/db/client');
     const { decryptPatientData } = await import('@/infrastructure/db/encryption');
 
-    // Build where clause dynamically
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {
+    // Build where clause dynamically with proper Prisma types
+    const where: Prisma.LetterWhereInput = {
       userId: session.user.id,
+      ...(status && { status: status as Prisma.EnumLetterStatusFilter }),
+      ...(letterType && { letterType: letterType as Prisma.EnumLetterTypeFilter }),
+      ...((startDate || endDate) && {
+        createdAt: {
+          ...(startDate && { gte: new Date(startDate) }),
+          ...(endDate && { lte: new Date(endDate) }),
+        },
+      }),
     };
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (letterType) {
-      where.letterType = letterType;
-    }
-
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) {
-        where.createdAt.gte = new Date(startDate);
-      }
-      if (endDate) {
-        where.createdAt.lte = new Date(endDate);
-      }
-    }
 
     // Calculate offset from page
     const offset = (page - 1) * limit;
 
-    // Build orderBy
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const orderBy: any = {};
-    if (sortBy === 'approvedAt') {
-      orderBy.approvedAt = sortOrder;
-    } else {
-      orderBy.createdAt = sortOrder;
-    }
+    // Build orderBy with proper Prisma type
+    const orderBy: Prisma.LetterOrderByWithRelationInput =
+      sortBy === 'approvedAt'
+        ? { approvedAt: sortOrder }
+        : { createdAt: sortOrder };
 
     // Fetch letters with patient data
     const [letters, total] = await Promise.all([

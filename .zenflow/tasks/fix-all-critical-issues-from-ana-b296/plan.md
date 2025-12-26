@@ -269,6 +269,7 @@ const phiKeys = [
 ## Phase 3: Code Quality (Week 2)
 
 ### [ ] Step: Issue 6 - Fix TypeScript any Types
+<!-- chat-id: 66a0dbab-5e0c-4733-b4d5-7c89a9f6455d -->
 
 Replace `any` types with proper TypeScript types.
 

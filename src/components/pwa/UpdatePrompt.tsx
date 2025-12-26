@@ -8,6 +8,17 @@ import {
   type ServiceWorkerUpdateEvent,
 } from '@/lib/pwa';
 import { logger } from '@/lib/logger';
+
+/**
+ * Browser's BeforeInstallPromptEvent for PWA installation
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/BeforeInstallPromptEvent
+ */
+interface BeforeInstallPromptEvent extends Event {
+  /** Shows the install prompt to the user */
+  prompt: () => Promise<void>;
+  /** The user's choice after prompt() resolves */
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 import {
   Dialog,
   DialogContent,
@@ -168,14 +179,14 @@ export function UpdateBanner() {
  */
 export function InstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     const handler = (e: Event) => {
       // Prevent default install prompt
       e.preventDefault();
-      // Store the event for later use
-      setDeferredPrompt(e);
+      // Store the event for later use (cast to BeforeInstallPromptEvent)
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
       setShowPrompt(true);
     };
 

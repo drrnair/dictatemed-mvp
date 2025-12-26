@@ -2,6 +2,7 @@
 // API endpoints for managing consultations
 
 import { NextRequest, NextResponse } from 'next/server';
+import type { ConsultationStatus } from '@prisma/client';
 import { prisma } from '@/infrastructure/db/client';
 import { getSession } from '@/lib/auth';
 import { encryptPatientData, decryptPatientData } from '@/infrastructure/db/encryption';

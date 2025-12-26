@@ -9,11 +9,24 @@ import { UserManagement } from '@/components/settings/UserManagement';
 import { PracticeSettings } from '@/components/settings/PracticeSettings';
 import { logger } from '@/lib/logger';
 
+/** Practice settings configuration values */
+type SettingValue = string | number | boolean | undefined;
+
+interface SettingsData {
+  defaultLetterType?: string;
+  autoSaveInterval?: number;
+  reviewReminderDays?: number;
+  enableHallucinationCheck?: boolean;
+  enableStyleLearning?: boolean;
+  requireSourceAnchors?: boolean;
+  minVerificationRate?: number;
+  [key: string]: SettingValue;
+}
+
 interface Practice {
   id: string;
   name: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  settings: any;
+  settings: SettingsData;
   letterhead: string | null;
   createdAt: Date;
   updatedAt: Date;
