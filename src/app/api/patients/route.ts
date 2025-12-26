@@ -15,9 +15,7 @@ import {
   formatZodErrors,
 } from '@/lib/validation';
 import { logger } from '@/lib/logger';
-
-// TODO: Replace with actual auth once implemented
-const PLACEHOLDER_PRACTICE_ID = 'placeholder-practice-id';
+import { getSession } from '@/lib/auth';
 
 /**
  * Decrypted patient response type
@@ -61,8 +59,12 @@ function formatPatientResponse(patient: {
  */
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Get practiceId from authenticated session
-    const practiceId = PLACEHOLDER_PRACTICE_ID;
+    // Get authenticated user session
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const practiceId = session.user.practiceId;
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -132,8 +134,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Get practiceId from authenticated session
-    const practiceId = PLACEHOLDER_PRACTICE_ID;
+    // Get authenticated user session
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const practiceId = session.user.practiceId;
 
     // Parse and validate request body
     const body = await request.json();
