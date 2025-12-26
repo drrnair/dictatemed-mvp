@@ -106,30 +106,39 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
-### [ ] Step 3: API Endpoints
-<!-- chat-id: 82222b44-30db-4956-a7af-73460426ac0a -->
+### [x] Step 3: API Endpoints
 
 **Objective**: Create batch, fast extraction, and status polling endpoints
 
-**Tasks**:
-- [ ] Create `POST /api/referrals/batch` endpoint:
-  - Accept array of file metadata
-  - Create multiple document records
-  - Return array of upload URLs
-- [ ] Create `POST /api/referrals/[id]/extract-fast` endpoint:
-  - Trigger fast extraction service
-  - Return patient identifiers with confidence
-  - Target <5 second response
-- [ ] Create `GET /api/referrals/[id]/status` endpoint:
-  - Return current processing status
-  - Include fast/full extraction status
+**Completed**:
+- [x] Created `POST /api/referrals/batch` endpoint:
+  - Accepts up to 10 files per batch (validated via Zod)
+  - Creates multiple document records in parallel
+  - Returns array of upload URLs with batchId
+  - Returns 201 for full success, 207 for partial success, 400 for all failures
+  - Includes rate limiting and proper error handling
+- [x] Created `POST /api/referrals/[id]/extract-fast` endpoint:
+  - Triggers fast extraction service
+  - Returns patient identifiers (name, DOB, MRN) with confidence scores
+  - Handles 404 for document not found, 400 for no text content
+  - Returns 200 with status field for both success and extraction failures
+- [x] Created `GET /api/referrals/[id]/status` endpoint:
+  - Returns current processing status for polling
+  - Includes document status, fast/full extraction status, and extracted data
+  - Reports errors from any phase (document, fast extraction, full extraction)
+  - 1-second cache header for efficient polling
+- [x] Added comprehensive integration tests (18 new tests for batch, extract-fast, status)
+  - Auth, rate limiting, validation, success, and error cases
 
-**Files to create**:
+**Files created**:
 - `src/app/api/referrals/batch/route.ts`
 - `src/app/api/referrals/[id]/extract-fast/route.ts`
 - `src/app/api/referrals/[id]/status/route.ts`
 
-**Verification**: `npm run test -- api/referrals`
+**Files modified**:
+- `tests/integration/api/referrals.test.ts` (added 18 new tests, now 48 total)
+
+**Verification**: `npm run typecheck` passed, 48 integration tests passing
 
 ---
 
