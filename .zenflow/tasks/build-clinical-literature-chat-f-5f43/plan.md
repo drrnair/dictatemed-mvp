@@ -345,25 +345,43 @@ npm run lint         # ✅ No errors in new files (only pre-existing warnings)
 
 ---
 
-### [ ] Step 9: Frontend - Layout Components
+### [x] Step 9: Frontend - Layout Components
 
 **Goal**: Three layout options for clinical assistant
 
-**Tasks**:
-1. Create layout components:
+**Completed**:
+1. Created layout components in `src/components/literature/layouts/`:
    - `SidePanelLayout.tsx` - Resizable side panel (desktop)
+     - Drag handle for resizing width (320px-640px)
+     - Minimizable to thin edge strip
+     - Smooth slide-in animation with Framer Motion
+     - Backdrop overlay on mobile
    - `PopupLayout.tsx` - Centered modal (Cmd+K)
+     - Scale/fade animation
+     - Click outside to close
+     - Focus trap for accessibility
+     - Keyboard hint footer
    - `DrawerLayout.tsx` - Bottom drawer (mobile)
-2. Create `ClinicalAssistantPanel.tsx`:
-   - Renders correct layout based on preference
-   - Handles keyboard shortcuts (Cmd+K, Esc)
-   - Passes search context from selected text
-3. Add Framer Motion animations
+     - Touch-optimized drag handle
+     - Snap points (30%, 50%, 90% height)
+     - Swipe down to close
+     - Height toggle button
+   - `index.ts` - Module exports
+2. Created `ClinicalAssistantPanel.tsx`:
+   - Renders correct layout based on user preference (side/popup/drawer)
+   - Uses `useLiteratureKeyboardShortcuts` hook (Cmd+K, Esc, Cmd+Shift+L)
+   - Context-aware search with selected text
+   - Full chat interface with messages, search results, citations
+   - Source filter toggles (UpToDate, PubMed, User Library)
+   - Layout toggle in header
+3. Updated `src/components/literature/index.ts`:
+   - Exported `ClinicalAssistantPanel`
+   - Exported layout components (`SidePanelLayout`, `PopupLayout`, `DrawerLayout`)
 
-**Verification**:
+**Verification**: ✅
 ```bash
-npm run typecheck
-npm run lint
+npm run typecheck    # ✅ No errors
+npm run lint         # ✅ No errors in new files (only pre-existing warnings)
 ```
 
 ---

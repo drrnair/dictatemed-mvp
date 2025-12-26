@@ -3,7 +3,13 @@
 
 // Core panel components
 export { LiteratureChatPanel } from './LiteratureChatPanel';
+export { ClinicalAssistantPanel } from './ClinicalAssistantPanel';
 export { LiteratureToolbarButton } from './LiteratureToolbarButton';
+
+// Layout components
+export { SidePanelLayout } from './layouts/SidePanelLayout';
+export { PopupLayout } from './layouts/PopupLayout';
+export { DrawerLayout } from './layouts/DrawerLayout';
 
 // Search components
 export { LiteratureSearchInput } from './LiteratureSearchInput';
