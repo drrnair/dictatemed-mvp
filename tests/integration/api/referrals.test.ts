@@ -172,20 +172,281 @@ describe('Referrals API', () => {
       expect(body.uploadUrl).toBe('https://storage.example.com/presigned-upload');
     });
 
-    it('rejects invalid MIME type', async () => {
+    it('rejects completely unsupported MIME type', async () => {
+      // Ensure mocks are set (may be cleared by resetAllMocks)
+      vi.mocked(auth.getSession).mockResolvedValue({ user: mockUser });
+      mockCheckRateLimit.mockReturnValue({ allowed: true, remaining: 59, resetAt: new Date() });
+
       const request = createRequest('http://localhost:3000/api/referrals', {
         method: 'POST',
         body: JSON.stringify({
-          filename: 'image.jpg',
-          mimeType: 'image/jpeg',
+          filename: 'video.mp4',
+          mimeType: 'video/mp4',
           sizeBytes: 102400,
         }),
       });
 
       const response = await POST(request);
       // Zod validation returns 400 for invalid enum value
-      // May return 500 in test environment due to mock resolution issues
-      expect([400, 500]).toContain(response.status);
+      expect(response.status).toBe(400);
+    });
+
+    describe('extended MIME types with feature flag', () => {
+      const originalEnv = process.env.FEATURE_EXTENDED_UPLOAD_TYPES;
+
+      beforeEach(() => {
+        // Reset mocks and auth for each test in this describe block
+        vi.mocked(auth.getSession).mockResolvedValue({ user: mockUser });
+        mockCheckRateLimit.mockReturnValue({ allowed: true, remaining: 59, resetAt: new Date() });
+      });
+
+      afterEach(() => {
+        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = originalEnv;
+      });
+
+      it('rejects extended types when feature flag is disabled', async () => {
+        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
+
+        const request = createRequest('http://localhost:3000/api/referrals', {
+          method: 'POST',
+          body: JSON.stringify({
+            filename: 'image.jpg',
+            mimeType: 'image/jpeg',
+            sizeBytes: 102400,
+          }),
+        });
+
+        const response = await POST(request);
+        expect(response.status).toBe(400);
+        const body = await response.json();
+        expect(body.error).toBe('Invalid request');
+        // Error should mention the currently accepted formats
+        expect(JSON.stringify(body.details)).toContain('.pdf, .txt');
+      });
+
+      it('accepts JPEG when feature flag is enabled', async () => {
+        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+
+        vi.mocked(prisma.referralDocument.create).mockResolvedValue({
+          ...mockReferralDocument,
+          filename: 'referral-photo.jpg',
+          mimeType: 'image/jpeg',
+        });
+        vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+          ...mockReferralDocument,
+          filename: 'referral-photo.jpg',
+          mimeType: 'image/jpeg',
+        });
+        vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
+        vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({
+          signedUrl: 'https://storage.example.com/presigned-upload',
+          storagePath: 'test',
+          expiresAt: new Date('2024-01-01T01:00:00Z'),
+        });
+
+        const request = createRequest('http://localhost:3000/api/referrals', {
+          method: 'POST',
+          body: JSON.stringify({
+            filename: 'referral-photo.jpg',
+            mimeType: 'image/jpeg',
+            sizeBytes: 102400,
+          }),
+        });
+
+        const response = await POST(request);
+        expect(response.status).toBe(201);
+      });
+
+      it('accepts PNG when feature flag is enabled', async () => {
+        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+
+        vi.mocked(prisma.referralDocument.create).mockResolvedValue({
+          ...mockReferralDocument,
+          filename: 'referral-scan.png',
+          mimeType: 'image/png',
+        });
+        vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+          ...mockReferralDocument,
+          filename: 'referral-scan.png',
+          mimeType: 'image/png',
+        });
+        vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
+        vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({
+          signedUrl: 'https://storage.example.com/presigned-upload',
+          storagePath: 'test',
+          expiresAt: new Date('2024-01-01T01:00:00Z'),
+        });
+
+        const request = createRequest('http://localhost:3000/api/referrals', {
+          method: 'POST',
+          body: JSON.stringify({
+            filename: 'referral-scan.png',
+            mimeType: 'image/png',
+            sizeBytes: 102400,
+          }),
+        });
+
+        const response = await POST(request);
+        expect(response.status).toBe(201);
+      });
+
+      it('accepts HEIC when feature flag is enabled', async () => {
+        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+
+        vi.mocked(prisma.referralDocument.create).mockResolvedValue({
+          ...mockReferralDocument,
+          filename: 'referral-iphone.heic',
+          mimeType: 'image/heic',
+        });
+        vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+          ...mockReferralDocument,
+          filename: 'referral-iphone.heic',
+          mimeType: 'image/heic',
+        });
+        vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
+        vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({
+          signedUrl: 'https://storage.example.com/presigned-upload',
+          storagePath: 'test',
+          expiresAt: new Date('2024-01-01T01:00:00Z'),
+        });
+
+        const request = createRequest('http://localhost:3000/api/referrals', {
+          method: 'POST',
+          body: JSON.stringify({
+            filename: 'referral-iphone.heic',
+            mimeType: 'image/heic',
+            sizeBytes: 102400,
+          }),
+        });
+
+        const response = await POST(request);
+        expect(response.status).toBe(201);
+      });
+
+      it('accepts DOCX when feature flag is enabled', async () => {
+        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+
+        const docxMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        vi.mocked(prisma.referralDocument.create).mockResolvedValue({
+          ...mockReferralDocument,
+          filename: 'referral-letter.docx',
+          mimeType: docxMimeType,
+        });
+        vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+          ...mockReferralDocument,
+          filename: 'referral-letter.docx',
+          mimeType: docxMimeType,
+        });
+        vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
+        vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({
+          signedUrl: 'https://storage.example.com/presigned-upload',
+          storagePath: 'test',
+          expiresAt: new Date('2024-01-01T01:00:00Z'),
+        });
+
+        const request = createRequest('http://localhost:3000/api/referrals', {
+          method: 'POST',
+          body: JSON.stringify({
+            filename: 'referral-letter.docx',
+            mimeType: docxMimeType,
+            sizeBytes: 102400,
+          }),
+        });
+
+        const response = await POST(request);
+        expect(response.status).toBe(201);
+      });
+
+      it('accepts RTF when feature flag is enabled', async () => {
+        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+
+        vi.mocked(prisma.referralDocument.create).mockResolvedValue({
+          ...mockReferralDocument,
+          filename: 'referral-letter.rtf',
+          mimeType: 'application/rtf',
+        });
+        vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+          ...mockReferralDocument,
+          filename: 'referral-letter.rtf',
+          mimeType: 'application/rtf',
+        });
+        vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
+        vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({
+          signedUrl: 'https://storage.example.com/presigned-upload',
+          storagePath: 'test',
+          expiresAt: new Date('2024-01-01T01:00:00Z'),
+        });
+
+        const request = createRequest('http://localhost:3000/api/referrals', {
+          method: 'POST',
+          body: JSON.stringify({
+            filename: 'referral-letter.rtf',
+            mimeType: 'application/rtf',
+            sizeBytes: 102400,
+          }),
+        });
+
+        const response = await POST(request);
+        expect(response.status).toBe(201);
+      });
+
+      it('always accepts PDF regardless of feature flag', async () => {
+        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
+
+        vi.mocked(prisma.referralDocument.create).mockResolvedValue(mockReferralDocument);
+        vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockReferralDocument);
+        vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
+        vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({
+          signedUrl: 'https://storage.example.com/presigned-upload',
+          storagePath: 'test',
+          expiresAt: new Date('2024-01-01T01:00:00Z'),
+        });
+
+        const request = createRequest('http://localhost:3000/api/referrals', {
+          method: 'POST',
+          body: JSON.stringify({
+            filename: 'referral-letter.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 102400,
+          }),
+        });
+
+        const response = await POST(request);
+        expect(response.status).toBe(201);
+      });
+
+      it('always accepts TXT regardless of feature flag', async () => {
+        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
+
+        vi.mocked(prisma.referralDocument.create).mockResolvedValue({
+          ...mockReferralDocument,
+          filename: 'referral-note.txt',
+          mimeType: 'text/plain',
+        });
+        vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+          ...mockReferralDocument,
+          filename: 'referral-note.txt',
+          mimeType: 'text/plain',
+        });
+        vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
+        vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({
+          signedUrl: 'https://storage.example.com/presigned-upload',
+          storagePath: 'test',
+          expiresAt: new Date('2024-01-01T01:00:00Z'),
+        });
+
+        const request = createRequest('http://localhost:3000/api/referrals', {
+          method: 'POST',
+          body: JSON.stringify({
+            filename: 'referral-note.txt',
+            mimeType: 'text/plain',
+            sizeBytes: 102400,
+          }),
+        });
+
+        const response = await POST(request);
+        expect(response.status).toBe(201);
+      });
     });
 
     it('rejects file too large', async () => {

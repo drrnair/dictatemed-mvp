@@ -20,11 +20,13 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import {
-  ALLOWED_REFERRAL_MIME_TYPES,
   MAX_REFERRAL_FILE_SIZE,
   formatFileSize,
   isAllowedMimeType,
   isFileSizeValid,
+  getAllowedMimeTypes,
+  getAcceptedExtensions,
+  isExtendedUploadTypesEnabled,
   type ReferralExtractedData,
 } from '@/domains/referrals';
 
@@ -54,8 +56,6 @@ interface ReferralUploaderProps {
   className?: string;
 }
 
-// File extensions for display
-const ACCEPTED_EXTENSIONS = '.pdf, .txt';
 
 // Progress values for each stage of the upload/extraction workflow
 const PROGRESS = {
@@ -124,14 +124,16 @@ export function ReferralUploader({
   // Validate file before upload
   const validateFile = (file: File): string | null => {
     if (!isAllowedMimeType(file.type)) {
-      // Check if it's a Word document and provide specific message
+      // Check if it's a Word document when extended types are disabled
       const isDocx = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
                      file.name.toLowerCase().endsWith('.docx') ||
                      file.name.toLowerCase().endsWith('.doc');
-      if (isDocx) {
+      if (isDocx && !isExtendedUploadTypesEnabled()) {
         return 'Word documents (.docx) are not yet supported. Please convert to PDF first.';
       }
-      return 'Invalid file type. Please upload a PDF or text file.';
+      // Dynamic error message based on what's currently allowed
+      const acceptedExtensions = getAcceptedExtensions();
+      return `Invalid file type. Please upload one of: ${acceptedExtensions}`;
     }
     if (!isFileSizeValid(file.size)) {
       return `File too large. Maximum size is ${formatFileSize(MAX_REFERRAL_FILE_SIZE)}.`;
@@ -478,7 +480,7 @@ export function ReferralUploader({
             ref={inputRef}
             type="file"
             className="hidden"
-            accept={ALLOWED_REFERRAL_MIME_TYPES.join(',')}
+            accept={getAllowedMimeTypes().join(',')}
             onChange={handleInputChange}
             disabled={disabled}
             data-testid="referral-file-input"
@@ -493,7 +495,7 @@ export function ReferralUploader({
               <span className="text-primary">browse</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {ACCEPTED_EXTENSIONS} up to {formatFileSize(MAX_REFERRAL_FILE_SIZE)}
+              {getAcceptedExtensions()} up to {formatFileSize(MAX_REFERRAL_FILE_SIZE)}
             </p>
           </div>
         </div>

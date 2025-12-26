@@ -16,6 +16,9 @@ import {
 } from '@/infrastructure/supabase';
 import { logger } from '@/lib/logger';
 import { extractPdfText } from './pdf-utils';
+import { isImageMimeType, isHeicMimeType, convertToJpeg, validateImageByType } from './image-utils';
+import { isDocxMimeType, validateAndExtractDocx } from './docx-utils';
+import { extractTextFromImageBufferVision, isVisionSupportedMimeType } from './vision-extraction';
 import type {
   ReferralDocument,
   ReferralDocumentStatus,
@@ -42,17 +45,29 @@ const REFERRAL_BUCKET_PATH = 'referrals';
 
 /**
  * Get file extension from MIME type.
- * Note: Includes docx for future support even though it's not currently
- * in ALLOWED_REFERRAL_MIME_TYPES.
+ * Maps all supported referral document MIME types to their file extensions.
  */
 function getExtensionFromMimeType(mimeType: string): string {
   switch (mimeType) {
+    // Base types (always supported)
     case 'application/pdf':
       return 'pdf';
     case 'text/plain':
       return 'txt';
+    // Extended types (when FEATURE_EXTENDED_UPLOAD_TYPES is enabled)
+    case 'image/jpeg':
+      return 'jpg';
+    case 'image/png':
+      return 'png';
+    case 'image/heic':
+      return 'heic';
+    case 'image/heif':
+      return 'heif';
     case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
       return 'docx';
+    case 'application/rtf':
+    case 'text/rtf':
+      return 'rtf';
     default:
       return 'bin';
   }
@@ -512,7 +527,14 @@ export async function getReferralDocumentForProcessing(
 const MIN_EXTRACTED_TEXT_LENGTH = 100;
 
 /**
- * Extract text from a referral document (PDF or plain text).
+ * Extract text from a referral document.
+ *
+ * Supported file types:
+ * - PDF: Text extraction via pdf-parse
+ * - Plain text: Direct UTF-8 decoding
+ * - Images (JPEG, PNG, HEIC, HEIF): Claude Vision API for OCR
+ * - Word documents (DOCX): Mammoth text extraction
+ * - RTF: Simple text extraction
  *
  * This function:
  * 1. Fetches the file from S3
@@ -553,24 +575,16 @@ export async function extractTextFromDocument(
     const { content } = await getFileContent(STORAGE_BUCKETS.CLINICAL_DOCUMENTS, document.s3Key);
 
     // Extract text based on MIME type
-    let extractedText: string;
-
-    if (document.mimeType === 'application/pdf') {
-      extractedText = await extractTextFromPdfBuffer(content, log);
-    } else if (document.mimeType === 'text/plain') {
-      extractedText = content.toString('utf-8');
-    } else {
-      throw new Error(`Unsupported MIME type for text extraction: ${document.mimeType}`);
-    }
+    const extractedText = await extractTextByMimeType(content, document.mimeType, log);
 
     // Trim and normalize whitespace (preserve paragraph structure)
-    extractedText = extractedText.trim().replace(/[ \t]+/g, ' ').replace(/ *\n+ */g, '\n');
+    const normalizedText = extractedText.trim().replace(/[ \t]+/g, ' ').replace(/ *\n+ */g, '\n');
 
     // Check if we got meaningful text
-    const isShortText = extractedText.length < MIN_EXTRACTED_TEXT_LENGTH;
+    const isShortText = normalizedText.length < MIN_EXTRACTED_TEXT_LENGTH;
     if (isShortText) {
       log.warn('Extracted text is very short', {
-        textLength: extractedText.length,
+        textLength: normalizedText.length,
         minRequired: MIN_EXTRACTED_TEXT_LENGTH,
       });
       // We still proceed but flag this - the AI extraction step can decide
@@ -581,13 +595,13 @@ export async function extractTextFromDocument(
     await prisma.referralDocument.update({
       where: { id: documentId },
       data: {
-        contentText: extractedText,
+        contentText: normalizedText,
         status: 'TEXT_EXTRACTED',
         updatedAt: new Date(),
       },
     });
 
-    log.info('Text extraction complete', { textLength: extractedText.length });
+    log.info('Text extraction complete', { textLength: normalizedText.length });
 
     // Create audit log
     await prisma.auditLog.create({
@@ -597,7 +611,7 @@ export async function extractTextFromDocument(
         resourceType: 'referral_document',
         resourceId: documentId,
         metadata: {
-          textLength: extractedText.length,
+          textLength: normalizedText.length,
           mimeType: document.mimeType,
           isShortText,
         },
@@ -605,12 +619,12 @@ export async function extractTextFromDocument(
     });
 
     // Return result with preview
-    const preview = extractedText.substring(0, 500) + (extractedText.length > 500 ? '...' : '');
+    const preview = normalizedText.substring(0, 500) + (normalizedText.length > 500 ? '...' : '');
 
     return {
       id: documentId,
       status: 'TEXT_EXTRACTED',
-      textLength: extractedText.length,
+      textLength: normalizedText.length,
       preview,
       isShortText,
     };
@@ -646,6 +660,357 @@ export async function extractTextFromDocument(
 
     throw error;
   }
+}
+
+/**
+ * Extract text from a buffer based on its MIME type.
+ *
+ * Routes to the appropriate extraction method for each file type.
+ */
+async function extractTextByMimeType(
+  content: Buffer,
+  mimeType: string,
+  log: ReturnType<typeof logger.child>
+): Promise<string> {
+  // PDF extraction
+  if (mimeType === 'application/pdf') {
+    return extractTextFromPdfBuffer(content, log);
+  }
+
+  // Plain text - direct decode
+  if (mimeType === 'text/plain') {
+    return content.toString('utf-8');
+  }
+
+  // Image extraction via Claude Vision
+  if (isImageMimeType(mimeType)) {
+    return extractTextFromImageBuffer(content, mimeType, log);
+  }
+
+  // Word document extraction via Mammoth
+  if (isDocxMimeType(mimeType)) {
+    return extractTextFromDocxBuffer(content, log);
+  }
+
+  // RTF extraction - extract plain text content
+  if (mimeType === 'application/rtf' || mimeType === 'text/rtf') {
+    return extractTextFromRtfBuffer(content, log);
+  }
+
+  throw new Error(`Unsupported MIME type for text extraction: ${mimeType}`);
+}
+
+/**
+ * Extract text from an image buffer using Claude Vision.
+ *
+ * Handles HEIC/HEIF conversion for iPhone photos before vision extraction.
+ */
+async function extractTextFromImageBuffer(
+  content: Buffer,
+  mimeType: string,
+  log: ReturnType<typeof logger.child>
+): Promise<string> {
+  // Validate image first
+  const validation = await validateImageByType(content, mimeType);
+  if (!validation.valid) {
+    throw new Error(`Invalid image: ${validation.error}`);
+  }
+
+  log.info('Image validated', {
+    width: validation.width,
+    height: validation.height,
+    format: validation.format,
+  });
+
+  // Convert HEIC/HEIF to JPEG for vision API (which doesn't support HEIC)
+  let processedBuffer = content;
+  let processedMimeType = mimeType;
+
+  if (isHeicMimeType(mimeType)) {
+    log.info('Converting HEIC to JPEG for vision extraction');
+    const converted = await convertToJpeg(content, mimeType);
+    processedBuffer = converted.buffer;
+    processedMimeType = converted.mimeType;
+  }
+
+  // Fallback: Convert any remaining non-supported formats to JPEG
+  // This handles edge cases where a format might be added to IMAGE_MIME_TYPES
+  // but not yet supported by Claude Vision (jpeg, png, gif, webp are supported)
+  if (!isVisionSupportedMimeType(processedMimeType)) {
+    log.info('Converting unsupported vision format to JPEG', { originalType: processedMimeType });
+    const converted = await convertToJpeg(content, mimeType);
+    processedBuffer = converted.buffer;
+    processedMimeType = converted.mimeType;
+  }
+
+  // Extract text using Claude Vision
+  log.info('Extracting text via vision API');
+  const result = await extractTextFromImageBufferVision(
+    processedBuffer,
+    processedMimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+  );
+
+  if (!result.success) {
+    throw new Error(result.error || 'Vision extraction failed');
+  }
+
+  log.info('Vision extraction complete', {
+    textLength: result.text.length,
+    inputTokens: result.inputTokens,
+    outputTokens: result.outputTokens,
+  });
+
+  return result.text;
+}
+
+/**
+ * Extract text from a Word document buffer using Mammoth.
+ */
+async function extractTextFromDocxBuffer(
+  content: Buffer,
+  log: ReturnType<typeof logger.child>
+): Promise<string> {
+  const result = await validateAndExtractDocx(content);
+
+  if (!result.success) {
+    throw new Error(result.error || 'Word document extraction failed');
+  }
+
+  // Log any warnings from mammoth
+  if (result.messages.length > 0) {
+    log.warn('Word document extraction warnings', {
+      messages: result.messages.map((m) => m.message),
+    });
+  }
+
+  log.info('Word document text extracted', { textLength: result.text.length });
+  return result.text;
+}
+
+/**
+ * Extract text from an RTF buffer.
+ *
+ * RTF is a complex format with nested brace structures for font tables,
+ * color tables, style sheets, etc. This parser uses a stack-based approach
+ * to properly handle nested groups and extract only the visible text content.
+ */
+async function extractTextFromRtfBuffer(
+  content: Buffer,
+  log: ReturnType<typeof logger.child>
+): Promise<string> {
+  // Decode as UTF-8 (or Latin-1 for older RTF files)
+  let rtfContent = content.toString('utf-8');
+
+  // If it doesn't start with RTF header, try Latin-1
+  if (!rtfContent.startsWith('{\\rtf')) {
+    rtfContent = content.toString('latin1');
+  }
+
+  // Validate RTF header
+  if (!rtfContent.startsWith('{\\rtf')) {
+    throw new Error('Invalid RTF file: Missing RTF header');
+  }
+
+  // Parse RTF using a stack-based approach to handle nested groups
+  const text = parseRtfContent(rtfContent);
+
+  log.info('RTF text extracted', { textLength: text.length });
+  return text;
+}
+
+/**
+ * Parse RTF content using a stack-based approach.
+ *
+ * RTF structure:
+ * - Groups are delimited by { and }
+ * - Control words start with \ followed by letters, optionally followed by a number
+ * - Control symbols are \ followed by a non-letter character
+ * - Destinations (like \fonttbl, \colortbl) should be skipped
+ */
+function parseRtfContent(rtf: string): string {
+  const output: string[] = [];
+  let i = 0;
+  let depth = 0;
+  let skipGroup = 0; // Depth at which we started skipping (0 = not skipping)
+
+  // Destination control words whose content should be skipped
+  const destinationKeywords = new Set([
+    'fonttbl', 'colortbl', 'stylesheet', 'listtable', 'listoverridetable',
+    'info', 'docvar', 'pict', 'object', 'datafield', 'fldinst',
+    'header', 'footer', 'headerl', 'headerr', 'headerf',
+    'footerl', 'footerr', 'footerf', 'footnote', 'annotation',
+  ]);
+
+  // Helper to safely get character at position (returns empty string if out of bounds)
+  const charAt = (pos: number): string => rtf.charAt(pos);
+
+  while (i < rtf.length) {
+    const char = charAt(i);
+
+    if (char === '{') {
+      depth++;
+      i++;
+      continue;
+    }
+
+    if (char === '}') {
+      // If we were skipping this group, check if we're exiting it
+      if (skipGroup > 0 && depth === skipGroup) {
+        skipGroup = 0;
+      }
+      depth--;
+      i++;
+      continue;
+    }
+
+    // If we're in a skipped group, just advance
+    if (skipGroup > 0) {
+      i++;
+      continue;
+    }
+
+    if (char === '\\') {
+      // Control word or control symbol
+      i++;
+      if (i >= rtf.length) break;
+
+      const nextChar = charAt(i);
+
+      // Control symbol (non-letter after backslash)
+      if (!/[a-zA-Z]/.test(nextChar)) {
+        // Handle special control symbols
+        if (nextChar === "'") {
+          // Hex character: \'XX
+          i++;
+          if (i + 1 < rtf.length) {
+            const hex = rtf.substring(i, i + 2);
+            const code = parseInt(hex, 16);
+            if (!isNaN(code)) {
+              output.push(String.fromCharCode(code));
+            }
+            i += 2;
+          }
+        } else if (nextChar === '\\' || nextChar === '{' || nextChar === '}') {
+          // Escaped literal characters
+          output.push(nextChar);
+          i++;
+        } else if (nextChar === '~') {
+          // Non-breaking space
+          output.push('\u00A0');
+          i++;
+        } else if (nextChar === '-') {
+          // Optional hyphen (soft hyphen)
+          output.push('\u00AD');
+          i++;
+        } else if (nextChar === '_') {
+          // Non-breaking hyphen
+          output.push('\u2011');
+          i++;
+        } else if (nextChar === '\n' || nextChar === '\r') {
+          // Line break in RTF source - treat as paragraph break
+          output.push('\n');
+          i++;
+        } else {
+          // Other control symbols - skip
+          i++;
+        }
+        continue;
+      }
+
+      // Control word: read letters
+      let word = '';
+      while (i < rtf.length && /[a-zA-Z]/.test(charAt(i))) {
+        word += charAt(i);
+        i++;
+      }
+
+      // Read optional numeric parameter (can be negative)
+      let param = '';
+      if (i < rtf.length && (charAt(i) === '-' || /[0-9]/.test(charAt(i)))) {
+        if (charAt(i) === '-') {
+          param += '-';
+          i++;
+        }
+        while (i < rtf.length && /[0-9]/.test(charAt(i))) {
+          param += charAt(i);
+          i++;
+        }
+      }
+
+      // Consume optional trailing space (delimiter)
+      if (i < rtf.length && charAt(i) === ' ') {
+        i++;
+      }
+
+      // Handle control words
+      if (destinationKeywords.has(word)) {
+        // Skip this entire group
+        skipGroup = depth;
+        continue;
+      }
+
+      // Handle text-producing control words
+      if (word === 'par' || word === 'pard') {
+        output.push('\n');
+      } else if (word === 'line') {
+        output.push('\n');
+      } else if (word === 'tab') {
+        output.push('\t');
+      } else if (word === 'u' && param) {
+        // Unicode character: \uN with optional replacement char after
+        const code = parseInt(param, 10);
+        if (!isNaN(code)) {
+          // Handle negative values (RTF uses signed 16-bit)
+          const actualCode = code < 0 ? code + 65536 : code;
+          output.push(String.fromCharCode(actualCode));
+        }
+        // Skip the replacement character (usually ?)
+        if (i < rtf.length && charAt(i) === '?') {
+          i++;
+        }
+      } else if (word === 'emdash') {
+        output.push('\u2014');
+      } else if (word === 'endash') {
+        output.push('\u2013');
+      } else if (word === 'bullet') {
+        output.push('\u2022');
+      } else if (word === 'lquote') {
+        output.push('\u2018');
+      } else if (word === 'rquote') {
+        output.push('\u2019');
+      } else if (word === 'ldblquote') {
+        output.push('\u201C');
+      } else if (word === 'rdblquote') {
+        output.push('\u201D');
+      }
+      // Other control words are ignored (formatting like \b, \i, etc.)
+
+      continue;
+    }
+
+    // Regular character - but skip if at depth 0 (outside document)
+    if (depth > 0) {
+      // Handle Windows line endings in text
+      if (char === '\r') {
+        i++;
+        continue;
+      }
+      if (char === '\n') {
+        i++;
+        continue;
+      }
+      output.push(char);
+    }
+    i++;
+  }
+
+  // Clean up the result
+  return output
+    .join('')
+    .replace(/\n{3,}/g, '\n\n') // Max 2 consecutive newlines
+    .replace(/[ \t]+/g, ' ') // Collapse spaces
+    .replace(/ *\n */g, '\n') // Remove spaces around newlines
+    .trim();
 }
 
 /**

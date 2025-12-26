@@ -1,12 +1,18 @@
-# E2E Test Referral PDF Fixtures
+# E2E Test Referral Fixtures
 
 This directory contains sample referral documents for E2E testing of the referral upload and extraction workflow.
 
 ## Contents
 
+### Base Types (Always Enabled)
 - `cardiology-referral-001.pdf` - Heart failure referral (routine)
 - `cardiology-referral-002.pdf` - Chest pain referral (urgent)
 - `*.txt` - Source text files used to generate PDFs
+
+### Extended Types (Feature Flag: FEATURE_EXTENDED_UPLOAD_TYPES)
+- `image-referral-001.jpg` - JPEG image referral (routine)
+- `image-referral-001.png` - PNG image referral (routine)
+- `docx-referral-001.docx` - Word document referral (routine)
 
 ## Generating PDF Files
 
@@ -61,12 +67,32 @@ All patient and referrer names in these referrals use the `TEST-` prefix to:
 - Prevent confusion with real PHI
 - Enable easy cleanup of test data
 
+## Generating Extended Type Fixtures
+
+To generate image and DOCX test fixtures:
+
+```bash
+npm run generate:test-fixtures
+```
+
+This creates:
+- `image-referral-001.jpg` - JPEG with embedded referral text
+- `image-referral-001.png` - PNG version of the same referral
+- `docx-referral-001.docx` - Word document with referral content
+
 ## Adding New Referral Types
 
 1. Create a new `.txt` file with the referral content
 2. Add expected extraction results to `test-data.ts`
 3. Generate the PDF using one of the methods above
 4. Add tests for the new referral type
+
+### For Extended Types (Images/DOCX)
+
+1. Add content to `scripts/generate-test-fixtures.ts`
+2. Run `npm run generate:test-fixtures`
+3. Add expected extraction results to `test-data.ts`
+4. Add tests to `tests/e2e/flows/extended-upload-types.spec.ts`
 
 ## File Format
 
