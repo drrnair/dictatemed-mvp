@@ -265,7 +265,7 @@ describe('clinical-extraction', () => {
       const unverified = getUnverifiedValues(values);
 
       expect(unverified).toHaveLength(1);
-      expect(unverified[0].id).toBe('1');
+      expect(unverified[0]?.id).toBe('1');
     });
 
     it('should return unverified values', () => {
@@ -277,7 +277,7 @@ describe('clinical-extraction', () => {
       const unverified = getUnverifiedValues(values);
 
       expect(unverified).toHaveLength(1);
-      expect(unverified[0].id).toBe('1');
+      expect(unverified[0]?.id).toBe('1');
     });
 
     it('should return empty for all verified values with anchors', () => {

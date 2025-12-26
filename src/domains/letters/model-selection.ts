@@ -5,6 +5,12 @@ import { MODELS, type ModelId, estimateCost, estimateTokenCount } from '@/infras
 import type { LetterType } from './letter.types';
 import type { LetterSources } from './prompts/generation';
 import { logger } from '@/lib/logger';
+import {
+  LETTER_COMPLEXITY,
+  LETTER_OUTPUT_TOKENS,
+  AI_MODEL,
+  TOKEN_ESTIMATION,
+} from '@/lib/constants';
 
 export interface ModelSelectionInput {
   letterType: LetterType;
@@ -25,22 +31,24 @@ export interface ModelSelectionResult {
 /**
  * Complexity score for different letter types.
  * Higher score = more complex = prefer Opus.
+ * Values come from LETTER_COMPLEXITY constants.
  */
 const LETTER_COMPLEXITY_SCORES: Record<LetterType, number> = {
-  NEW_PATIENT: 9, // Most complex - comprehensive history, management plan
-  ANGIOGRAM_PROCEDURE: 8, // Complex - precise vessel descriptions, intervention details
-  ECHO_REPORT: 5, // Moderate - structured measurements, standardized reporting
-  FOLLOW_UP: 3, // Simple - interval changes only, concise
+  NEW_PATIENT: LETTER_COMPLEXITY.NEW_PATIENT,
+  ANGIOGRAM_PROCEDURE: LETTER_COMPLEXITY.ANGIOGRAM_PROCEDURE,
+  ECHO_REPORT: LETTER_COMPLEXITY.ECHO_REPORT,
+  FOLLOW_UP: LETTER_COMPLEXITY.FOLLOW_UP,
 };
 
 /**
  * Estimated output tokens for each letter type.
+ * Values come from LETTER_OUTPUT_TOKENS constants.
  */
 const ESTIMATED_OUTPUT_TOKENS: Record<LetterType, number> = {
-  NEW_PATIENT: 3000, // Comprehensive letter
-  ANGIOGRAM_PROCEDURE: 2500, // Detailed procedure report
-  ECHO_REPORT: 1500, // Structured report
-  FOLLOW_UP: 1000, // Concise update
+  NEW_PATIENT: LETTER_OUTPUT_TOKENS.NEW_PATIENT,
+  ANGIOGRAM_PROCEDURE: LETTER_OUTPUT_TOKENS.ANGIOGRAM_PROCEDURE,
+  ECHO_REPORT: LETTER_OUTPUT_TOKENS.ECHO_REPORT,
+  FOLLOW_UP: LETTER_OUTPUT_TOKENS.FOLLOW_UP,
 };
 
 /**
@@ -65,9 +73,9 @@ export function selectModel(input: ModelSelectionInput): ModelSelectionResult {
     (input.sources.userInput ? 1 : 0);
 
   if (sourceCount >= 3) {
-    complexityScore += 2; // Multiple sources = more integration needed
+    complexityScore += LETTER_COMPLEXITY.MULTIPLE_SOURCES_BONUS; // Multiple sources = more integration needed
   } else if (sourceCount === 0) {
-    complexityScore -= 2; // No sources = simpler (shouldn't happen in practice)
+    complexityScore -= LETTER_COMPLEXITY.NO_SOURCES_REDUCTION; // No sources = simpler (shouldn't happen in practice)
   }
 
   // Check if sources contain complex data
@@ -76,7 +84,7 @@ export function selectModel(input: ModelSelectionInput): ModelSelectionResult {
       (doc) => doc.type === 'ANGIOGRAM_REPORT' || doc.type === 'ECHO_REPORT'
     );
     if (hasComplexDoc) {
-      complexityScore += 1; // Structured medical data requires precision
+      complexityScore += LETTER_COMPLEXITY.COMPLEX_DOCUMENT_BONUS; // Structured medical data requires precision
     }
   }
 
@@ -98,8 +106,8 @@ export function selectModel(input: ModelSelectionInput): ModelSelectionResult {
     reason = 'User preference: cost (Sonnet)';
   } else {
     // Intelligent selection based on complexity
-    // Threshold: complexity score >= 7 → Opus, < 7 → Sonnet
-    if (complexityScore >= 7) {
+    // Threshold: complexity score >= OPUS_THRESHOLD → Opus, otherwise → Sonnet
+    if (complexityScore >= LETTER_COMPLEXITY.OPUS_THRESHOLD) {
       selectedModel = MODELS.OPUS;
       reason = `High complexity (score: ${complexityScore}): ${input.letterType} with ${sourceCount} source(s)`;
     } else {
@@ -109,8 +117,8 @@ export function selectModel(input: ModelSelectionInput): ModelSelectionResult {
 
     // Override for user preference 'balanced' if provided
     if (input.userPreference === 'balanced') {
-      // Use Sonnet unless complexity is very high (>= 8)
-      if (complexityScore >= 8) {
+      // Use Sonnet unless complexity is very high (>= BALANCED_MODE_THRESHOLD)
+      if (complexityScore >= LETTER_COMPLEXITY.BALANCED_MODE_THRESHOLD) {
         selectedModel = MODELS.OPUS;
         reason += ' (balanced mode, high complexity detected)';
       } else {
@@ -124,10 +132,10 @@ export function selectModel(input: ModelSelectionInput): ModelSelectionResult {
   const costEstimate = estimateCost(selectedModel, estimatedInputTokens, estimatedOutputTokens);
 
   // Set max tokens based on letter type
-  const maxTokens = estimatedOutputTokens + 1000; // Add buffer
+  const maxTokens = estimatedOutputTokens + LETTER_OUTPUT_TOKENS.TOKEN_BUFFER; // Add buffer
 
   // Temperature: Lower for medical letters (need precision)
-  const temperature = 0.3;
+  const temperature = AI_MODEL.LETTER_TEMPERATURE;
 
   log.info('Model selected', {
     letterType: input.letterType,

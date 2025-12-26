@@ -43,30 +43,34 @@ vi.mock('@/infrastructure/bedrock', () => ({
 
 describe('model-selection', () => {
   const minimalSources = {
-    transcript: { text: 'Patient consultation transcript' },
+    transcript: { id: 'trans-1', text: 'Patient consultation transcript', mode: 'DICTATION' as const },
   };
 
   const complexSources = {
     transcript: {
+      id: 'trans-2',
       text: 'Long patient consultation transcript with detailed history...',
+      mode: 'DICTATION' as const,
       speakers: [
-        { speaker: 'Doctor', text: 'What brings you in today?', start: 0, end: 5 },
-        { speaker: 'Patient', text: 'I have chest pain...', start: 5, end: 10 },
+        { speaker: 'Doctor', text: 'What brings you in today?', timestamp: 0 },
+        { speaker: 'Patient', text: 'I have chest pain...', timestamp: 5 },
       ],
     },
     documents: [
       {
-        filename: 'echo_report.pdf',
+        id: 'doc-1',
+        name: 'echo_report.pdf',
         type: 'ECHO_REPORT' as const,
         extractedData: { lvef: '45%', findings: 'Reduced LV function' },
       },
       {
-        filename: 'angiogram.pdf',
+        id: 'doc-2',
+        name: 'angiogram.pdf',
         type: 'ANGIOGRAM_REPORT' as const,
         extractedData: { vessels: ['LAD 70% stenosis'] },
       },
     ],
-    userInput: { text: 'Additional notes from physician' },
+    userInput: { id: 'user-1', text: 'Additional notes from physician' },
   };
 
   describe('selectModel', () => {

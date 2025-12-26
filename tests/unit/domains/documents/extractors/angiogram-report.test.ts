@@ -98,12 +98,12 @@ describe('angiogram-report extractor', () => {
 
       expect(result.pciPerformed).toBe(true);
       expect(result.pciDetails).toHaveLength(2);
-      expect(result.pciDetails?.[0].vessel).toBe('LAD');
-      expect(result.pciDetails?.[0].stentType).toBe('DES');
-      expect(result.pciDetails?.[0].stentSize).toBe('3.0 x 28mm');
-      expect(result.pciDetails?.[0].preDilatation).toBe(true);
-      expect(result.pciDetails?.[0].timiFlow).toBe(3);
-      expect(result.pciDetails?.[1].vessel).toBe('RCA');
+      expect(result.pciDetails?.[0]?.vessel).toBe('LAD');
+      expect(result.pciDetails?.[0]?.stentType).toBe('DES');
+      expect(result.pciDetails?.[0]?.stentSize).toBe('3.0 x 28mm');
+      expect(result.pciDetails?.[0]?.preDilatation).toBe(true);
+      expect(result.pciDetails?.[0]?.timiFlow).toBe(3);
+      expect(result.pciDetails?.[1]?.vessel).toBe('RCA');
     });
 
     it('should parse dominance values', () => {
@@ -207,9 +207,9 @@ describe('angiogram-report extractor', () => {
 
       const result = parseAngiogramExtraction(json);
 
-      expect(result.pciDetails?.[0].timiFlow).toBeUndefined();
-      expect(result.pciDetails?.[1].timiFlow).toBeUndefined();
-      expect(result.pciDetails?.[2].timiFlow).toBe(3);
+      expect(result.pciDetails?.[0]?.timiFlow).toBeUndefined();
+      expect(result.pciDetails?.[1]?.timiFlow).toBeUndefined();
+      expect(result.pciDetails?.[2]?.timiFlow).toBe(3);
     });
 
     it('should parse vessel with dissection', () => {
@@ -274,7 +274,7 @@ describe('angiogram-report extractor', () => {
 
       const result = parseAngiogramExtraction(json);
 
-      expect(result.pciDetails?.[0].vessel).toBe('Unknown');
+      expect(result.pciDetails?.[0]?.vessel).toBe('Unknown');
     });
   });
 

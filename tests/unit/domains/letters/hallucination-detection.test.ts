@@ -31,7 +31,7 @@ describe('hallucination-detection', () => {
   describe('detectHallucinations', () => {
     it('should return empty array when no hallucinations detected', () => {
       const letterText = 'This is a simple letter with no clinical statements.';
-      const sources = { transcript: { text: 'This is a simple letter.' } };
+      const sources = { transcript: { id: 't1', text: 'This is a simple letter.', mode: 'DICTATION' as const } };
       const sourceAnchors: SourceAnchor[] = [];
       const clinicalValues: ClinicalValue[] = [];
 
@@ -42,7 +42,7 @@ describe('hallucination-detection', () => {
 
     it('should flag unsourced clinical values', () => {
       const letterText = 'The LVEF 45% was measured.';
-      const sources = { transcript: { text: 'No clinical values mentioned.' } };
+      const sources = { transcript: { id: 't1', text: 'No clinical values mentioned.', mode: 'DICTATION' as const } };
       const sourceAnchors: SourceAnchor[] = [];
       const clinicalValues: ClinicalValue[] = [
         {
@@ -62,7 +62,7 @@ describe('hallucination-detection', () => {
 
     it('should flag referring doctor names not in sources', () => {
       const letterText = 'Dear Dr. Johnson, thank you for your referral.';
-      const sources = { transcript: { text: 'Patient was referred for consultation.' } };
+      const sources = { transcript: { id: 't1', text: 'Patient was referred for consultation.', mode: 'DICTATION' as const } };
       const sourceAnchors: SourceAnchor[] = [];
       const clinicalValues: ClinicalValue[] = [];
 
@@ -75,7 +75,7 @@ describe('hallucination-detection', () => {
 
     it('should not flag doctor names that appear in sources', () => {
       const letterText = 'Dear Dr. Smith, thank you for the referral.';
-      const sources = { transcript: { text: 'Dr. Smith referred this patient.' } };
+      const sources = { transcript: { id: 't1', text: 'Dr. Smith referred this patient.', mode: 'DICTATION' as const } };
       const sourceAnchors: SourceAnchor[] = [];
       const clinicalValues: ClinicalValue[] = [];
 
@@ -87,7 +87,7 @@ describe('hallucination-detection', () => {
 
     it('should flag specific dates not in sources', () => {
       const letterText = 'The procedure was performed on 15 Jan 2024.';
-      const sources = { transcript: { text: 'Procedure completed successfully.' } };
+      const sources = { transcript: { id: 't1', text: 'Procedure completed successfully.', mode: 'DICTATION' as const } };
       const sourceAnchors: SourceAnchor[] = [];
       const clinicalValues: ClinicalValue[] = [];
 
@@ -98,7 +98,7 @@ describe('hallucination-detection', () => {
 
     it('should flag vessel findings without source anchors', () => {
       const letterText = 'The LAD shows 70% stenosis.';
-      const sources = { transcript: { text: 'Angiogram reviewed.' } };
+      const sources = { transcript: { id: 't1', text: 'Angiogram reviewed.', mode: 'DICTATION' as const } };
       const sourceAnchors: SourceAnchor[] = [];
       const clinicalValues: ClinicalValue[] = [];
 
@@ -112,7 +112,7 @@ describe('hallucination-detection', () => {
 
     it('should flag medication changes not in sources', () => {
       const letterText = 'We started aspirin 100mg daily.';
-      const sources = { transcript: { text: 'Treatment discussed.' } };
+      const sources = { transcript: { id: 't1', text: 'Treatment discussed.', mode: 'DICTATION' as const } };
       const sourceAnchors: SourceAnchor[] = [];
       const clinicalValues: ClinicalValue[] = [];
 
@@ -123,7 +123,7 @@ describe('hallucination-detection', () => {
 
     it('should flag stent sizes without source anchors', () => {
       const letterText = 'A 3.0 x 18 mm stent was deployed.';
-      const sources = { transcript: { text: 'Stent placed.' } };
+      const sources = { transcript: { id: 't1', text: 'Stent placed.', mode: 'DICTATION' as const } };
       const sourceAnchors: SourceAnchor[] = [];
       const clinicalValues: ClinicalValue[] = [];
 
@@ -138,8 +138,8 @@ describe('hallucination-detection', () => {
     it('should check user input for text', () => {
       const letterText = 'The patient mentioned chest pain.';
       const sources = {
-        transcript: { text: 'Something else.' },
-        userInput: { text: 'Patient has chest pain.' },
+        transcript: { id: 't1', text: 'Something else.', mode: 'DICTATION' as const },
+        userInput: { id: 'u1', text: 'Patient has chest pain.' },
       };
       const sourceAnchors: SourceAnchor[] = [];
       const clinicalValues: ClinicalValue[] = [];
@@ -153,10 +153,11 @@ describe('hallucination-detection', () => {
     it('should check documents for text', () => {
       const letterText = 'Echo shows LVEF of 55%.';
       const sources = {
-        transcript: { text: 'Something else.' },
+        transcript: { id: 't1', text: 'Something else.', mode: 'DICTATION' as const },
         documents: [
           {
             id: 'd1',
+            name: 'echo.pdf',
             type: 'ECHOCARDIOGRAM' as const,
             extractedData: { lvef: '55%' },
           },

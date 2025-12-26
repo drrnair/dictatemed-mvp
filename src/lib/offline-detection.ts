@@ -2,6 +2,7 @@
 // Network status monitoring service for offline-first PWA
 
 import { logger } from '@/lib/logger';
+import { CONNECTION } from '@/lib/constants';
 
 export type NetworkStatus = 'online' | 'offline' | 'slow';
 
@@ -16,8 +17,8 @@ export interface NetworkStatusEvent {
 type NetworkStatusListener = (event: NetworkStatusEvent) => void;
 
 // Threshold for "slow" connection (RTT > 500ms or downlink < 1 Mbps)
-const SLOW_RTT_THRESHOLD = 500;
-const SLOW_DOWNLINK_THRESHOLD = 1;
+const SLOW_RTT_THRESHOLD = CONNECTION.SLOW_RTT_THRESHOLD_MS;
+const SLOW_DOWNLINK_THRESHOLD = CONNECTION.SLOW_DOWNLOAD_THRESHOLD_MBPS;
 
 class OfflineDetectionService {
   private listeners = new Set<NetworkStatusListener>();
