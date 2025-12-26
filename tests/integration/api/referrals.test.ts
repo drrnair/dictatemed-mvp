@@ -27,6 +27,7 @@ vi.mock('@/infrastructure/db/client', () => ({
       findUnique: vi.fn(),
       findMany: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
       delete: vi.fn(),
       count: vi.fn(),
     },
@@ -962,6 +963,8 @@ describe('Referrals API', () => {
     beforeEach(() => {
       vi.mocked(auth.getSession).mockResolvedValue({ user: mockUser });
       mockCheckRateLimit.mockReturnValue({ allowed: true, remaining: 59, resetAt: new Date() });
+      // Mock updateMany for optimistic locking - return count > 0 means lock acquired
+      vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 1 });
     });
 
     it('extracts patient identifiers and returns result', async () => {

@@ -113,9 +113,25 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       hasData: !!result.data,
     });
 
-    // Return appropriate status based on result
-    if (result.status === 'FAILED') {
-      // Still return 200 - the extraction ran but couldn't extract data
+    // Check for specific error conditions in failed results
+    if (result.status === 'FAILED' && result.error) {
+      // Document not found
+      if (result.error.includes('document not found')) {
+        return NextResponse.json({ error: 'Referral document not found' }, { status: 404 });
+      }
+
+      // No text content - need to extract text first
+      if (result.error.includes('no extracted text')) {
+        return NextResponse.json(
+          {
+            error: 'Document text has not been extracted yet. Please extract text first.',
+            details: 'Call POST /api/referrals/:id/extract-text before fast extraction.',
+          },
+          { status: 400 }
+        );
+      }
+
+      // Other failures - return 200 with FAILED status
       // Client can check status field to determine outcome
       return NextResponse.json(result);
     }
