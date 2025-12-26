@@ -38,23 +38,22 @@ Created comprehensive technical specification in `spec.md` covering:
 
 ---
 
-### [ ] Step: Add Dependencies
+### [x] Step: Add Dependencies
 
-Install required npm packages for new file type support.
+**Status**: Complete
 
-**Tasks**:
-1. Add `heic-convert` for HEIC to JPEG conversion
-2. Add `mammoth` for Word document text extraction
-3. Move `sharp` from devDependencies to dependencies
-4. Run `npm install` and verify no conflicts
-5. Update `.gitignore` if needed for any generated files
+Installed required npm packages for new file type support:
+- Added `heic-convert@^2.1.0` for HEIC to JPEG conversion
+- Added `mammoth@^1.11.0` for Word document text extraction
+- Moved `sharp@^0.34.5` from devDependencies to dependencies
 
-**Verification**:
-```bash
-npm install heic-convert mammoth
-npm install sharp --save
-npm run typecheck
-```
+**Completed Tasks**:
+1. ✅ Added `heic-convert` for HEIC to JPEG conversion
+2. ✅ Added `mammoth` for Word document text extraction
+3. ✅ Moved `sharp` from devDependencies to dependencies
+4. ✅ Ran `npm install` - no conflicts (pre-existing vulnerabilities from ESLint v8)
+5. ✅ `.gitignore` already properly configured (no changes needed)
+6. ✅ TypeScript type checking passes
 
 **Files Modified**:
 - `package.json`
