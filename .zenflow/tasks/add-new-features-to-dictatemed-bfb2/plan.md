@@ -123,6 +123,7 @@ npm run test -- tests/unit/domains/referrals/  # ✅ 140 total tests pass (no re
 ---
 
 ### [ ] Step: Create Vision Extraction Module
+<!-- chat-id: 8286fac3-767a-4e49-8819-a3027017e05a -->
 
 Create Claude Vision integration for image text extraction.
 
