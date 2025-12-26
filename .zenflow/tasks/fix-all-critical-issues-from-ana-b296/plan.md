@@ -335,6 +335,7 @@ is the recommended Next.js App Router pattern. Benefits:
 ---
 
 ### [ ] Step: Issue 9 - Add Integration Tests
+<!-- chat-id: a80c72f1-24e6-43cf-ac12-ccffed45b3e0 -->
 
 Add integration tests for critical paths to achieve >30% coverage.
 

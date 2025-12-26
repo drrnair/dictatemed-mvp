@@ -109,7 +109,7 @@ describe('Dashboard Stats API', () => {
       expect(data.lettersToday).toBe(2);
       expect(data.pendingReview).toBe(8);
       expect(data.thisMonth).toBe(15);
-      expect(data.timeSavedHours).toBe(2); // 10 * 15 / 60 = 2.5 rounded to 2
+      expect(data.timeSavedHours).toBe(3); // 10 * 15 / 60 = 2.5, Math.round gives 3
       expect(data.recentActivity).toBeDefined();
       expect(Array.isArray(data.recentActivity)).toBe(true);
     });
