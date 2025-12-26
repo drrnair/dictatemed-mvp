@@ -2,6 +2,7 @@
 // Webhook endpoint for Resend delivery status updates
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Webhook } from 'svix';
 import { updateEmailStatus, type EmailStatus } from '@/infrastructure/email';
 import { logger } from '@/lib/logger';
 
@@ -34,43 +35,122 @@ const eventToStatus: Record<string, EmailStatus> = {
 };
 
 /**
+ * Verify webhook signature using Svix
+ * Returns the verified event payload or null if verification fails
+ */
+function verifyWebhookSignature(
+  payload: string,
+  headers: Headers,
+  secret: string
+): ResendWebhookEvent | null {
+  const log = logger.child({ action: 'resendWebhookVerify' });
+
+  const svixId = headers.get('svix-id');
+  const svixTimestamp = headers.get('svix-timestamp');
+  const svixSignature = headers.get('svix-signature');
+
+  if (!svixId || !svixTimestamp || !svixSignature) {
+    log.warn('Webhook missing required Svix headers', {
+      hasSvixId: Boolean(svixId),
+      hasSvixTimestamp: Boolean(svixTimestamp),
+      hasSvixSignature: Boolean(svixSignature),
+    });
+    return null;
+  }
+
+  try {
+    const wh = new Webhook(secret);
+    const verified = wh.verify(payload, {
+      'svix-id': svixId,
+      'svix-timestamp': svixTimestamp,
+      'svix-signature': svixSignature,
+    }) as ResendWebhookEvent;
+
+    return verified;
+  } catch (error) {
+    log.error(
+      'Webhook signature verification failed',
+      {
+        svixId,
+        svixTimestamp,
+      },
+      error instanceof Error ? error : undefined
+    );
+    return null;
+  }
+}
+
+/**
  * POST /api/webhooks/resend - Handle Resend webhook events
  *
  * Receives delivery status updates from Resend and updates
  * the sent_emails table accordingly.
  *
- * Note: In production, you should verify the webhook signature
- * using RESEND_WEBHOOK_SECRET. For MVP, we accept all events
- * but log verification warnings.
+ * Security: Verifies webhook signatures using Svix when
+ * RESEND_WEBHOOK_SECRET is configured (required in production).
  */
 export async function POST(request: NextRequest) {
   const log = logger.child({ action: 'resendWebhook' });
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+  const isProduction = process.env.NODE_ENV === 'production';
 
   try {
     // Get the raw body for signature verification
     const body = await request.text();
+
     let event: ResendWebhookEvent;
 
-    try {
-      event = JSON.parse(body) as ResendWebhookEvent;
-    } catch {
-      log.warn('Invalid JSON in webhook payload');
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    // Verify signature when secret is configured
+    if (webhookSecret) {
+      const verifiedEvent = verifyWebhookSignature(
+        body,
+        request.headers,
+        webhookSecret
+      );
+
+      if (!verifiedEvent) {
+        // In production, reject invalid signatures
+        if (isProduction) {
+          return NextResponse.json(
+            { error: 'Invalid webhook signature' },
+            { status: 401 }
+          );
+        }
+        // In development, log warning but parse manually
+        log.warn('Webhook signature verification failed, allowing in dev mode');
+        try {
+          event = JSON.parse(body) as ResendWebhookEvent;
+        } catch (parseError) {
+          log.warn('Invalid JSON in webhook payload', {
+            error:
+              parseError instanceof Error ? parseError.message : String(parseError),
+          });
+          return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+        }
+      } else {
+        event = verifiedEvent;
+      }
+    } else {
+      // No secret configured
+      if (isProduction) {
+        log.error('RESEND_WEBHOOK_SECRET not configured in production');
+        return NextResponse.json(
+          { error: 'Webhook endpoint not configured' },
+          { status: 500 }
+        );
+      }
+      // Development: parse without verification
+      log.warn('RESEND_WEBHOOK_SECRET not configured, skipping verification');
+      try {
+        event = JSON.parse(body) as ResendWebhookEvent;
+      } catch (parseError) {
+        log.warn('Invalid JSON in webhook payload', {
+          error:
+            parseError instanceof Error ? parseError.message : String(parseError),
+        });
+        return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+      }
     }
-
-    // Signature verification (optional for MVP)
-    const signature = request.headers.get('svix-signature');
-    const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
-
-    if (webhookSecret && !signature) {
-      log.warn('Missing webhook signature');
-      // In production, you should reject requests without valid signatures
-      // For MVP, we log and continue
-    }
-
-    // TODO: Implement actual signature verification using Svix
-    // See: https://resend.com/docs/dashboard/webhooks/verify-webhooks
-    // Note: The secret needs to be base64-decoded before use with Svix
 
     if (!event.type || !event.data?.email_id) {
       log.warn('Malformed webhook event', { event });
