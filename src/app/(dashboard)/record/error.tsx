@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, Home, RefreshCw, Mic, Save, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logUnhandledError } from '@/lib/error-logger';
+import { logger } from '@/lib/logger';
 
 interface ErrorPageProps {
   error: Error & { digest?: string };
@@ -47,7 +48,7 @@ export default function RecordError({ error, reset }: ErrorPageProps) {
         setRecoverySuccess(true);
       }
     } catch (err) {
-      console.error('Failed to parse recovery data:', err);
+      logger.error('Failed to parse recovery data', { error: err });
       setRecoverySuccess(false);
     }
   };
@@ -72,7 +73,7 @@ export default function RecordError({ error, reset }: ErrorPageProps) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Failed to download recovery data:', err);
+      logger.error('Failed to download recovery data', { error: err });
     }
   };
 

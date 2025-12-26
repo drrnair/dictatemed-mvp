@@ -6,6 +6,7 @@
 import { useCallback } from 'react';
 import { Sparkles } from 'lucide-react';
 import { PracticeProfileForm } from '@/components/specialty';
+import { logger } from '@/lib/logger';
 
 export default function OnboardingPage() {
   // Handle save completion - redirect to dashboard
@@ -28,9 +29,7 @@ export default function OnboardingPage() {
     } catch (error) {
       // Continue even if the API call fails - user wants to skip
       // Log for debugging but don't block user flow
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Failed to mark onboarding complete:', error);
-      }
+      logger.warn('Failed to mark onboarding complete', { error });
     }
 
     // Seed templates if not already done (fire and forget)

@@ -38,15 +38,25 @@ const inMemoryStore = new Map<string, RateLimitEntry>();
 // Redis client singleton - only created if environment variables are set
 let redisClient: Redis | null = null;
 let redisLimiters: Map<string, Ratelimit> | null = null;
+// Track whether we've already checked for Redis config (to avoid log spam)
+let redisInitAttempted = false;
 
 /**
  * Initialize Redis client and rate limiters if configured.
  * This is lazy-initialized on first use.
  */
 function initializeRedis(): boolean {
+  // Already successfully initialized
   if (redisClient !== null) {
     return true;
   }
+
+  // Already attempted but Redis not configured - skip without logging again
+  if (redisInitAttempted) {
+    return false;
+  }
+
+  redisInitAttempted = true;
 
   const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
   const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -122,13 +132,11 @@ export async function checkRateLimitAsync(
     if (limiter) {
       try {
         const result = await limiter.limit(key);
-        const config = RATE_LIMITS[resource] ?? RATE_LIMITS.default;
-        const resetAt = new Date(result.reset);
 
         return {
           allowed: result.success,
           remaining: result.remaining,
-          resetAt,
+          resetAt: new Date(result.reset),
           retryAfterMs: result.success ? undefined : result.reset - Date.now(),
         };
       } catch (error) {

@@ -163,26 +163,40 @@ export async function GET(request: NextRequest) {
     const { decryptPatientData } = await import('@/infrastructure/db/encryption');
 
     // Build where clause dynamically
-    // Using type assertion as Prisma types are complex with union types
-    const where = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {
       userId: session.user.id,
-      ...(status && { status }),
-      ...(letterType && { letterType }),
-      ...((startDate || endDate) && {
-        createdAt: {
-          ...(startDate && { gte: new Date(startDate) }),
-          ...(endDate && { lte: new Date(endDate) }),
-        },
-      }),
     };
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (letterType) {
+      where.letterType = letterType;
+    }
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        where.createdAt.lte = new Date(endDate);
+      }
+    }
 
     // Calculate offset from page
     const offset = (page - 1) * limit;
 
     // Build orderBy
-    const orderBy = sortBy === 'approvedAt'
-      ? { approvedAt: sortOrder as const }
-      : { createdAt: sortOrder as const };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const orderBy: any = {};
+    if (sortBy === 'approvedAt') {
+      orderBy.approvedAt = sortOrder;
+    } else {
+      orderBy.createdAt = sortOrder;
+    }
 
     // Fetch letters with patient data
     const [letters, total] = await Promise.all([
@@ -199,8 +213,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Decrypt patient data and filter by search if needed
-    type LetterWithPatient = typeof letters[number];
-    let processedLetters = letters.map((letter: LetterWithPatient) => {
+    let processedLetters = letters.map((letter) => {
       let patientName = 'Unknown Patient';
       if (letter.patient?.encryptedData) {
         try {

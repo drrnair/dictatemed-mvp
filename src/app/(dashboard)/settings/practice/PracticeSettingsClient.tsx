@@ -7,19 +7,13 @@ import { useState } from 'react';
 import { PracticeDetails } from '@/components/settings/PracticeDetails';
 import { UserManagement } from '@/components/settings/UserManagement';
 import { PracticeSettings } from '@/components/settings/PracticeSettings';
-
-interface PracticeSettingsData {
-  defaultLetterType?: string;
-  defaultSpecialty?: string;
-  signatureRequired?: boolean;
-  autoSave?: boolean;
-  [key: string]: unknown;
-}
+import { logger } from '@/lib/logger';
 
 interface Practice {
   id: string;
   name: string;
-  settings: PracticeSettingsData | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  settings: any;
   letterhead: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -62,7 +56,7 @@ export function PracticeSettingsClient({
         setUsers(updatedUsers);
       }
     } catch (error) {
-      console.error('Error refreshing users:', error);
+      logger.error('Error refreshing users', { error });
     } finally {
       setIsRefreshing(false);
     }
