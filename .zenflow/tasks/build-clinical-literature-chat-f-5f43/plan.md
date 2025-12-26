@@ -255,28 +255,36 @@ npm run typecheck              # ✅ No errors
 npm run test -- domains/literature  # ✅ 30 tests passed (16 user-library + 14 orchestration)
 ```
 
-### [ ] Step 7: API Routes
+### [x] Step 7: API Routes
 
 **Goal**: REST endpoints for literature features
 
-**Tasks**:
-1. Create literature routes:
-   - `POST /api/literature/search` - Execute search
-   - `POST /api/literature/upload` - Upload document
-   - `GET /api/literature/library` - List documents
-   - `DELETE /api/literature/library/[id]` - Remove document
-2. Create UpToDate routes (stubs):
-   - `GET /api/uptodate/connect` - Start OAuth
-   - `GET /api/uptodate/callback` - OAuth callback
-   - `DELETE /api/uptodate/disconnect` - Remove connection
-   - `GET /api/uptodate/status` - Connection status
-3. Add Zod schemas for request validation
-4. Add integration tests `tests/integration/api/literature.test.ts`
+**Completed**:
+1. Verified existing literature routes at `src/app/api/literature/`:
+   - `search/route.ts` - POST for literature search with Zod validation
+   - `library/route.ts` - GET list, POST upload with multipart/form-data
+   - `library/[id]/route.ts` - GET by ID, DELETE document
+   - `history/route.ts` - GET query history with pagination
+   - `history/[id]/route.ts` - GET cached query, PATCH citation inserted
+2. Verified existing UpToDate routes at `src/app/api/literature/uptodate/`:
+   - `route.ts` - GET status, DELETE disconnect
+   - `connect/route.ts` - GET authorization URL
+   - `callback/route.ts` - GET OAuth callback handler
+3. All routes include:
+   - Session authentication checks
+   - Zod schema validation (SearchRequestSchema, UploadRequestSchema)
+   - Proper error handling (400, 401, 404, 413, 429, 500)
+   - Logging with structured context
+4. Created comprehensive integration tests `tests/integration/api/literature.test.ts`:
+   - 43 tests covering all endpoints
+   - Tests for authentication, validation, success cases, error handling
+   - Tests for user isolation (User A cannot access User B resources)
+   - Tests for pagination, caching, citation tracking
 
-**Verification**:
+**Verification**: ✅
 ```bash
-npm run typecheck
-npm run test:integration -- literature
+npm run typecheck                                  # ✅ No errors
+npm run test:integration -- literature.test.ts     # ✅ 43 tests passed
 ```
 
 ---
