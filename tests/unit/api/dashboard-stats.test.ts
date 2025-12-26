@@ -62,6 +62,7 @@ describe('Dashboard Stats API', () => {
         .mockResolvedValueOnce(15) // thisMonth
         .mockResolvedValueOnce(10); // approvedThisMonth
 
+      // Only include fields that the API actually selects
       vi.mocked(prisma.letter.findMany).mockResolvedValue([
         {
           id: 'letter-1',
@@ -69,37 +70,8 @@ describe('Dashboard Stats API', () => {
           status: 'DRAFT',
           createdAt: new Date(),
           patientId: 'patient-abc',
-          userId: 'user-123',
-          patientMRN: null,
-          consultationId: null,
-          processingError: null,
-          recordingId: null,
-          templateId: null,
-          subspecialty: null,
-          contentGenerated: null,
-          contentDraft: null,
-          contentFinal: null,
-          feedbackNotes: null,
-          verificationStatus: null,
-          verifiedValues: null,
-          provenanceComplete: false,
-          createdBy: 'user',
-          approvedAt: null,
-          approvedBy: null,
-          generatedAt: null,
-          sentAt: null,
-          sentBy: null,
-          sentTo: null,
-          updatedAt: new Date(),
-          styleVersion: null,
-          styleProfileId: null,
-          styleConfidenceScore: null,
-          isStyleLearningLetter: false,
-          editsExtracted: false,
-          reviewStartedAt: null,
-          reviewDurationMs: null,
         },
-      ]);
+      ] as unknown as Awaited<ReturnType<typeof prisma.letter.findMany>>);
 
       const response = await GET();
       const data: DashboardStats = await response.json();
@@ -129,6 +101,7 @@ describe('Dashboard Stats API', () => {
       vi.mocked(getSession).mockResolvedValue({ user: mockUser });
 
       vi.mocked(prisma.letter.count).mockResolvedValue(0);
+      // Only include fields that the API actually selects
       vi.mocked(prisma.letter.findMany).mockResolvedValue([
         {
           id: 'letter-1',
@@ -136,45 +109,18 @@ describe('Dashboard Stats API', () => {
           status: 'APPROVED',
           createdAt: new Date(Date.now() - 60000), // 1 minute ago
           patientId: 'ab123456',
-          userId: 'user-123',
-          patientMRN: null,
-          consultationId: null,
-          processingError: null,
-          recordingId: null,
-          templateId: null,
-          subspecialty: null,
-          contentGenerated: null,
-          contentDraft: null,
-          contentFinal: null,
-          feedbackNotes: null,
-          verificationStatus: null,
-          verifiedValues: null,
-          provenanceComplete: false,
-          createdBy: 'user',
-          approvedAt: null,
-          approvedBy: null,
-          generatedAt: null,
-          sentAt: null,
-          sentBy: null,
-          sentTo: null,
-          updatedAt: new Date(),
-          styleVersion: null,
-          styleProfileId: null,
-          styleConfidenceScore: null,
-          isStyleLearningLetter: false,
-          editsExtracted: false,
-          reviewStartedAt: null,
-          reviewDurationMs: null,
         },
-      ]);
+      ] as unknown as Awaited<ReturnType<typeof prisma.letter.findMany>>);
 
       const response = await GET();
       const data: DashboardStats = await response.json();
 
-      expect(data.recentActivity[0].patientInitials).toBe('AB');
-      expect(data.recentActivity[0].letterType).toBe('Follow Up');
-      expect(data.recentActivity[0].status).toBe('approved');
-      expect(data.recentActivity[0].time).toMatch(/\d+m ago|Just now/);
+      expect(data.recentActivity.length).toBeGreaterThan(0);
+      const firstActivity = data.recentActivity[0];
+      expect(firstActivity?.patientInitials).toBe('AB');
+      expect(firstActivity?.letterType).toBe('Follow Up');
+      expect(firstActivity?.status).toBe('approved');
+      expect(firstActivity?.time).toMatch(/\d+m ago|Just now/);
     });
   });
 });
