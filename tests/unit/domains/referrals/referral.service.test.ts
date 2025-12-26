@@ -129,6 +129,16 @@ describe('referral.service', () => {
     status: 'UPLOADED' as ReferralDocumentStatus,
     contentText: null,
     extractedData: null,
+    // Two-phase extraction fields
+    fastExtractionStatus: 'PENDING' as const,
+    fastExtractionData: null,
+    fastExtractionStartedAt: null,
+    fastExtractionCompletedAt: null,
+    fastExtractionError: null,
+    fullExtractionStatus: 'PENDING' as const,
+    fullExtractionStartedAt: null,
+    fullExtractionCompletedAt: null,
+    fullExtractionError: null,
     processingError: null,
     processedAt: null,
     createdAt: new Date('2024-01-01'),
@@ -178,7 +188,7 @@ describe('referral.service', () => {
     });
 
     it('should throw error for file too large', async () => {
-      const tooLarge = 11 * 1024 * 1024; // 11 MB
+      const tooLarge = 21 * 1024 * 1024; // 21 MB (limit is now 20 MB)
 
       await expect(
         referralService.createReferralDocument('user-1', 'practice-1', {

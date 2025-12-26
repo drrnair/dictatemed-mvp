@@ -3,6 +3,7 @@
 // src/components/consultation/ConsultationContextForm.tsx
 // Main form combining patient, referrer, CC recipients, and letter type selection
 // Now includes optional referral upload for auto-population
+// Supports multi-document upload with fast extraction and background processing
 
 import { useCallback, useState } from 'react';
 import { logger } from '@/lib/logger';
@@ -18,11 +19,12 @@ import { PatientContacts } from './PatientContacts';
 import {
   ReferralUploader,
   ReferralReviewPanel,
+  BackgroundProcessingIndicator,
 } from '@/components/referral';
 import { toast } from '@/hooks/use-toast';
 import type { PatientSummary, ReferrerInfo, CCRecipientInfo } from '@/domains/consultation';
 import type { LetterType } from '@prisma/client';
-import type { ReferralExtractedData, ApplyReferralInput } from '@/domains/referrals';
+import type { ReferralExtractedData, ApplyReferralInput, FastExtractedData } from '@/domains/referrals';
 
 export interface ConsultationFormData {
   patient?: PatientSummary;
@@ -36,6 +38,10 @@ export interface ConsultationFormData {
     keyProblems?: string[];
   };
   referralDocumentId?: string;
+  // Multi-document upload: IDs of all uploaded documents
+  referralDocumentIds?: string[];
+  // Fast extraction data from multi-document upload
+  fastExtractionData?: FastExtractedData;
 }
 
 interface ConsultationContextFormProps {
@@ -47,6 +53,12 @@ interface ConsultationContextFormProps {
     referrer?: string;
     letterType?: string;
   };
+  /** Enable multi-document upload with fast extraction and background processing */
+  multiDocumentUpload?: boolean;
+  /** Show background processing indicator (when documents are being processed) */
+  showBackgroundProcessing?: boolean;
+  /** Number of documents being processed in background */
+  processingDocumentCount?: number;
 }
 
 export function ConsultationContextForm({
@@ -54,6 +66,9 @@ export function ConsultationContextForm({
   onChange,
   disabled,
   errors,
+  multiDocumentUpload = false,
+  showBackgroundProcessing = false,
+  processingDocumentCount = 0,
 }: ConsultationContextFormProps) {
   const [showContacts, setShowContacts] = useState(false);
 
@@ -63,7 +78,11 @@ export function ConsultationContextForm({
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
 
-  // Handle successful extraction
+  // Multi-document upload state
+  const [uploadedDocumentIds, setUploadedDocumentIds] = useState<string[]>([]);
+  const [isMultiDocProcessing, setIsMultiDocProcessing] = useState(false);
+
+  // Handle successful extraction (single-file mode)
   const handleExtractionComplete = useCallback(
     (id: string, data: ReferralExtractedData) => {
       setReferralId(id);
@@ -72,6 +91,61 @@ export function ConsultationContextForm({
     },
     []
   );
+
+  // Handle fast extraction complete (multi-document mode)
+  // Called when fast extraction completes with patient identifiers
+  const handleFastExtractionComplete = useCallback(
+    (data: FastExtractedData) => {
+      // Pre-fill patient name from fast extraction if available
+      const patientName = data.patientName?.value;
+
+      // Update form with fast extraction data
+      // Document IDs will be set when user clicks "Continue" (via handleMultiDocContinue)
+      onChange({
+        ...value,
+        fastExtractionData: data,
+      });
+
+      // Show toast with extracted info
+      if (patientName) {
+        toast({
+          title: 'Patient identified',
+          description: `Found: ${patientName}. Search for this patient below.`,
+        });
+      }
+    },
+    [value, onChange]
+  );
+
+  // Handle continue from multi-document upload
+  const handleMultiDocContinue = useCallback(
+    (documentIds: string[]) => {
+      setUploadedDocumentIds(documentIds);
+      setIsMultiDocProcessing(true); // Background processing started
+
+      // Update form with document IDs
+      onChange({
+        ...value,
+        referralDocumentIds: documentIds,
+      });
+
+      toast({
+        title: 'Documents uploaded',
+        description: `${documentIds.length} document${documentIds.length !== 1 ? 's' : ''} processing in background.`,
+      });
+    },
+    [value, onChange]
+  );
+
+  // Handle full extraction complete (background processing finished)
+  const handleFullExtractionComplete = useCallback(() => {
+    setIsMultiDocProcessing(false); // Background processing finished
+
+    toast({
+      title: 'Document processing complete',
+      description: 'All documents have been fully processed.',
+    });
+  }, []);
 
   // Handle apply from review panel
   const handleApplyReferral = useCallback(
@@ -196,24 +270,73 @@ export function ConsultationContextForm({
 
   // Determine if referral has been applied
   const hasAppliedReferral = !!value.referralDocumentId;
+  const hasMultiDocUpload = (value.referralDocumentIds?.length ?? 0) > 0;
+
+  // Show background processing if explicitly set or if we have documents processing
+  const shouldShowBackgroundProcessing = showBackgroundProcessing || isMultiDocProcessing;
+  const effectiveProcessingCount = processingDocumentCount || uploadedDocumentIds.length;
 
   return (
     <Card>
       <CardHeader className="pb-4">
-        <CardTitle className="text-lg">Consultation Context</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">Consultation Context</CardTitle>
+          {/* Background processing indicator */}
+          {shouldShowBackgroundProcessing && effectiveProcessingCount > 0 && (
+            <BackgroundProcessingIndicator
+              status="PROCESSING"
+              documentsProcessing={effectiveProcessingCount}
+              documentsTotal={effectiveProcessingCount}
+              variant="inline"
+            />
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Referral Upload Section - only show if no patient selected and no referral applied */}
-        {!value.patient && !hasAppliedReferral && (
+        {!value.patient && !hasAppliedReferral && !hasMultiDocUpload && (
           <div className="rounded-lg border border-dashed border-border/60 p-4 bg-muted/30">
             <h3 className="text-sm font-medium mb-3">
               Upload referral or previous letter (optional)
             </h3>
             <ReferralUploader
               onExtractionComplete={handleExtractionComplete}
+              onFastExtractionComplete={handleFastExtractionComplete}
+              onContinue={handleMultiDocContinue}
+              onFullExtractionComplete={handleFullExtractionComplete}
               onRemove={handleRemoveReferral}
               disabled={disabled}
+              multiDocument={multiDocumentUpload}
             />
+          </div>
+        )}
+
+        {/* Multi-document upload indicator */}
+        {hasMultiDocUpload && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-primary mb-1">
+                  {value.referralDocumentIds?.length} document{(value.referralDocumentIds?.length ?? 0) !== 1 ? 's' : ''} uploaded
+                </h3>
+                {value.fastExtractionData?.patientName?.value && (
+                  <p className="text-sm text-muted-foreground">
+                    Patient: {value.fastExtractionData.patientName.value}
+                    {value.fastExtractionData.dateOfBirth?.value && (
+                      <> • DOB: {value.fastExtractionData.dateOfBirth.value}</>
+                    )}
+                  </p>
+                )}
+              </div>
+              {isMultiDocProcessing && (
+                <BackgroundProcessingIndicator
+                  status="PROCESSING"
+                  documentsProcessing={effectiveProcessingCount}
+                  documentsTotal={effectiveProcessingCount}
+                  variant="inline"
+                />
+              )}
+            </div>
           </div>
         )}
 

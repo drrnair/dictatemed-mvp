@@ -61,7 +61,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const rateLimit = checkRateLimit(rateLimitKey, 'referrals');
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded', retryAfterMs: rateLimit.retryAfterMs },
+        { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfterMs },
         { status: 429 }
       );
     }

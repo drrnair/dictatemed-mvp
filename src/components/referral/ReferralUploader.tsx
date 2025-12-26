@@ -2,6 +2,7 @@
 
 // src/components/referral/ReferralUploader.tsx
 // Upload component for referral letters with extraction workflow
+// Supports both single-file (legacy) and multi-file modes
 
 import { useState, useCallback, useRef } from 'react';
 import {
@@ -28,7 +29,9 @@ import {
   getAcceptedExtensions,
   isExtendedUploadTypesEnabled,
   type ReferralExtractedData,
+  type FastExtractedData,
 } from '@/domains/referrals';
+import { MultiDocumentUploader } from './MultiDocumentUploader';
 
 // Upload status for the referral document
 export type ReferralUploadStatus =
@@ -50,10 +53,19 @@ export interface ReferralUploadState {
 }
 
 interface ReferralUploaderProps {
+  /** Called when full extraction completes (single-file mode) */
   onExtractionComplete?: (referralId: string, extractedData: ReferralExtractedData) => void;
+  /** Called when fast extraction completes with patient identifiers (multi-file mode) */
+  onFastExtractionComplete?: (data: FastExtractedData) => void;
+  /** Called when user is ready to continue with document IDs (multi-file mode) */
+  onContinue?: (documentIds: string[]) => void;
+  /** Called when background full extraction completes for all documents (multi-file mode) */
+  onFullExtractionComplete?: () => void;
   onRemove?: () => void;
   disabled?: boolean;
   className?: string;
+  /** Enable multi-document upload mode with background processing */
+  multiDocument?: boolean;
 }
 
 
@@ -106,12 +118,18 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function ReferralUploader({
+// Single-file uploader component (legacy mode)
+function SingleFileUploader({
   onExtractionComplete,
   onRemove,
   disabled = false,
   className,
-}: ReferralUploaderProps) {
+}: {
+  onExtractionComplete?: (referralId: string, extractedData: ReferralExtractedData) => void;
+  onRemove?: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
   const [state, setState] = useState<ReferralUploadState>({
     status: 'idle',
     progress: 0,
@@ -608,5 +626,40 @@ export function ReferralUploader({
         </div>
       </div>
     </div>
+  );
+}
+
+// Exported component that delegates to either single or multi-document uploader
+export function ReferralUploader({
+  onExtractionComplete,
+  onFastExtractionComplete,
+  onContinue,
+  onFullExtractionComplete,
+  onRemove,
+  disabled = false,
+  className,
+  multiDocument = false,
+}: ReferralUploaderProps) {
+  // If multi-document mode is enabled, render MultiDocumentUploader
+  if (multiDocument) {
+    return (
+      <MultiDocumentUploader
+        onFastExtractionComplete={onFastExtractionComplete}
+        onContinue={onContinue}
+        onFullExtractionComplete={onFullExtractionComplete}
+        disabled={disabled}
+        className={className}
+      />
+    );
+  }
+
+  // Otherwise render the single-file uploader (legacy mode)
+  return (
+    <SingleFileUploader
+      onExtractionComplete={onExtractionComplete}
+      onRemove={onRemove}
+      disabled={disabled}
+      className={className}
+    />
   );
 }

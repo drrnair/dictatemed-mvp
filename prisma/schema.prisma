@@ -889,6 +889,22 @@ enum ReferralDocumentStatus {
   FAILED          // Processing failed
 }
 
+// Fast extraction status for two-phase processing
+enum FastExtractionStatus {
+  PENDING     // Not yet started
+  PROCESSING  // Currently extracting patient identifiers
+  COMPLETE    // Fast extraction successful
+  FAILED      // Fast extraction failed
+}
+
+// Full extraction status for background processing
+enum FullExtractionStatus {
+  PENDING     // Not yet started (waiting for fast extraction)
+  PROCESSING  // Currently extracting full context
+  COMPLETE    // Full extraction successful
+  FAILED      // Full extraction failed
+}
+
 model ReferralDocument {
   id         String                 @id @default(uuid())
   userId     String
@@ -912,8 +928,33 @@ model ReferralDocument {
   status ReferralDocumentStatus @default(UPLOADED)
 
   // Extracted content
-  contentText   String? @db.Text // Raw text from PDF/TXT
-  extractedData Json?            // Structured extraction result
+  contentText   String? @db.Text // Raw text from PDF/TXT/OCR
+  // extractedData stores the full structured extraction result (ReferralExtractedData)
+  // This is populated by full extraction (background processing)
+  // Fast extraction data is stored separately in fastExtractionData
+  extractedData Json?            // Full structured extraction: { patient, gp, referrer, referralContext }
+
+  // === Two-Phase Extraction (Fast + Background) ===
+  //
+  // Phase 1 - Fast extraction: Extracts patient identifiers only (<5 seconds)
+  //           Stored in fastExtractionData as FastExtractedData
+  //
+  // Phase 2 - Full extraction: Extracts complete context in background (<60 seconds)
+  //           Stored in extractedData as ReferralExtractedData (reuses existing field)
+
+  // Fast extraction - patient identifiers only (<5 seconds)
+  fastExtractionStatus      FastExtractionStatus? @default(PENDING) @map("fast_extraction_status")
+  fastExtractionData        Json?                 @map("fast_extraction_data") // FastExtractedData: { patientName, dob, mrn, confidence }
+  fastExtractionStartedAt   DateTime?             @map("fast_extraction_started_at")
+  fastExtractionCompletedAt DateTime?             @map("fast_extraction_completed_at")
+  fastExtractionError       String?               @map("fast_extraction_error")
+
+  // Full extraction - complete context (background, <60 seconds)
+  // Note: Full extraction result is stored in extractedData (above), not a separate field
+  fullExtractionStatus      FullExtractionStatus? @default(PENDING) @map("full_extraction_status")
+  fullExtractionStartedAt   DateTime?             @map("full_extraction_started_at")
+  fullExtractionCompletedAt DateTime?             @map("full_extraction_completed_at")
+  fullExtractionError       String?               @map("full_extraction_error")
 
   // Metadata
   processingError String?
@@ -925,6 +966,8 @@ model ReferralDocument {
   @@index([practiceId])
   @@index([patientId])
   @@index([status])
+  @@index([fastExtractionStatus])
+  @@index([fullExtractionStatus])
   @@map("referral_documents")
 }
 
