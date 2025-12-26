@@ -1,7 +1,7 @@
 # Spec and build
 
 ## Configuration
-- **Artifacts Path**: {@artifacts_path} → `.zenflow/tasks/{task_id}`
+- **Artifacts Path**: `.zenflow/tasks/fix-all-critical-issues-from-ana-b296`
 
 ---
 
@@ -12,53 +12,294 @@ Ask the user questions when anything is unclear or needs their input. This inclu
 - Technical decisions that affect architecture or user experience
 - Trade-offs that require business context
 
-Do not make assumptions on important decisions — get clarification first.
+Do not make assumptions on important decisions - get clarification first.
 
 ---
 
 ## Workflow Steps
 
-### [ ] Step: Technical Specification
+### [x] Step: Technical Specification
 
-Assess the task's difficulty, as underestimating it leads to poor outcomes.
-- easy: Straightforward implementation, trivial bug fix or feature
-- medium: Moderate complexity, some edge cases or caveats to consider
-- hard: Complex logic, many caveats, architectural considerations, or high-risk changes
-
-Create a technical specification for the task that is appropriate for the complexity level:
-- Review the existing codebase architecture and identify reusable components.
-- Define the implementation approach based on established patterns in the project.
-- Identify all source code files that will be created or modified.
-- Define any necessary data model, API, or interface changes.
-- Describe verification steps using the project's test and lint commands.
-
-Save the output to `{@artifacts_path}/spec.md` with:
-- Technical context (language, dependencies)
-- Implementation approach
-- Source code structure changes
-- Data model / API / interface changes
-- Verification approach
-
-If the task is complex enough, create a detailed implementation plan based on `{@artifacts_path}/spec.md`:
-- Break down the work into concrete tasks (incrementable, testable milestones)
-- Each task should reference relevant contracts and include verification steps
-- Replace the Implementation step below with the planned tasks
-
-Rule of thumb for step size: each step should represent a coherent unit of work (e.g., implement a component, add an API endpoint, write tests for a module). Avoid steps that are too granular (single function).
-
-Save to `{@artifacts_path}/plan.md`. If the feature is trivial and doesn't warrant this breakdown, keep the Implementation step below as is.
+Created comprehensive technical specification in `spec.md`:
+- Assessed task difficulty as **HARD** (13 issues, security-critical, zero breaking changes required)
+- Documented all 12 issues with severity, files affected, and implementation approach
+- Identified new dependencies: `svix`, `@upstash/redis`, `@upstash/ratelimit`
+- Defined verification approach for each issue
+- Created rollback and risk mitigation strategy
 
 ---
 
-### [ ] Step: Implementation
+## Phase 1: Critical Security (Days 1-2)
 
-Implement the task according to the technical specification and general engineering best practices.
+### [ ] Step: Issue 1 - Patient API Authentication
 
-1. Break the task into steps where possible.
-2. Implement the required changes in the codebase.
-3. Add and run relevant tests and linters.
-4. Perform basic manual verification if applicable.
-5. After completion, write a report to `{@artifacts_path}/report.md` describing:
-   - What was implemented
-   - How the solution was tested
-   - The biggest issues or challenges encountered
+Add proper authentication to patient API endpoints (currently using placeholder practice ID).
+
+**Files to modify:**
+- `src/app/api/patients/route.ts` - GET (list) and POST (create)
+- `src/app/api/patients/[id]/route.ts` - GET, PUT, PATCH, DELETE
+- `src/app/api/patients/[id]/materials/route.ts` - GET materials
+
+**Implementation:**
+1. Import `getSession` from `@/lib/auth`
+2. Replace `PLACEHOLDER_PRACTICE_ID` with `session.user.practiceId`
+3. Return 401 for unauthenticated requests
+4. Ensure all queries are scoped to practiceId
+
+**Verification:**
+- `npm run typecheck` passes
+- Unauthenticated requests return 401
+- Cross-practice access is denied
+
+---
+
+### [ ] Step: Issue 2 - Webhook Signature Verification
+
+Implement Svix signature verification for Resend webhooks.
+
+**Files to modify:**
+- `src/app/api/webhooks/resend/route.ts`
+- `package.json` (add svix dependency)
+- `.env.example` (document RESEND_WEBHOOK_SECRET)
+
+**Implementation:**
+1. Install `svix` package
+2. Verify webhook signature using Svix headers
+3. Reject invalid signatures in production
+4. Log verification failures
+
+**Verification:**
+- Valid signatures pass
+- Invalid signatures rejected with 401
+- Existing webhook handling still works
+
+---
+
+### [ ] Step: Issue 3 - Fix Empty Catch Blocks
+
+Add proper error logging to all empty catch blocks in src/.
+
+**Files to modify (20+ locations):**
+- `src/middleware.ts`
+- `src/domains/referrals/extractors/referral-letter.ts`
+- `src/domains/documents/document.service.ts`
+- `src/domains/recording/recording.service.ts`
+- `src/domains/letters/sending.service.ts`
+- `src/components/recording/TranscriptViewer.tsx`
+- `src/components/consultation/ReferrerSelector.tsx`
+- `src/components/consultation/ContactForm.tsx`
+- `src/components/consultation/PatientSelector.tsx`
+- `src/app/(dashboard)/**/*.tsx` (multiple)
+- `src/app/api/**/*.ts` (multiple)
+
+**Implementation:**
+- Add `error` parameter to catch blocks
+- Log with context using `logger.warn` or `logger.error`
+- Preserve existing error handling behavior
+
+**Verification:**
+- `grep -r "} catch {" src/` returns 0 results
+- Existing error recovery still works
+
+---
+
+## Phase 2: Production Readiness (Days 3-5)
+
+### [ ] Step: Issue 4 - Distributed Rate Limiting
+
+Add Upstash Redis support for distributed rate limiting.
+
+**Files to modify:**
+- `src/lib/rate-limit.ts`
+- `package.json` (add @upstash/redis, @upstash/ratelimit)
+- `.env.example` (document UPSTASH_* variables)
+
+**Implementation:**
+1. Install Upstash packages
+2. Add Redis-based rate limiter (optional)
+3. Fall back to in-memory when Redis not configured
+4. Keep existing API unchanged
+
+**Verification:**
+- Works in dev (no Redis - fallback)
+- Works in prod (with Redis)
+- Existing rate-limited endpoints work
+
+---
+
+### [ ] Step: Issue 5 - Replace Console Statements
+
+Replace console.log/warn/error with structured logger.
+
+**Files to modify (15+ files):**
+- `src/hooks/useNotifications.ts`
+- `src/hooks/useErrorHandler.ts`
+- `src/components/settings/UserManagement.tsx`
+- `src/components/settings/PracticeSettings.tsx`
+- `src/components/pwa/PWASettings.tsx`
+- `src/components/letters/LetterEditor.tsx`
+- `src/components/layout/NotificationCenter.tsx`
+- `src/components/consultation/*.tsx`
+- `src/app/api/practice/users/route.ts`
+- `src/app/api/auth/[...auth0]/route.ts`
+- `src/app/(dashboard)/**/*.tsx`
+
+**Implementation:**
+- Import logger from `@/lib/logger`
+- Replace console.log with logger.info/debug
+- Replace console.error with logger.error
+- Replace console.warn with logger.warn
+- Add context objects for structured logging
+
+**Verification:**
+- `grep -rn "console\." src/` only shows logger.ts, error-logger.ts
+- Logs appear correctly in development
+- No functionality changes
+
+---
+
+### [ ] Step: Issue 8 - Error Tracking Preparation
+
+Prepare error logger for Sentry integration.
+
+**Files to modify:**
+- `src/lib/error-logger.ts`
+- `.env.example` (document NEXT_PUBLIC_SENTRY_DSN)
+
+**Implementation:**
+1. Add Sentry DSN placeholder check
+2. Add conditional Sentry capture in error methods
+3. Document setup steps for production
+4. Defer full Sentry wizard installation
+
+**Verification:**
+- Error logger functions correctly
+- Ready for Sentry integration when needed
+
+---
+
+## Phase 3: Code Quality (Week 2)
+
+### [ ] Step: Issue 6 - Fix TypeScript any Types
+
+Replace `any` types with proper TypeScript types.
+
+**Files to modify:**
+- `src/lib/pwa.ts` - BeforeInstallPromptEvent interface
+- `src/hooks/useNotifications.ts` - settings type
+- `src/components/settings/PracticeSettings.tsx`
+- `src/app/api/letters/route.ts` - Prisma.LetterWhereInput
+- `src/app/(dashboard)/settings/practice/PracticeSettingsClient.tsx`
+
+**Implementation:**
+- Define proper interfaces for each any usage
+- Use Prisma types for database queries
+- Add type guards where needed
+
+**Verification:**
+- `npm run typecheck` passes
+- No `any` types in modified files
+
+---
+
+### [ ] Step: Issue 7 - Dashboard Real Data
+
+Create API endpoint and update dashboard to show real data.
+
+**Files to create:**
+- `src/app/api/dashboard/stats/route.ts`
+
+**Files to modify:**
+- `src/app/(dashboard)/dashboard/page.tsx`
+
+**Implementation:**
+1. Create stats API endpoint:
+   - Count draft letters for practiceId
+   - Count sent letters for practiceId
+   - Count patients for practiceId
+   - Calculate time saved estimate
+2. Update dashboard to fetch from API
+3. Add loading states
+
+**Verification:**
+- Dashboard shows real counts
+- Counts match database
+- Practice-scoped (no cross-tenant data)
+
+---
+
+### [ ] Step: Issue 9 - Add Integration Tests
+
+Add integration tests for critical paths to achieve >30% coverage.
+
+**Files to create:**
+- `tests/integration/api/patients.test.ts`
+- `tests/integration/api/dashboard.test.ts`
+- `tests/integration/auth/session.test.ts`
+
+**Implementation:**
+1. Test patient CRUD operations with auth
+2. Test dashboard stats endpoint
+3. Test auth flow and session handling
+4. Add multi-tenancy isolation tests
+
+**Verification:**
+- `npm run test:coverage` shows >30%
+- All new tests pass
+
+---
+
+## Phase 4: Technical Debt (As Time Permits)
+
+### [ ] Step: Issue 10 - Deprecated Schema Fields Analysis
+
+Analyze and clean up deprecated schema fields.
+
+**Files to analyze:**
+- `prisma/schema.prisma` - s3AudioKey, s3Key marked @deprecated
+
+**Implementation:**
+1. Search codebase for usage
+2. If unused, plan migration to remove
+3. If used, update to use new fields
+
+**Verification:**
+- Deprecated fields usage documented
+- Migration plan created (if applicable)
+
+---
+
+### [ ] Step: Issue 11 - Extract Magic Numbers
+
+Create constants file and extract magic numbers.
+
+**Files to create:**
+- `src/lib/constants.ts`
+
+**Implementation:**
+1. Identify magic numbers in codebase
+2. Extract to named constants
+3. Update references
+
+**Verification:**
+- Magic numbers replaced with named constants
+- No functionality changes
+
+---
+
+## Final Verification
+
+### [ ] Step: Final Testing and Validation
+
+Comprehensive testing before completion.
+
+**Verification checklist:**
+- [ ] `npm run typecheck` - No errors
+- [ ] `npm run lint` - No warnings
+- [ ] `npm run test` - All pass
+- [ ] `npm run test:coverage` - >30% coverage
+- [ ] `npm run build` - Successful
+- [ ] Manual workflow test (record -> transcribe -> letter -> send)
+- [ ] All 14 modules still working
+
+**Write report to:** `report.md`
