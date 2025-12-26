@@ -204,10 +204,10 @@ describe('filterPHI', () => {
 
       const patients = result.patients as Record<string, unknown>[];
       expect(patients).toHaveLength(2);
-      expect(patients[0].patientName).toBe('[REDACTED]');
-      expect(patients[0].id).toBe(1);
-      expect(patients[1].patientName).toBe('[REDACTED]');
-      expect(patients[1].id).toBe(2);
+      expect(patients[0]!.patientName).toBe('[REDACTED]');
+      expect(patients[0]!.id).toBe(1);
+      expect(patients[1]!.patientName).toBe('[REDACTED]');
+      expect(patients[1]!.id).toBe(2);
     });
 
     it('should preserve arrays of primitives', () => {
