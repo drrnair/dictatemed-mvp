@@ -2,10 +2,10 @@
 // Unit tests for vision-based text extraction using Claude Vision
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { analyzeImage } from '@/infrastructure/bedrock/vision';
+import { analyzeImage } from '@/infrastructure/ai/vision';
 
-// Mock the Bedrock vision module
-vi.mock('@/infrastructure/bedrock/vision', () => ({
+// Mock the AI vision module (unified layer)
+vi.mock('@/infrastructure/ai/vision', () => ({
   analyzeImage: vi.fn(),
 }));
 

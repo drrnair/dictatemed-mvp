@@ -2,7 +2,7 @@
 // Tests for fast patient extraction prompt parser and service
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MODELS } from '@/infrastructure/bedrock/text-generation';
+import { MODELS } from '@/infrastructure/ai';
 
 // Mock Prisma
 vi.mock('@/infrastructure/db/client', () => ({
@@ -19,12 +19,12 @@ vi.mock('@/infrastructure/db/client', () => ({
   },
 }));
 
-// Mock Bedrock text generation
-vi.mock('@/infrastructure/bedrock/text-generation', () => ({
+// Mock AI text generation (unified layer)
+vi.mock('@/infrastructure/ai', () => ({
   generateTextWithRetry: vi.fn(),
   MODELS: {
-    SONNET: 'anthropic.claude-sonnet-4-20250514-v1:0',
-    OPUS: 'anthropic.claude-opus-4-20250514-v1:0',
+    SONNET: 'sonnet',
+    OPUS: 'opus',
   },
 }));
 
@@ -56,7 +56,7 @@ import {
   isFastExtractionComplete,
 } from '@/domains/referrals/referral-fast-extraction.service';
 import { prisma } from '@/infrastructure/db/client';
-import { generateTextWithRetry } from '@/infrastructure/bedrock/text-generation';
+import { generateTextWithRetry } from '@/infrastructure/ai';
 
 describe('fast-patient-extraction parser', () => {
   describe('parseFastExtraction', () => {

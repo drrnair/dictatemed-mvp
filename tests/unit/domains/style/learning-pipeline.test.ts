@@ -29,11 +29,11 @@ vi.mock('@/infrastructure/db/client', () => ({
   },
 }));
 
-vi.mock('@/infrastructure/bedrock', () => ({
+vi.mock('@/infrastructure/ai', () => ({
   generateTextWithRetry: vi.fn(),
   MODELS: {
-    SONNET: 'claude-sonnet',
-    OPUS: 'claude-opus',
+    SONNET: 'sonnet',
+    OPUS: 'opus',
   },
 }));
 
