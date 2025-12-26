@@ -106,7 +106,7 @@ export function RecordingSection({
 
       timerRef.current = setInterval(() => {
         setDuration((d) => d + 1);
-      }, 1000);
+      }, AUDIO.TIMER_UPDATE_INTERVAL_MS);
     }
   }, []);
 
