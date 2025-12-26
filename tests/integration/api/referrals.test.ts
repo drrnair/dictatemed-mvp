@@ -788,18 +788,18 @@ describe('Referrals API', () => {
 
     it('creates multiple documents and returns upload URLs', async () => {
       let docIndex = 0;
-      vi.mocked(prisma.referralDocument.create).mockImplementation(() =>
+      vi.mocked(prisma.referralDocument.create).mockImplementation((() =>
         Promise.resolve({
           ...mockReferralDocument,
           id: `doc-${++docIndex}`,
         })
-      );
-      vi.mocked(prisma.referralDocument.update).mockImplementation((args) =>
+      ) as never);
+      vi.mocked(prisma.referralDocument.update).mockImplementation(((args: { where: { id: string } }) =>
         Promise.resolve({
           ...mockReferralDocument,
-          id: args.where.id as string,
+          id: args.where.id,
         })
-      );
+      ) as never);
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
       vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({
         signedUrl: 'https://storage.example.com/presigned-upload',
@@ -857,7 +857,7 @@ describe('Referrals API', () => {
 
     it('returns 207 Multi-Status for partial success', async () => {
       let callCount = 0;
-      vi.mocked(prisma.referralDocument.create).mockImplementation(() => {
+      vi.mocked(prisma.referralDocument.create).mockImplementation((() => {
         callCount++;
         if (callCount === 2) {
           return Promise.reject(new Error('Storage error'));
@@ -866,13 +866,13 @@ describe('Referrals API', () => {
           ...mockReferralDocument,
           id: `doc-${callCount}`,
         });
-      });
-      vi.mocked(prisma.referralDocument.update).mockImplementation((args) =>
+      }) as never);
+      vi.mocked(prisma.referralDocument.update).mockImplementation(((args: { where: { id: string } }) =>
         Promise.resolve({
           ...mockReferralDocument,
-          id: args.where.id as string,
+          id: args.where.id,
         })
-      );
+      ) as never);
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
       vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({
         signedUrl: 'https://storage.example.com/presigned-upload',
@@ -974,17 +974,20 @@ describe('Referrals API', () => {
         fastExtractionStatus: 'COMPLETE' as const,
       });
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
+      // Mock LLM response in the expected format from fast-patient-extraction.ts
       vi.mocked(textGeneration.generateTextWithRetry).mockResolvedValue({
         content: JSON.stringify({
-          patient_name: 'John Smith',
-          date_of_birth: '1965-03-15',
+          name: 'John Smith',
+          dob: '1965-03-15',
           mrn: 'MRN12345',
-          name_confidence: 0.95,
-          dob_confidence: 0.90,
-          mrn_confidence: 0.85,
+          nameConfidence: 0.95,
+          dobConfidence: 0.90,
+          mrnConfidence: 0.85,
         }),
         inputTokens: 100,
         outputTokens: 50,
+        stopReason: 'end_turn',
+        modelId: 'anthropic.claude-sonnet-4-20250514-v1:0',
       });
 
       const request = createRequest(`http://localhost:3000/api/referrals/${mockReferralDocument.id}/extract-fast`, {
