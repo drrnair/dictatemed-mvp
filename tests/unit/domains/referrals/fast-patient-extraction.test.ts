@@ -11,6 +11,7 @@ vi.mock('@/infrastructure/db/client', () => ({
       findFirst: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
     auditLog: {
       create: vi.fn(),
@@ -545,6 +546,7 @@ describe('referral-fast-extraction.service', () => {
 
   describe('extractFastPatientData', () => {
     it('should extract patient data successfully', async () => {
+      vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 1 });
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument as any);
       vi.mocked(generateTextWithRetry).mockResolvedValue(mockLLMResponse);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({
@@ -562,6 +564,7 @@ describe('referral-fast-extraction.service', () => {
     });
 
     it('should call LLM with correct parameters', async () => {
+      vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 1 });
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument as any);
       vi.mocked(generateTextWithRetry).mockResolvedValue(mockLLMResponse);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({} as any);
@@ -584,6 +587,7 @@ describe('referral-fast-extraction.service', () => {
     });
 
     it('should return error when document not found', async () => {
+      vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 1 });
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({} as any);
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(null);
 
@@ -594,6 +598,7 @@ describe('referral-fast-extraction.service', () => {
     });
 
     it('should return error when document has no text', async () => {
+      vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 1 });
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({} as any);
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
         ...mockReferralDocument,
@@ -606,7 +611,8 @@ describe('referral-fast-extraction.service', () => {
       expect(result.error).toContain('no extracted text content');
     });
 
-    it('should update status to PROCESSING at start', async () => {
+    it('should use optimistic locking when acquiring PROCESSING status', async () => {
+      vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 1 });
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument as any);
       vi.mocked(generateTextWithRetry).mockResolvedValue(mockLLMResponse);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({} as any);
@@ -614,10 +620,13 @@ describe('referral-fast-extraction.service', () => {
 
       await extractFastPatientData('user-1', 'practice-1', 'ref-doc-1');
 
-      // First call should be status update to PROCESSING
-      expect(prisma.referralDocument.update).toHaveBeenCalledWith(
+      // Should use updateMany with status check for optimistic locking
+      expect(prisma.referralDocument.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'ref-doc-1' },
+          where: expect.objectContaining({
+            id: 'ref-doc-1',
+            fastExtractionStatus: { in: ['PENDING', 'FAILED'] },
+          }),
           data: expect.objectContaining({
             fastExtractionStatus: 'PROCESSING',
           }),
@@ -625,7 +634,21 @@ describe('referral-fast-extraction.service', () => {
       );
     });
 
+    it('should skip extraction if already in progress', async () => {
+      // Mock updateMany returning 0 count (lock not acquired)
+      vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 0 });
+
+      const result = await extractFastPatientData('user-1', 'practice-1', 'ref-doc-1');
+
+      expect(result.status).toBe('PROCESSING');
+      expect(result.error).toContain('already in progress');
+      // Should not have called findFirst or generateText since lock wasn't acquired
+      expect(prisma.referralDocument.findFirst).not.toHaveBeenCalled();
+      expect(generateTextWithRetry).not.toHaveBeenCalled();
+    });
+
     it('should update status to COMPLETE on success', async () => {
+      vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 1 });
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument as any);
       vi.mocked(generateTextWithRetry).mockResolvedValue(mockLLMResponse);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({} as any);
@@ -633,7 +656,7 @@ describe('referral-fast-extraction.service', () => {
 
       await extractFastPatientData('user-1', 'practice-1', 'ref-doc-1');
 
-      // Second call should be status update to COMPLETE
+      // Should use update for COMPLETE status
       expect(prisma.referralDocument.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -646,6 +669,7 @@ describe('referral-fast-extraction.service', () => {
     });
 
     it('should update status to FAILED on error', async () => {
+      vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 1 });
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({} as any);
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument as any);
       vi.mocked(generateTextWithRetry).mockRejectedValue(new Error('LLM timeout'));
@@ -664,6 +688,7 @@ describe('referral-fast-extraction.service', () => {
     });
 
     it('should create audit log on success', async () => {
+      vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 1 });
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument as any);
       vi.mocked(generateTextWithRetry).mockResolvedValue(mockLLMResponse);
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({} as any);
@@ -688,6 +713,7 @@ describe('referral-fast-extraction.service', () => {
     });
 
     it('should handle malformed LLM response', async () => {
+      vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 1 });
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({} as any);
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(mockReferralDocument as any);
       vi.mocked(generateTextWithRetry).mockResolvedValue({

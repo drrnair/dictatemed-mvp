@@ -4,10 +4,15 @@
 // This service extracts only essential patient identifiers (name, DOB, MRN)
 // for quick form pre-fill while full extraction happens in the background.
 //
+// Authorization model:
+// - Practice-level: Any user in a practice can extract from any document in that practice
+// - userId is used for audit logging only, not access control
+// - This matches the authorization model in referral.service.ts
+//
 // Performance optimizations:
 // - Minimal prompt with only required fields
-// - Haiku model for speed (Sonnet as fallback)
-// - Aggressive retry timing
+// - Sonnet model for balance of speed and accuracy
+// - Aggressive retry timing (2 retries, 500ms initial delay)
 // - Direct text extraction without streaming
 
 import { Prisma } from '@prisma/client';
@@ -71,8 +76,17 @@ export async function extractFastPatientData(
     action: 'extractFastPatientData',
   });
 
-  // Update status to PROCESSING
-  await updateFastExtractionStatus(documentId, 'PROCESSING');
+  // Update status to PROCESSING with optimistic lock
+  // Returns false if document is already being processed by another request
+  const acquiredLock = await updateFastExtractionStatus(documentId, 'PROCESSING');
+  if (!acquiredLock) {
+    log.info('Fast extraction already in progress, skipping');
+    return {
+      documentId,
+      status: 'PROCESSING',
+      error: 'Extraction already in progress',
+    };
+  }
 
   try {
     // Get document with practice-level authorization
@@ -280,12 +294,17 @@ ${documentText}`;
 }
 
 /**
- * Update fast extraction status in database.
+ * Update fast extraction status in database with optimistic locking.
+ *
+ * When setting status to PROCESSING, only updates if current status is
+ * PENDING or FAILED to prevent concurrent extractions on the same document.
+ *
+ * @returns true if update was applied, false if document was already being processed
  */
 async function updateFastExtractionStatus(
   documentId: string,
   status: FastExtractionStatus
-): Promise<void> {
+): Promise<boolean> {
   const updateData: Record<string, unknown> = {
     fastExtractionStatus: status,
     updatedAt: new Date(),
@@ -293,12 +312,27 @@ async function updateFastExtractionStatus(
 
   if (status === 'PROCESSING') {
     updateData.fastExtractionStartedAt = new Date();
+
+    // Use updateMany with status check for optimistic locking
+    // Only transition to PROCESSING if currently PENDING or FAILED
+    const result = await prisma.referralDocument.updateMany({
+      where: {
+        id: documentId,
+        fastExtractionStatus: { in: ['PENDING', 'FAILED'] },
+      },
+      data: updateData,
+    });
+
+    return result.count > 0;
   }
 
+  // For other status updates (COMPLETE, FAILED), just update directly
   await prisma.referralDocument.update({
     where: { id: documentId },
     data: updateData,
   });
+
+  return true;
 }
 
 /**
