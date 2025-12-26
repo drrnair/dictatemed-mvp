@@ -209,6 +209,19 @@ describe('image-utils', () => {
 
         expect(result.valid).toBe(true);
       });
+
+      it('should default format to unknown when metadata.format is undefined', async () => {
+        mockSharpInstance.metadata.mockResolvedValue({
+          width: 1920,
+          height: 1080,
+          // format intentionally omitted
+        });
+
+        const result = await validateImage(mockBuffer);
+
+        expect(result.valid).toBe(true);
+        expect(result.format).toBe('unknown');
+      });
     });
 
     describe('with invalid image', () => {

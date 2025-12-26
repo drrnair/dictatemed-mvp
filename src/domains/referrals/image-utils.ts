@@ -4,8 +4,6 @@
 // Provides HEIC/HEIF to JPEG conversion for iPhone photos and image validation.
 // Uses dynamic imports to avoid bundling issues with native modules.
 
-import type sharp from 'sharp';
-
 /**
  * Result from image conversion to JPEG format.
  */
