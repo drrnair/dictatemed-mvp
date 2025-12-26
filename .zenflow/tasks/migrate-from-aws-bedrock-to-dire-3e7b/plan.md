@@ -25,7 +25,7 @@ Do not make assumptions on important decisions — get clarification first.
 **Assessment:** Medium difficulty
 - Creating a new Anthropic client alongside existing Bedrock infrastructure
 - Building a unified abstraction layer for provider switching
-- Updating 8 domain service files
+- Updating 6 domain service files
 - Adding feature flag support for zero-downtime migration
 
 ---
@@ -76,7 +76,7 @@ Create the direct Anthropic API client in `src/infrastructure/anthropic/`.
 
 ---
 
-### [ ] Step 3: Create Unified AI Layer
+### [x] Step 3: Create Unified AI Layer
 <!-- chat-id: f378496d-4dbb-4a27-aa9c-da5020ebf349 -->
 
 Create the provider-switching abstraction layer in `src/infrastructure/ai/`.
@@ -91,6 +91,16 @@ Create the provider-switching abstraction layer in `src/infrastructure/ai/`.
 - `npm run typecheck` passes
 - `npm run lint` passes
 - Exports match current Bedrock interface
+
+**Completed:**
+- Created all 4 files in `src/infrastructure/ai/`:
+  - `types.ts` - AIProvider type, AIError types, unified RetryConfig, parseAIError(), calculateBackoffDelay(), getCurrentProvider()
+  - `text-generation.ts` - Provider-switching generateText(), generateTextStream(), generateTextWithRetry(), estimateTokenCount(), estimateCost() with abstract ModelId ('opus'|'sonnet')
+  - `vision.ts` - Provider-switching analyzeImage(), analyzeMultipleImages(), fetchImageAsBase64()
+  - `index.ts` - Unified exports that match Bedrock interface for drop-in replacement
+- Feature: `getCurrentProvider()` reads `USE_ANTHROPIC_API` env var to determine active provider
+- Feature: Abstract model IDs (`'opus'`, `'sonnet'`) mapped to provider-specific IDs internally
+- All verifications passed: `npm run typecheck` and `npm run lint` succeed
 
 ---
 
