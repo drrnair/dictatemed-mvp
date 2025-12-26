@@ -12,7 +12,7 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 // Store original env value
-const originalEnv = process.env.FEATURE_EXTENDED_UPLOAD_TYPES;
+const originalEnv = process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES;
 
 describe('ReferralUploader', () => {
   const defaultProps = {
@@ -46,16 +46,16 @@ describe('ReferralUploader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset feature flag to undefined (disabled by default)
-    delete process.env.FEATURE_EXTENDED_UPLOAD_TYPES;
+    delete process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     // Restore original env value
     if (originalEnv !== undefined) {
-      process.env.FEATURE_EXTENDED_UPLOAD_TYPES = originalEnv;
+      process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = originalEnv;
     } else {
-      delete process.env.FEATURE_EXTENDED_UPLOAD_TYPES;
+      delete process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES;
     }
   });
 
@@ -850,7 +850,7 @@ describe('ReferralUploader', () => {
   describe('Extended file types (feature flag)', () => {
     describe('with feature flag disabled', () => {
       beforeEach(() => {
-        delete process.env.FEATURE_EXTENDED_UPLOAD_TYPES;
+        delete process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES;
       });
 
       it('shows base extensions in UI', () => {
@@ -904,7 +904,7 @@ describe('ReferralUploader', () => {
 
     describe('with feature flag enabled', () => {
       beforeEach(() => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
       });
 
       it('shows extended extensions in UI', () => {
@@ -1089,7 +1089,7 @@ describe('ReferralUploader', () => {
 
     describe('drag and drop with extended types', () => {
       beforeEach(() => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
       });
 
       it('handles JPEG drag and drop', async () => {

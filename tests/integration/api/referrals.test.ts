@@ -192,7 +192,7 @@ describe('Referrals API', () => {
     });
 
     describe('extended MIME types with feature flag', () => {
-      const originalEnv = process.env.FEATURE_EXTENDED_UPLOAD_TYPES;
+      const originalEnv = process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES;
 
       beforeEach(() => {
         // Reset mocks and auth for each test in this describe block
@@ -201,11 +201,11 @@ describe('Referrals API', () => {
       });
 
       afterEach(() => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = originalEnv;
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = originalEnv;
       });
 
       it('rejects extended types when feature flag is disabled', async () => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
 
         const request = createRequest('http://localhost:3000/api/referrals', {
           method: 'POST',
@@ -225,7 +225,7 @@ describe('Referrals API', () => {
       });
 
       it('accepts JPEG when feature flag is enabled', async () => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
 
         vi.mocked(prisma.referralDocument.create).mockResolvedValue({
           ...mockReferralDocument,
@@ -258,7 +258,7 @@ describe('Referrals API', () => {
       });
 
       it('accepts PNG when feature flag is enabled', async () => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
 
         vi.mocked(prisma.referralDocument.create).mockResolvedValue({
           ...mockReferralDocument,
@@ -291,7 +291,7 @@ describe('Referrals API', () => {
       });
 
       it('accepts HEIC when feature flag is enabled', async () => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
 
         vi.mocked(prisma.referralDocument.create).mockResolvedValue({
           ...mockReferralDocument,
@@ -324,7 +324,7 @@ describe('Referrals API', () => {
       });
 
       it('accepts DOCX when feature flag is enabled', async () => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
 
         const docxMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
         vi.mocked(prisma.referralDocument.create).mockResolvedValue({
@@ -358,7 +358,7 @@ describe('Referrals API', () => {
       });
 
       it('accepts RTF when feature flag is enabled', async () => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
 
         vi.mocked(prisma.referralDocument.create).mockResolvedValue({
           ...mockReferralDocument,
@@ -391,7 +391,7 @@ describe('Referrals API', () => {
       });
 
       it('always accepts PDF regardless of feature flag', async () => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
 
         vi.mocked(prisma.referralDocument.create).mockResolvedValue(mockReferralDocument);
         vi.mocked(prisma.referralDocument.update).mockResolvedValue(mockReferralDocument);
@@ -416,7 +416,7 @@ describe('Referrals API', () => {
       });
 
       it('always accepts TXT regardless of feature flag', async () => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
 
         vi.mocked(prisma.referralDocument.create).mockResolvedValue({
           ...mockReferralDocument,

@@ -68,28 +68,28 @@ describe('referral.types', () => {
       process.env = originalEnv;
     });
 
-    it('should return true when FEATURE_EXTENDED_UPLOAD_TYPES is "true"', () => {
-      process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+    it('should return true when NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES is "true"', () => {
+      process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
       expect(isExtendedUploadTypesEnabled()).toBe(true);
     });
 
-    it('should return false when FEATURE_EXTENDED_UPLOAD_TYPES is "false"', () => {
-      process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
+    it('should return false when NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES is "false"', () => {
+      process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
       expect(isExtendedUploadTypesEnabled()).toBe(false);
     });
 
-    it('should return false when FEATURE_EXTENDED_UPLOAD_TYPES is undefined', () => {
-      delete process.env.FEATURE_EXTENDED_UPLOAD_TYPES;
+    it('should return false when NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES is undefined', () => {
+      delete process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES;
       expect(isExtendedUploadTypesEnabled()).toBe(false);
     });
 
-    it('should return false when FEATURE_EXTENDED_UPLOAD_TYPES is empty string', () => {
-      process.env.FEATURE_EXTENDED_UPLOAD_TYPES = '';
+    it('should return false when NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES is empty string', () => {
+      process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = '';
       expect(isExtendedUploadTypesEnabled()).toBe(false);
     });
 
-    it('should return false when FEATURE_EXTENDED_UPLOAD_TYPES is "TRUE" (case sensitive)', () => {
-      process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'TRUE';
+    it('should return false when NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES is "TRUE" (case sensitive)', () => {
+      process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'TRUE';
       expect(isExtendedUploadTypesEnabled()).toBe(false);
     });
   });
@@ -180,7 +180,7 @@ describe('referral.types', () => {
 
     describe('with feature flag disabled', () => {
       beforeEach(() => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
       });
 
       it('should allow PDF', () => {
@@ -210,7 +210,7 @@ describe('referral.types', () => {
 
     describe('with feature flag enabled', () => {
       beforeEach(() => {
-        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+        process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
       });
 
       it('should allow PDF', () => {
@@ -286,7 +286,7 @@ describe('referral.types', () => {
     });
 
     it('should return only base types when feature flag is disabled', () => {
-      process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
+      process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
       const allowed = getAllowedMimeTypes();
       expect(allowed).toHaveLength(2);
       expect(allowed).toContain('application/pdf');
@@ -295,7 +295,7 @@ describe('referral.types', () => {
     });
 
     it('should return all types when feature flag is enabled', () => {
-      process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+      process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
       const allowed = getAllowedMimeTypes();
       expect(allowed).toHaveLength(9);
       expect(allowed).toContain('application/pdf');
@@ -317,12 +317,12 @@ describe('referral.types', () => {
     });
 
     it('should return base extensions when feature flag is disabled', () => {
-      process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
+      process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'false';
       expect(getAcceptedExtensions()).toBe('.pdf, .txt');
     });
 
     it('should return all extensions when feature flag is enabled', () => {
-      process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+      process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
       expect(getAcceptedExtensions()).toBe('.pdf, .txt, .jpg, .jpeg, .png, .heic, .heif, .docx, .rtf');
     });
   });

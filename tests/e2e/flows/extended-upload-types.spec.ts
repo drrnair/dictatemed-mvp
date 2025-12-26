@@ -1,7 +1,7 @@
 // tests/e2e/flows/extended-upload-types.spec.ts
 // E2E tests for extended file upload types (images, DOCX)
 //
-// Tests the upload flow for new file types enabled by FEATURE_EXTENDED_UPLOAD_TYPES:
+// Tests the upload flow for new file types enabled by NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES:
 // - JPEG/PNG images (extracted via Claude Vision)
 // - Word documents (extracted via mammoth)
 //
@@ -30,7 +30,7 @@ const REFERRAL_FIXTURES_PATH = path.join(__dirname, '../fixtures/referrals');
  * This mirrors the server-side check for consistency.
  */
 function isExtendedUploadTypesEnabled(): boolean {
-  return process.env.FEATURE_EXTENDED_UPLOAD_TYPES === 'true';
+  return process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES === 'true';
 }
 
 // ============================================

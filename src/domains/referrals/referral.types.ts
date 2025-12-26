@@ -200,7 +200,7 @@ export const BASE_REFERRAL_MIME_TYPES = [
   'text/plain',
 ] as const;
 
-// Extended MIME types (enabled via FEATURE_EXTENDED_UPLOAD_TYPES)
+// Extended MIME types (enabled via NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES)
 export const EXTENDED_REFERRAL_MIME_TYPES = [
   // Images
   'image/jpeg',
@@ -230,8 +230,9 @@ export const ACCEPTED_REFERRAL_EXTENSIONS = '.pdf, .txt, .jpg, .jpeg, .png, .hei
 export const BASE_ACCEPTED_EXTENSIONS = '.pdf, .txt';
 
 // Check if extended upload types feature is enabled
+// Uses NEXT_PUBLIC_ prefix so it's available in both client and server components
 export function isExtendedUploadTypesEnabled(): boolean {
-  return process.env.FEATURE_EXTENDED_UPLOAD_TYPES === 'true';
+  return process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES === 'true';
 }
 
 // Max file size in bytes (10 MB)
