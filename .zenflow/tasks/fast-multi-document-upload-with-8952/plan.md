@@ -147,24 +147,35 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
-### [ ] Step 4: Upload Queue Hook
+### [x] Step 4: Upload Queue Hook
 <!-- chat-id: 53c3aa26-ac2c-407e-a66c-61c2105a9104 -->
 
 **Objective**: State management for multi-file upload queue
 
-**Tasks**:
-- [ ] Create `src/hooks/use-document-upload-queue.ts`:
-  - Track multiple files with individual progress
-  - Handle parallel uploads (max 3 concurrent)
-  - Manage upload → text extraction → fast extraction flow
-  - Status polling for background processing
-- [ ] Add abort/cancel support for individual files
-- [ ] Add retry logic for failed uploads
+**Completed**:
+- [x] Created `src/hooks/use-document-upload-queue.ts`:
+  - Track multiple files with individual progress (queued, uploading, uploaded, extracting, complete, failed)
+  - Handle parallel uploads (max 3 concurrent via batch processing)
+  - Manage upload → confirm → text extraction → fast extraction flow
+  - AbortController per file for cancellation
+  - Retry logic with exponential backoff for transient failures (network, 5xx, 429)
+  - Derived state: hasErrors, allFastExtractionsComplete, canProceed, aggregatedFastExtraction
+- [x] Added abort/cancel support for individual files via `cancelFile(clientId)`
+- [x] Added retry logic for failed uploads via `retryFile(clientId)`
+- [x] Comprehensive unit tests (31 tests):
+  - Initial state tests
+  - addFiles validation (MIME types, size limits, batch limits)
+  - removeFile, cancelFile, clearQueue, reset operations
+  - startUpload flow including batch API, S3 upload, confirm, text extraction, fast extraction
+  - Error handling for each stage (batch failure, upload failure, extraction failure)
+  - Retry functionality tests
+  - Derived state tests (hasErrors, canProceed, allFastExtractionsComplete)
 
-**Files to create**:
+**Files created**:
 - `src/hooks/use-document-upload-queue.ts`
+- `tests/unit/hooks/use-document-upload-queue.test.ts`
 
-**Verification**: `npm run test -- use-document-upload-queue`
+**Verification**: `npm run typecheck` passed, 31 unit tests passing
 
 ---
 
