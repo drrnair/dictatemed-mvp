@@ -180,6 +180,7 @@ Do not make assumptions on important decisions — get clarification first.
 ---
 
 ### [ ] Step 5: UI Components
+<!-- chat-id: 4b743bfb-7854-484a-8040-c14134b8d220 -->
 
 **Objective**: Build multi-document upload interface
 
