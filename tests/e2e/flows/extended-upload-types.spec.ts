@@ -742,21 +742,23 @@ test.describe('Extended Upload Types - Feature Flag Disabled', () => {
     // Wait for error response
     await waitForNetworkIdle(page);
 
-    // Should show invalid file type error
-    // Note: The exact error display depends on UI implementation
+    // Should show invalid file type error - check multiple possible error indicators
+    // The UI may show: error alert, error class styling, retry button, or file type error message
     const errorIndicator = page.locator(
       '[data-testid="upload-error"], [class*="error"], [role="alert"]'
     );
-    const hasError = await errorIndicator.isVisible({ timeout: 5000 }).catch(() => false);
+    const fileTypeError = page.locator('text=/invalid file|unsupported|only pdf/i');
+    const retryButton = referralPage.retryButton;
 
-    // If client-side validation is in place, file may not even be uploaded
-    // In that case, check for file input validation
-    if (!hasError) {
-      // Check if the upload was prevented client-side
-      const retryButton = referralPage.retryButton;
-      const hasRetry = await retryButton.isVisible().catch(() => false);
-      expect(hasError || hasRetry || true).toBeTruthy(); // Test passes if any error indication
-    }
+    const hasErrorIndicator = await errorIndicator.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasFileTypeError = await fileTypeError.isVisible().catch(() => false);
+    const hasRetryButton = await retryButton.isVisible().catch(() => false);
+
+    // At least one rejection indicator should be present
+    expect(
+      hasErrorIndicator || hasFileTypeError || hasRetryButton,
+      'Expected file rejection indicator (error alert, file type error message, or retry button)'
+    ).toBeTruthy();
   });
 
   test('should reject DOCX upload when feature flag is disabled', async ({ page }) => {
@@ -773,17 +775,24 @@ test.describe('Extended Upload Types - Feature Flag Disabled', () => {
     await waitForNetworkIdle(page);
 
     // Should show invalid file type error or Word-specific error
+    // The UI may show: error alert, Word-specific message, general file type error, or retry button
     const errorIndicator = page.locator(
       '[data-testid="upload-error"], [class*="error"], [role="alert"]'
     );
-    const hasError = await errorIndicator.isVisible({ timeout: 5000 }).catch(() => false);
+    const wordError = page.locator('text=/word|docx|not supported/i');
+    const fileTypeError = page.locator('text=/invalid file|unsupported|only pdf/i');
+    const retryButton = referralPage.retryButton;
 
-    // If client-side validation is in place, may show Word-specific error
-    if (!hasError) {
-      const wordError = page.locator('text=/word|docx|not supported/i');
-      const hasWordError = await wordError.isVisible().catch(() => false);
-      expect(hasError || hasWordError || true).toBeTruthy();
-    }
+    const hasErrorIndicator = await errorIndicator.isVisible({ timeout: 5000 }).catch(() => false);
+    const hasWordError = await wordError.isVisible().catch(() => false);
+    const hasFileTypeError = await fileTypeError.isVisible().catch(() => false);
+    const hasRetryButton = await retryButton.isVisible().catch(() => false);
+
+    // At least one rejection indicator should be present
+    expect(
+      hasErrorIndicator || hasWordError || hasFileTypeError || hasRetryButton,
+      'Expected file rejection indicator (error alert, Word error message, file type error, or retry button)'
+    ).toBeTruthy();
   });
 
   test('should still accept PDF when feature flag is disabled', async ({ page }) => {
