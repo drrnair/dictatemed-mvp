@@ -291,6 +291,31 @@ export function useDocumentUploadQueue(): UseDocumentUploadQueueResult {
     []
   );
 
+  // Trigger full extraction in background (fire-and-forget)
+  // This runs the complete structured extraction asynchronously after fast extraction
+  const triggerFullExtraction = useCallback((documentId: string) => {
+    // Fire-and-forget: don't await, just trigger
+    fetch(`/api/referrals/${documentId}/extract-structured`, {
+      method: 'POST',
+    })
+      .then((response) => {
+        if (response.ok) {
+          // Update file to indicate full extraction is complete
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.documentId === documentId
+                ? { ...f, fullExtractionComplete: true }
+                : f
+            )
+          );
+        }
+      })
+      .catch(() => {
+        // Silent failure - full extraction is optional
+        // User can still proceed with fast extraction data
+      });
+  }, []);
+
   // Process a single file (upload, confirm, extract text, fast extract)
   const processFile = useCallback(
     async (
@@ -389,6 +414,10 @@ export function useDocumentUploadQueue(): UseDocumentUploadQueueResult {
           progress: 100,
           fastExtractionData: fastResult.data,
         });
+
+        // Step 5: Trigger full extraction in background (fire-and-forget)
+        // This runs the complete structured extraction asynchronously
+        triggerFullExtraction(documentId);
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
           // Don't update state - cancelFile already handled it
