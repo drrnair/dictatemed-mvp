@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const consultations = await prisma.consultation.findMany({
       where: {
         userId: session.user.id,
-        ...(status && { status: status as any }),
+        ...(status && { status: status as ConsultationStatus }),
       },
       include: {
         patient: true,
