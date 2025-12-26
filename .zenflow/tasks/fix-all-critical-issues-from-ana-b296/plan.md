@@ -430,22 +430,47 @@ The deprecated fields should remain in the schema because:
 
 ---
 
-### [ ] Step: Issue 11 - Extract Magic Numbers
+### [x] Step: Issue 11 - Extract Magic Numbers
 <!-- chat-id: 2406e982-a3a6-46ba-a991-15284422b305 -->
 
-Create constants file and extract magic numbers.
+Created centralized constants file and updated key files to use named constants.
 
-**Files to create:**
-- `src/lib/constants.ts`
+**Files created:**
+- `src/lib/constants.ts` - Comprehensive constants organized by domain
 
-**Implementation:**
-1. Identify magic numbers in codebase
-2. Extract to named constants
-3. Update references
+**Files modified (7 files):**
+- `src/hooks/useRecording.ts` - Audio constants (sample rate, FFT size, quality thresholds)
+- `src/hooks/useAudioLevel.ts` - Audio level monitoring constants
+- `src/lib/sync-manager.ts` - Sync retry/backoff constants
+- `src/lib/offline-detection.ts` - Connection quality thresholds
+- `src/domains/letters/model-selection.ts` - AI model parameters, letter complexity scores
+- `src/infrastructure/deepgram/client.ts` - Transcription constants
+
+**Constants organized by category:**
+
+| Category | Constants | Examples |
+|----------|-----------|----------|
+| Audio & Recording | `AUDIO`, `AUDIO_QUALITY_THRESHOLDS` | Sample rate (48000), FFT size (256), quality thresholds |
+| Rate Limiting | `RATE_LIMITS`, `RATE_LIMIT_WINDOW_MS` | Requests per resource type |
+| Pagination | `PAGINATION` | Default limits, max limits |
+| Sync & Offline | `SYNC`, `CONNECTION` | Retry delays, backoff multipliers, auto-sync interval |
+| PDF Generation | `PDF_PAGE`, `PDF_MARGINS`, `PDF_FONTS` | A4 dimensions, margins, font sizes |
+| AI Model | `LETTER_COMPLEXITY`, `LETTER_OUTPUT_TOKENS`, `AI_MODEL`, `TOKEN_ESTIMATION` | Complexity scores, temperatures, token estimates |
+| Transcription | `TRANSCRIPTION` | Speaker count, max keywords |
+| Time | `TIME` | Minutes saved per letter, time unit conversions |
+| Files | `FILE` | Max filename length |
+
+**Benefits:**
+1. **Discoverability**: All configurable values in one place
+2. **Maintainability**: Single source of truth for each value
+3. **Type safety**: Constants use `as const` for literal types
+4. **Documentation**: Each constant has JSDoc comments explaining its purpose
 
 **Verification:**
-- Magic numbers replaced with named constants
-- No functionality changes
+- `npm run typecheck` passes for modified source files ✅
+- `npm run lint` passes ✅
+- No functionality changes - only refactored to use constants ✅
+- Magic numbers replaced with named constants ✅
 
 ---
 

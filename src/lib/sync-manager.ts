@@ -291,7 +291,7 @@ class AutoSyncManager {
   private syncManagers: BaseSyncManager<SyncableItem>[] = [];
   private syncInterval: ReturnType<typeof setInterval> | null = null;
   private networkUnsubscribe: (() => void) | null = null;
-  private intervalMs = SYNC.AUTO_SYNC_INTERVAL_MS;
+  private intervalMs: number = SYNC.AUTO_SYNC_INTERVAL_MS;
 
   /**
    * Register a sync manager for automatic syncing.

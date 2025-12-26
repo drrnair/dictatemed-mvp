@@ -73,6 +73,7 @@ const mockRecordingUserA = {
   patientId: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
   mode: 'DICTATION',
   status: 'PENDING',
+  consentType: 'VERBAL' as const,
   durationSeconds: null,
   s3Path: null,
   transcription: null,
@@ -87,6 +88,7 @@ const mockRecordingUserB = {
   patientId: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
   mode: 'AMBIENT',
   status: 'PENDING',
+  consentType: 'VERBAL' as const,
   durationSeconds: null,
   s3Path: null,
   transcription: null,
@@ -138,6 +140,7 @@ describe('Recordings API', () => {
         total: 1,
         page: 1,
         limit: 20,
+        hasMore: false,
       });
 
       const request = createRequest('/api/recordings');
@@ -158,6 +161,7 @@ describe('Recordings API', () => {
         total: 0,
         page: 1,
         limit: 20,
+        hasMore: false,
       });
 
       // Valid recording statuses: UPLOADING, UPLOADED, TRANSCRIBING, TRANSCRIBED, FAILED
@@ -178,6 +182,7 @@ describe('Recordings API', () => {
         total: 0,
         page: 1,
         limit: 20,
+        hasMore: false,
       });
 
       const request = createRequest('/api/recordings?mode=DICTATION');
@@ -456,6 +461,7 @@ describe('Recordings API', () => {
         total: 0,
         page: 1,
         limit: 20,
+        hasMore: false,
       });
 
       const request = createRequest('/api/recordings');
@@ -524,6 +530,7 @@ describe('Recordings API', () => {
         total: 1,
         page: 1,
         limit: 20,
+        hasMore: false,
       });
 
       const request = createRequest('/api/recordings');
@@ -545,8 +552,9 @@ describe('Recordings API', () => {
       });
 
       vi.mocked(recordingService.createRecording).mockResolvedValue({
-        recording: mockRecordingUserA,
+        id: mockRecordingUserA.id,
         uploadUrl: 'https://upload.example.com/recording',
+        expiresAt: new Date('2024-01-02'),
       });
 
       const request = createRequest('/api/recordings', {
@@ -579,8 +587,9 @@ describe('Recordings API', () => {
       });
 
       vi.mocked(recordingService.createRecording).mockResolvedValue({
-        recording: mockRecordingUserA,
+        id: mockRecordingUserA.id,
         uploadUrl: 'https://upload.example.com/recording',
+        expiresAt: new Date('2024-01-02'),
       });
 
       const request = createRequest('/api/recordings', {
