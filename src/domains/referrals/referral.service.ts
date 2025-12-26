@@ -54,7 +54,7 @@ function getExtensionFromMimeType(mimeType: string): string {
       return 'pdf';
     case 'text/plain':
       return 'txt';
-    // Extended types (when FEATURE_EXTENDED_UPLOAD_TYPES is enabled)
+    // Extended types (when NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES is enabled)
     case 'image/jpeg':
       return 'jpg';
     case 'image/png':

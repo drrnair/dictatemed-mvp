@@ -9,7 +9,7 @@ This directory contains sample referral documents for E2E testing of the referra
 - `cardiology-referral-002.pdf` - Chest pain referral (urgent)
 - `*.txt` - Source text files used to generate PDFs
 
-### Extended Types (Feature Flag: FEATURE_EXTENDED_UPLOAD_TYPES)
+### Extended Types (Feature Flag: NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES)
 - `image-referral-001.jpg` - JPEG image referral (routine)
 - `image-referral-001.png` - PNG image referral (routine)
 - `docx-referral-001.docx` - Word document referral (routine)
