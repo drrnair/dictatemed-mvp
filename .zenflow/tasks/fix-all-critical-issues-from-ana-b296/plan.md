@@ -297,13 +297,18 @@ Replaced all `any` types with proper TypeScript types.
 **Implementation completed:**
 1. Created proper interfaces for Practice settings (`SettingsData`)
 2. Used Prisma types for database queries (`Prisma.LetterWhereInput`, `Prisma.LetterOrderByWithRelationInput`)
-3. Added browser-standard `BeforeInstallPromptEvent` interface for PWA
+3. Added browser-standard `BeforeInstallPromptEvent` interface for PWA (imported from `@/lib/pwa`)
 4. Imported and used Prisma enums (`ConsultationStatus`) instead of `as any` casts
 5. Created typed Zod schema for settings values instead of `z.any()`
 6. Handled `JsonValue` from Prisma with proper type assertions where needed
 
+**Review feedback addressed:**
+1. Fixed Prisma type casting: Changed `Prisma.EnumLetterStatusFilter` to `LetterStatus` and `Prisma.EnumLetterTypeFilter` to `PrismaLetterType` (actual enum types, not filter object types)
+2. Consolidated `BeforeInstallPromptEvent` interface: Now exported from `@/lib/pwa.ts` (canonical definition), imported in `UpdatePrompt.tsx`
+
 **Verification:**
-- `npm run typecheck` passes ✅
+- `npm run typecheck` passes for modified source files ✅
+- (Pre-existing errors in patients/route.ts and recordings/route.ts unrelated to these changes)
 - `npm run lint` passes (only pre-existing warning) ✅
 - `grep -rn ": any" src/` returns 0 results ✅
 - `grep -rn "eslint-disable.*no-explicit-any" src/` returns 0 results ✅
