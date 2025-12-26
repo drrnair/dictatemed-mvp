@@ -80,7 +80,7 @@ describe('api-error', () => {
 
     it('should use fallback for unsafe errors in production', () => {
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
 
       const error = new Error('SQL injection detected');
       const response = createErrorResponse(error, 'Bad request');
@@ -90,7 +90,7 @@ describe('api-error', () => {
         message: 'An unexpected error occurred',
       });
 
-      process.env.NODE_ENV = originalEnv;
+      (process.env as Record<string, string | undefined>).NODE_ENV = originalEnv;
     });
   });
 

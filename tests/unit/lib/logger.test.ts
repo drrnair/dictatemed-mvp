@@ -118,7 +118,8 @@ describe('Logger', () => {
       const { logger } = await import('@/lib/logger');
       logger.info('message with context', { userId: 'user-123', action: 'test' });
 
-      const output = consoleSpy.mock.calls[0][0] as string;
+      expect(consoleSpy).toHaveBeenCalled();
+      const output = consoleSpy.mock.calls[0]?.[0] as string;
       expect(output).toContain('user-123');
       expect(output).toContain('test');
     });
@@ -147,7 +148,8 @@ describe('Logger', () => {
       const testError = new Error('test error');
       logger.warn('warning with error', {}, testError);
 
-      const output = consoleSpy.mock.calls[0][0] as string;
+      expect(consoleSpy).toHaveBeenCalled();
+      const output = consoleSpy.mock.calls[0]?.[0] as string;
       expect(output).toContain('Error:');
       expect(output).toContain('test error');
     });
@@ -162,7 +164,8 @@ describe('Logger', () => {
       const testError = new Error('test error');
       logger.error('error occurred', {}, testError);
 
-      const output = consoleSpy.mock.calls[0][0] as string;
+      expect(consoleSpy).toHaveBeenCalled();
+      const output = consoleSpy.mock.calls[0]?.[0] as string;
       expect(output).toContain('Error:');
       expect(output).toContain('test error');
     });
@@ -179,7 +182,8 @@ describe('Logger', () => {
       const childLogger = logger.child({ userId: 'user-123', action: 'childTest' });
       childLogger.info('child message');
 
-      const output = consoleSpy.mock.calls[0][0] as string;
+      expect(consoleSpy).toHaveBeenCalled();
+      const output = consoleSpy.mock.calls[0]?.[0] as string;
       expect(output).toContain('user-123');
       expect(output).toContain('childTest');
     });
@@ -194,7 +198,8 @@ describe('Logger', () => {
       const childLogger = logger.child({ userId: 'user-123' });
       childLogger.info('merged context', { resource: 'patient' });
 
-      const output = consoleSpy.mock.calls[0][0] as string;
+      expect(consoleSpy).toHaveBeenCalled();
+      const output = consoleSpy.mock.calls[0]?.[0] as string;
       expect(output).toContain('user-123');
       expect(output).toContain('patient');
     });
@@ -236,7 +241,8 @@ describe('Logger', () => {
       const testError = new Error('child error');
       childLogger.error('error message', {}, testError);
 
-      const output = consoleSpy.mock.calls[0][0] as string;
+      expect(consoleSpy).toHaveBeenCalled();
+      const output = consoleSpy.mock.calls[0]?.[0] as string;
       expect(output).toContain('child error');
     });
   });
@@ -251,7 +257,8 @@ describe('Logger', () => {
       const { logger } = await import('@/lib/logger');
       logger.request('GET', '/api/patients', 200, 150);
 
-      const output = consoleSpy.mock.calls[0][0] as string;
+      expect(consoleSpy).toHaveBeenCalled();
+      const output = consoleSpy.mock.calls[0]?.[0] as string;
       expect(output).toContain('GET');
       expect(output).toContain('/api/patients');
       expect(output).toContain('200');
@@ -266,7 +273,8 @@ describe('Logger', () => {
       const { logger } = await import('@/lib/logger');
       logger.request('POST', '/api/patients', 400, 50);
 
-      const output = consoleSpy.mock.calls[0][0] as string;
+      expect(consoleSpy).toHaveBeenCalled();
+      const output = consoleSpy.mock.calls[0]?.[0] as string;
       expect(output).toContain('400');
     });
 

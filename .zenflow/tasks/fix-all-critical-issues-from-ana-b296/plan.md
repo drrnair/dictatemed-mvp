@@ -226,12 +226,17 @@ logger.error('Error saving draft', { letterId: letter.id, error });
   - Removed duplicate from `src/components/pwa/UpdatePrompt.tsx`
   - `UpdatePrompt.tsx` now imports from `@/lib/pwa`
 
+- Fixed TypeScript errors from `z.preprocess()` unknown type inference:
+  - `src/app/api/patients/route.ts` - Added type assertion for pagination data
+  - `src/app/api/recordings/route.ts` - Added type assertion and imported `RecordingListQuery` type
+
 **Verification:**
 - `npm run typecheck` passes (source files) ✅
 - All logger imports use `@/lib/logger` ✅
 - All error logs include context objects for debugging ✅
 - `grep -rn "console\." src/` only shows acceptable locations ✅
 - No duplicate `BeforeInstallPromptEvent` definitions ✅
+- Zero TypeScript errors in `src/` directory ✅
 
 ---
 
