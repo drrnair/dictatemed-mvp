@@ -455,20 +455,21 @@ Created centralized constants file and updated key files to use named constants.
 **Files created:**
 - `src/lib/constants.ts` - Comprehensive constants organized by domain
 
-**Files modified (7 files):**
+**Files modified (8 files):**
 - `src/hooks/useRecording.ts` - Audio constants (sample rate, FFT size, quality thresholds)
 - `src/hooks/useAudioLevel.ts` - Audio level monitoring constants
 - `src/lib/sync-manager.ts` - Sync retry/backoff constants
 - `src/lib/offline-detection.ts` - Connection quality thresholds
 - `src/domains/letters/model-selection.ts` - AI model parameters, letter complexity scores
 - `src/infrastructure/deepgram/client.ts` - Transcription constants
+- `src/components/recording/RecordingSection.tsx` - FFT size, max byte value, timer interval (added after review)
 
 **Constants organized by category:**
 
 | Category | Constants | Examples |
 |----------|-----------|----------|
 | Audio & Recording | `AUDIO`, `AUDIO_QUALITY_THRESHOLDS` | Sample rate (48000), FFT size (256), quality thresholds |
-| Rate Limiting | `RATE_LIMITS`, `RATE_LIMIT_WINDOW_MS` | Requests per resource type |
+| Rate Limiting | *(defined in rate-limit.ts)* | Full config in src/lib/rate-limit.ts |
 | Pagination | `PAGINATION` | Default limits, max limits |
 | Sync & Offline | `SYNC`, `CONNECTION` | Retry delays, backoff multipliers, auto-sync interval |
 | PDF Generation | `PDF_PAGE`, `PDF_MARGINS`, `PDF_FONTS` | A4 dimensions, margins, font sizes |
@@ -482,6 +483,10 @@ Created centralized constants file and updated key files to use named constants.
 2. **Maintainability**: Single source of truth for each value
 3. **Type safety**: Constants use `as const` for literal types
 4. **Documentation**: Each constant has JSDoc comments explaining its purpose
+
+**Review feedback addressed:**
+1. Fixed `src/components/recording/RecordingSection.tsx` - Added `AUDIO.FFT_SIZE`, `AUDIO.MAX_BYTE_VALUE`, `AUDIO.TIMER_UPDATE_INTERVAL_MS`
+2. Removed duplicate rate limit constants from `constants.ts` - Rate limits are now only in `rate-limit.ts` to avoid duplication
 
 **Verification:**
 - `npm run typecheck` passes for modified source files ✅

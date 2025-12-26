@@ -47,24 +47,9 @@ export const AUDIO_QUALITY_THRESHOLDS = {
 // =============================================================================
 // RATE LIMITING
 // =============================================================================
-
-/** Rate limit window duration in milliseconds */
-export const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-
-/** Rate limits per resource type (requests per minute) */
-export const RATE_LIMITS = {
-  RECORDINGS: 10,
-  TRANSCRIPTIONS: 5,
-  DOCUMENTS: 20,
-  LETTERS: 10,
-  APPROVALS: 30,
-  EMAILS: 10,
-  STYLE_PROFILES: 30,
-  STYLE_ANALYSIS: 5,
-  STYLE_SEED_UPLOADS: 10,
-  REFERRALS: 10,
-  DEFAULT: 60,
-} as const;
+// Note: Rate limit configuration is defined in src/lib/rate-limit.ts
+// with full RateLimitConfig objects ({ requests, windowMs }).
+// Import from there for rate limiting functionality.
 
 // =============================================================================
 // PAGINATION
