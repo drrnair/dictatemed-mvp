@@ -444,8 +444,8 @@ Ran comprehensive verification across all test types.
 2. ✅ ESLint linting: 0 errors or warnings
 3. ✅ Unit tests: **1206 tests pass** (all 39 test files)
 4. ✅ Integration tests: **232 tests pass** (all 9 test files)
-5. ✅ E2E tests: **836 tests defined** (12 test files × 3 browsers)
-   - Includes 54 new tests for extended upload types (18 tests × 3 browsers)
+5. ✅ E2E tests: **860 tests defined** (12 test files × 3 browsers)
+   - Includes 120 new tests for extended upload types (40 tests × 3 browsers)
    - E2E tests require credentials - syntax verified via `--list`
    - Tests will run in CI with proper E2E_TEST_USER_EMAIL/PASSWORD
 6. ✅ Test coverage for new modules:
@@ -461,7 +461,7 @@ npm run typecheck        # ✅ 0 errors
 npm run lint             # ✅ No ESLint warnings or errors
 npm run test             # ✅ 1206 tests pass (8.15s)
 npm run test:integration # ✅ 232 tests pass (772ms)
-npx playwright test --list # ✅ 836 E2E tests defined (12 files)
+npx playwright test --list # ✅ 860 E2E tests defined (12 files)
 npm run test:coverage    # ✅ New code >95% coverage
 ```
 
