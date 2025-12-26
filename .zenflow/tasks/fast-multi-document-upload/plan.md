@@ -25,8 +25,6 @@
 - `src/components/referral/ReferralUploader.tsx`
 - Create `src/components/referral/DocumentUploadQueue.tsx`
 
-**Estimated effort**: 3-5 days
-
 ---
 
 ### [ ] Step 2: Fast Patient Extraction API
@@ -46,8 +44,6 @@
 - `src/domains/referrals/referral.service.ts`
 - `prisma/schema.prisma` (add new fields)
 
-**Estimated effort**: 3-5 days
-
 ---
 
 ### [ ] Step 3: Fast Extraction UI
@@ -65,8 +61,6 @@
 - Create `src/components/referral/FastExtractionResult.tsx`
 - `src/components/referral/ReferralUploader.tsx`
 - `src/components/consultation/ConsultationContextForm.tsx`
-
-**Estimated effort**: 2-3 days
 
 ---
 
@@ -87,8 +81,6 @@
 - Create `src/lib/jobs/document-extraction.ts`
 - `prisma/schema.prisma`
 
-**Estimated effort**: 5-7 days
-
 ---
 
 ### [ ] Step 5: Background Processing UI
@@ -107,8 +99,6 @@
 - `src/components/consultation/ConsultationRecorder.tsx`
 - `src/components/consultation/ConsultationContextForm.tsx`
 
-**Estimated effort**: 2-3 days
-
 ---
 
 ### [ ] Step 6: Integration & Testing
@@ -121,22 +111,6 @@
 - [ ] Error handling edge cases
 - [ ] Mobile/responsive testing
 - [ ] Documentation updates
-
-**Estimated effort**: 2-3 days
-
----
-
-## Total Estimated Effort
-
-| Phase | Effort |
-|-------|--------|
-| Step 1: Multi-File Upload | 3-5 days |
-| Step 2: Fast Extraction API | 3-5 days |
-| Step 3: Fast Extraction UI | 2-3 days |
-| Step 4: Background Processing | 5-7 days |
-| Step 5: Background UI | 2-3 days |
-| Step 6: Integration | 2-3 days |
-| **Total** | **17-26 days** |
 
 ---
 

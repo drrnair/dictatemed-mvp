@@ -209,25 +209,25 @@ model ReferralDocument {
 
 ## Implementation Phases
 
-### Phase 1: Multi-File Upload (3-5 days)
+### Phase 1: Multi-File Upload
 - Add `multiple` to file input
 - Create document queue UI
 - Handle parallel uploads
 - Update progress tracking
 
-### Phase 2: Fast Extraction (3-5 days)
+### Phase 2: Fast Extraction
 - Create `/extract-fast` endpoint
 - Optimize AI prompts for speed
 - Add confidence scoring
 - Display results in UI
 
-### Phase 3: Background Processing (5-7 days)
+### Phase 3: Background Processing
 - Set up job queue system
 - Create background worker
 - Implement status polling/webhooks
 - Handle failures gracefully
 
-### Phase 4: Integration & Polish (2-3 days)
+### Phase 4: Integration & Polish
 - End-to-end testing
 - Error handling improvements
 - Performance optimization
