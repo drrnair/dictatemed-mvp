@@ -122,22 +122,30 @@ npm run test -- tests/unit/domains/referrals/  # ✅ 140 total tests pass (no re
 
 ---
 
-### [ ] Step: Create Vision Extraction Module
-<!-- chat-id: 8286fac3-767a-4e49-8819-a3027017e05a -->
+### [x] Step: Create Vision Extraction Module
 
-Create Claude Vision integration for image text extraction.
+**Status**: Complete
 
-**Tasks**:
-1. Create `src/domains/referrals/vision-extraction.ts`
-2. Implement `extractTextFromImageVision()` using existing Bedrock integration
-3. Define medical document extraction prompt
-4. Handle API errors with graceful fallback
-5. Create unit tests with mocked Bedrock in `tests/unit/domains/referrals/vision-extraction.test.ts`
+Created Claude Vision integration for image text extraction using existing Bedrock infrastructure.
 
-**Verification**:
+**Completed Tasks**:
+1. ✅ Created `src/domains/referrals/vision-extraction.ts` with:
+   - `extractTextFromImageVision()` - extracts text from images via Claude Vision API
+   - `extractTextFromImageBufferVision()` - convenience wrapper for Buffer input
+   - `isVisionSupportedMimeType()` - type guard for vision-supported MIME types
+   - `REFERRAL_EXTRACTION_PROMPT` - optimized prompt for medical referral documents
+   - Constants: `VISION_SUPPORTED_MIME_TYPES` (jpeg, png, gif, webp)
+   - Structured result type with success/error/token tracking
+   - Graceful error handling with retryable error detection (throttling, timeouts, 503/429)
+   - Special handling for `[NO_READABLE_TEXT]` response (blurry/dark images)
+2. ✅ Created unit tests in `tests/unit/domains/referrals/vision-extraction.test.ts` - 34 passing tests
+3. ✅ No additional type declarations needed (uses existing Bedrock types)
+
+**Verification Results**:
 ```bash
-npm run test -- tests/unit/domains/referrals/vision-extraction.test.ts
-npm run typecheck
+npm run typecheck  # ✅ Passes
+npm run test -- tests/unit/domains/referrals/vision-extraction.test.ts  # ✅ 34 tests pass
+npm run test -- tests/unit/domains/referrals/  # ✅ 175 total tests pass (no regressions)
 ```
 
 **Files Created**:
