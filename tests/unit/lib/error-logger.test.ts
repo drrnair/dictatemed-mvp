@@ -231,10 +231,10 @@ describe('filterPHI', () => {
       });
 
       const items = result.items as unknown[];
-      expect(items[0]).toBe('string');
-      expect(items[1]).toBe(123);
-      expect((items[2] as Record<string, unknown>).patientName).toBe('[REDACTED]');
-      expect(items[3]).toBe(null);
+      expect(items[0]!).toBe('string');
+      expect(items[1]!).toBe(123);
+      expect((items[2]! as Record<string, unknown>).patientName).toBe('[REDACTED]');
+      expect(items[3]!).toBe(null);
     });
 
     it('should handle empty arrays', () => {
