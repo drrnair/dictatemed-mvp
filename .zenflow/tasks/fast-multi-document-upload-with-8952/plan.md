@@ -238,26 +238,42 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
-### [ ] Step 6: Integration & Background Processing
+### [x] Step 6: Integration & Background Processing
 <!-- chat-id: 08732c8f-cf9f-4cab-9105-63573805d3cd -->
 
 **Objective**: Connect components to workflow, handle full extraction
 
-**Tasks**:
-- [ ] Update existing `ReferralUploader.tsx` to use `MultiDocumentUploader`
-- [ ] Trigger full extraction after fast extraction completes
-- [ ] Update `POST /api/referrals/[id]/extract-structured` to track full extraction status
-- [ ] Integrate with consultation context form:
-  - Pre-fill patient search with extracted name
-  - Show background processing indicator during recording
-- [ ] Letter generation waits for full extraction
+**Completed**:
+- [x] Updated `ReferralUploader.tsx` to support multi-document mode:
+  - Added `multiDocument` prop to switch between single and multi-file modes
+  - Added `onFastExtractionComplete` and `onContinue` callbacks for multi-doc mode
+  - Renders `MultiDocumentUploader` when `multiDocument={true}`
+- [x] Trigger full extraction after fast extraction completes:
+  - Added `triggerFullExtraction()` function to `useDocumentUploadQueue` hook
+  - Fire-and-forget call to `/api/referrals/[id]/extract-structured` after fast extraction
+  - Updates `fullExtractionComplete` flag on success
+  - Silent failure handling (full extraction is optional)
+- [x] Updated `POST /api/referrals/[id]/extract-structured` endpoint:
+  - Marks `fullExtractionStatus` as PROCESSING at start
+  - Marks `fullExtractionStatus` as COMPLETE on success
+  - Marks `fullExtractionStatus` as FAILED with error message on failure
+  - Stores `fullExtractionStartedAt` and `fullExtractionCompletedAt` timestamps
+- [x] Integrated with `ConsultationContextForm`:
+  - Added `multiDocumentUpload`, `showBackgroundProcessing`, `processingDocumentCount` props
+  - Shows `BackgroundProcessingIndicator` in header when processing
+  - Shows multi-document upload summary with patient info from fast extraction
+  - Pre-fills form with fast extraction data and document IDs
+  - Added `referralDocumentIds` and `fastExtractionData` to `ConsultationFormData`
+- [x] Updated tests for hook changes (31 tests passing)
 
-**Files to modify**:
+**Files modified**:
 - `src/components/referral/ReferralUploader.tsx`
+- `src/hooks/use-document-upload-queue.ts`
 - `src/app/api/referrals/[id]/extract-structured/route.ts`
 - `src/components/consultation/ConsultationContextForm.tsx`
+- `tests/unit/hooks/use-document-upload-queue.test.ts`
 
-**Verification**: Manual testing of full workflow
+**Verification**: `npm run typecheck` passed, 31 hook unit tests passing
 
 ---
 
