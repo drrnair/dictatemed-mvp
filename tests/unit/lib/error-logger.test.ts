@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { filterPHI } from '@/lib/error-logger';
 
 describe('filterPHI', () => {
