@@ -26,7 +26,11 @@
 - `sharp`: Image processing (existing in devDeps, move to deps)
 - NEW: `heic-convert`: HEIC to JPEG conversion
 - NEW: `mammoth`: Word document text extraction
-- NEW: `tesseract.js`: OCR for image-based documents (optional, for scanned docs)
+
+### Existing Infrastructure
+- `src/infrastructure/bedrock/vision.ts`: Claude Vision API wrapper with `analyzeImage()` function
+  - Supports `image/png`, `image/jpeg`, `image/gif`, `image/webp` MIME types
+  - Uses Claude Sonnet 4 for cost-effective vision tasks
 
 ## Current Implementation Analysis
 
@@ -84,7 +88,7 @@ Supports:
 | PNG | `image/png` | .png | NEW: AI vision (Claude) or OCR |
 | HEIC | `image/heic`, `image/heif` | .heic, .heif | NEW: Convert to JPEG, then vision/OCR |
 | Word | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | .docx | NEW: mammoth library |
-| RTF | `application/rtf`, `text/rtf` | .rtf | NEW: @iarna/rtf-to-html or simple regex |
+| RTF | `application/rtf`, `text/rtf` | .rtf | NEW: Simple regex-based tag stripping |
 
 ### Feature Flag
 
@@ -97,15 +101,14 @@ When disabled, behavior reverts to PDF + TXT only.
 
 ### Architecture Decision: Image Text Extraction
 
-**Option A: OCR with tesseract.js** (CPU-intensive, works offline)
-- Pros: No API costs, works in isolation
-- Cons: Heavy dependency (~10MB WASM), slow, lower accuracy
+**Decision: AI Vision with Claude**
+- Uses existing `analyzeImage()` function from `src/infrastructure/bedrock/vision.ts`
+- Already integrated with AWS Bedrock and Claude Sonnet 4
+- High accuracy, handles handwriting better than OCR
+- Cost-effective since we're already paying for Bedrock
+- The referral extraction already calls Claude for structured data extraction
 
-**Option B: AI Vision with Claude** (recommended)
-- Pros: Already using Bedrock, high accuracy, handles handwriting
-- Cons: API cost per image
-
-**Recommendation**: Use Claude Vision via existing Bedrock integration. The referral extraction already calls Claude for structured data extraction; we can use it for image-to-text as well.
+Note: tesseract.js was considered but rejected due to heavy bundle size (~10MB WASM) and lower accuracy.
 
 ## Source Code Structure Changes
 
@@ -291,10 +294,47 @@ export async function extractDocxText(buffer: Buffer): Promise<DocxExtractResult
 }
 ```
 
+#### `src/domains/referrals/rtf-utils.ts`
+
+```typescript
+/**
+ * Extract plain text from an RTF document.
+ * Uses simple regex-based tag stripping (no external library required).
+ *
+ * RTF format uses control words like \par (paragraph), \b (bold), etc.
+ * This function strips all RTF formatting to extract raw text.
+ */
+export function extractRtfText(buffer: Buffer): string {
+  const rtfContent = buffer.toString('utf-8');
+
+  // Remove RTF header and footer
+  let text = rtfContent
+    // Remove RTF groups like {\fonttbl...} {\colortbl...}
+    .replace(/\{\\[^{}]*\}/g, '')
+    // Remove control words with numeric arguments (\fs24, \cf1, etc.)
+    .replace(/\\[a-z]+\d*\s?/gi, '')
+    // Replace paragraph markers with newlines
+    .replace(/\\par\s?/gi, '\n')
+    // Replace line breaks
+    .replace(/\\line\s?/gi, '\n')
+    // Remove remaining backslash-escaped characters
+    .replace(/\\\\/g, '\\')
+    .replace(/\\'/g, "'")
+    // Remove curly braces
+    .replace(/[{}]/g, '')
+    // Normalize whitespace
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n/g, '\n\n')
+    .trim();
+
+  return text;
+}
+```
+
 #### `src/domains/referrals/vision-extraction.ts`
 
 ```typescript
-import { invokeBedrockModel } from '@/infrastructure/bedrock';
+import { analyzeImage } from '@/infrastructure/bedrock';
 import { logger } from '@/lib/logger';
 
 const VISION_EXTRACTION_PROMPT = `Extract all text from this medical document image.
@@ -309,6 +349,7 @@ Return only the extracted text, no additional commentary.`;
 
 /**
  * Extract text from an image using Claude Vision.
+ * Uses the existing analyzeImage() function from infrastructure/bedrock/vision.ts
  */
 export async function extractTextFromImageVision(
   imageBuffer: Buffer,
@@ -318,34 +359,21 @@ export async function extractTextFromImageVision(
 
   const base64Image = imageBuffer.toString('base64');
 
-  // Use Claude Sonnet for cost-effective vision
-  const response = await invokeBedrockModel({
-    model: 'sonnet',
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: mimeType,
-              data: base64Image,
-            },
-          },
-          {
-            type: 'text',
-            text: VISION_EXTRACTION_PROMPT,
-          },
-        ],
-      },
-    ],
+  // Use existing analyzeImage from bedrock/vision.ts
+  const response = await analyzeImage({
+    imageBase64: base64Image,
+    mimeType,
+    prompt: VISION_EXTRACTION_PROMPT,
     maxTokens: 4096,
   });
 
-  log.info('Vision extraction complete', { textLength: response.length });
+  log.info('Vision extraction complete', {
+    textLength: response.content.length,
+    inputTokens: response.inputTokens,
+    outputTokens: response.outputTokens,
+  });
 
-  return response;
+  return response.content;
 }
 ```
 
@@ -482,10 +510,39 @@ npm run verify:full
 
 Move `sharp` from devDependencies to dependencies (already installed).
 
+## HEIC Browser Detection Edge Cases
+
+Some browsers report HEIC files differently:
+- Safari/iOS: `image/heic` or `image/heif`
+- Chrome/Firefox: May report `application/octet-stream` for HEIC files
+
+**Solution**: In the frontend `validateFile()`, add extension-based fallback for HEIC detection:
+
+```typescript
+const validateFile = (file: File): string | null => {
+  let mimeType = file.type;
+
+  // Handle HEIC files that browsers report as octet-stream
+  if (mimeType === 'application/octet-stream' || mimeType === '') {
+    const extension = file.name.toLowerCase().split('.').pop();
+    if (extension === 'heic' || extension === 'heif') {
+      mimeType = 'image/heic';
+    }
+  }
+
+  if (!isAllowedMimeType(mimeType)) {
+    return 'Invalid file type...';
+  }
+  // ...
+};
+```
+
+Note: `sharp` does not natively support HEIC (requires libheif bindings). We use `heic-convert` to convert HEIC to JPEG before passing to sharp for validation/processing.
+
 ## Security Considerations
 
 1. **File type spoofing**: Validate actual file content, not just extension/MIME header
-   - Use `sharp` to verify images are valid
+   - Use `sharp` to verify images are valid (after HEIC conversion for HEIC files)
    - Use `mammoth` to verify DOCX structure
 
 2. **Malicious files**:
