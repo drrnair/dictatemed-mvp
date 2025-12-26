@@ -146,28 +146,29 @@ class PubMedService {
   private parseArticleXml(xml: string): PubMedArticle | null {
     // Extract PMID
     const pmidMatch = xml.match(/<PMID[^>]*>(\d+)<\/PMID>/);
-    if (!pmidMatch) {
+    if (!pmidMatch?.[1]) {
       return null;
     }
     const pmid = pmidMatch[1];
 
     // Extract title
     const titleMatch = xml.match(/<ArticleTitle>([^<]*(?:<[^>]+>[^<]*)*)<\/ArticleTitle>/);
-    const title = titleMatch ? this.cleanXmlText(titleMatch[1]) : 'Untitled';
+    const title = titleMatch?.[1] ? this.cleanXmlText(titleMatch[1]) : 'Untitled';
 
     // Extract abstract
     const abstractMatch = xml.match(/<Abstract>[\s\S]*?<\/Abstract>/);
     let abstract = '';
     if (abstractMatch) {
       // Extract all AbstractText elements
-      const abstractTexts = abstractMatch[0].match(/<AbstractText[^>]*>([^<]*(?:<[^>]+>[^<]*)*)<\/AbstractText>/g);
+      const abstractTexts = abstractMatch[0].match(/<AbstractText[^>]*>[\s\S]*?<\/AbstractText>/g);
       if (abstractTexts) {
         abstract = abstractTexts
           .map((at) => {
             const labelMatch = at.match(/Label="([^"]+)"/);
-            const textMatch = at.match(/>([^<]*(?:<[^>]+>[^<]*)*)</);
-            const text = textMatch ? this.cleanXmlText(textMatch[1]) : '';
-            return labelMatch ? `${labelMatch[1]}: ${text}` : text;
+            // Extract content between opening tag (after >) and closing tag
+            const textMatch = at.match(/<AbstractText[^>]*>([\s\S]*?)<\/AbstractText>/);
+            const text = textMatch?.[1] ? this.cleanXmlText(textMatch[1]) : '';
+            return labelMatch?.[1] ? `${labelMatch[1]}: ${text}` : text;
           })
           .join(' ')
           .trim();
@@ -211,7 +212,7 @@ class PubMedService {
     if (pubTypeMatches) {
       for (const pt of pubTypeMatches) {
         const typeMatch = pt.match(/>([^<]+)</);
-        if (typeMatch) {
+        if (typeMatch?.[1]) {
           publicationTypes.push(typeMatch[1]);
         }
       }
@@ -223,7 +224,7 @@ class PubMedService {
     if (meshMatches) {
       for (const mesh of meshMatches) {
         const termMatch = mesh.match(/>([^<]+)</);
-        if (termMatch) {
+        if (termMatch?.[1]) {
           meshTerms.push(termMatch[1]);
         }
       }
@@ -275,7 +276,7 @@ class PubMedService {
       const initialsMatch = authorXml.match(/<Initials>([^<]+)<\/Initials>/);
       const affiliationMatch = authorXml.match(/<Affiliation>([^<]+)<\/Affiliation>/);
 
-      if (lastNameMatch) {
+      if (lastNameMatch?.[1]) {
         authors.push({
           lastName: lastNameMatch[1],
           foreName: foreNameMatch?.[1] ?? '',
@@ -296,16 +297,22 @@ class PubMedService {
       return 'Unknown Authors';
     }
 
-    if (authors.length === 1) {
-      return `${authors[0].lastName} ${authors[0].initials}`.trim();
+    const first = authors[0];
+    if (!first) {
+      return 'Unknown Authors';
     }
 
-    if (authors.length === 2) {
-      return `${authors[0].lastName} ${authors[0].initials}, ${authors[1].lastName} ${authors[1].initials}`.trim();
+    if (authors.length === 1) {
+      return `${first.lastName} ${first.initials}`.trim();
+    }
+
+    const second = authors[1];
+    if (authors.length === 2 && second) {
+      return `${first.lastName} ${first.initials}, ${second.lastName} ${second.initials}`.trim();
     }
 
     // More than 2 authors: First author et al.
-    return `${authors[0].lastName} ${authors[0].initials} et al.`.trim();
+    return `${first.lastName} ${first.initials} et al.`.trim();
   }
 
   /**

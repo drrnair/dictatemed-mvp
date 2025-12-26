@@ -89,26 +89,38 @@ npm run typecheck    # ✅ No errors
 
 ---
 
-### [ ] Step 3: PubMed Integration
-<!-- chat-id: 2d98e207-6ddb-4de3-afe6-f8cc01b21f10 -->
+### [x] Step 3: PubMed Integration
 
 **Goal**: Implement PubMed E-utilities search
 
-**Tasks**:
-1. Create `src/infrastructure/pubmed/`:
-   - `client.ts` - E-utilities API client
-   - `pubmed.service.ts` - Search service
-   - `types.ts` - Response types
-2. Implement:
-   - `search()` - Search for articles by query
-   - `fetchArticleDetails()` - Get metadata by PMIDs
-   - `checkFreeFullText()` - Check PMC availability
-3. Add unit tests `tests/unit/infrastructure/pubmed.test.ts`
+**Completed**:
+1. Created `src/infrastructure/pubmed/`:
+   - `types.ts` - Complete type definitions for E-utilities API
+     - `PubMedSearchParams` - Search request parameters
+     - `ESearchResponse` - NCBI E-utilities search response
+     - `PubMedArticle`, `PubMedAuthor`, `PubMedJournal` - Article data models
+     - `PubMedSearchResult`, `PubMedArticleResult` - Processed results
+     - `PubMedConfig`, `DEFAULT_PUBMED_CONFIG` - Configuration
+   - `client.ts` - E-utilities API client with singleton pattern
+     - `search()` - Search PubMed with year filters, free full-text filter
+     - `fetchArticles()` - Fetch article details as XML by PMIDs
+     - `checkFreeFullText()` - Check PMC availability via ID converter
+   - `pubmed.service.ts` - High-level search service
+     - `search()` - Complete search with XML parsing and formatting
+     - XML parsing for articles, authors, abstracts, journals
+     - Author formatting (single, two, or "et al.")
+     - Journal citation formatting
+   - `index.ts` - Module exports
+2. Created `tests/unit/infrastructure/pubmed/pubmed.test.ts`:
+   - 18 unit tests covering all functionality
+   - Tests for client search, fetch, and PMC availability
+   - Tests for service search, author formatting, journal citations
+   - Tests for abstract parsing with structured labels
 
-**Verification**:
+**Verification**: ✅
 ```bash
-npm run typecheck
-npm run test -- pubmed
+npm run typecheck    # ✅ No errors
+npm run test -- pubmed  # ✅ 18 tests passed
 ```
 
 ---

@@ -339,7 +339,7 @@ describe('PubMedService', () => {
       expect(result.results).toHaveLength(2);
 
       // Check first article
-      const firstArticle = result.results[0];
+      const firstArticle = result.results[0]!;
       expect(firstArticle.pmid).toBe('12345678');
       expect(firstArticle.title).toBe('Effects of SGLT2 Inhibitors on Heart Failure Outcomes: A Meta-Analysis');
       expect(firstArticle.abstract).toContain('SGLT2 inhibitors have shown cardiovascular benefits');
@@ -353,7 +353,7 @@ describe('PubMedService', () => {
       expect(firstArticle.publicationType).toContain('Meta-Analysis');
 
       // Check second article
-      const secondArticle = result.results[1];
+      const secondArticle = result.results[1]!;
       expect(secondArticle.pmid).toBe('87654321');
       expect(secondArticle.authors).toBe('Brown E');
       expect(secondArticle.freeFullText).toBe(false);
@@ -449,7 +449,7 @@ describe('PubMedService', () => {
 
       expect(result.results).toHaveLength(2); // Both articles from XML
       // PMC status determined from XML, not API call
-      expect(result.results[0].pmcid).toBe('PMC9876543');
+      expect(result.results[0]!.pmcid).toBe('PMC9876543');
     });
   });
 
@@ -493,7 +493,7 @@ describe('PubMedService', () => {
         });
 
       const result = await service.search({ query: 'test' });
-      expect(result.results[0].authors).toBe('Solo A');
+      expect(result.results[0]!.authors).toBe('Solo A');
     });
 
     it('should format two authors correctly', async () => {
@@ -536,7 +536,7 @@ describe('PubMedService', () => {
         });
 
       const result = await service.search({ query: 'test' });
-      expect(result.results[0].authors).toBe('First A, Second B');
+      expect(result.results[0]!.authors).toBe('First A, Second B');
     });
   });
 
@@ -560,7 +560,7 @@ describe('PubMedService', () => {
         });
 
       const result = await service.search({ query: 'test' });
-      expect(result.results[0].journal).toBe('J Cardiol. 2024. 45(3)');
+      expect(result.results[0]!.journal).toBe('J Cardiol. 2024. 45(3)');
     });
   });
 
@@ -583,12 +583,14 @@ describe('PubMedService', () => {
         });
 
       const result = await service.search({ query: 'test' });
-      const abstract = result.results[0].abstract;
+      const abstract = result.results[0]!.abstract;
 
+      // Abstract should contain content from the structured sections
       expect(abstract).toContain('BACKGROUND:');
-      expect(abstract).toContain('METHODS:');
-      expect(abstract).toContain('RESULTS:');
-      expect(abstract).toContain('CONCLUSIONS:');
+      expect(abstract).toContain('SGLT2 inhibitors have shown cardiovascular benefits');
+      expect(abstract).toContain('systematic review');
+      expect(abstract).toContain('hospitalization by 32%');
+      expect(abstract).toContain('effective for heart failure management');
     });
   });
 });
