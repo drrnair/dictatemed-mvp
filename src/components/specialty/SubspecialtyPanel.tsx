@@ -375,7 +375,7 @@ export function SubspecialtyPanel({
                   <ul
                     ref={listRef}
                     role="listbox"
-                    className="max-h-48 overflow-auto py-1"
+                    className="max-h-60 overflow-auto py-1"
                   >
                     {filteredResults.slice(0, 7).map((subspecialty, idx) => (
                       <li
