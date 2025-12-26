@@ -61,26 +61,33 @@ Installed required npm packages for new file type support:
 
 ---
 
-### [ ] Step: Create Image Utilities Module
-<!-- chat-id: 400cea42-8107-43b6-b672-b0e3f437a5b1 -->
+### [x] Step: Create Image Utilities Module
 
-Create image processing utilities for HEIC conversion and image validation.
+**Status**: Complete
 
-**Tasks**:
-1. Create `src/domains/referrals/image-utils.ts`
-2. Implement `convertToJpeg()` - converts HEIC/HEIF/PNG to JPEG
-3. Implement `validateImage()` - checks dimensions, corruption
-4. Add TypeScript types for conversion results
-5. Create unit tests in `tests/unit/domains/referrals/image-utils.test.ts`
+Created image processing utilities for HEIC conversion and image validation.
 
-**Verification**:
+**Completed Tasks**:
+1. ✅ Created `src/domains/referrals/image-utils.ts` with:
+   - `convertToJpeg()` - converts HEIC/HEIF/PNG to JPEG using heic-convert and sharp
+   - `validateImage()` - validates image dimensions and corruption
+   - `validateHeicImage()` - validates HEIC images via conversion test
+   - `validateImageByType()` - routes validation by MIME type
+   - Helper functions: `isImageMimeType()`, `isHeicMimeType()`
+   - Constants: `IMAGE_MIME_TYPES`, `MAX_IMAGE_PIXELS` (50MP), `JPEG_QUALITY` (90)
+2. ✅ Created `src/types/heic-convert.d.ts` - TypeScript declarations for heic-convert
+3. ✅ Created unit tests in `tests/unit/domains/referrals/image-utils.test.ts` - 29 passing tests
+
+**Verification Results**:
 ```bash
-npm run test -- tests/unit/domains/referrals/image-utils.test.ts
-npm run typecheck
+npm run typecheck  # ✅ Passes
+npm run test -- tests/unit/domains/referrals/image-utils.test.ts  # ✅ 29 tests pass
+npm run test -- tests/unit/domains/referrals/  # ✅ 109 total tests pass (no regressions)
 ```
 
 **Files Created**:
 - `src/domains/referrals/image-utils.ts`
+- `src/types/heic-convert.d.ts`
 - `tests/unit/domains/referrals/image-utils.test.ts`
 
 ---
