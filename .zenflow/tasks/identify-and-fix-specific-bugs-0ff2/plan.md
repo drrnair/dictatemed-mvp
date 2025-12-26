@@ -120,7 +120,10 @@ psql $SUPABASE_DB_URL -f supabase/migrations/001_create_storage_buckets.sql
 3. **Fixed UI text** in `NewUploadsSection.tsx`:
    - Updated drop zone text: "PDF, PNG, JPEG, HEIC up to 20MB"
 
-**Note on HEIC for Referrals**: The referral uploader (`/api/referrals`) intentionally only accepts PDF and text files since it performs AI text extraction. HEIC photo support is only for the clinical documents uploader where photos of reports/ECGs make sense.
+4. **Added HEIC/HEIF support to referrals uploader** (for photographing paper documents):
+   - `src/domains/referrals/referral.types.ts`: Added PNG, JPEG, HEIC, HEIF to `ALLOWED_REFERRAL_MIME_TYPES`
+   - `src/components/referral/ReferralUploader.tsx`: Updated UI text and error messages
+   - Supabase bucket already has required MIME types
 
 **User Action Required**:
 

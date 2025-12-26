@@ -195,10 +195,15 @@ export interface ReferralDocumentWithUrl extends ReferralDocument {
 }
 
 // Allowed MIME types for referral uploads
-// Note: DOCX support deferred to post-MVP - most referral letters are PDFs
+// Supports: PDFs, text files, and photos (PNG, JPEG, HEIC) for photographing paper documents
+// Note: DOCX support deferred to post-MVP
 export const ALLOWED_REFERRAL_MIME_TYPES = [
   'application/pdf',
   'text/plain',
+  'image/png',
+  'image/jpeg',
+  'image/heic',
+  'image/heif',
 ] as const;
 
 export type AllowedReferralMimeType = (typeof ALLOWED_REFERRAL_MIME_TYPES)[number];

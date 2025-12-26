@@ -54,8 +54,8 @@ interface ReferralUploaderProps {
   className?: string;
 }
 
-// File extensions for display
-const ACCEPTED_EXTENSIONS = '.pdf, .txt';
+// File extensions for display (PDF, images for photographed documents, text)
+const ACCEPTED_EXTENSIONS = 'PDF, PNG, JPEG, HEIC';
 
 // Progress values for each stage of the upload/extraction workflow
 const PROGRESS = {
@@ -131,7 +131,7 @@ export function ReferralUploader({
       if (isDocx) {
         return 'Word documents (.docx) are not yet supported. Please convert to PDF first.';
       }
-      return 'Invalid file type. Please upload a PDF or text file.';
+      return 'Invalid file type. Please upload a PDF, image, or text file.';
     }
     if (!isFileSizeValid(file.size)) {
       return `File too large. Maximum size is ${formatFileSize(MAX_REFERRAL_FILE_SIZE)}.`;
