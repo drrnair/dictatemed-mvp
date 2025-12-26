@@ -220,11 +220,18 @@ logger.error('Error saving draft', { letterId: letter.id, error });
 - `*.example.tsx` files - Example files for documentation
 - `*.test.ts` files - Test documentation comments
 
+**Additional cleanup (based on review feedback):**
+- Consolidated `BeforeInstallPromptEvent` interface:
+  - Exported from `src/lib/pwa.ts` (canonical definition)
+  - Removed duplicate from `src/components/pwa/UpdatePrompt.tsx`
+  - `UpdatePrompt.tsx` now imports from `@/lib/pwa`
+
 **Verification:**
 - `npm run typecheck` passes (source files) ✅
 - All logger imports use `@/lib/logger` ✅
 - All error logs include context objects for debugging ✅
 - `grep -rn "console\." src/` only shows acceptable locations ✅
+- No duplicate `BeforeInstallPromptEvent` definitions ✅
 
 ---
 

@@ -6,19 +6,9 @@ import {
   onServiceWorkerUpdate,
   activateUpdate,
   type ServiceWorkerUpdateEvent,
+  type BeforeInstallPromptEvent,
 } from '@/lib/pwa';
 import { logger } from '@/lib/logger';
-
-/**
- * Browser's BeforeInstallPromptEvent for PWA installation
- * @see https://developer.mozilla.org/en-US/docs/Web/API/BeforeInstallPromptEvent
- */
-interface BeforeInstallPromptEvent extends Event {
-  /** Shows the install prompt to the user */
-  prompt: () => Promise<void>;
-  /** The user's choice after prompt() resolves */
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
 import {
   Dialog,
   DialogContent,
