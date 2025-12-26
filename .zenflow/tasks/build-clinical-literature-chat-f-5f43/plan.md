@@ -424,22 +424,39 @@ npm run lint         # ✅ No new errors (only pre-existing warnings)
 
 ---
 
-### [ ] Step 11: Settings UI for UpToDate & Library
+### [x] Step 11: Settings UI for UpToDate & Library
 
 **Goal**: User can manage UpToDate connection and library
 
-**Tasks**:
-1. Create `src/app/(dashboard)/settings/literature/page.tsx`:
-   - UpToDate connection status card
-   - Connect/disconnect buttons
-   - Library document list
-   - Upload button with drag-drop
-2. Add navigation link in settings layout
+**Completed**:
+1. Created `src/app/(dashboard)/settings/literature/page.tsx`:
+   - Server component wrapper with metadata (title, description)
+   - Clean layout with heading and description
+2. Created `src/app/(dashboard)/settings/literature/LiteratureSettingsClient.tsx`:
+   - **UpToDate Integration Card**:
+     - Status display (connected/not connected/not configured)
+     - Subscription info (type, validity, queries this month, last used)
+     - Connect button (redirects to OAuth flow)
+     - Disconnect button with confirmation dialog
+   - **Personal Library Card**:
+     - Storage stats with progress bar (documents used/max)
+     - File upload with drag-drop UI and progress indicator
+     - Document title and category (guideline/textbook/reference/protocol/other)
+     - Document list table with status badges (Processed/Processing/Failed)
+     - Delete button with confirmation dialog
+     - File size validation and limits display
+   - **PubMed Card**:
+     - Always available indicator
+     - Description of included functionality
+3. Updated `src/app/(dashboard)/settings/page.tsx`:
+   - Added BookOpen icon import
+   - Added "Clinical Literature" link with description
+   - Links to `/settings/literature`
 
-**Verification**:
+**Verification**: ✅
 ```bash
-npm run typecheck
-npm run lint
+npm run typecheck    # ✅ No errors
+npm run lint         # ✅ No errors
 ```
 
 ---
