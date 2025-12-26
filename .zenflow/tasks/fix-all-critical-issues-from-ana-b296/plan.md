@@ -258,8 +258,16 @@ const phiKeys = [
 ];
 ```
 
+**Review feedback addressed:**
+1. Fixed array handling in `filterPHI()` - now properly filters arrays of objects
+2. Removed unreachable console.debug code block
+3. Documented PHI matching as intentional fail-safe (over-filter vs under-filter)
+4. Exported `filterPHI()` function for testing
+5. Added comprehensive unit tests (37 tests) in `tests/unit/lib/error-logger.test.ts`
+
 **Verification:**
 - `npx tsc --noEmit src/lib/error-logger.ts` passes ✅
+- `npm run test -- tests/unit/lib/error-logger.test.ts` - 37 tests pass ✅
 - Error logger functions correctly without Sentry installed ✅
 - PHI filtering prevents sensitive data leakage ✅
 - Ready for Sentry integration: just uncomment imports and calls ✅
