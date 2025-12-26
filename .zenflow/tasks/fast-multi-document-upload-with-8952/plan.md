@@ -181,36 +181,60 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
-### [ ] Step 5: UI Components
-<!-- chat-id: 4b743bfb-7854-484a-8040-c14134b8d220 -->
+### [x] Step 5: UI Components
 
 **Objective**: Build multi-document upload interface
 
-**Tasks**:
-- [ ] Create `DocumentUploadQueue` component:
+**Completed**:
+- [x] Created `DocumentUploadQueue` component:
   - List of files with individual progress bars
   - Status indicators (uploading, extracting, complete, failed)
-  - Cancel/retry buttons per file
-- [ ] Create `FastExtractionResult` component:
-  - Display patient name, DOB, MRN
-  - Confidence indicators (high/medium/low)
-  - Edit button for corrections
-- [ ] Create `BackgroundProcessingIndicator` component:
-  - "Processing documents..." status
-  - Progress for full extraction
-- [ ] Create `MultiDocumentUploader` component:
+  - Cancel/retry/remove buttons per file
+  - Summary header with processing/complete/failed counts
+  - Visual styling based on file status (green for complete, red for failed)
+- [x] Created `FastExtractionResult` component:
+  - Display patient name, DOB, MRN with field labels
+  - Confidence indicators per field (high/medium/low with tooltips)
+  - Click-to-edit functionality for all fields
+  - Date formatting (YYYY-MM-DD to DD/MM/YYYY)
+  - Low confidence warning banner
+  - No data warning when extraction fails
+  - Processing time display
+- [x] Created `BackgroundProcessingIndicator` component:
+  - Two variants: inline (minimal) and banner (prominent)
+  - Status-based styling (blue/processing, green/complete, amber/failed)
+  - Progress dots for multi-document processing
+  - `BackgroundProcessingBadge` for toolbar display
+  - `BackgroundProcessingInfo` for explaining background processing
+- [x] Created `MultiDocumentUploader` component:
   - Multi-select file input (`multiple` attribute)
-  - Drag-and-drop for multiple files
-  - Compose queue, results, and indicator components
+  - Drag-and-drop for multiple files with visual feedback
+  - Composes queue, results, and indicator components
+  - "Upload N files" button for queued files
   - "Continue to Recording" button (enabled after fast extraction)
+  - "Clear All" button with processing state handling
+  - Integrates with `useDocumentUploadQueue` hook
+- [x] Updated `src/components/referral/index.ts` to export new components
+- [x] Comprehensive unit tests (120 tests total):
+  - DocumentUploadQueue: 27 tests
+  - FastExtractionResult: 25 tests
+  - BackgroundProcessingIndicator: 36 tests
+  - MultiDocumentUploader: 32 tests
 
-**Files to create**:
+**Files created**:
 - `src/components/referral/DocumentUploadQueue.tsx`
 - `src/components/referral/FastExtractionResult.tsx`
 - `src/components/referral/BackgroundProcessingIndicator.tsx`
 - `src/components/referral/MultiDocumentUploader.tsx`
+- `tests/unit/components/DocumentUploadQueue.test.tsx`
+- `tests/unit/components/FastExtractionResult.test.tsx`
+- `tests/unit/components/BackgroundProcessingIndicator.test.tsx`
+- `tests/unit/components/MultiDocumentUploader.test.tsx`
 
-**Verification**: `npm run test -- components/referral`
+**Files modified**:
+- `src/components/referral/index.ts` (added exports for new components)
+
+**Verification**: `npm run typecheck` passed, 120 unit tests passing
 
 ---
 
