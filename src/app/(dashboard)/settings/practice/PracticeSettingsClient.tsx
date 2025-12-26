@@ -90,8 +90,8 @@ export function PracticeSettingsClient({
 
       {/* Practice Settings */}
       <PracticeSettings
-        initialSettings={practice.settings as Record<string, any>}
-        onUpdate={handlePracticeUpdate}
+        initialSettings={practice.settings || {}}
+        onUpdate={(settings) => handlePracticeUpdate({ settings })}
       />
     </div>
   );

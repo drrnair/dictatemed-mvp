@@ -5,6 +5,7 @@
 
 import * as React from 'react';
 import { Bell, Check, CheckCheck, AlertCircle, FileText, FileCheck } from 'lucide-react';
+import { logger } from '@/lib/logger';
 import { formatDistanceToNow } from 'date-fns';
 import {
   DropdownMenu,
@@ -136,7 +137,7 @@ export function NotificationCenter() {
     try {
       await markAllAsRead();
     } catch (err) {
-      console.error('Failed to mark all as read:', err);
+      logger.error('Failed to mark all as read', { error: err });
     }
   };
 
@@ -144,7 +145,7 @@ export function NotificationCenter() {
     try {
       await markRead(notificationId);
     } catch (err) {
-      console.error('Failed to mark notification as read:', err);
+      logger.error('Failed to mark notification as read', { notificationId, error: err });
     }
   };
 

@@ -5,6 +5,7 @@
 // Now includes optional referral upload for auto-population
 
 import { useCallback, useState } from 'react';
+import { logger } from '@/lib/logger';
 import { AlertCircle, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -124,7 +125,7 @@ export function ConsultationContextForm({
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to apply referral';
-        console.error('Failed to apply referral:', error);
+        logger.error('Failed to apply referral', { error });
 
         // Error toast
         toast({

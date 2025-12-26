@@ -162,54 +162,27 @@ export async function GET(request: NextRequest) {
     const { prisma } = await import('@/infrastructure/db/client');
     const { decryptPatientData } = await import('@/infrastructure/db/encryption');
 
-    // Build where clause using Prisma types
-    type LetterWhereInput = {
-      userId: string;
-      status?: string;
-      letterType?: string;
-      createdAt?: {
-        gte?: Date;
-        lte?: Date;
-      };
-    };
-
-    const where: LetterWhereInput = {
+    // Build where clause dynamically
+    // Using type assertion as Prisma types are complex with union types
+    const where = {
       userId: session.user.id,
+      ...(status && { status }),
+      ...(letterType && { letterType }),
+      ...((startDate || endDate) && {
+        createdAt: {
+          ...(startDate && { gte: new Date(startDate) }),
+          ...(endDate && { lte: new Date(endDate) }),
+        },
+      }),
     };
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (letterType) {
-      where.letterType = letterType;
-    }
-
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) {
-        where.createdAt.gte = new Date(startDate);
-      }
-      if (endDate) {
-        where.createdAt.lte = new Date(endDate);
-      }
-    }
 
     // Calculate offset from page
     const offset = (page - 1) * limit;
 
     // Build orderBy
-    type LetterOrderByInput = {
-      createdAt?: 'asc' | 'desc';
-      approvedAt?: 'asc' | 'desc';
-    };
-
-    const orderBy: LetterOrderByInput = {};
-    if (sortBy === 'approvedAt') {
-      orderBy.approvedAt = sortOrder;
-    } else {
-      orderBy.createdAt = sortOrder;
-    }
+    const orderBy = sortBy === 'approvedAt'
+      ? { approvedAt: sortOrder as const }
+      : { createdAt: sortOrder as const };
 
     // Fetch letters with patient data
     const [letters, total] = await Promise.all([
@@ -226,7 +199,8 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Decrypt patient data and filter by search if needed
-    let processedLetters = letters.map((letter) => {
+    type LetterWithPatient = typeof letters[number];
+    let processedLetters = letters.map((letter: LetterWithPatient) => {
       let patientName = 'Unknown Patient';
       if (letter.patient?.encryptedData) {
         try {

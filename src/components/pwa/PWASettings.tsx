@@ -10,6 +10,7 @@ import {
   checkForUpdates,
   isPWA,
 } from '@/lib/pwa';
+import { logger } from '@/lib/logger';
 import { Trash2, RefreshCw, HardDrive, Download } from 'lucide-react';
 
 export function PWASettings() {
@@ -33,7 +34,7 @@ export function PWASettings() {
         alert('Failed to clear cache. Please try again.');
       }
     } catch (error) {
-      console.error('Clear cache error:', error);
+      logger.error('Clear cache error', { error });
       alert('An error occurred while clearing cache.');
     } finally {
       setIsClearing(false);
@@ -48,7 +49,7 @@ export function PWASettings() {
         alert('Checking for updates... If an update is available, you will be notified.');
       }
     } catch (error) {
-      console.error('Update check error:', error);
+      logger.error('Update check error', { error });
     } finally {
       setIsChecking(false);
     }
@@ -65,7 +66,7 @@ export function PWASettings() {
       setCacheInfo(info);
       setShowCacheInfo(true);
     } catch (error) {
-      console.error('Cache info error:', error);
+      logger.error('Cache info error', { error });
     }
   };
 
