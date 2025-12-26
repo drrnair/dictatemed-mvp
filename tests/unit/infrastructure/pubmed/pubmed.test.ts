@@ -224,7 +224,7 @@ describe('PubMedClient', () => {
         .mockResolvedValueOnce(errorResponse);
 
       await expect(client.search({ query: 'test' })).rejects.toThrow(
-        'PubMed search failed: 500'
+        'PubMed search failed: 500 - Internal Server Error'
       );
     });
   });

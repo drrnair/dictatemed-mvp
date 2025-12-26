@@ -174,6 +174,7 @@ npm run test -- openai/embeddings    # ✅ 22 tests passed
 ---
 
 ### [ ] Step 5: UpToDate OAuth Stub
+<!-- chat-id: 0b7116ea-4e5b-4e9b-a266-01bb728d8ebc -->
 
 **Goal**: OAuth-ready infrastructure (stub for later activation)
 
