@@ -154,22 +154,36 @@ npm run test -- tests/unit/domains/referrals/  # ✅ 175 total tests pass (no re
 
 ---
 
-### [ ] Step: Expand MIME Type Constants
-<!-- chat-id: f952c9d3-ea90-402f-b787-33b141aed05f -->
+### [x] Step: Expand MIME Type Constants
 
-Update type definitions to support new file types.
+**Status**: Complete
 
-**Tasks**:
-1. Modify `src/domains/referrals/referral.types.ts`:
-   - Expand `ALLOWED_REFERRAL_MIME_TYPES` array with new types
-   - Add `ACCEPTED_REFERRAL_EXTENSIONS` constant for display
-2. Ensure `isAllowedMimeType()` continues to work with expanded types
-3. Add feature flag check helper
+Updated type definitions to support new file types with feature flag support.
 
-**Verification**:
+**Completed Tasks**:
+1. ✅ Modified `src/domains/referrals/referral.types.ts`:
+   - Added `BASE_REFERRAL_MIME_TYPES` (PDF, TXT - always allowed)
+   - Added `EXTENDED_REFERRAL_MIME_TYPES` (JPEG, PNG, HEIC, HEIF, DOCX, RTF)
+   - `ALLOWED_REFERRAL_MIME_TYPES` now combines both arrays (9 types total)
+   - Added `ACCEPTED_REFERRAL_EXTENSIONS` for UI display
+   - Added `BASE_ACCEPTED_EXTENSIONS` for when feature is disabled
+2. ✅ Updated `isAllowedMimeType()` to respect feature flag:
+   - Base types always allowed
+   - Extended types only allowed when `FEATURE_EXTENDED_UPLOAD_TYPES=true`
+3. ✅ Added helper functions:
+   - `isExtendedUploadTypesEnabled()` - checks feature flag
+   - `isBaseMimeType()` - checks if MIME type is base type
+   - `isExtendedMimeType()` - checks if MIME type is extended
+   - `getAllowedMimeTypes()` - returns currently allowed types (respects flag)
+   - `getAcceptedExtensions()` - returns extension string for UI (respects flag)
+4. ✅ Added new types: `BaseReferralMimeType`, `ExtendedReferralMimeType`
+
+**Verification Results**:
 ```bash
-npm run test -- tests/unit/domains/referrals/referral.types.test.ts
-npm run typecheck
+npm run typecheck  # ✅ Passes
+npm run lint  # ✅ No warnings or errors
+npm run test -- tests/unit/domains/referrals/  # ✅ 175 tests pass (no regressions)
+npm run test:integration -- tests/integration/api/referrals.test.ts  # ✅ 20 tests pass
 ```
 
 **Files Modified**:
