@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSession } from '@/lib/auth';
 import { extractTextFromDocument } from '@/domains/referrals/referral.service';
+import { getAcceptedExtensions } from '@/domains/referrals';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, createRateLimitKey } from '@/lib/rate-limit';
 
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (message.includes('Unsupported MIME type')) {
       return NextResponse.json(
-        { error: 'This file type is not supported. Please upload a PDF or text file.' },
+        { error: `This file type is not supported. Accepted formats: ${getAcceptedExtensions()}` },
         { status: 400 }
       );
     }

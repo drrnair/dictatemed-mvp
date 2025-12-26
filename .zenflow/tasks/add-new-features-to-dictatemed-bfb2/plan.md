@@ -230,26 +230,43 @@ npm run test -- tests/unit/domains/referrals/  # ✅ 181 total tests pass (no re
 
 ---
 
-### [ ] Step: Update API Route Validation
+### [x] Step: Update API Route Validation
 
-Update API endpoint to accept new MIME types.
+**Status**: Complete
 
-**Tasks**:
-1. Modify `src/app/api/referrals/route.ts`:
-   - Update Zod schema `createReferralSchema` to use expanded MIME types
-2. Modify `src/app/api/referrals/[id]/extract-text/route.ts`:
-   - Update error messages to reflect new supported types
-3. Add integration tests for new file types
+Updated API endpoints to validate new MIME types with feature flag support.
 
-**Verification**:
+**Completed Tasks**:
+1. ✅ Modified `src/app/api/referrals/route.ts`:
+   - Updated Zod schema `createReferralSchema` to use `superRefine()` for runtime feature flag checking
+   - Added imports for `isAllowedMimeType()` and `getAcceptedExtensions()`
+   - Extended types are validated against feature flag at request time (not module load time)
+2. ✅ Modified `src/app/api/referrals/[id]/extract-text/route.ts`:
+   - Updated error message to use dynamic `getAcceptedExtensions()` function
+   - Error message now reflects currently enabled file types based on feature flag
+3. ✅ Added 9 new integration tests for MIME type validation:
+   - Test unsupported MIME type rejection (video/mp4)
+   - Test extended types rejected when feature flag disabled
+   - Test JPEG acceptance when feature flag enabled
+   - Test PNG acceptance when feature flag enabled
+   - Test HEIC acceptance when feature flag enabled
+   - Test DOCX acceptance when feature flag enabled
+   - Test RTF acceptance when feature flag enabled
+   - Test PDF always accepted regardless of flag
+   - Test TXT always accepted regardless of flag
+
+**Verification Results**:
 ```bash
-npm run test:integration -- tests/integration/api/referrals
-npm run typecheck
+npm run typecheck  # ✅ Passes
+npm run lint  # ✅ No warnings or errors
+npm run test -- tests/unit/domains/referrals/  # ✅ 181 tests pass (no regressions)
+npm run test:integration -- tests/integration/api/referrals.test.ts  # ✅ 28 tests pass
 ```
 
 **Files Modified**:
 - `src/app/api/referrals/route.ts`
 - `src/app/api/referrals/[id]/extract-text/route.ts`
+- `tests/integration/api/referrals.test.ts`
 
 ---
 
