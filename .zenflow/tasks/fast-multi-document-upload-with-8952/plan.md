@@ -278,6 +278,7 @@ Do not make assumptions on important decisions — get clarification first.
 ---
 
 ### [ ] Step 7: Testing & Polish
+<!-- chat-id: 963497f3-d22f-4032-8861-2dfa55370d13 -->
 
 **Objective**: Comprehensive testing and error handling
 
