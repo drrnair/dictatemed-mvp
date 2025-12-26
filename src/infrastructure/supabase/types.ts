@@ -45,6 +45,8 @@ export const ALLOWED_DOCUMENT_TYPES = [
   'image/jpeg',
   'image/jpg',
   'image/tiff',
+  'image/heic',
+  'image/heif',
 ] as const;
 
 export type AllowedDocumentType = (typeof ALLOWED_DOCUMENT_TYPES)[number];

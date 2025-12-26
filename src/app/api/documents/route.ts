@@ -14,7 +14,7 @@ import { logger } from '@/lib/logger';
 
 const createDocumentSchema = z.object({
   name: z.string().min(1).max(255),
-  mimeType: z.enum(['application/pdf', 'image/png', 'image/jpeg']),
+  mimeType: z.enum(['application/pdf', 'image/png', 'image/jpeg', 'image/heic', 'image/heif']),
   size: z.number().int().positive().max(20 * 1024 * 1024), // 20MB max
   type: z.enum(['ECHO_REPORT', 'ANGIOGRAM_REPORT', 'ECG_REPORT', 'HOLTER_REPORT', 'LAB_RESULT', 'REFERRAL', 'OTHER']).optional(),
   patientId: z.string().uuid().optional(),

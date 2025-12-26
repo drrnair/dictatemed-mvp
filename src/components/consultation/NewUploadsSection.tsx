@@ -74,16 +74,16 @@ export function NewUploadsSection({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          filename: targetFile.file.name,
+          name: targetFile.file.name,
           mimeType: targetFile.file.type,
-          sizeBytes: targetFile.file.size,
+          size: targetFile.file.size,
           consultationId,
         }),
       });
 
       if (!response.ok) throw new Error('Failed to get upload URL');
 
-      const { document, uploadUrl } = await response.json();
+      const { id: documentId, uploadUrl } = await response.json();
 
       // Upload to storage
       setFiles((prev) =>
@@ -109,7 +109,7 @@ export function NewUploadsSection({
       );
 
       // Confirm upload
-      await fetch(`/api/documents/${document.id}`, {
+      await fetch(`/api/documents/${documentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'UPLOADED' }),
@@ -118,12 +118,12 @@ export function NewUploadsSection({
       setFiles((prev) =>
         prev.map((f) =>
           f.id === fileId
-            ? { ...f, status: 'complete', progress: 100, documentId: document.id }
+            ? { ...f, status: 'complete', progress: 100, documentId }
             : f
         )
       );
 
-      onUploadComplete?.(document.id);
+      onUploadComplete?.(documentId);
     } catch (error) {
       setFiles((prev) =>
         prev.map((f) =>

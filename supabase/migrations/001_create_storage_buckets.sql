@@ -53,14 +53,14 @@ ON CONFLICT (id) DO UPDATE SET
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- Create clinical-documents bucket (private)
--- Stores PDFs, referral letters (text), ECG images, echo reports, etc.
+-- Stores PDFs, referral letters (text), ECG images, echo reports, iPhone photos (HEIC), etc.
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'clinical-documents',
   'clinical-documents',
   false,  -- Private bucket
   52428800,  -- 50MB max file size
-  ARRAY['application/pdf', 'image/png', 'image/jpeg', 'image/tiff', 'text/plain']::text[]
+  ARRAY['application/pdf', 'image/png', 'image/jpeg', 'image/tiff', 'text/plain', 'image/heic', 'image/heif']::text[]
 )
 ON CONFLICT (id) DO UPDATE SET
   public = EXCLUDED.public,

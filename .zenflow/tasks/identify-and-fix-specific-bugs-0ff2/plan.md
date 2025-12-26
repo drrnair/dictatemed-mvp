@@ -86,3 +86,41 @@ psql $SUPABASE_DB_URL -f supabase/migrations/001_create_storage_buckets.sql
 ```
 
 **Verification**: PDF upload should now work. Try uploading again.
+
+---
+
+### [x] Step: Bug 4 - Multiple Document Upload & Field Mismatch
+<!-- chat-id: current -->
+
+**Issue**: After deployment, uploads still failing. Also need support for multiple documents/images.
+
+**Root Causes Found**:
+
+1. **Vercel Environment Variables**: `SUPABASE_SERVICE_ROLE_KEY` may not be set in Vercel production
+2. **Field name mismatch** in `NewUploadsSection.tsx`:
+   - Sent: `filename`, `sizeBytes`
+   - API expected: `name`, `size`
+3. **Response shape mismatch**:
+   - API returns: `{ id, uploadUrl, expiresAt }`
+   - Component expected: `{ document, uploadUrl }`
+4. **Missing HEIC/HEIF support** for iPhone photos
+
+**Fixes Applied**:
+
+1. **Fixed `NewUploadsSection.tsx`** (multiple document upload component):
+   - Changed `filename` → `name`, `sizeBytes` → `size`
+   - Changed `{ document, uploadUrl }` → `{ id: documentId, uploadUrl }`
+
+2. **Added HEIC/HEIF support**:
+   - `src/app/api/documents/route.ts`: Added to mimeType enum
+   - `src/infrastructure/supabase/types.ts`: Added to `ALLOWED_DOCUMENT_TYPES`
+   - Updated Supabase bucket allowed MIME types
+   - Updated migration file
+
+**User Action Required**:
+
+Verify these environment variables are set in **Vercel Production**:
+- `NEXT_PUBLIC_SUPABASE_URL` = `https://rhrasddllgyqbmhirkwq.supabase.co`
+- `SUPABASE_SERVICE_ROLE_KEY` = (from Supabase Dashboard → Settings → API)
+
+Go to: Vercel Dashboard → Your Project → Settings → Environment Variables
