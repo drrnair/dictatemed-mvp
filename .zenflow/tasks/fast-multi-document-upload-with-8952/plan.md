@@ -127,8 +127,11 @@ Do not make assumptions on important decisions — get clarification first.
   - Includes document status, fast/full extraction status, and extracted data
   - Reports errors from any phase (document, fast extraction, full extraction)
   - 1-second cache header for efficient polling
-- [x] Added comprehensive integration tests (18 new tests for batch, extract-fast, status)
+- [x] Added comprehensive integration tests (19 new tests for batch, extract-fast, status)
   - Auth, rate limiting, validation, success, and error cases
+- [x] Added rate limit headers to all extract-fast responses
+- [x] Added rate limiting to status endpoint
+- [x] Standardized `retryAfter` property name across all endpoints
 
 **Files created**:
 - `src/app/api/referrals/batch/route.ts`
@@ -136,9 +139,11 @@ Do not make assumptions on important decisions — get clarification first.
 - `src/app/api/referrals/[id]/status/route.ts`
 
 **Files modified**:
-- `tests/integration/api/referrals.test.ts` (added 18 new tests, now 48 total)
+- `tests/integration/api/referrals.test.ts` (added 19 new tests, now 49 total)
+- `src/app/api/referrals/[id]/extract-text/route.ts` (standardized retryAfter)
+- `src/app/api/referrals/[id]/extract-structured/route.ts` (standardized retryAfter)
 
-**Verification**: `npm run typecheck` passed, 48 integration tests passing
+**Verification**: `npm run typecheck` passed, 49 integration tests passing
 
 ---
 
