@@ -362,13 +362,14 @@ describe('referral.types', () => {
     it('should format megabytes correctly', () => {
       expect(formatFileSize(1024 * 1024)).toBe('1.0 MB');
       expect(formatFileSize(1024 * 1024 * 5.5)).toBe('5.5 MB');
-      expect(formatFileSize(MAX_REFERRAL_FILE_SIZE)).toBe('10.0 MB');
+      expect(formatFileSize(MAX_REFERRAL_FILE_SIZE)).toBe('20.0 MB');
     });
   });
 
   describe('MAX_REFERRAL_FILE_SIZE', () => {
-    it('should be 10 MB', () => {
-      expect(MAX_REFERRAL_FILE_SIZE).toBe(10 * 1024 * 1024);
+    it('should be 20 MB', () => {
+      // Updated from 10 MB to 20 MB to support larger scanned documents and photos
+      expect(MAX_REFERRAL_FILE_SIZE).toBe(20 * 1024 * 1024);
     });
   });
 });

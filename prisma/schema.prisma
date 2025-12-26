@@ -924,23 +924,33 @@ model ReferralDocument {
   sizeBytes Int
   s3Key     String
 
-  // Processing status (legacy single-phase)
+  // Processing status
   status ReferralDocumentStatus @default(UPLOADED)
 
-  // Extracted content (legacy single-phase)
-  contentText   String? @db.Text // Raw text from PDF/TXT
-  extractedData Json?            // Structured extraction result
+  // Extracted content
+  contentText   String? @db.Text // Raw text from PDF/TXT/OCR
+  // extractedData stores the full structured extraction result (ReferralExtractedData)
+  // This is populated by full extraction (background processing)
+  // Fast extraction data is stored separately in fastExtractionData
+  extractedData Json?            // Full structured extraction: { patient, gp, referrer, referralContext }
 
   // === Two-Phase Extraction (Fast + Background) ===
+  //
+  // Phase 1 - Fast extraction: Extracts patient identifiers only (<5 seconds)
+  //           Stored in fastExtractionData as FastExtractedData
+  //
+  // Phase 2 - Full extraction: Extracts complete context in background (<60 seconds)
+  //           Stored in extractedData as ReferralExtractedData (reuses existing field)
 
   // Fast extraction - patient identifiers only (<5 seconds)
   fastExtractionStatus      FastExtractionStatus? @default(PENDING) @map("fast_extraction_status")
-  fastExtractionData        Json?                 @map("fast_extraction_data") // { name, dob, mrn, confidence }
+  fastExtractionData        Json?                 @map("fast_extraction_data") // FastExtractedData: { patientName, dob, mrn, confidence }
   fastExtractionStartedAt   DateTime?             @map("fast_extraction_started_at")
   fastExtractionCompletedAt DateTime?             @map("fast_extraction_completed_at")
   fastExtractionError       String?               @map("fast_extraction_error")
 
   // Full extraction - complete context (background, <60 seconds)
+  // Note: Full extraction result is stored in extractedData (above), not a separate field
   fullExtractionStatus      FullExtractionStatus? @default(PENDING) @map("full_extraction_status")
   fullExtractionStartedAt   DateTime?             @map("full_extraction_started_at")
   fullExtractionCompletedAt DateTime?             @map("full_extraction_completed_at")

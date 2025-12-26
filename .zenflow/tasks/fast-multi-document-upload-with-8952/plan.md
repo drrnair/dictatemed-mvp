@@ -71,26 +71,38 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
-### [ ] Step 2: Fast Extraction Service & Prompt
+### [x] Step 2: Fast Extraction Service & Prompt
 <!-- chat-id: ade68013-ca7a-4d12-89df-8ca0eb4b916b -->
 
 **Objective**: Create optimized extraction for patient identifiers (<5 seconds)
 
-**Tasks**:
-- [ ] Create `src/domains/referrals/extractors/fast-patient-extraction.ts`:
-  - Optimized prompt for name, DOB, MRN only
-  - Parser for fast extraction response
-  - Confidence scoring
-- [ ] Create `src/domains/referrals/referral-fast-extraction.service.ts`:
-  - `extractFastPatientData()` function
-  - Update database with fast extraction status/data
-- [ ] Add unit tests for fast extraction parsing
+**Completed**:
+- [x] Created `src/domains/referrals/extractors/fast-patient-extraction.ts`:
+  - `FAST_PATIENT_EXTRACTION_PROMPT` - Minimal prompt for name, DOB, MRN only
+  - `FAST_EXTRACTION_SYSTEM_PROMPT` - Minimal system prompt
+  - `parseFastExtraction()` - Parser with JSON cleaning, field extraction, date normalization
+  - `FastExtractionError` - Custom error class with error codes
+  - Confidence scoring with weighted calculation (name 40%, DOB 35%, MRN 25%)
+  - Helper functions: `hasFastExtractionData()`, `hasMinimumFastExtractionData()`, `getFastExtractionSummary()`
+- [x] Created `src/domains/referrals/referral-fast-extraction.service.ts`:
+  - `extractFastPatientData()` - Main extraction function with status tracking
+  - `getFastExtractionData()` - Retrieve extraction data
+  - `getFastExtractionStatus()` - Get current status
+  - `isFastExtractionComplete()` - Check completion
+  - `retryFastExtraction()` - Retry failed extractions
+  - Uses Sonnet model with aggressive retry config (2 retries, 500ms initial delay)
+  - Creates audit log with timing metrics
+- [x] Added comprehensive unit tests (44 tests):
+  - Parser tests for JSON cleaning, date normalization, confidence calculation
+  - Service tests for extraction flow, status updates, error handling
+  - All tests passing
 
-**Files to create**:
+**Files created**:
 - `src/domains/referrals/extractors/fast-patient-extraction.ts`
 - `src/domains/referrals/referral-fast-extraction.service.ts`
+- `tests/unit/domains/referrals/fast-patient-extraction.test.ts`
 
-**Verification**: `npm run test -- fast-patient-extraction`
+**Verification**: `npm run typecheck` passed, 44 unit tests passing
 
 ---
 

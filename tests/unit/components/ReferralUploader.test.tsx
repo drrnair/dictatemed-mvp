@@ -159,8 +159,8 @@ describe('ReferralUploader', () => {
       render(<ReferralUploader {...defaultProps} />);
 
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-      // Create a file larger than 10MB
-      const largeFile = new File(['x'.repeat(11 * 1024 * 1024)], 'large.pdf', {
+      // Create a file larger than 20MB (limit was increased from 10MB to 20MB)
+      const largeFile = new File(['x'.repeat(21 * 1024 * 1024)], 'large.pdf', {
         type: 'application/pdf',
       });
 

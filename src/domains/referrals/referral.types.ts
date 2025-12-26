@@ -25,14 +25,24 @@ export interface ReferralDocument {
   s3Key: string;
   status: ReferralDocumentStatus;
   contentText?: string;
+  // Full extraction result - populated by background processing (Phase 2)
+  // Contains complete structured data: patient, GP, referrer, referral context
   extractedData?: ReferralExtractedData;
 
-  // Two-phase extraction fields
+  // === Two-Phase Extraction Fields ===
+  //
+  // Phase 1 - Fast extraction: Patient identifiers only (<5 seconds)
+  // Phase 2 - Full extraction: Complete context in background (<60 seconds)
+  //           Result stored in extractedData above (reuses existing field)
+
+  // Fast extraction (Phase 1)
   fastExtractionStatus?: FastExtractionStatus;
-  fastExtractionData?: FastExtractedData;
+  fastExtractionData?: FastExtractedData; // Patient name, DOB, MRN with confidence
   fastExtractionStartedAt?: Date;
   fastExtractionCompletedAt?: Date;
   fastExtractionError?: string;
+
+  // Full extraction status tracking (Phase 2) - result stored in extractedData
   fullExtractionStatus?: FullExtractionStatus;
   fullExtractionStartedAt?: Date;
   fullExtractionCompletedAt?: Date;
@@ -253,8 +263,9 @@ export function isExtendedUploadTypesEnabled(): boolean {
   return process.env.NEXT_PUBLIC_FEATURE_EXTENDED_UPLOAD_TYPES === 'true';
 }
 
-// Max file size in bytes (10 MB)
-export const MAX_REFERRAL_FILE_SIZE = 10 * 1024 * 1024;
+// Max file size in bytes (20 MB per file for multi-document upload)
+// Updated from 10 MB to support larger scanned documents and photos
+export const MAX_REFERRAL_FILE_SIZE = 20 * 1024 * 1024;
 
 // Confidence thresholds for extraction quality indicators
 // HIGH: 85%+ - Information clearly stated
@@ -468,15 +479,12 @@ export interface UploadQueueState {
   allFullExtractionsComplete: boolean;
 }
 
-// ============ Constants ============
+// ============ Multi-Document Upload Constants ============
 
-// Max files per batch upload
+// Max files per batch upload session
 export const MAX_BATCH_FILES = 10;
 
-// Max file size for batch upload (20 MB per file)
-export const MAX_BATCH_FILE_SIZE = 20 * 1024 * 1024;
-
-// Max concurrent uploads
+// Max concurrent uploads (parallel file uploads)
 export const MAX_CONCURRENT_UPLOADS = 3;
 
 // Fast extraction target time (ms)
