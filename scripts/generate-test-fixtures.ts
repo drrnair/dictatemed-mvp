@@ -7,10 +7,11 @@
 // This script creates sample JPEG, PNG, and DOCX files for testing
 // the extended file upload feature.
 
+/* eslint-disable no-console */
+
 import * as fs from 'fs';
 import * as path from 'path';
 import sharp from 'sharp';
-import mammoth from 'mammoth';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 
 const FIXTURES_DIR = path.join(__dirname, '../tests/e2e/fixtures/referrals');
