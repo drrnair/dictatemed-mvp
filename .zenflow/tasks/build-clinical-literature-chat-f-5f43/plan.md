@@ -90,6 +90,7 @@ npm run typecheck    # ✅ No errors
 ---
 
 ### [ ] Step 3: PubMed Integration
+<!-- chat-id: 2d98e207-6ddb-4de3-afe6-f8cc01b21f10 -->
 
 **Goal**: Implement PubMed E-utilities search
 
