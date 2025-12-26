@@ -402,12 +402,23 @@ Created comprehensive E2E tests for extended file upload types (JPEG, PNG, DOCX)
 npm run typecheck  # ✅ Passes
 npm run lint  # ✅ No warnings or errors
 npm run test -- tests/unit/domains/referrals/  # ✅ 242 tests pass (no regressions)
-npx playwright test tests/e2e/flows/extended-upload-types.spec.ts --list  # ✅ 18 tests recognized
+npx playwright test tests/e2e/flows/extended-upload-types.spec.ts --list  # ✅ 22 tests recognized
 npm run generate:test-fixtures  # ✅ Fixtures generated successfully
 ```
 
+**Post-Review Fixes Applied**:
+1. ✅ Removed unused `mammoth` import from `scripts/generate-test-fixtures.ts`
+2. ✅ Added `/* eslint-disable no-console */` to CLI script
+3. ✅ Added `isExtendedUploadTypesEnabled()` helper function for feature flag checking
+4. ✅ Added `test.skip()` logic when running against real APIs without feature flag
+5. ✅ Added 4 new tests for "Feature Flag Disabled" scenario:
+   - `should reject JPEG upload when feature flag is disabled`
+   - `should reject DOCX upload when feature flag is disabled`
+   - `should still accept PDF when feature flag is disabled`
+   - `should still accept TXT when feature flag is disabled`
+
 **Files Created**:
-- `tests/e2e/flows/extended-upload-types.spec.ts`
+- `tests/e2e/flows/extended-upload-types.spec.ts` (22 tests total)
 - `scripts/generate-test-fixtures.ts`
 - `tests/e2e/fixtures/referrals/image-referral-001.jpg`
 - `tests/e2e/fixtures/referrals/image-referral-001.png`
