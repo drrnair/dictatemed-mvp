@@ -4,6 +4,9 @@
 // User library service
 export { getUserLibraryService, UserLibraryService } from './user-library.service';
 
+// Orchestration service
+export { getLiteratureOrchestrationService, LiteratureOrchestrationService } from './orchestration.service';
+
 // Types
 export type {
   LiteratureSourceType,

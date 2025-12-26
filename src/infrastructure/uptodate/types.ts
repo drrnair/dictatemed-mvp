@@ -68,6 +68,8 @@ export interface UpToDateTopic {
   title: string;
   summary: string;
   url: string;
+  section?: string;
+  lastUpdated?: string;
   lastReviewDate?: string;
   specialty?: string;
   type?: string;

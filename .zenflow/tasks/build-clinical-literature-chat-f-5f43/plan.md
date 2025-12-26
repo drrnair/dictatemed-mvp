@@ -173,26 +173,43 @@ npm run test -- openai/embeddings    # ✅ 22 tests passed
 
 ---
 
-### [ ] Step 5: UpToDate OAuth Stub
-<!-- chat-id: 0b7116ea-4e5b-4e9b-a266-01bb728d8ebc -->
+### [x] Step 5: UpToDate OAuth Stub
 
 **Goal**: OAuth-ready infrastructure (stub for later activation)
 
-**Tasks**:
-1. Create `src/infrastructure/uptodate/`:
-   - `client.ts` - OAuth client (stub)
-   - `uptodate.service.ts` - Search service (stub returns empty)
+**Completed**:
+1. Verified existing `src/infrastructure/uptodate/` implementation:
    - `types.ts` - Type definitions
-2. Implement OAuth flow structure:
-   - `getAuthorizationUrl()` - Generate OAuth URL
-   - `exchangeCodeForTokens()` - Exchange code (stub)
-   - `refreshToken()` - Refresh logic (stub)
-   - `search()` - Returns empty array when not configured
-3. Add env check: `UPTODATE_CLIENT_ID` present = enabled
+     - `UpToDateConfig` - OAuth configuration
+     - `UpToDateTokens` - OAuth tokens
+     - `UpToDateSubscription` - Subscription info
+     - `UpToDateSearchParams`, `UpToDateSearchResult`, `UpToDateTopic` - Search types
+     - `UpToDateStatus` - Connection status
+     - `isUpToDateConfigured()` - Env check function
+   - `client.ts` - OAuth client (stub)
+     - `getAuthorizationUrl()` - Generate OAuth URL with CSRF state
+     - `exchangeCodeForTokens()` - Exchange code (stub returns mock tokens)
+     - `refreshToken()` - Refresh logic (stub returns mock tokens)
+     - `validateSubscription()` - Subscription check (stub)
+     - `encryptTokens()`/`decryptTokens()` - Token encryption for storage
+   - `uptodate.service.ts` - Search service (stub returns empty)
+     - `isEnabled()` - Check if credentials configured
+     - `getStatus()` - User connection status
+     - `getAuthorizationUrl()` - Delegate to client
+     - `connectAccount()` - Complete OAuth flow
+     - `disconnectAccount()` - Remove connection
+     - `search()` - Returns empty when not configured/connected
+   - `index.ts` - Module exports
+2. Env check: `UPTODATE_CLIENT_ID` + `UPTODATE_CLIENT_SECRET` = enabled
+3. Created comprehensive unit tests `tests/unit/infrastructure/uptodate/uptodate.test.ts`:
+   - 32 unit tests covering all functionality
+   - Tests for types, client, and service
+   - Tests for unconfigured, configured, and connected states
 
-**Verification**:
+**Verification**: ✅
 ```bash
-npm run typecheck
+npm run typecheck          # ✅ No errors
+npm run test -- uptodate   # ✅ 32 tests passed
 ```
 
 ---
