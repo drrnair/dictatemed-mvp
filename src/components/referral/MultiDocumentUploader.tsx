@@ -3,7 +3,7 @@
 // src/components/referral/MultiDocumentUploader.tsx
 // Multi-document upload component with fast extraction and background processing
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { Upload, Info, X, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,8 @@ export interface MultiDocumentUploaderProps {
   onFastExtractionComplete?: (data: FastExtractedData) => void;
   /** Callback when user clicks "Continue to Recording" with document IDs */
   onContinue?: (documentIds: string[]) => void;
+  /** Callback when background full extraction completes for all documents */
+  onFullExtractionComplete?: () => void;
   /** Whether the uploader is disabled */
   disabled?: boolean;
   /** Additional CSS classes to apply to the container */
@@ -41,18 +43,21 @@ export interface MultiDocumentUploaderProps {
 export function MultiDocumentUploader({
   onFastExtractionComplete,
   onContinue,
+  onFullExtractionComplete,
   disabled = false,
   className,
 }: MultiDocumentUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const prevAllFullExtractionsCompleteRef = useRef(false);
 
   const {
     files,
     isProcessing,
     hasErrors,
     canProceed,
+    allFullExtractionsComplete,
     aggregatedFastExtraction,
     completedFiles,
     addFiles,
@@ -63,6 +68,14 @@ export function MultiDocumentUploader({
     clearQueue,
     reset,
   } = useDocumentUploadQueue();
+
+  // Notify parent when all full extractions complete
+  useEffect(() => {
+    if (allFullExtractionsComplete && !prevAllFullExtractionsCompleteRef.current) {
+      onFullExtractionComplete?.();
+    }
+    prevAllFullExtractionsCompleteRef.current = allFullExtractionsComplete;
+  }, [allFullExtractionsComplete, onFullExtractionComplete]);
 
   // Handle file validation errors
   const handleValidationErrors = useCallback((errors: FileValidationError[]) => {

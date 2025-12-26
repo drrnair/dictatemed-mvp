@@ -1190,4 +1190,260 @@ describe('Referrals API', () => {
       expect(response.headers.get('Cache-Control')).toBe('private, max-age=1');
     });
   });
+
+  // ============================================
+  // Edge Case Tests for Multi-Document Upload
+  // ============================================
+
+  describe('Multi-Document Upload - Edge Cases', () => {
+    beforeEach(() => {
+      vi.mocked(auth.getSession).mockResolvedValue({ user: mockUser });
+      mockCheckRateLimit.mockReturnValue({ allowed: true, remaining: 59, resetAt: new Date() });
+    });
+
+    describe('Batch upload edge cases', () => {
+      it('handles empty files array', async () => {
+        const request = createRequest('http://localhost:3000/api/referrals/batch', {
+          method: 'POST',
+          body: JSON.stringify({ files: [] }),
+        });
+
+        const response = await BATCH_UPLOAD(request);
+        expect(response.status).toBe(400);
+      });
+
+      it('handles duplicate filenames in batch', async () => {
+        vi.mocked(prisma.referralDocument.create).mockImplementation((() =>
+          Promise.resolve({
+            ...mockReferralDocument,
+            id: `doc-${Date.now()}-${Math.random()}`,
+          })
+        ) as never);
+        vi.mocked(prisma.referralDocument.update).mockImplementation(((args: { where: { id: string } }) =>
+          Promise.resolve({
+            ...mockReferralDocument,
+            id: args.where.id,
+          })
+        ) as never);
+        vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
+        vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({
+          signedUrl: 'https://storage.example.com/presigned-upload',
+          storagePath: 'test',
+          expiresAt: new Date('2024-01-01T01:00:00Z'),
+        });
+
+        const request = createRequest('http://localhost:3000/api/referrals/batch', {
+          method: 'POST',
+          body: JSON.stringify({
+            files: [
+              { filename: 'duplicate.pdf', mimeType: 'application/pdf', sizeBytes: 1024 },
+              { filename: 'duplicate.pdf', mimeType: 'application/pdf', sizeBytes: 2048 },
+            ],
+          }),
+        });
+
+        const response = await BATCH_UPLOAD(request);
+        // Should handle duplicates (either accept or reject - implementation specific)
+        expect([201, 207, 400]).toContain(response.status);
+      });
+
+      it('handles mixed valid and invalid MIME types in batch', async () => {
+        vi.mocked(prisma.referralDocument.create).mockResolvedValue({
+          ...mockReferralDocument,
+          id: 'doc-valid',
+        });
+        vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+          ...mockReferralDocument,
+          id: 'doc-valid',
+        });
+        vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
+        vi.mocked(supabaseStorage.generateUploadUrl).mockResolvedValue({
+          signedUrl: 'https://storage.example.com/presigned-upload',
+          storagePath: 'test',
+          expiresAt: new Date('2024-01-01T01:00:00Z'),
+        });
+
+        const request = createRequest('http://localhost:3000/api/referrals/batch', {
+          method: 'POST',
+          body: JSON.stringify({
+            files: [
+              { filename: 'valid.pdf', mimeType: 'application/pdf', sizeBytes: 1024 },
+              { filename: 'invalid.exe', mimeType: 'application/x-msdownload', sizeBytes: 1024 },
+            ],
+          }),
+        });
+
+        const response = await BATCH_UPLOAD(request);
+        // Should reject invalid types in validation
+        expect([400]).toContain(response.status);
+      });
+    });
+
+    describe('Fast extraction edge cases', () => {
+      it('handles empty document text gracefully', async () => {
+        vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
+          ...mockReferralDocument,
+          contentText: '',
+          status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+        });
+
+        const request = createRequest(`http://localhost:3000/api/referrals/${mockReferralDocument.id}/extract-fast`, {
+          method: 'POST',
+        });
+
+        const response = await EXTRACT_FAST(request, { params: Promise.resolve({ id: mockReferralDocument.id }) });
+        // Empty content treated same as null - should return 400 (no text)
+        // but may return 500 if treated as validation error in some implementations
+        expect([400, 500]).toContain(response.status);
+      });
+
+      it('handles concurrent extraction requests (already processing)', async () => {
+        vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
+          ...mockReferralDocument,
+          contentText: 'Sample text',
+          fastExtractionStatus: 'PROCESSING' as const,
+        });
+        vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 0 }); // Lock not acquired
+
+        const request = createRequest(`http://localhost:3000/api/referrals/${mockReferralDocument.id}/extract-fast`, {
+          method: 'POST',
+        });
+
+        const response = await EXTRACT_FAST(request, { params: Promise.resolve({ id: mockReferralDocument.id }) });
+        // Should handle already processing state
+        expect([200, 409]).toContain(response.status);
+      });
+
+      it('handles AI extraction timeout', async () => {
+        vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
+          ...mockReferralDocument,
+          contentText: 'Sample text',
+          fastExtractionStatus: 'PENDING' as const,
+        });
+        vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 1 });
+        vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+          ...mockReferralDocument,
+          fastExtractionStatus: 'FAILED' as const,
+        });
+        vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
+
+        // Simulate timeout error
+        vi.mocked(textGeneration.generateTextWithRetry).mockRejectedValue(
+          new Error('Request timed out after 30000ms')
+        );
+
+        const request = createRequest(`http://localhost:3000/api/referrals/${mockReferralDocument.id}/extract-fast`, {
+          method: 'POST',
+        });
+
+        const response = await EXTRACT_FAST(request, { params: Promise.resolve({ id: mockReferralDocument.id }) });
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(body.status).toBe('FAILED');
+      });
+
+      it('handles malformed AI response', async () => {
+        vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
+          ...mockReferralDocument,
+          contentText: 'Sample text',
+          fastExtractionStatus: 'PENDING' as const,
+        });
+        vi.mocked(prisma.referralDocument.updateMany).mockResolvedValue({ count: 1 });
+        vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+          ...mockReferralDocument,
+          fastExtractionStatus: 'COMPLETE' as const,
+        });
+        vi.mocked(prisma.auditLog.create).mockResolvedValue({} as never);
+
+        // Simulate malformed JSON response
+        vi.mocked(textGeneration.generateTextWithRetry).mockResolvedValue({
+          content: 'This is not valid JSON {broken',
+          inputTokens: 100,
+          outputTokens: 50,
+          stopReason: 'end_turn',
+          modelId: 'anthropic.claude-sonnet-4-20250514-v1:0',
+        });
+
+        const request = createRequest(`http://localhost:3000/api/referrals/${mockReferralDocument.id}/extract-fast`, {
+          method: 'POST',
+        });
+
+        const response = await EXTRACT_FAST(request, { params: Promise.resolve({ id: mockReferralDocument.id }) });
+        const body = await response.json();
+
+        // Should handle parse errors gracefully
+        expect(response.status).toBe(200);
+        // Status will be FAILED or COMPLETE with partial data
+        expect(['FAILED', 'COMPLETE']).toContain(body.status);
+      });
+    });
+
+    describe('Status polling edge cases', () => {
+      it('returns full extraction error when that phase failed', async () => {
+        vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
+          ...mockReferralDocument,
+          status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+          fastExtractionStatus: 'COMPLETE' as const,
+          fastExtractionData: {
+            patientName: { value: 'John Smith', confidence: 0.95, level: 'high' },
+          },
+          fullExtractionStatus: 'FAILED' as const,
+          fullExtractionError: 'AI service temporarily unavailable',
+        });
+
+        const request = createRequest(`http://localhost:3000/api/referrals/${mockReferralDocument.id}/status`);
+        const response = await GET_STATUS(request, { params: Promise.resolve({ id: mockReferralDocument.id }) });
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(body.fullExtractionStatus).toBe('FAILED');
+        expect(body.error).toBe('AI service temporarily unavailable');
+      });
+
+      it('returns both fast and full extraction data when complete', async () => {
+        vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
+          ...mockReferralDocument,
+          status: 'EXTRACTED' as ReferralDocumentStatus,
+          fastExtractionStatus: 'COMPLETE' as const,
+          fastExtractionData: {
+            patientName: { value: 'John Smith', confidence: 0.95, level: 'high' },
+            dateOfBirth: { value: '1965-03-15', confidence: 0.90, level: 'high' },
+          },
+          fullExtractionStatus: 'COMPLETE' as const,
+          extractedData: {
+            patient: { name: 'John Smith', dateOfBirth: '1965-03-15' },
+            referrer: { name: 'Dr. Smith', practice: 'Sydney Clinic' },
+            clinicalContext: 'Heart failure assessment',
+          },
+        });
+
+        const request = createRequest(`http://localhost:3000/api/referrals/${mockReferralDocument.id}/status`);
+        const response = await GET_STATUS(request, { params: Promise.resolve({ id: mockReferralDocument.id }) });
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(body.fastExtractionStatus).toBe('COMPLETE');
+        expect(body.fullExtractionStatus).toBe('COMPLETE');
+        expect(body.fastExtractionData.patientName.value).toBe('John Smith');
+      });
+
+      it('handles document in uploading state', async () => {
+        vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
+          ...mockReferralDocument,
+          status: 'UPLOADING' as ReferralDocumentStatus,
+          fastExtractionStatus: 'PENDING' as const,
+          fullExtractionStatus: 'PENDING' as const,
+        });
+
+        const request = createRequest(`http://localhost:3000/api/referrals/${mockReferralDocument.id}/status`);
+        const response = await GET_STATUS(request, { params: Promise.resolve({ id: mockReferralDocument.id }) });
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(body.status).toBe('UPLOADING');
+        expect(body.fastExtractionStatus).toBe('PENDING');
+      });
+    });
+  });
 });

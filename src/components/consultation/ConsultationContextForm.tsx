@@ -93,18 +93,17 @@ export function ConsultationContextForm({
   );
 
   // Handle fast extraction complete (multi-document mode)
+  // Called when fast extraction completes with patient identifiers
   const handleFastExtractionComplete = useCallback(
-    (data: FastExtractedData, documentIds: string[]) => {
-      setUploadedDocumentIds(documentIds);
-
+    (data: FastExtractedData) => {
       // Pre-fill patient name from fast extraction if available
       const patientName = data.patientName?.value;
 
       // Update form with fast extraction data
+      // Document IDs will be set when user clicks "Continue" (via handleMultiDocContinue)
       onChange({
         ...value,
         fastExtractionData: data,
-        referralDocumentIds: documentIds,
       });
 
       // Show toast with extracted info
@@ -137,6 +136,16 @@ export function ConsultationContextForm({
     },
     [value, onChange]
   );
+
+  // Handle full extraction complete (background processing finished)
+  const handleFullExtractionComplete = useCallback(() => {
+    setIsMultiDocProcessing(false); // Background processing finished
+
+    toast({
+      title: 'Document processing complete',
+      description: 'All documents have been fully processed.',
+    });
+  }, []);
 
   // Handle apply from review panel
   const handleApplyReferral = useCallback(
@@ -294,6 +303,7 @@ export function ConsultationContextForm({
               onExtractionComplete={handleExtractionComplete}
               onFastExtractionComplete={handleFastExtractionComplete}
               onContinue={handleMultiDocContinue}
+              onFullExtractionComplete={handleFullExtractionComplete}
               onRemove={handleRemoveReferral}
               disabled={disabled}
               multiDocument={multiDocumentUpload}

@@ -55,10 +55,12 @@ export interface ReferralUploadState {
 interface ReferralUploaderProps {
   /** Called when full extraction completes (single-file mode) */
   onExtractionComplete?: (referralId: string, extractedData: ReferralExtractedData) => void;
-  /** Called when fast extraction completes (multi-file mode) */
-  onFastExtractionComplete?: (data: FastExtractedData, documentIds: string[]) => void;
-  /** Called when user is ready to continue (multi-file mode) */
+  /** Called when fast extraction completes with patient identifiers (multi-file mode) */
+  onFastExtractionComplete?: (data: FastExtractedData) => void;
+  /** Called when user is ready to continue with document IDs (multi-file mode) */
   onContinue?: (documentIds: string[]) => void;
+  /** Called when background full extraction completes for all documents (multi-file mode) */
+  onFullExtractionComplete?: () => void;
   onRemove?: () => void;
   disabled?: boolean;
   className?: string;
@@ -120,6 +122,7 @@ export function ReferralUploader({
   onExtractionComplete,
   onFastExtractionComplete,
   onContinue,
+  onFullExtractionComplete,
   onRemove,
   disabled = false,
   className,
@@ -134,32 +137,13 @@ export function ReferralUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Handle multi-document mode callbacks
-  const handleMultiDocFastExtraction = useCallback(
-    (data: FastExtractedData) => {
-      // This is called from MultiDocumentUploader when fast extraction is done
-      // We'll get documentIds from onContinue
-    },
-    []
-  );
-
-  const handleMultiDocContinue = useCallback(
-    (documentIds: string[]) => {
-      onContinue?.(documentIds);
-    },
-    [onContinue]
-  );
-
   // If multi-document mode is enabled, render MultiDocumentUploader
   if (multiDocument) {
     return (
       <MultiDocumentUploader
-        onFastExtractionComplete={(data) => {
-          // Store fast extraction data for when continue is clicked
-        }}
-        onContinue={(documentIds) => {
-          onContinue?.(documentIds);
-        }}
+        onFastExtractionComplete={onFastExtractionComplete}
+        onContinue={onContinue}
+        onFullExtractionComplete={onFullExtractionComplete}
         disabled={disabled}
         className={className}
       />

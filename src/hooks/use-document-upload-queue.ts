@@ -119,8 +119,8 @@ export function useDocumentUploadQueue(): UseDocumentUploadQueueResult {
   // AbortControllers for each file (keyed by client ID)
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
 
-  // Polling intervals (keyed by document ID)
-  // TODO: Used in Step 6 for full extraction status polling
+  // Polling intervals for status updates (keyed by document ID)
+  // Currently unused since full extraction uses fire-and-forget, but kept for future polling use
   const pollingIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Clean up on unmount
