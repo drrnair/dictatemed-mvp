@@ -236,7 +236,7 @@ describe('FastExtractionResult', () => {
       );
 
       const editButtons = screen.getAllByTestId('field-edit-button');
-      fireEvent.click(editButtons[0]); // Edit patient name
+      fireEvent.click(editButtons[0]!); // Edit patient name
 
       expect(screen.getByTestId('field-edit-input')).toBeInTheDocument();
     });
@@ -252,7 +252,7 @@ describe('FastExtractionResult', () => {
       );
 
       const editButtons = screen.getAllByTestId('field-edit-button');
-      fireEvent.click(editButtons[0]);
+      fireEvent.click(editButtons[0]!);
 
       const input = screen.getByTestId('field-edit-input') as HTMLInputElement;
       expect(input.value).toBe('John Smith');
@@ -267,7 +267,7 @@ describe('FastExtractionResult', () => {
       );
 
       const editButtons = screen.getAllByTestId('field-edit-button');
-      fireEvent.click(editButtons[0]);
+      fireEvent.click(editButtons[0]!);
 
       const input = screen.getByTestId('field-edit-input');
       fireEvent.change(input, { target: { value: 'Jane Doe' } });
@@ -286,7 +286,7 @@ describe('FastExtractionResult', () => {
       );
 
       const editButtons = screen.getAllByTestId('field-edit-button');
-      fireEvent.click(editButtons[0]);
+      fireEvent.click(editButtons[0]!);
 
       const input = screen.getByTestId('field-edit-input');
       fireEvent.change(input, { target: { value: 'New Name' } });
@@ -304,7 +304,7 @@ describe('FastExtractionResult', () => {
       );
 
       const editButtons = screen.getAllByTestId('field-edit-button');
-      fireEvent.click(editButtons[0]);
+      fireEvent.click(editButtons[0]!);
 
       const input = screen.getByTestId('field-edit-input');
       fireEvent.change(input, { target: { value: 'Changed Value' } });
@@ -324,7 +324,7 @@ describe('FastExtractionResult', () => {
       );
 
       const editButtons = screen.getAllByTestId('field-edit-button');
-      fireEvent.click(editButtons[1]); // Edit DOB
+      fireEvent.click(editButtons[1]!); // Edit DOB
 
       const input = screen.getByTestId('field-edit-input');
       fireEvent.change(input, { target: { value: '1990-01-01' } });
@@ -342,7 +342,7 @@ describe('FastExtractionResult', () => {
       );
 
       const editButtons = screen.getAllByTestId('field-edit-button');
-      fireEvent.click(editButtons[2]); // Edit MRN
+      fireEvent.click(editButtons[2]!); // Edit MRN
 
       const input = screen.getByTestId('field-edit-input');
       fireEvent.change(input, { target: { value: 'NEW123456' } });
