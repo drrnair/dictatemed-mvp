@@ -739,13 +739,15 @@ describe('referral.service', () => {
     });
 
     it('should throw error for unsupported MIME type', async () => {
+      // Use a truly unsupported MIME type (not PDF, TXT, images, DOCX, or RTF)
       vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue({
         ...mockReferralDocument,
-        mimeType: 'image/jpeg',
+        mimeType: 'video/mp4',
+        filename: 'video.mp4',
       });
       vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
-        content: Buffer.from('fake image'),
-        contentType: 'image/jpeg',
+        content: Buffer.from('fake video'),
+        contentType: 'video/mp4',
       });
       vi.mocked(prisma.referralDocument.update).mockResolvedValue({
         ...mockReferralDocument,
