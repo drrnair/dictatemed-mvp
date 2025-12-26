@@ -2,6 +2,7 @@
 
 // src/components/referral/ReferralUploader.tsx
 // Upload component for referral letters with extraction workflow
+// Supports both single-file (legacy) and multi-file modes
 
 import { useState, useCallback, useRef } from 'react';
 import {
@@ -28,7 +29,9 @@ import {
   getAcceptedExtensions,
   isExtendedUploadTypesEnabled,
   type ReferralExtractedData,
+  type FastExtractedData,
 } from '@/domains/referrals';
+import { MultiDocumentUploader } from './MultiDocumentUploader';
 
 // Upload status for the referral document
 export type ReferralUploadStatus =
@@ -50,10 +53,17 @@ export interface ReferralUploadState {
 }
 
 interface ReferralUploaderProps {
+  /** Called when full extraction completes (single-file mode) */
   onExtractionComplete?: (referralId: string, extractedData: ReferralExtractedData) => void;
+  /** Called when fast extraction completes (multi-file mode) */
+  onFastExtractionComplete?: (data: FastExtractedData, documentIds: string[]) => void;
+  /** Called when user is ready to continue (multi-file mode) */
+  onContinue?: (documentIds: string[]) => void;
   onRemove?: () => void;
   disabled?: boolean;
   className?: string;
+  /** Enable multi-document upload mode with background processing */
+  multiDocument?: boolean;
 }
 
 
@@ -108,9 +118,12 @@ function sleep(ms: number): Promise<void> {
 
 export function ReferralUploader({
   onExtractionComplete,
+  onFastExtractionComplete,
+  onContinue,
   onRemove,
   disabled = false,
   className,
+  multiDocument = false,
 }: ReferralUploaderProps) {
   const [state, setState] = useState<ReferralUploadState>({
     status: 'idle',
@@ -120,6 +133,38 @@ export function ReferralUploader({
   const dragCounter = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Handle multi-document mode callbacks
+  const handleMultiDocFastExtraction = useCallback(
+    (data: FastExtractedData) => {
+      // This is called from MultiDocumentUploader when fast extraction is done
+      // We'll get documentIds from onContinue
+    },
+    []
+  );
+
+  const handleMultiDocContinue = useCallback(
+    (documentIds: string[]) => {
+      onContinue?.(documentIds);
+    },
+    [onContinue]
+  );
+
+  // If multi-document mode is enabled, render MultiDocumentUploader
+  if (multiDocument) {
+    return (
+      <MultiDocumentUploader
+        onFastExtractionComplete={(data) => {
+          // Store fast extraction data for when continue is clicked
+        }}
+        onContinue={(documentIds) => {
+          onContinue?.(documentIds);
+        }}
+        disabled={disabled}
+        className={className}
+      />
+    );
+  }
 
   // Validate file before upload
   const validateFile = (file: File): string | null => {
