@@ -270,27 +270,41 @@ npm run test:integration -- tests/integration/api/referrals.test.ts  # ✅ 28 te
 
 ---
 
-### [ ] Step: Update Frontend Upload Component
+### [x] Step: Update Frontend Upload Component
 
-Update the ReferralUploader component for new file types.
+**Status**: Complete
 
-**Tasks**:
-1. Modify `src/components/referral/ReferralUploader.tsx`:
-   - Update `ACCEPTED_EXTENSIONS` constant
-   - Update `validateFile()` error messages
-   - Update file input `accept` attribute
-   - Remove Word-specific error (now supported)
-2. Verify drag-and-drop works with new types
-3. Add component tests for new file types
+Updated the ReferralUploader component to support new file types with feature flag.
 
-**Verification**:
+**Completed Tasks**:
+1. ✅ Modified `src/components/referral/ReferralUploader.tsx`:
+   - Removed hardcoded `ACCEPTED_EXTENSIONS` constant
+   - Added imports for `getAllowedMimeTypes()`, `getAcceptedExtensions()`, `isExtendedUploadTypesEnabled()`
+   - Updated `validateFile()` to show Word-specific error only when feature flag is disabled
+   - Updated error message to dynamically show allowed extensions: `Invalid file type. Please upload one of: ${extensions}`
+   - Updated file input `accept` attribute to use `getAllowedMimeTypes().join(',')`
+   - Updated UI display to use `getAcceptedExtensions()` function
+2. ✅ Verified drag-and-drop works with new types (via tests)
+3. ✅ Added 12 new component tests for extended file types:
+   - Base extensions shown when flag disabled
+   - Extended extensions shown when flag enabled
+   - JPEG/PNG/HEIC/DOCX/RTF acceptance when flag enabled
+   - JPEG/DOCX rejection when flag disabled
+   - Word documents show specific error when flag disabled
+   - Drag-and-drop with JPEG and DOCX files
+   - Unsupported files (video/mp4) rejected even with flag enabled
+
+**Verification Results**:
 ```bash
-npm run test -- tests/unit/components/referral/ReferralUploader.test.tsx
-npm run typecheck
+npm run typecheck  # ✅ Passes
+npm run lint  # ✅ No warnings or errors
+npm run test -- tests/unit/components/ReferralUploader.test.tsx  # ✅ 48 tests pass
+npm run test -- tests/unit/domains/referrals/  # ✅ 181 tests pass (no regressions)
 ```
 
 **Files Modified**:
 - `src/components/referral/ReferralUploader.tsx`
+- `tests/unit/components/ReferralUploader.test.tsx`
 
 ---
 
