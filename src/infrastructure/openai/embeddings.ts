@@ -148,7 +148,7 @@ class EmbeddingsService {
     const allEmbeddings: number[][] = [];
     let totalPromptTokens = 0;
     let totalTokens = 0;
-    let modelUsed = this.config.model;
+    let modelUsed: string = this.config.model;
 
     for (let i = 0; i < texts.length; i += batchSize) {
       const batch = texts.slice(i, i + batchSize);
@@ -296,11 +296,13 @@ export class TextChunker {
       for (const segment of segments) {
         const parts = segment.split(separator);
         for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
+          if (part === undefined) continue;
           // Add separator back except for last part
           if (i < parts.length - 1) {
-            newSegments.push(parts[i] + separator);
-          } else if (parts[i]) {
-            newSegments.push(parts[i]);
+            newSegments.push(part + separator);
+          } else if (part) {
+            newSegments.push(part);
           }
         }
       }

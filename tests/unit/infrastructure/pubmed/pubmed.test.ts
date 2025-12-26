@@ -212,11 +212,16 @@ describe('PubMedClient', () => {
     });
 
     it('should throw error on API failure', async () => {
-      mockFetch.mockResolvedValueOnce({
+      // Mock all retry attempts with the same 500 error
+      const errorResponse = {
         ok: false,
         status: 500,
         text: () => Promise.resolve('Internal Server Error'),
-      });
+      };
+      mockFetch
+        .mockResolvedValueOnce(errorResponse)
+        .mockResolvedValueOnce(errorResponse)
+        .mockResolvedValueOnce(errorResponse);
 
       await expect(client.search({ query: 'test' })).rejects.toThrow(
         'PubMed search failed: 500'

@@ -82,6 +82,8 @@ class PubMedService {
         freeFullText: Boolean(pmcidMap.get(article.pmid) ?? article.pmcid),
         url: `https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/`,
         publicationType: article.publicationType,
+        meshTerms: article.meshTerms?.length ? article.meshTerms : undefined,
+        keywords: article.keywords?.length ? article.keywords : undefined,
       }));
 
       log.info('PubMed search complete', {
@@ -230,6 +232,18 @@ class PubMedService {
       }
     }
 
+    // Extract author-provided keywords
+    const keywords: string[] = [];
+    const keywordMatches = xml.match(/<Keyword[^>]*>([^<]+)<\/Keyword>/g);
+    if (keywordMatches) {
+      for (const kw of keywordMatches) {
+        const kwMatch = kw.match(/>([^<]+)</);
+        if (kwMatch?.[1]) {
+          keywords.push(kwMatch[1]);
+        }
+      }
+    }
+
     // Format publication date
     const pubDate = [year, month, day].filter(Boolean).join(' ');
 
@@ -249,6 +263,7 @@ class PubMedService {
       pmcid,
       publicationType: publicationTypes,
       meshTerms,
+      keywords,
       pubDate,
       year,
     };

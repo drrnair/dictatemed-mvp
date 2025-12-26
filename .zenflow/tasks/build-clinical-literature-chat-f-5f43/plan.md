@@ -125,26 +125,50 @@ npm run test -- pubmed  # ✅ 18 tests passed
 
 ---
 
-### [ ] Step 4: User Library Service (Vector Search)
-<!-- chat-id: c29b3d62-6e27-4409-8f35-53a0fb8fb176 -->
+### [x] Step 4: User Library Service (Vector Search)
 
 **Goal**: PDF upload with embedding-based search
 
-**Tasks**:
-1. Create `src/domains/literature/user-library.service.ts`:
-   - `uploadDocument()` - Extract text, chunk, embed, store
-   - `search()` - Vector similarity search via pgvector
-   - `listDocuments()` - Get user's library
-   - `deleteDocument()` - Remove document and chunks
-2. Create `src/infrastructure/openai/embeddings.ts`:
-   - `generateEmbeddings()` - Batch embedding generation
-3. Add helper for PDF text extraction + chunking
-4. Add unit tests `tests/unit/domains/user-library.test.ts`
+**Completed**:
+1. Created `src/infrastructure/openai/`:
+   - `types.ts` - Type definitions for embeddings
+     - `EmbeddingConfig`, `EmbeddingModel`, `EmbeddingRequest/Response`
+     - `ChunkingConfig`, `TextChunk` for document chunking
+     - `DEFAULT_EMBEDDING_CONFIG`, `DEFAULT_CHUNKING_CONFIG`
+     - `EMBEDDING_PRICING` for cost tracking
+   - `embeddings.ts` - OpenAI embeddings service
+     - `EmbeddingsService` class with singleton pattern
+     - `generateEmbeddings()` - Batch embedding generation
+     - `generateEmbedding()` - Single text embedding
+     - `generateEmbeddingsBatched()` - Handles large inputs with batching
+     - Token usage tracking and cost estimation
+     - `TextChunker` class for intelligent text splitting
+   - `index.ts` - Module exports
+2. Created `src/domains/literature/`:
+   - `types.ts` - Shared types for literature chat
+     - `Citation`, `LiteratureSearchResult`, `LiteratureSearchParams`
+     - `UserLibraryDocument`, `UserLibrarySearchResult`, `UserLibraryChunkResult`
+     - `UploadDocumentRequest/Result`
+     - `TierConfig`, `TIER_LIMITS` (Essential/Professional/Enterprise)
+   - `user-library.service.ts` - User library service
+     - `uploadDocument()` - PDF text extraction, chunking, embeddings, storage
+     - `search()` - Vector similarity search using pgvector
+     - `listDocuments()` - Get user's documents with chunk counts
+     - `getDocument()` - Get single document by ID
+     - `deleteDocument()` - Remove document and chunks
+     - Tier-based limits enforcement
+   - `index.ts` - Module exports
+3. Added generic `encrypt()` and `decrypt()` functions to `src/infrastructure/db/encryption.ts`
+4. Fixed UpToDate client to use local encryption functions
+5. Created unit tests:
+   - `tests/unit/domains/literature/user-library.service.test.ts` - 16 tests
+   - `tests/unit/infrastructure/openai/embeddings.test.ts` - 22 tests
 
-**Verification**:
+**Verification**: ✅
 ```bash
-npm run typecheck
-npm run test -- user-library
+npm run typecheck                    # ✅ No errors
+npm run test -- literature           # ✅ 16 tests passed
+npm run test -- openai/embeddings    # ✅ 22 tests passed
 ```
 
 ---

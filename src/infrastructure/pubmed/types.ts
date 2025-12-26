@@ -130,6 +130,10 @@ export interface PubMedArticleResult {
   freeFullText: boolean;
   url: string;
   publicationType: string[];
+  /** MeSH terms for clinical indexing */
+  meshTerms?: string[];
+  /** Author-provided keywords */
+  keywords?: string[];
 }
 
 /**
