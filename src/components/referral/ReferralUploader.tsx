@@ -118,16 +118,18 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function ReferralUploader({
+// Single-file uploader component (legacy mode)
+function SingleFileUploader({
   onExtractionComplete,
-  onFastExtractionComplete,
-  onContinue,
-  onFullExtractionComplete,
   onRemove,
   disabled = false,
   className,
-  multiDocument = false,
-}: ReferralUploaderProps) {
+}: {
+  onExtractionComplete?: (referralId: string, extractedData: ReferralExtractedData) => void;
+  onRemove?: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
   const [state, setState] = useState<ReferralUploadState>({
     status: 'idle',
     progress: 0,
@@ -136,19 +138,6 @@ export function ReferralUploader({
   const dragCounter = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  // If multi-document mode is enabled, render MultiDocumentUploader
-  if (multiDocument) {
-    return (
-      <MultiDocumentUploader
-        onFastExtractionComplete={onFastExtractionComplete}
-        onContinue={onContinue}
-        onFullExtractionComplete={onFullExtractionComplete}
-        disabled={disabled}
-        className={className}
-      />
-    );
-  }
 
   // Validate file before upload
   const validateFile = (file: File): string | null => {
@@ -637,5 +626,40 @@ export function ReferralUploader({
         </div>
       </div>
     </div>
+  );
+}
+
+// Exported component that delegates to either single or multi-document uploader
+export function ReferralUploader({
+  onExtractionComplete,
+  onFastExtractionComplete,
+  onContinue,
+  onFullExtractionComplete,
+  onRemove,
+  disabled = false,
+  className,
+  multiDocument = false,
+}: ReferralUploaderProps) {
+  // If multi-document mode is enabled, render MultiDocumentUploader
+  if (multiDocument) {
+    return (
+      <MultiDocumentUploader
+        onFastExtractionComplete={onFastExtractionComplete}
+        onContinue={onContinue}
+        onFullExtractionComplete={onFullExtractionComplete}
+        disabled={disabled}
+        className={className}
+      />
+    );
+  }
+
+  // Otherwise render the single-file uploader (legacy mode)
+  return (
+    <SingleFileUploader
+      onExtractionComplete={onExtractionComplete}
+      onRemove={onRemove}
+      disabled={disabled}
+      className={className}
+    />
   );
 }
