@@ -175,7 +175,7 @@ describe('Documents API', () => {
       vi.mocked(documentService.createDocument).mockResolvedValue({
         id: 'new-document-id',
         uploadUrl: 'https://s3.amazonaws.com/presigned-url',
-        ...mockDocumentUserA,
+        expiresAt: new Date('2024-01-01T01:00:00Z'),
       });
 
       const request = createRequest('/api/documents', {
