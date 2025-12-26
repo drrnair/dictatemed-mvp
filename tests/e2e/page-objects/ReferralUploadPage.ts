@@ -105,7 +105,8 @@ export class ReferralUploadPage extends BasePage {
     this.uploadDropzone = page.locator(
       '[data-testid="referral-dropzone"], [data-testid="file-dropzone"]'
     );
-    this.fileInput = page.locator('input[type="file"][accept*="pdf"]');
+    // Support both base types (pdf, txt) and extended types (images, docx)
+    this.fileInput = page.locator('input[type="file"]').first();
     this.uploadButton = page.getByRole('button', { name: /upload|select file/i });
     this.uploadProgress = page.locator('[data-testid="upload-progress"]');
     this.uploadProgressBar = page.locator('[role="progressbar"]');

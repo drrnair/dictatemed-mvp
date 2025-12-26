@@ -733,10 +733,11 @@ async function extractTextFromImageBuffer(
     processedMimeType = converted.mimeType;
   }
 
-  // Check if the processed type is supported by vision API
+  // Fallback: Convert any remaining non-supported formats to JPEG
+  // This handles edge cases where a format might be added to IMAGE_MIME_TYPES
+  // but not yet supported by Claude Vision (jpeg, png, gif, webp are supported)
   if (!isVisionSupportedMimeType(processedMimeType)) {
-    // Convert non-supported formats (like PNG) to JPEG
-    // Note: PNG is actually supported, but we keep this for safety
+    log.info('Converting unsupported vision format to JPEG', { originalType: processedMimeType });
     const converted = await convertToJpeg(content, mimeType);
     processedBuffer = converted.buffer;
     processedMimeType = converted.mimeType;
@@ -840,8 +841,11 @@ function parseRtfContent(rtf: string): string {
     'footerl', 'footerr', 'footerf', 'footnote', 'annotation',
   ]);
 
+  // Helper to safely get character at position (returns empty string if out of bounds)
+  const charAt = (pos: number): string => rtf.charAt(pos);
+
   while (i < rtf.length) {
-    const char = rtf[i];
+    const char = charAt(i);
 
     if (char === '{') {
       depth++;
@@ -870,7 +874,7 @@ function parseRtfContent(rtf: string): string {
       i++;
       if (i >= rtf.length) break;
 
-      const nextChar = rtf[i];
+      const nextChar = charAt(i);
 
       // Control symbol (non-letter after backslash)
       if (!/[a-zA-Z]/.test(nextChar)) {
@@ -915,26 +919,26 @@ function parseRtfContent(rtf: string): string {
 
       // Control word: read letters
       let word = '';
-      while (i < rtf.length && /[a-zA-Z]/.test(rtf[i])) {
-        word += rtf[i];
+      while (i < rtf.length && /[a-zA-Z]/.test(charAt(i))) {
+        word += charAt(i);
         i++;
       }
 
       // Read optional numeric parameter (can be negative)
       let param = '';
-      if (i < rtf.length && (rtf[i] === '-' || /[0-9]/.test(rtf[i]))) {
-        if (rtf[i] === '-') {
+      if (i < rtf.length && (charAt(i) === '-' || /[0-9]/.test(charAt(i)))) {
+        if (charAt(i) === '-') {
           param += '-';
           i++;
         }
-        while (i < rtf.length && /[0-9]/.test(rtf[i])) {
-          param += rtf[i];
+        while (i < rtf.length && /[0-9]/.test(charAt(i))) {
+          param += charAt(i);
           i++;
         }
       }
 
       // Consume optional trailing space (delimiter)
-      if (i < rtf.length && rtf[i] === ' ') {
+      if (i < rtf.length && charAt(i) === ' ') {
         i++;
       }
 
@@ -961,7 +965,7 @@ function parseRtfContent(rtf: string): string {
           output.push(String.fromCharCode(actualCode));
         }
         // Skip the replacement character (usually ?)
-        if (i < rtf.length && rtf[i] === '?') {
+        if (i < rtf.length && charAt(i) === '?') {
           i++;
         }
       } else if (word === 'emdash') {

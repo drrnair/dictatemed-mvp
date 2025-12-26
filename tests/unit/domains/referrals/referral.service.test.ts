@@ -1146,6 +1146,154 @@ describe('referral.service', () => {
         referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1')
       ).rejects.toThrow('No readable text found');
     });
+
+    it('should extract text from RTF document', async () => {
+      // Simple RTF with nested font table and paragraphs
+      const rtfContent = '{\\rtf1\\ansi{\\fonttbl{\\f0 Arial;}}{\\colortbl;}\\f0 Dear Specialist,\\par I am referring this patient.\\par Thank you.}';
+      const rtfDoc = {
+        ...mockReferralDocument,
+        mimeType: 'application/rtf',
+        filename: 'referral-letter.rtf',
+      };
+
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(rtfDoc);
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
+        content: Buffer.from(rtfContent),
+        contentType: 'application/rtf',
+      });
+      mockIsImageMimeType.mockReturnValue(false);
+      mockIsDocxMimeType.mockReturnValue(false);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...rtfDoc,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1');
+
+      expect(result.status).toBe('TEXT_EXTRACTED');
+      expect(result.textLength).toBeGreaterThan(0);
+      // Verify the nested font table was skipped and text was extracted
+      expect(result.preview).toContain('Dear Specialist');
+      expect(result.preview).not.toContain('fonttbl');
+    });
+
+    it('should handle RTF with hex characters', async () => {
+      // RTF with hex-encoded characters (\'e9 = é)
+      const rtfContent = "{\\rtf1\\ansi Caf\\'e9 au lait}";
+      const rtfDoc = {
+        ...mockReferralDocument,
+        mimeType: 'text/rtf',
+        filename: 'referral.rtf',
+      };
+
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(rtfDoc);
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
+        content: Buffer.from(rtfContent),
+        contentType: 'text/rtf',
+      });
+      mockIsImageMimeType.mockReturnValue(false);
+      mockIsDocxMimeType.mockReturnValue(false);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...rtfDoc,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1');
+
+      expect(result.status).toBe('TEXT_EXTRACTED');
+      expect(result.preview).toContain('Café au lait');
+    });
+
+    it('should handle RTF with Unicode characters including negative values', async () => {
+      // RTF with Unicode: \u8364? = € (euro sign), \u-10? = U+FFF6 in RTF's signed representation
+      const rtfContent = '{\\rtf1\\ansi Price: \\u8364?100}';
+      const rtfDoc = {
+        ...mockReferralDocument,
+        mimeType: 'application/rtf',
+        filename: 'referral.rtf',
+      };
+
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(rtfDoc);
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
+        content: Buffer.from(rtfContent),
+        contentType: 'application/rtf',
+      });
+      mockIsImageMimeType.mockReturnValue(false);
+      mockIsDocxMimeType.mockReturnValue(false);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...rtfDoc,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1');
+
+      expect(result.status).toBe('TEXT_EXTRACTED');
+      expect(result.preview).toContain('€');
+      expect(result.preview).toContain('100');
+    });
+
+    it('should throw error for invalid RTF file', async () => {
+      const rtfDoc = {
+        ...mockReferralDocument,
+        mimeType: 'application/rtf',
+        filename: 'invalid.rtf',
+      };
+
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(rtfDoc);
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
+        content: Buffer.from('This is not an RTF file'),
+        contentType: 'application/rtf',
+      });
+      mockIsImageMimeType.mockReturnValue(false);
+      mockIsDocxMimeType.mockReturnValue(false);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...rtfDoc,
+        status: 'FAILED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      await expect(
+        referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1')
+      ).rejects.toThrow('Invalid RTF file: Missing RTF header');
+    });
+
+    it('should handle RTF with special typography characters', async () => {
+      // RTF with em-dash, en-dash, smart quotes, and bullets
+      const rtfContent = '{\\rtf1\\ansi \\ldblquote Hello\\rdblquote \\emdash world\\endash test\\bullet item}';
+      const rtfDoc = {
+        ...mockReferralDocument,
+        mimeType: 'application/rtf',
+        filename: 'referral.rtf',
+      };
+
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(rtfDoc);
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
+        content: Buffer.from(rtfContent),
+        contentType: 'application/rtf',
+      });
+      mockIsImageMimeType.mockReturnValue(false);
+      mockIsDocxMimeType.mockReturnValue(false);
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...rtfDoc,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1');
+
+      expect(result.status).toBe('TEXT_EXTRACTED');
+      // Check for smart quotes (U+201C left double quote, U+201D right double quote)
+      expect(result.preview).toContain('\u201C'); // left double quote "
+      expect(result.preview).toContain('\u201D'); // right double quote "
+      // Check for dashes
+      expect(result.preview).toContain('\u2014'); // em-dash —
+      expect(result.preview).toContain('\u2013'); // en-dash –
+      // Check for bullet
+      expect(result.preview).toContain('\u2022'); // bullet •
+    });
   });
 
   describe('findMatchingPatient', () => {

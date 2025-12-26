@@ -187,6 +187,9 @@ export const TEST_CONTACTS = {
  * Note: Keys are the base filename without extension. The actual files are:
  * - tests/e2e/fixtures/referrals/cardiology-referral-001.txt (source)
  * - tests/e2e/fixtures/referrals/cardiology-referral-001.pdf (generated)
+ * - tests/e2e/fixtures/referrals/image-referral-001.jpg (image referral)
+ * - tests/e2e/fixtures/referrals/image-referral-001.png (image referral)
+ * - tests/e2e/fixtures/referrals/docx-referral-001.docx (Word document referral)
  */
 export const EXPECTED_REFERRAL_EXTRACTIONS = {
   // Heart failure referral (routine)
@@ -220,6 +223,38 @@ export const EXPECTED_REFERRAL_EXTRACTIONS = {
     },
     reasonForReferral: 'Exertional chest pain with positive stress test for urgent cardiology review',
     urgency: 'urgent',
+  },
+  // Image referral (JPEG/PNG) - extracted via Claude Vision
+  'image-referral-001': {
+    patient: {
+      name: 'TEST Patient - Image Referral',
+      dateOfBirth: '1965-05-15',
+      mrn: 'TEST-REF-IMG-001',
+    },
+    referrer: {
+      name: 'Dr. TEST Referring GP Melbourne',
+      practice: 'TEST Melbourne Medical Centre',
+      email: undefined, // Not visible in image
+      phone: '+61 3 9000 0003',
+    },
+    reasonForReferral: 'Chest discomfort on exertion requiring cardiology review',
+    urgency: 'routine',
+  },
+  // DOCX referral (Word document) - extracted via mammoth
+  'docx-referral-001': {
+    patient: {
+      name: 'TEST Patient - DOCX Referral',
+      dateOfBirth: '1970-08-10',
+      mrn: 'TEST-REF-DOCX-001',
+    },
+    referrer: {
+      name: 'Dr. TEST Referring GP Brisbane DOCX',
+      practice: 'TEST Brisbane Medical Practice',
+      email: 'test.gp.brisbane.docx@test.dictatemed.dev',
+      phone: '+61 7 9000 0003',
+    },
+    reasonForReferral: 'Palpitations and dizziness for cardiology assessment',
+    urgency: 'routine',
   },
 } as const;
 

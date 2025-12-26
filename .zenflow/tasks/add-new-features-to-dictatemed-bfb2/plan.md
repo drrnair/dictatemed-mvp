@@ -203,25 +203,43 @@ Extended the text extraction logic to handle new file types (images, DOCX, RTF).
    - Created `extractTextByMimeType()` - routing function for type-specific extraction
    - Created `extractTextFromImageBuffer()` - handles HEIC conversion + Claude Vision OCR
    - Created `extractTextFromDocxBuffer()` - uses mammoth for Word document extraction
-   - Created `extractTextFromRtfBuffer()` - parses RTF control codes to extract plain text
+   - Created `extractTextFromRtfBuffer()` - stack-based RTF parser with proper brace handling
+   - Created `parseRtfContent()` - full RTF parsing supporting:
+     - Nested brace structures (font tables, color tables, stylesheets)
+     - Destination group skipping (fonttbl, colortbl, info, pict, etc.)
+     - Hex characters (`\'e9` → `é`)
+     - Unicode with negative values (`\u-10?` → signed 16-bit conversion)
+     - Typography characters (emdash, endash, smart quotes, bullets)
    - Updated `extractTextFromDocument()` to use the new routing function
+   - Clarified PNG conversion comment (fallback for future formats, not PNG)
 2. ✅ Added imports for new utility modules (image-utils, docx-utils, vision-extraction)
 3. ✅ Updated test file with mocks for new modules
-4. ✅ Added 6 new test cases for extended file types:
+4. ✅ Added 11 new test cases for extended file types:
    - JPEG image extraction via vision API
    - HEIC to JPEG conversion before vision extraction
    - Word document extraction via mammoth
    - Word document extraction failure handling
    - Image validation failure handling
    - Vision extraction no readable text handling
+   - RTF document extraction with nested font tables
+   - RTF with hex characters (café)
+   - RTF with Unicode characters (€)
+   - RTF with invalid header (error handling)
+   - RTF with special typography (smart quotes, dashes, bullets)
 5. ✅ Updated existing test for unsupported MIME type (now uses video/mp4)
+
+**Code Review Fixes Applied**:
+- Fixed RTF parser to use stack-based brace matching (was using regex that didn't handle nesting)
+- Added support for negative Unicode values in RTF (`\u-10?` syntax)
+- Clarified PNG conversion comment (it's a fallback, not actually used for PNG)
+- Used `String.charAt()` instead of bracket notation for TypeScript safety
 
 **Verification Results**:
 ```bash
 npm run typecheck  # ✅ Passes
 npm run lint  # ✅ No warnings or errors
-npm run test -- tests/unit/domains/referrals/referral.service.test.ts  # ✅ 61 tests pass
-npm run test -- tests/unit/domains/referrals/  # ✅ 181 total tests pass (no regressions)
+npm run test -- tests/unit/domains/referrals/referral.service.test.ts  # ✅ 66 tests pass
+npm run test -- tests/unit/domains/referrals/  # ✅ 242 total tests pass (no regressions)
 ```
 
 **Files Modified**:
