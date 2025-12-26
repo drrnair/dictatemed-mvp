@@ -4,7 +4,7 @@
 // Multi-document upload component with fast extraction and background processing
 
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { Upload, Info, X, ArrowRight } from 'lucide-react';
+import { Upload, Info, X, ArrowRight, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -60,6 +60,7 @@ export function MultiDocumentUploader({
     allFullExtractionsComplete,
     aggregatedFastExtraction,
     completedFiles,
+    patientConflict,
     addFiles,
     removeFile,
     retryFile,
@@ -265,6 +266,28 @@ export function MultiDocumentUploader({
           onRetryFile={retryFile}
           onCancelFile={cancelFile}
         />
+      )}
+
+      {/* Patient conflict warning */}
+      {patientConflict?.hasConflict && (
+        <div
+          className="flex items-start gap-3 p-4 rounded-lg bg-amber-50 border border-amber-200"
+          data-testid="patient-conflict-warning"
+          role="alert"
+        >
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-amber-800">
+              Multiple patients detected
+            </p>
+            <p className="text-sm text-amber-700">
+              {patientConflict.conflictDescription}
+            </p>
+            <p className="text-xs text-amber-600">
+              Please verify you are uploading documents for the same patient.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Fast extraction results */}

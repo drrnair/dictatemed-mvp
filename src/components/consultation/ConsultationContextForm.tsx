@@ -370,6 +370,7 @@ export function ConsultationContextForm({
             value={value.patient}
             onChange={handlePatientChange}
             disabled={disabled}
+            initialSearchQuery={value.fastExtractionData?.patientName?.value || undefined}
           />
           {errors?.patient && (
             <p className="mt-1 flex items-center gap-1 text-sm text-destructive">

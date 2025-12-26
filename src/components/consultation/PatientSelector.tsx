@@ -24,6 +24,10 @@ interface PatientSelectorProps {
   value?: PatientSummary;
   onChange: (patient: PatientSummary | undefined) => void;
   disabled?: boolean;
+  /** Initial search query to pre-fill (from fast extraction) */
+  initialSearchQuery?: string;
+  /** Auto-trigger search when initialSearchQuery is set */
+  autoSearch?: boolean;
 }
 
 interface PatientSearchResult {
@@ -33,14 +37,21 @@ interface PatientSearchResult {
   mrn?: string;
 }
 
-export function PatientSelector({ value, onChange, disabled }: PatientSelectorProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+export function PatientSelector({
+  value,
+  onChange,
+  disabled,
+  initialSearchQuery = '',
+  autoSearch = true,
+}: PatientSelectorProps) {
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [searchResults, setSearchResults] = useState<PatientSearchResult[]>([]);
   const [recentPatients, setRecentPatients] = useState<PatientSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasAppliedInitialSearch, setHasAppliedInitialSearch] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -99,6 +110,23 @@ export function PatientSelector({ value, onChange, disabled }: PatientSelectorPr
       setIsSearching(false);
     }
   }, []);
+
+  // Auto-search when initialSearchQuery changes (from fast extraction)
+  useEffect(() => {
+    if (
+      autoSearch &&
+      initialSearchQuery &&
+      initialSearchQuery.trim().length >= 2 &&
+      !hasAppliedInitialSearch &&
+      !value // Only auto-search if no patient is selected
+    ) {
+      setSearchQuery(initialSearchQuery);
+      setShowDropdown(true);
+      setHasAppliedInitialSearch(true);
+      // Trigger search
+      searchPatients(initialSearchQuery);
+    }
+  }, [autoSearch, initialSearchQuery, hasAppliedInitialSearch, value, searchPatients]);
 
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

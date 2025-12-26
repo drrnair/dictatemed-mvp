@@ -8,6 +8,7 @@ import {
   type UploadQueueState,
   type FastExtractedData,
   type BatchUploadFileResult,
+  type PatientConflictResult,
   MAX_BATCH_FILES,
   MAX_CONCURRENT_UPLOADS,
   MAX_REFERRAL_FILE_SIZE,
@@ -15,6 +16,7 @@ import {
   isFileSizeValid,
   formatFileSize,
   getAcceptedExtensions,
+  detectPatientConflicts,
 } from '@/domains/referrals';
 
 // Generate a unique client-side ID for tracking files before server assignment
@@ -58,6 +60,8 @@ export interface UseDocumentUploadQueueResult extends UploadQueueState, UseDocum
   processingFiles: QueuedFile[];
   // List of files ready for the next step
   completedFiles: QueuedFile[];
+  // Multi-patient conflict detection result
+  patientConflict: PatientConflictResult | null;
 }
 
 // Retry configuration
@@ -627,10 +631,22 @@ export function useDocumentUploadQueue(): UseDocumentUploadQueueResult {
   // Can proceed once all fast extractions are done (even if some failed)
   const canProceed = allFastExtractionsComplete && completedFiles.length > 0;
 
-  // Aggregate fast extraction data from first completed file with data
-  // In real scenarios, you might want to merge or select the best match
-  const aggregatedFastExtraction: FastExtractedData | null =
-    completedFiles.find((f) => f.fastExtractionData)?.fastExtractionData ?? null;
+  // Detect patient conflicts across all completed files
+  const allExtractionData = completedFiles.map((f) => f.fastExtractionData);
+  const patientConflict = allExtractionData.length > 0
+    ? detectPatientConflicts(allExtractionData)
+    : null;
+
+  // Aggregate fast extraction data - prefer the suggested patient from conflict detection
+  // when there's a conflict, otherwise use the first completed file's data
+  const aggregatedFastExtraction: FastExtractedData | null = (() => {
+    if (!patientConflict) return null;
+
+    // If there's conflict data with a suggested patient, use it
+    // Otherwise, fall back to the first completed file's extraction data
+    const firstWithData = completedFiles.find((f) => f.fastExtractionData);
+    return firstWithData?.fastExtractionData ?? null;
+  })();
 
   return {
     // State
@@ -646,6 +662,7 @@ export function useDocumentUploadQueue(): UseDocumentUploadQueueResult {
     failedFiles,
     processingFiles,
     completedFiles,
+    patientConflict,
 
     // Actions
     addFiles,
