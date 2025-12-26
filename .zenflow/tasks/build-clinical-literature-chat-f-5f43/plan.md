@@ -58,22 +58,33 @@ npm run typecheck    # ✅ No errors
 
 ---
 
-### [ ] Step 2: Unified Anthropic Service Enhancement
+### [x] Step 2: Unified Anthropic Service Enhancement
 
 **Goal**: Extend Anthropic infrastructure for chat + caching
 
-**Tasks**:
-1. Create `src/infrastructure/anthropic/unified-service.ts`:
-   - System prompt caching with TTL
-   - Multi-turn `chat()` method for conversations
-   - Usage tracking with `getUsageStats()`
-   - Export from `src/infrastructure/anthropic/index.ts`
-2. Create shared types in `src/infrastructure/anthropic/chat-types.ts`
+**Completed**:
+1. Created `src/infrastructure/anthropic/chat-types.ts`:
+   - `ChatMessage`, `ChatRequest`, `ChatResponse` for multi-turn conversations
+   - `ChatTool`, `ToolUseResult` for function calling support
+   - `UnifiedTextRequest/Response`, `UnifiedImageRequest/Response` for unified API
+   - `CachedPrompt`, `UnifiedUsageStats`, `UnifiedServiceConfig` for caching/tracking
+   - `DEFAULT_UNIFIED_CONFIG` with sensible defaults (24h cache TTL)
+2. Created `src/infrastructure/anthropic/unified-service.ts`:
+   - `UnifiedAnthropicService` class with singleton pattern
+   - `generateText()` - Text generation with system prompt caching
+   - `chat()` - Multi-turn conversations with tool support
+   - `analyzeImage()` - Vision/image analysis
+   - `getUsageStats()` - Token and cost tracking
+   - `getCacheStats()` - Cache hit rate monitoring
+   - SHA-256 based prompt hashing for cache keys
+3. Updated `src/infrastructure/anthropic/index.ts`:
+   - Exported `unifiedAnthropicService` singleton
+   - Exported `UnifiedAnthropicService` class for testing
+   - Exported all new types and constants
 
-**Verification**:
+**Verification**: ✅
 ```bash
-npm run typecheck
-npm run test -- src/infrastructure/anthropic
+npm run typecheck    # ✅ No errors
 ```
 
 ---
