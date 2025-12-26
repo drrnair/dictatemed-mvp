@@ -17,6 +17,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 import type { PatientSummary } from '@/domains/consultation';
 
 interface PatientSelectorProps {
@@ -53,9 +54,10 @@ export function PatientSelector({ value, onChange, disabled }: PatientSelectorPr
         const data = await response.json();
         setRecentPatients(data.patients || []);
       }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to load recent patients:', err);
+    } catch (error) {
+      logger.warn('Failed to load recent patients', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }, []);
 
@@ -140,7 +142,8 @@ export function PatientSelector({ value, onChange, disabled }: PatientSelectorPr
         month: 'short',
         year: 'numeric',
       });
-    } catch {
+    } catch (error) {
+      logger.debug('Date format error', { dateStr, error: error instanceof Error ? error.message : String(error) });
       return dateStr;
     }
   };

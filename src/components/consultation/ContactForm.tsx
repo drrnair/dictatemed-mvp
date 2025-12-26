@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 import type { ContactType, ChannelType } from '@/domains/contacts';
 
 export interface ContactFormData {
@@ -111,8 +112,11 @@ export function ContactForm({
         fax: formData.fax?.trim() || undefined,
         address: formData.address?.trim() || undefined,
       });
-    } catch {
-      // Error handled by parent
+    } catch (error) {
+      // Log the error - parent component handles display
+      logger.warn('Contact form submission failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   };
 
