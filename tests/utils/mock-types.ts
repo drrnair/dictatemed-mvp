@@ -3,6 +3,23 @@
  *
  * These types allow tests to create mock data with only the fields they need,
  * while still maintaining type safety for the fields that are specified.
+ *
+ * CURRENT STATUS:
+ * This utility file is provided for future test improvements. Currently, the
+ * integration test files use @ts-nocheck because:
+ * - Tests specify only fields relevant to behavior being tested
+ * - Full Prisma types have 30+ required fields
+ *
+ * FUTURE MIGRATION PATH:
+ * When migrating away from @ts-nocheck, import and use these helpers:
+ *
+ * @example
+ * // Before (with @ts-nocheck):
+ * vi.mocked(prisma.patient.findFirst).mockResolvedValue({ id: '123' });
+ *
+ * // After (type-safe):
+ * import { asMock } from '../../utils/mock-types';
+ * vi.mocked(prisma.patient.findFirst).mockResolvedValue(asMock({ id: '123' }));
  */
 
 import type {
