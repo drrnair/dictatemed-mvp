@@ -422,6 +422,7 @@ npm run generate:test-fixtures  # ✅ Fixtures generated successfully
 ---
 
 ### [ ] Step: Run Full Verification Suite
+<!-- chat-id: 3374ea46-7b20-4289-aac1-cd4295005c4f -->
 
 Ensure all tests pass and no regressions.
 
