@@ -63,6 +63,19 @@ describe('validation schemas', () => {
       expect(() => paginationSchema.parse({ page: 0 })).toThrow();
       expect(() => paginationSchema.parse({ limit: 200 })).toThrow();
     });
+
+    it('should handle null values from query params', () => {
+      // URLSearchParams.get() returns null for missing params
+      const result = paginationSchema.parse({ page: null, limit: null });
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(20);
+    });
+
+    it('should handle empty string values', () => {
+      const result = paginationSchema.parse({ page: '', limit: '' });
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(20);
+    });
   });
 
   describe('createRecordingSchema', () => {

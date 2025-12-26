@@ -34,7 +34,7 @@ describe('api-error', () => {
     const originalEnv = process.env.NODE_ENV;
 
     afterEach(() => {
-      process.env.NODE_ENV = originalEnv;
+      (process.env as Record<string, string | undefined>).NODE_ENV = originalEnv;
     });
 
     it('should return safe error messages directly', () => {
@@ -43,19 +43,19 @@ describe('api-error', () => {
     });
 
     it('should return fallback for unsafe messages in production', () => {
-      process.env.NODE_ENV = 'production';
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
       const error = new Error('Database connection failed');
       expect(getSafeErrorMessage(error)).toBe('An unexpected error occurred');
     });
 
     it('should return error message in development mode', () => {
-      process.env.NODE_ENV = 'development';
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'development';
       const error = new Error('Database connection failed');
       expect(getSafeErrorMessage(error)).toBe('Database connection failed');
     });
 
     it('should use custom fallback message', () => {
-      process.env.NODE_ENV = 'production';
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
       const error = new Error('Internal error');
       expect(getSafeErrorMessage(error, 'Custom fallback')).toBe('Custom fallback');
     });

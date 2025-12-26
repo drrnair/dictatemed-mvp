@@ -253,7 +253,8 @@ describe('model-selection', () => {
         letterType: 'ECHO_REPORT',
         sources: {
           documents: [{
-            filename: 'test.pdf',
+            id: 'doc-1',
+            name: 'test.pdf',
             type: 'OTHER' as const,
             extractedData: {},
           }],
@@ -268,7 +269,7 @@ describe('model-selection', () => {
       const input: ModelSelectionInput = {
         letterType: 'FOLLOW_UP',
         sources: {
-          userInput: { text: 'Just some notes' },
+          userInput: { id: 'input-1', text: 'Just some notes' },
         },
       };
 

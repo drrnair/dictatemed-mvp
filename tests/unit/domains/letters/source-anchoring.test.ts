@@ -35,6 +35,7 @@ describe('source-anchoring', () => {
         transcript: {
           id: 'transcript-123',
           text: 'The LVEF is forty-five percent, showing reduced function.',
+          mode: 'DICTATION' as const,
         },
       };
 
@@ -47,7 +48,7 @@ describe('source-anchoring', () => {
     it('should remove anchor markers from text', () => {
       const letterText = 'The patient has {{SOURCE:doc-1:hypertension}} and diabetes.';
       const sources = {
-        documents: [{ id: 'doc-1', type: 'OTHER' as const, extractedData: { diagnosis: 'hypertension' } }],
+        documents: [{ id: 'doc-1', type: 'OTHER' as const, name: 'report.pdf', extractedData: { diagnosis: 'hypertension' } }],
       };
 
       const result = parseSourceAnchors(letterText, sources);
@@ -57,7 +58,7 @@ describe('source-anchoring', () => {
 
     it('should handle text with no anchors', () => {
       const letterText = 'This is a plain letter with no source anchors.';
-      const sources = { transcript: { text: 'Some text' } };
+      const sources = { transcript: { id: 't1', text: 'Some text', mode: 'DICTATION' as const } };
 
       const result = parseSourceAnchors(letterText, sources);
 
@@ -69,7 +70,7 @@ describe('source-anchoring', () => {
     it('should separate verified from unverified anchors', () => {
       const letterText = 'Finding: {{SOURCE:transcript-1:mentioned in recording}} also {{SOURCE:unknown:not found}}.';
       const sources = {
-        transcript: { id: 'transcript-1', text: 'This was mentioned in recording clearly.' },
+        transcript: { id: 'transcript-1', text: 'This was mentioned in recording clearly.', mode: 'DICTATION' as const },
       };
 
       const result = parseSourceAnchors(letterText, sources);
@@ -153,7 +154,7 @@ describe('source-anchoring', () => {
       const sectionAnchors = getAnchorsForSection(sectionText, allAnchors);
 
       expect(sectionAnchors.length).toBe(1);
-      expect(sectionAnchors[0].sourceExcerpt).toBe('chest pain');
+      expect(sectionAnchors[0]?.sourceExcerpt).toBe('chest pain');
     });
 
     it('should return empty array for section without anchors', () => {
