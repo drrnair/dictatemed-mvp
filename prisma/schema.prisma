@@ -1151,8 +1151,9 @@ model LiteratureQuery {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Query details
-  query   String  @db.Text
-  context String? @db.Text // Letter excerpt for context-aware search
+  query    String  @db.Text
+  context  String? @db.Text // Letter excerpt for context-aware search
+  letterId String? // Optional reference to the letter being edited
 
   // Search results
   sources          Json // Array of source types used: ['uptodate', 'pubmed', 'user_library']

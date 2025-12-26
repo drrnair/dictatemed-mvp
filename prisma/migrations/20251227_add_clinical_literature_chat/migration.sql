@@ -103,6 +103,7 @@ CREATE TABLE "literature_queries" (
     "userId" TEXT NOT NULL,
     "query" TEXT NOT NULL,
     "context" TEXT,
+    "letterId" TEXT,
     "sources" JSONB NOT NULL,
     "confidence" TEXT NOT NULL,
     "citationInserted" BOOLEAN NOT NULL DEFAULT false,

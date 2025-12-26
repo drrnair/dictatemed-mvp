@@ -58,9 +58,26 @@ Output format:
  * Uses Anthropic Claude to synthesize findings into actionable clinical guidance.
  */
 class LiteratureOrchestrationService {
-  private pubmedService = getPubMedService();
-  private upToDateService = getUpToDateService();
-  private userLibraryService = getUserLibraryService();
+  /**
+   * Get PubMed service instance (lazy loaded for testability).
+   */
+  private get pubmedService() {
+    return getPubMedService();
+  }
+
+  /**
+   * Get UpToDate service instance (lazy loaded for testability).
+   */
+  private get upToDateService() {
+    return getUpToDateService();
+  }
+
+  /**
+   * Get User Library service instance (lazy loaded for testability).
+   */
+  private get userLibraryService() {
+    return getUserLibraryService();
+  }
 
   /**
    * Search clinical literature and synthesize results.
@@ -95,10 +112,10 @@ class LiteratureOrchestrationService {
       // Step 5: Synthesize results with AI
       const synthesized = await this.synthesizeResults(params, sourceResults);
 
-      // Step 6: Record the query
-      await this.recordQuery(params.userId, params.letterId);
-
       const responseTimeMs = Date.now() - startTime;
+
+      // Step 6: Record the query
+      await this.recordQuery(params.userId, params, synthesized, responseTimeMs);
 
       log.info('Literature search complete', {
         query: params.query.substring(0, 100),
@@ -203,7 +220,7 @@ class LiteratureOrchestrationService {
 
     log.info('Searches complete', {
       sourceCount: results.length,
-      sources: [...new Set(results.map((r) => r.type))],
+      sources: Array.from(new Set(results.map((r) => r.type))),
     });
 
     return results;
@@ -423,7 +440,7 @@ class LiteratureOrchestrationService {
     // Extract dosing information
     let dosing: string | undefined;
     const dosingMatch = content.match(/(?:dosing|dose|dosage)[:\s]+([^.\n]+(?:\.[^.\n]+)?)/i);
-    if (dosingMatch) {
+    if (dosingMatch?.[1]) {
       dosing = dosingMatch[1].trim();
     }
 
@@ -582,11 +599,23 @@ class LiteratureOrchestrationService {
   /**
    * Record a query for usage tracking.
    */
-  private async recordQuery(userId: string, letterId?: string): Promise<void> {
+  private async recordQuery(
+    userId: string,
+    params: LiteratureSearchParams,
+    result: Omit<LiteratureSearchResult, 'responseTimeMs'>,
+    responseTimeMs: number
+  ): Promise<void> {
     await prisma.literatureQuery.create({
       data: {
         userId,
-        letterId,
+        query: params.query,
+        context: params.context,
+        letterId: params.letterId,
+        sources: params.sources || ['pubmed', 'user_library', 'uptodate'],
+        confidence: result.confidence,
+        responseTimeMs,
+        cachedResponse: JSON.parse(JSON.stringify(result)),
+        cacheExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hour cache
       },
     });
   }

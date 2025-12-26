@@ -214,29 +214,46 @@ npm run test -- uptodate   # ✅ 32 tests passed
 
 ---
 
-### [ ] Step 6: Literature Orchestration Service
+### [x] Step 6: Literature Orchestration Service
 
 **Goal**: Main service that aggregates all sources
 
-**Tasks**:
-1. Create `src/domains/literature/`:
-   - `literature.service.ts` - Main orchestration
-   - `types.ts` - Shared types (Citation, SearchResult, etc.)
-2. Implement:
-   - `search()` - Parallel search across sources
-   - `synthesizeResults()` - Claude synthesis with JSON response
-   - `getTierLimits()` - Hardcoded Professional limits
-   - `logQuery()` - Store query for analytics
-3. Add system prompts for clinical synthesis
-4. Add unit tests `tests/unit/domains/literature.test.ts`
+**Completed**:
+1. Verified existing `src/domains/literature/orchestration.service.ts`:
+   - `LiteratureOrchestrationService` class with singleton pattern
+   - `search()` - Main search method with parallel source searches
+   - `determineSources()` - Filter sources based on tier and request
+   - `executeSearches()` - Parallel execution across PubMed, UpToDate, User Library
+   - `searchPubMed()` - Format PubMed results to SourceResult
+   - `searchUpToDate()` - Format UpToDate results (when connected)
+   - `searchUserLibrary()` - Format user library results
+   - `synthesizeResults()` - Claude synthesis with clinical system prompt
+   - `buildContext()` - Format sources for Claude context
+   - `parseAIResponse()` - Extract recommendations, dosing, warnings, citations
+   - `buildCitations()` - Create citations from source results
+   - `determineConfidence()` - High/medium/low based on source types
+   - `checkQueryLimits()` - Enforce tier-based query limits
+   - `recordQuery()` - Store query in database for analytics
+2. Added `LITERATURE_SYSTEM_PROMPT` for clinical synthesis:
+   - Role definition for clinical literature assistant
+   - Guidelines for prioritizing evidence
+   - Output format specification
+3. Fixed schema and API route issues:
+   - Added `letterId` field to `LiteratureQuery` model
+   - Updated migration file
+   - Fixed API route to use `subspecialties` instead of `specialty`
+4. Created comprehensive unit tests `tests/unit/domains/literature/orchestration.service.test.ts`:
+   - 14 unit tests covering all functionality
+   - Tests for empty results, PubMed synthesis, UpToDate integration
+   - Tests for user library search, query limits, source failures
+   - Tests for context passing, source filtering, confidence levels
+   - Tests for error handling and query recording
 
-**Verification**:
+**Verification**: ✅
 ```bash
-npm run typecheck
-npm run test -- literature
+npm run typecheck              # ✅ No errors
+npm run test -- domains/literature  # ✅ 30 tests passed (16 user-library + 14 orchestration)
 ```
-
----
 
 ### [ ] Step 7: API Routes
 
