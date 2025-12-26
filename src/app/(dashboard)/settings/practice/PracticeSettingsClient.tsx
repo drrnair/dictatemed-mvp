@@ -100,7 +100,7 @@ export function PracticeSettingsClient({
 
       {/* Practice Settings */}
       <PracticeSettings
-        initialSettings={practice.settings || {}}
+        initialSettings={(practice.settings as SettingsData | null) || {}}
         onUpdate={(settings) => handlePracticeUpdate({ settings })}
       />
     </div>

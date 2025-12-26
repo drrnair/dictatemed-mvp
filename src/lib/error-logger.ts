@@ -40,56 +40,69 @@ function captureToSentry(error: Error, context: Record<string, unknown>, severit
   if (!isSentryAvailable()) return;
 
   // PHI filtering - never send patient data to external services
-  const sanitizedContext = filterPHI(context);
+  const _sanitizedContext = filterPHI(context);
 
   // Uncomment when Sentry is installed:
   // Sentry.withScope((scope) => {
   //   scope.setLevel(mapSeverityToSentryLevel(severity));
-  //   scope.setExtras(sanitizedContext);
+  //   scope.setExtras(_sanitizedContext);
   //   if (context.userId) {
   //     scope.setUser({ id: String(context.userId) });
   //   }
   //   Sentry.captureException(error);
   // });
 
-  // For now, log that we would send to Sentry
-  if (process.env.NODE_ENV === 'development') {
-    // eslint-disable-next-line no-console
-    console.debug('[Sentry Ready] Would capture:', error.message, sanitizedContext);
-  }
+  // Suppress unused variable warnings until Sentry is installed
+  void error;
+  void severity;
 }
 
 /**
- * Filter PHI from error context before sending to external services
+ * PHI keys to filter from error context before sending to external services.
+ * Uses substring matching intentionally as a fail-safe approach:
+ * - Prefers over-filtering to under-filtering for healthcare compliance
+ * - Keys like "hasPhoneCapability" will be filtered (acceptable false positive)
+ * - Ensures patient data never leaks even with non-standard key names
  */
-function filterPHI(context: Record<string, unknown>): Record<string, unknown> {
-  const phiKeys = [
-    'patientName',
-    'patientId',
-    'dateOfBirth',
-    'dob',
-    'nhsNumber',
-    'medicareNumber',
-    'mrn',
-    'medicalRecordNumber',
-    'address',
-    'phone',
-    'email',
-    'ssn',
-    'socialSecurityNumber',
-    'diagnosis',
-    'medication',
-    'prescription',
-  ];
+const PHI_KEYS = [
+  'patientname',
+  'patientid',
+  'dateofbirth',
+  'dob',
+  'nhsnumber',
+  'medicarenumber',
+  'mrn',
+  'medicalrecordnumber',
+  'address',
+  'phone',
+  'email',
+  'ssn',
+  'socialsecuritynumber',
+  'diagnosis',
+  'medication',
+  'prescription',
+] as const;
 
+/**
+ * Filter PHI from error context before sending to external services.
+ * Exported for testing.
+ */
+export function filterPHI(context: Record<string, unknown>): Record<string, unknown> {
   const filtered: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(context)) {
     const lowerKey = key.toLowerCase();
-    const isPHI = phiKeys.some(phiKey => lowerKey.includes(phiKey.toLowerCase()));
+    const isPHI = PHI_KEYS.some(phiKey => lowerKey.includes(phiKey));
 
     if (isPHI) {
       filtered[key] = '[REDACTED]';
+    } else if (Array.isArray(value)) {
+      // Handle arrays - filter each element if it's an object
+      filtered[key] = value.map(item =>
+        typeof item === 'object' && item !== null
+          ? filterPHI(item as Record<string, unknown>)
+          : item
+      );
     } else if (typeof value === 'object' && value !== null) {
       // Recursively filter nested objects
       filtered[key] = filterPHI(value as Record<string, unknown>);

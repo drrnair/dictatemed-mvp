@@ -268,26 +268,31 @@ const phiKeys = [
 
 ## Phase 3: Code Quality (Week 2)
 
-### [ ] Step: Issue 6 - Fix TypeScript any Types
-<!-- chat-id: 66a0dbab-5e0c-4733-b4d5-7c89a9f6455d -->
+### [x] Step: Issue 6 - Fix TypeScript any Types
 
-Replace `any` types with proper TypeScript types.
+Replaced all `any` types with proper TypeScript types.
 
-**Files to modify:**
-- `src/lib/pwa.ts` - BeforeInstallPromptEvent interface
-- `src/hooks/useNotifications.ts` - settings type
-- `src/components/settings/PracticeSettings.tsx`
-- `src/app/api/letters/route.ts` - Prisma.LetterWhereInput
-- `src/app/(dashboard)/settings/practice/PracticeSettingsClient.tsx`
+**Files modified:**
+- `src/app/(dashboard)/settings/practice/PracticeSettingsClient.tsx` - Added `SettingsData` interface, imported `JsonValue` from Prisma
+- `src/app/api/letters/route.ts` - Replaced `any` with `Prisma.LetterWhereInput` and `Prisma.LetterOrderByWithRelationInput`
+- `src/components/pwa/UpdatePrompt.tsx` - Added `BeforeInstallPromptEvent` interface for PWA install prompt
+- `src/app/api/consultations/route.ts` - Replaced `as any` with proper `ConsultationStatus` type import
+- `src/app/api/practice/route.ts` - Replaced `z.any()` with typed `settingValueSchema` using Zod union
 
-**Implementation:**
-- Define proper interfaces for each any usage
-- Use Prisma types for database queries
-- Add type guards where needed
+**Implementation completed:**
+1. Created proper interfaces for Practice settings (`SettingsData`)
+2. Used Prisma types for database queries (`Prisma.LetterWhereInput`, `Prisma.LetterOrderByWithRelationInput`)
+3. Added browser-standard `BeforeInstallPromptEvent` interface for PWA
+4. Imported and used Prisma enums (`ConsultationStatus`) instead of `as any` casts
+5. Created typed Zod schema for settings values instead of `z.any()`
+6. Handled `JsonValue` from Prisma with proper type assertions where needed
 
 **Verification:**
-- `npm run typecheck` passes
-- No `any` types in modified files
+- `npm run typecheck` passes ✅
+- `npm run lint` passes (only pre-existing warning) ✅
+- `grep -rn ": any" src/` returns 0 results ✅
+- `grep -rn "eslint-disable.*no-explicit-any" src/` returns 0 results ✅
+- `grep -rn "z\.any()" src/` returns 0 results ✅
 
 ---
 

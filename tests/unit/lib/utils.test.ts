@@ -6,6 +6,7 @@ import {
   formatDuration,
   generateId,
   escapeRegex,
+  sleep,
 } from '@/lib/utils';
 
 describe('utils', () => {
@@ -37,6 +38,24 @@ describe('utils', () => {
       const result = formatDate('2025-06-20');
       expect(result).toContain('Jun');
       expect(result).toContain('2025');
+    });
+  });
+
+  describe('formatDateTime', () => {
+    it('should format a Date object with time', () => {
+      const date = new Date('2025-01-15T10:30:00Z');
+      const result = formatDateTime(date);
+      expect(result).toContain('Jan');
+      expect(result).toContain('2025');
+      // Time should be included (will vary by timezone)
+      expect(result).toMatch(/\d{1,2}:\d{2}/);
+    });
+
+    it('should format a date string with time', () => {
+      const result = formatDateTime('2025-06-20T14:45:00Z');
+      expect(result).toContain('Jun');
+      expect(result).toContain('2025');
+      expect(result).toMatch(/\d{1,2}:\d{2}/);
     });
   });
 
@@ -73,6 +92,20 @@ describe('utils', () => {
 
     it('should leave normal strings unchanged', () => {
       expect(escapeRegex('normal string')).toBe('normal string');
+    });
+  });
+
+  describe('sleep', () => {
+    it('should resolve after specified time', async () => {
+      const start = Date.now();
+      await sleep(50);
+      const elapsed = Date.now() - start;
+      expect(elapsed).toBeGreaterThanOrEqual(45); // Allow some tolerance
+    });
+
+    it('should return a promise', () => {
+      const result = sleep(10);
+      expect(result).toBeInstanceOf(Promise);
     });
   });
 });
