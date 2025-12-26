@@ -34,6 +34,7 @@ Do not make assumptions on important decisions — get clarification first.
 ---
 
 ### [ ] Step 1: Database Schema & Types
+<!-- chat-id: 18578dde-7bec-47ec-ac11-8b5866afa7a6 -->
 
 **Objective**: Add database fields and types for two-phase extraction tracking
 

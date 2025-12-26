@@ -1,10 +1,16 @@
 // src/domains/referrals/referral.types.ts
 // Referral document domain type definitions
 
-import type { ReferralDocumentStatus as PrismaReferralDocumentStatus } from '@prisma/client';
+import type {
+  ReferralDocumentStatus as PrismaReferralDocumentStatus,
+  FastExtractionStatus as PrismaFastExtractionStatus,
+  FullExtractionStatus as PrismaFullExtractionStatus,
+} from '@prisma/client';
 
-// Re-export status type from Prisma for type safety
+// Re-export status types from Prisma for type safety
 export type ReferralDocumentStatus = PrismaReferralDocumentStatus;
+export type FastExtractionStatus = PrismaFastExtractionStatus;
+export type FullExtractionStatus = PrismaFullExtractionStatus;
 
 // Core referral document model
 export interface ReferralDocument {
@@ -20,6 +26,18 @@ export interface ReferralDocument {
   status: ReferralDocumentStatus;
   contentText?: string;
   extractedData?: ReferralExtractedData;
+
+  // Two-phase extraction fields
+  fastExtractionStatus?: FastExtractionStatus;
+  fastExtractionData?: FastExtractedData;
+  fastExtractionStartedAt?: Date;
+  fastExtractionCompletedAt?: Date;
+  fastExtractionError?: string;
+  fullExtractionStatus?: FullExtractionStatus;
+  fullExtractionStartedAt?: Date;
+  fullExtractionCompletedAt?: Date;
+  fullExtractionError?: string;
+
   processingError?: string;
   processedAt?: Date;
   createdAt: Date;
@@ -313,4 +331,178 @@ export interface PatientMatchResult {
   patientId?: string;
   patientName?: string;
   confidence: 'exact' | 'partial' | 'none';
+}
+
+// ============ Two-Phase Extraction Types ============
+
+// Confidence level for extracted fields
+export type ConfidenceLevel = 'high' | 'medium' | 'low';
+
+// Individual field confidence
+export interface FieldConfidence {
+  value: string | null;
+  confidence: number; // 0-1
+  level: ConfidenceLevel;
+}
+
+// Fast extraction result - patient identifiers only
+export interface FastExtractedData {
+  patientName: FieldConfidence;
+  dateOfBirth: FieldConfidence;
+  mrn: FieldConfidence;
+  overallConfidence: number; // 0-1
+  extractedAt: string; // ISO timestamp
+  modelUsed: string;
+  processingTimeMs: number;
+}
+
+// Document processing status for UI
+export interface DocumentProcessingStatus {
+  documentId: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+
+  // Upload status
+  uploadProgress: number; // 0-100
+  uploadComplete: boolean;
+  uploadError?: string;
+
+  // Text extraction status
+  textExtractionStatus: 'pending' | 'processing' | 'complete' | 'failed';
+  textExtractionError?: string;
+
+  // Fast extraction status
+  fastExtractionStatus: FastExtractionStatus;
+  fastExtractionData?: FastExtractedData;
+  fastExtractionError?: string;
+
+  // Full extraction status
+  fullExtractionStatus: FullExtractionStatus;
+  fullExtractionError?: string;
+}
+
+// ============ Batch Upload Types ============
+
+// Input for batch upload - single file metadata
+export interface BatchUploadFileInput {
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+// Input for batch upload request
+export interface BatchUploadInput {
+  files: BatchUploadFileInput[];
+}
+
+// Result for a single file in batch upload
+export interface BatchUploadFileResult {
+  id: string;
+  filename: string;
+  uploadUrl: string;
+  expiresAt: Date;
+}
+
+// Result from batch upload creation
+export interface BatchUploadResult {
+  files: BatchUploadFileResult[];
+  batchId: string; // For tracking the batch
+}
+
+// ============ Fast Extraction API Types ============
+
+// Input for fast extraction
+export interface FastExtractionInput {
+  documentId: string;
+}
+
+// Result from fast extraction API
+export interface FastExtractionResult {
+  documentId: string;
+  status: FastExtractionStatus;
+  data?: FastExtractedData;
+  error?: string;
+}
+
+// ============ Document Status Polling Types ============
+
+// Input for status polling
+export interface DocumentStatusInput {
+  documentId: string;
+}
+
+// Result from status polling
+export interface DocumentStatusResult {
+  documentId: string;
+  filename: string;
+  status: ReferralDocumentStatus;
+  fastExtractionStatus: FastExtractionStatus;
+  fastExtractionData?: FastExtractedData;
+  fullExtractionStatus: FullExtractionStatus;
+  extractedData?: ReferralExtractedData;
+  error?: string;
+}
+
+// ============ Upload Queue Types (Client-side) ============
+
+// File in the upload queue
+export interface QueuedFile {
+  id: string; // Client-generated ID for tracking before server ID exists
+  file: File;
+  status: 'queued' | 'uploading' | 'uploaded' | 'extracting' | 'complete' | 'failed';
+  progress: number; // 0-100 for upload progress
+  documentId?: string; // Server-generated ID after creation
+  uploadUrl?: string;
+  error?: string;
+  fastExtractionData?: FastExtractedData;
+  fullExtractionComplete?: boolean;
+}
+
+// Upload queue state
+export interface UploadQueueState {
+  files: QueuedFile[];
+  isProcessing: boolean;
+  hasErrors: boolean;
+  allFastExtractionsComplete: boolean;
+  allFullExtractionsComplete: boolean;
+}
+
+// ============ Constants ============
+
+// Max files per batch upload
+export const MAX_BATCH_FILES = 10;
+
+// Max file size for batch upload (20 MB per file)
+export const MAX_BATCH_FILE_SIZE = 20 * 1024 * 1024;
+
+// Max concurrent uploads
+export const MAX_CONCURRENT_UPLOADS = 3;
+
+// Fast extraction target time (ms)
+export const FAST_EXTRACTION_TARGET_MS = 5000;
+
+// Full extraction target time (ms)
+export const FULL_EXTRACTION_TARGET_MS = 60000;
+
+// Polling interval for status updates (ms)
+export const STATUS_POLLING_INTERVAL_MS = 2000;
+
+// Helper to determine confidence level from score
+export function getConfidenceLevel(confidence: number): ConfidenceLevel {
+  if (confidence >= HIGH_CONFIDENCE_THRESHOLD) return 'high';
+  if (confidence >= MEDIUM_CONFIDENCE_THRESHOLD) return 'medium';
+  return 'low';
+}
+
+// Helper to create a FieldConfidence object
+export function createFieldConfidence(
+  value: string | null | undefined,
+  confidence: number
+): FieldConfidence {
+  return {
+    value: value ?? null,
+    confidence,
+    level: getConfidenceLevel(confidence),
+  };
 }
