@@ -308,28 +308,44 @@ npm run test -- tests/unit/domains/referrals/  # ✅ 181 tests pass (no regressi
 
 ---
 
-### [ ] Step: Add Feature Flag Configuration
+### [x] Step: Add Feature Flag Configuration
 
-Configure feature flag for safe rollout.
+**Status**: Complete
 
-**Tasks**:
-1. Add `FEATURE_EXTENDED_UPLOAD_TYPES` to `.env.example`
-2. Add feature flag documentation
-3. Implement conditional logic in MIME type validation
-4. Test with flag enabled and disabled
+Configured feature flag for safe rollout of extended upload types.
 
-**Verification**:
+**Completed Tasks**:
+1. ✅ Added `FEATURE_EXTENDED_UPLOAD_TYPES` to `.env.example` with documentation:
+   - Set to `"false"` by default (safe rollout)
+   - Clear comment explaining what the flag enables
+2. ✅ Feature flag logic already implemented in `referral.types.ts`:
+   - `isExtendedUploadTypesEnabled()` - checks flag value
+   - `isAllowedMimeType()` - respects flag for extended types
+   - `getAllowedMimeTypes()` - returns types based on flag
+   - `getAcceptedExtensions()` - returns UI extensions based on flag
+3. ✅ Fixed test for invalid MIME type (now uses video/mp4 instead of image/jpeg)
+4. ✅ Verified tests pass with both flag settings:
+   - `FEATURE_EXTENDED_UPLOAD_TYPES=false` - 181 tests pass
+   - `FEATURE_EXTENDED_UPLOAD_TYPES=true` - 181 tests pass
+
+**Verification Results**:
 ```bash
-# Test with flag disabled
-FEATURE_EXTENDED_UPLOAD_TYPES=false npm run test
+# Test with flag disabled (default)
+FEATURE_EXTENDED_UPLOAD_TYPES=false npm run test -- tests/unit/domains/referrals/  # ✅ 181 tests pass
 
 # Test with flag enabled
-FEATURE_EXTENDED_UPLOAD_TYPES=true npm run test
+FEATURE_EXTENDED_UPLOAD_TYPES=true npm run test -- tests/unit/domains/referrals/  # ✅ 181 tests pass
+
+# Integration tests
+npm run test:integration -- tests/integration/api/referrals.test.ts  # ✅ 28 tests pass
+
+# Frontend component tests
+npm run test -- tests/unit/components/ReferralUploader.test.tsx  # ✅ 48 tests pass
 ```
 
 **Files Modified**:
 - `.env.example`
-- `src/domains/referrals/referral.types.ts`
+- `tests/unit/domains/referrals/referral.service.test.ts` (fixed invalid MIME type test)
 
 ---
 

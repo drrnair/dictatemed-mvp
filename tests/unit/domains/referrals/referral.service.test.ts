@@ -167,10 +167,11 @@ describe('referral.service', () => {
     });
 
     it('should throw error for invalid MIME type', async () => {
+      // Use video/mp4 which is never valid, even with extended types enabled
       await expect(
         referralService.createReferralDocument('user-1', 'practice-1', {
-          filename: 'image.jpg',
-          mimeType: 'image/jpeg',
+          filename: 'video.mp4',
+          mimeType: 'video/mp4',
           sizeBytes: 102400,
         })
       ).rejects.toThrow('Invalid file type');
