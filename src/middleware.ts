@@ -32,6 +32,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // E2E Test Mode: Skip authentication when E2E_MOCK_AUTH is enabled
+  // This allows E2E tests to run without Auth0 authentication
+  // SECURITY: Only enable this in CI/test environments, never in production
+  if (process.env.E2E_MOCK_AUTH === 'true') {
+    // Set a header to indicate mock auth is active (for debugging)
+    const response = NextResponse.next();
+    response.headers.set('X-E2E-Mock-Auth', 'true');
+    return response;
+  }
+
   // Check authentication for protected routes
   try {
     const response = NextResponse.next();

@@ -72,7 +72,7 @@ export function SendLetterDialog({
   const [preferences, setPreferences] = useState<LetterSendingPreferences>(DEFAULT_SENDING_PREFERENCES);
   const [subject, setSubject] = useState('');
   const [coverNote, setCoverNote] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sendResult, setSendResult] = useState<SendLetterResult | null>(null);
 
@@ -301,6 +301,7 @@ export function SendLetterDialog({
     setShowOneOffForm(false);
     setOneOffName('');
     setOneOffEmail('');
+    setIsLoading(true); // Reset to true so auto-select waits for fetch
   }, []);
 
   // Handle close

@@ -93,193 +93,193 @@ async function seedE2ETestData(): Promise<void> {
     );
   }
 
-  // Use transaction for atomicity
-  await prisma.$transaction(async (tx) => {
-    // 1. Create test practice
-    console.log('  Creating test practice...');
-    await tx.practice.upsert({
-      where: { id: TEST_IDS.practice },
-      update: {},
-      create: {
-        id: TEST_IDS.practice,
-        name: 'TEST-PRACTICE-E2E Sydney Heart Specialists',
-        settings: {
-          timezone: 'Australia/Sydney',
-          letterheadEnabled: true,
-          isTestPractice: true,
-        },
-      },
-    });
+  // Run upserts without transaction to avoid timeout issues with Supabase connection pooler
+  // Upserts are idempotent, so this is safe for E2E test data seeding
 
-    // 2. Create test clinician
-    console.log('  Creating test clinician...');
-    await tx.user.upsert({
-      where: { id: TEST_IDS.clinician },
+  // 1. Create test practice
+  console.log('  Creating test practice...');
+  await prisma.practice.upsert({
+    where: { id: TEST_IDS.practice },
+    update: {},
+    create: {
+      id: TEST_IDS.practice,
+      name: 'TEST-PRACTICE-E2E Sydney Heart Specialists',
+      settings: {
+        timezone: 'Australia/Sydney',
+        letterheadEnabled: true,
+        isTestPractice: true,
+      },
+    },
+  });
+
+  // 2. Create test clinician
+  console.log('  Creating test clinician...');
+  await prisma.user.upsert({
+    where: { id: TEST_IDS.clinician },
+    update: {},
+    create: {
+      id: TEST_IDS.clinician,
+      auth0Id: 'auth0|e2e-test-clinician',
+      email: 'test.cardiologist+e2e@dictatemed.dev',
+      name: 'Dr. TEST E2E Cardiologist',
+      role: 'SPECIALIST',
+      clinicianRole: 'MEDICAL',
+      practiceId: TEST_IDS.practice,
+      subspecialties: ['HEART_FAILURE', 'INTERVENTIONAL'],
+      styleProfile: {
+        formality: 'formal',
+        verbosity: 'concise',
+        letterCount: 0,
+        isTestProfile: true,
+      },
+      settings: {
+        preferredMode: 'DICTATION',
+        notificationsEnabled: true,
+        isTestUser: true,
+      },
+    },
+  });
+
+  // 3. Create test patients (bulk insert with encrypted PHI)
+  console.log('  Creating test patients...');
+  for (const patientData of TEST_PATIENTS) {
+    const { id, ...phi } = patientData;
+    // medicareNumber is used as MRN - the API returns it as 'mrn' in search results
+    const encryptedData = encryptPatientData(phi);
+
+    await prisma.patient.upsert({
+      where: { id },
       update: {},
       create: {
-        id: TEST_IDS.clinician,
-        auth0Id: 'auth0|e2e-test-clinician',
-        email: 'test.cardiologist+e2e@dictatemed.dev',
-        name: 'Dr. TEST E2E Cardiologist',
-        role: 'SPECIALIST',
-        clinicianRole: 'MEDICAL',
+        id,
+        encryptedData,
         practiceId: TEST_IDS.practice,
-        subspecialties: ['HEART_FAILURE', 'INTERVENTIONAL'],
-        styleProfile: {
-          formality: 'formal',
-          verbosity: 'concise',
-          letterCount: 0,
-          isTestProfile: true,
-        },
-        settings: {
-          preferredMode: 'DICTATION',
-          notificationsEnabled: true,
-          isTestUser: true,
-        },
       },
     });
+  }
 
-    // 3. Create test patients (bulk insert with encrypted PHI)
-    console.log('  Creating test patients...');
-    for (const patientData of TEST_PATIENTS) {
-      const { id, ...phi } = patientData;
-      // medicareNumber is used as MRN - the API returns it as 'mrn' in search results
-      const encryptedData = encryptPatientData(phi);
-
-      await tx.patient.upsert({
-        where: { id },
-        update: {},
-        create: {
-          id,
-          encryptedData,
-          practiceId: TEST_IDS.practice,
-        },
-      });
-    }
-
-    // 4. Create test referrers (bulk)
-    console.log('  Creating test referrers...');
-    for (const referrer of TEST_REFERRERS) {
-      await tx.referrer.upsert({
-        where: { id: referrer.id },
-        update: {},
-        create: {
-          ...referrer,
-          practiceId: TEST_IDS.practice,
-        },
-      });
-    }
-
-    // 5. Create patient contacts (GP contacts for each patient)
-    console.log('  Creating patient contacts...');
-    const patientContacts = [
-      {
-        id: TEST_IDS.contactGP1,
-        patientId: TEST_IDS.patientHF,
-        type: 'GP' as const,
-        fullName: 'Dr. TEST GP Smith',
-        organisation: 'TEST Sydney Medical Centre',
-        email: 'test.gp.smith@test.dictatemed.dev',
-        phone: '+61 2 9000 0001',
-        fax: '+61 2 9000 0002',
-        address: 'TEST Address - 50 Martin Place, Sydney NSW 2000',
-        preferredChannel: 'EMAIL' as const,
-        isDefaultForPatient: true,
-      },
-      {
-        id: TEST_IDS.contactGP2,
-        patientId: TEST_IDS.patientPCI,
-        type: 'GP' as const,
-        fullName: 'Dr. TEST GP Brown',
-        organisation: 'TEST Harbour Medical Practice',
-        email: 'test.gp.brown@test.dictatemed.dev',
-        phone: '+61 2 9000 0005',
-        fax: '+61 2 9000 0006',
-        address: 'TEST Address - 100 Circular Quay, Sydney NSW 2000',
-        preferredChannel: 'EMAIL' as const,
-        isDefaultForPatient: true,
-      },
-    ];
-
-    for (const contact of patientContacts) {
-      await tx.patientContact.upsert({
-        where: { id: contact.id },
-        update: {},
-        create: contact,
-      });
-    }
-
-    // 6. Create style profile for test clinician
-    console.log('  Creating style profile...');
-    await tx.styleProfile.upsert({
-      where: {
-        userId_subspecialty: {
-          userId: TEST_IDS.clinician,
-          subspecialty: Subspecialty.HEART_FAILURE,
-        },
-      },
+  // 4. Create test referrers (bulk)
+  console.log('  Creating test referrers...');
+  for (const referrer of TEST_REFERRERS) {
+    await prisma.referrer.upsert({
+      where: { id: referrer.id },
       update: {},
       create: {
-        id: TEST_IDS.styleProfile,
+        ...referrer,
+        practiceId: TEST_IDS.practice,
+      },
+    });
+  }
+
+  // 5. Create patient contacts (GP contacts for each patient)
+  console.log('  Creating patient contacts...');
+  const patientContacts = [
+    {
+      id: TEST_IDS.contactGP1,
+      patientId: TEST_IDS.patientHF,
+      type: 'GP' as const,
+      fullName: 'Dr. TEST GP Smith',
+      organisation: 'TEST Sydney Medical Centre',
+      email: 'test.gp.smith@test.dictatemed.dev',
+      phone: '+61 2 9000 0001',
+      fax: '+61 2 9000 0002',
+      address: 'TEST Address - 50 Martin Place, Sydney NSW 2000',
+      preferredChannel: 'EMAIL' as const,
+      isDefaultForPatient: true,
+    },
+    {
+      id: TEST_IDS.contactGP2,
+      patientId: TEST_IDS.patientPCI,
+      type: 'GP' as const,
+      fullName: 'Dr. TEST GP Brown',
+      organisation: 'TEST Harbour Medical Practice',
+      email: 'test.gp.brown@test.dictatemed.dev',
+      phone: '+61 2 9000 0005',
+      fax: '+61 2 9000 0006',
+      address: 'TEST Address - 100 Circular Quay, Sydney NSW 2000',
+      preferredChannel: 'EMAIL' as const,
+      isDefaultForPatient: true,
+    },
+  ];
+
+  for (const contact of patientContacts) {
+    await prisma.patientContact.upsert({
+      where: { id: contact.id },
+      update: {},
+      create: contact,
+    });
+  }
+
+  // 6. Create style profile for test clinician
+  console.log('  Creating style profile...');
+  await prisma.styleProfile.upsert({
+    where: {
+      userId_subspecialty: {
         userId: TEST_IDS.clinician,
         subspecialty: Subspecialty.HEART_FAILURE,
-        sectionOrder: ['History', 'Examination', 'Investigations', 'Impression', 'Plan'],
-        sectionInclusion: { Medications: 0.95, FamilyHistory: 0.4 },
-        sectionVerbosity: { History: 'detailed', Plan: 'concise' },
-        phrasingPreferences: { greeting: 'Thank you for referring' },
-        greetingStyle: 'formal',
-        closingStyle: 'formal',
-        formalityLevel: 'formal',
-        learningStrength: 1.0,
-        totalEditsAnalyzed: 0,
       },
+    },
+    update: {},
+    create: {
+      id: TEST_IDS.styleProfile,
+      userId: TEST_IDS.clinician,
+      subspecialty: Subspecialty.HEART_FAILURE,
+      sectionOrder: ['History', 'Examination', 'Investigations', 'Impression', 'Plan'],
+      sectionInclusion: { Medications: 0.95, FamilyHistory: 0.4 },
+      sectionVerbosity: { History: 'detailed', Plan: 'concise' },
+      phrasingPreferences: { greeting: 'Thank you for referring' },
+      greetingStyle: 'formal',
+      closingStyle: 'formal',
+      formalityLevel: 'formal',
+      learningStrength: 1.0,
+      totalEditsAnalyzed: 0,
+    },
+  });
+
+  // 7. Create sample consultations for testing
+  console.log('  Creating sample consultations...');
+  const consultations = [
+    {
+      id: TEST_IDS.consultation1,
+      userId: TEST_IDS.clinician,
+      patientId: TEST_IDS.patientHF,
+      referrerId: TEST_IDS.referrerGP,
+      letterType: LetterType.NEW_PATIENT,
+      status: ConsultationStatus.DRAFT,
+    },
+    {
+      id: TEST_IDS.consultation2,
+      userId: TEST_IDS.clinician,
+      patientId: TEST_IDS.patientPCI,
+      referrerId: TEST_IDS.referrerGP,
+      letterType: LetterType.ANGIOGRAM_PROCEDURE,
+      status: ConsultationStatus.DRAFT,
+    },
+  ];
+
+  for (const consultation of consultations) {
+    await prisma.consultation.upsert({
+      where: { id: consultation.id },
+      update: {},
+      create: consultation,
     });
+  }
 
-    // 7. Create sample consultations for testing
-    console.log('  Creating sample consultations...');
-    const consultations = [
+  // 8. Create audit log entries for test user activity
+  console.log('  Creating audit log entries...');
+  await prisma.auditLog.createMany({
+    data: [
       {
-        id: TEST_IDS.consultation1,
         userId: TEST_IDS.clinician,
-        patientId: TEST_IDS.patientHF,
-        referrerId: TEST_IDS.referrerGP,
-        letterType: LetterType.NEW_PATIENT,
-        status: ConsultationStatus.DRAFT,
-      },
-      {
-        id: TEST_IDS.consultation2,
-        userId: TEST_IDS.clinician,
-        patientId: TEST_IDS.patientPCI,
-        referrerId: TEST_IDS.referrerGP,
-        letterType: LetterType.ANGIOGRAM_PROCEDURE,
-        status: ConsultationStatus.DRAFT,
-      },
-    ];
-
-    for (const consultation of consultations) {
-      await tx.consultation.upsert({
-        where: { id: consultation.id },
-        update: {},
-        create: consultation,
-      });
-    }
-
-    // 8. Create audit log entries for test user activity
-    console.log('  Creating audit log entries...');
-    await tx.auditLog.createMany({
-      data: [
-        {
-          userId: TEST_IDS.clinician,
-          action: 'e2e_test.seed',
-          resourceType: 'system',
-          metadata: {
-            testRun: true,
-            seededAt: new Date().toISOString(),
-          },
+        action: 'e2e_test.seed',
+        resourceType: 'system',
+        metadata: {
+          testRun: true,
+          seededAt: new Date().toISOString(),
         },
-      ],
-      skipDuplicates: true,
-    });
+      },
+    ],
+    skipDuplicates: true,
   });
 
   const duration = Date.now() - startTime;

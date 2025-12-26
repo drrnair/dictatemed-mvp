@@ -47,6 +47,10 @@ async function checkDatabase(): Promise<ServiceStatus> {
 async function checkDeepgram(): Promise<ServiceStatus> {
   // Deepgram health check - just verify API key is configured
   // Full connectivity check would be expensive
+  // In test mode with mocking enabled, skip this check
+  if (process.env.MOCK_DEEPGRAM_SERVICE === 'true') {
+    return { status: 'up', message: 'mocked' };
+  }
   if (!process.env.DEEPGRAM_API_KEY) {
     return {
       status: 'down',
@@ -59,6 +63,10 @@ async function checkDeepgram(): Promise<ServiceStatus> {
 async function checkBedrock(): Promise<ServiceStatus> {
   // Bedrock health check - verify credentials are configured
   // Full connectivity check would be expensive
+  // In test mode with mocking enabled, skip this check
+  if (process.env.MOCK_BEDROCK_SERVICE === 'true') {
+    return { status: 'up', message: 'mocked' };
+  }
   if (!process.env.AWS_REGION) {
     return {
       status: 'down',
@@ -70,6 +78,10 @@ async function checkBedrock(): Promise<ServiceStatus> {
 
 async function checkSupabase(): Promise<ServiceStatus> {
   // Supabase health check - verify credentials are configured
+  // In test mode with mocking enabled, skip this check
+  if (process.env.MOCK_SUPABASE_STORAGE === 'true') {
+    return { status: 'up', message: 'mocked' };
+  }
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
     return {
       status: 'down',

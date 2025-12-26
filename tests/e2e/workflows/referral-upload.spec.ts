@@ -31,7 +31,13 @@ import {
   mockLetterGeneration,
   mockTranscription,
   waitForNetworkIdle,
+  MOCK_SERVICES,
 } from '../utils/helpers';
+import {
+  workflowTest,
+  extractLetterIdFromUrl,
+  clearWorkflowState,
+} from '../fixtures/workflow-state';
 
 // Path to test referral files (TXT for CI, PDF optional)
 const REFERRAL_FIXTURES_PATH = path.join(__dirname, '../fixtures/referrals');
@@ -59,8 +65,11 @@ interface ReferralMockOptions {
 /**
  * Sets up all referral-related API mocks in one place.
  * Reduces code duplication across tests.
+ * Respects MOCK_SERVICES flag - returns early if MOCK_SERVICES=false.
  */
 async function setupReferralMocks(page: Page, options: ReferralMockOptions = {}): Promise<void> {
+  if (!MOCK_SERVICES) return;
+
   const {
     referralId = 'test-referral-001',
     extractedData,
@@ -149,18 +158,21 @@ async function setupReferralMocks(page: Page, options: ReferralMockOptions = {})
 }
 
 // Test configuration - serial execution to maintain state
-test.describe.configure({ mode: 'serial' });
+workflowTest.describe.configure({ mode: 'serial' });
 
-test.describe('Referral Upload Workflow', () => {
+workflowTest.describe('Referral Upload Workflow', () => {
   let loginPage: LoginPage;
   let dashboardPage: DashboardPage;
   let referralPage: ReferralUploadPage;
   let consultationPage: NewConsultationPage;
   let letterDetailPage: LetterDetailPage;
-  // Shared state for letter ID across serial tests
-  let generatedLetterId: string | null = null;
 
-  test.beforeEach(async ({ page }) => {
+  // Clear workflow state before the test suite starts
+  workflowTest.beforeAll(async () => {
+    clearWorkflowState();
+  });
+
+  workflowTest.beforeEach(async ({ page }) => {
     // Initialize page objects
     loginPage = new LoginPage(page);
     dashboardPage = new DashboardPage(page);
@@ -169,7 +181,7 @@ test.describe('Referral Upload Workflow', () => {
     letterDetailPage = new LetterDetailPage(page);
   });
 
-  test('should login and navigate to referral upload', async ({ page }) => {
+  workflowTest('should login and navigate to referral upload', async ({ page }) => {
     // Login with test credentials
     await loginPage.loginWithEnvCredentials();
     await loginPage.expectLoginSuccess();
@@ -184,7 +196,7 @@ test.describe('Referral Upload Workflow', () => {
     await referralPage.expectReadyForUpload();
   });
 
-  test('should upload referral file successfully', async ({ page }) => {
+  workflowTest('should upload referral file successfully', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Use helper for mock setup
@@ -208,7 +220,7 @@ test.describe('Referral Upload Workflow', () => {
     await referralPage.expectUploadSuccess();
   });
 
-  test('should extract patient information from referral', async ({ page }) => {
+  workflowTest('should extract patient information from referral', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Use helper with extraction delay
@@ -241,7 +253,7 @@ test.describe('Referral Upload Workflow', () => {
     expect(state).toBe('ready');
   });
 
-  test('should extract GP/referrer information', async ({ page }) => {
+  workflowTest('should extract GP/referrer information', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Use helper for mock setup
@@ -271,7 +283,7 @@ test.describe('Referral Upload Workflow', () => {
     await referralPage.expectExtractedReferrer('TEST');
   });
 
-  test('should display review panel with extracted data', async ({ page }) => {
+  workflowTest('should display review panel with extracted data', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Use helper for mock setup
@@ -302,7 +314,7 @@ test.describe('Referral Upload Workflow', () => {
     expect(review.hasReferrer).toBe(true);
   });
 
-  test('should allow editing extracted patient fields', async ({ page }) => {
+  workflowTest('should allow editing extracted patient fields', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Use helper with update support enabled
@@ -334,7 +346,7 @@ test.describe('Referral Upload Workflow', () => {
     await waitForNetworkIdle(page);
   });
 
-  test('should allow editing extracted referrer fields', async ({ page }) => {
+  workflowTest('should allow editing extracted referrer fields', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Use helper with update support enabled
@@ -366,7 +378,7 @@ test.describe('Referral Upload Workflow', () => {
     await waitForNetworkIdle(page);
   });
 
-  test('should create consultation from referral', async ({ page }) => {
+  workflowTest('should create consultation from referral', async ({ page }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Use helper for referral mocks
@@ -416,7 +428,7 @@ test.describe('Referral Upload Workflow', () => {
     await waitForNetworkIdle(page);
   });
 
-  test('should generate letter with referral context', async ({ page }) => {
+  workflowTest('should generate letter with referral context', async ({ page, workflowState }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
 
     // Use helper for referral mocks
@@ -469,20 +481,18 @@ test.describe('Referral Upload Workflow', () => {
       // Generate the letter
       await consultationPage.generateLetterAndWait(TEST_TIMEOUTS.letterGeneration);
 
-      // Capture the letter ID for subsequent tests
+      // Capture the letter ID in workflow state for subsequent tests
       const url = page.url();
-      const match = url.match(/\/letters\/([a-zA-Z0-9-]+)/);
-      if (match && match[1]) {
-        generatedLetterId = match[1];
-      }
+      workflowState.letterId = extractLetterIdFromUrl(url);
 
       // Verify we're on the letter detail page
       await expect(page).toHaveURL(/\/letters\/.+/);
     }
   });
 
-  test('should send letter to referrer', async ({ page }) => {
+  workflowTest('should send letter to referrer', async ({ page, workflowState }) => {
     const expectedExtraction = EXPECTED_REFERRAL_EXTRACTIONS['cardiology-referral-001'];
+    const letterId = workflowState.letterId ?? 'test-letter-from-referral';
 
     // Mock the letter API
     await page.route('**/api/letters/**', async (route) => {
@@ -495,7 +505,7 @@ test.describe('Referral Upload Workflow', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            id: generatedLetterId ?? 'test-letter-from-referral',
+            id: letterId,
             content: SAMPLE_LETTER_CONTENT.heartFailure.body,
             status: 'APPROVED',
             letterType: 'NEW_PATIENT',
@@ -530,7 +540,6 @@ test.describe('Referral Upload Workflow', () => {
 
     // Login and navigate to letter
     await loginPage.loginWithEnvCredentials();
-    const letterId = generatedLetterId ?? 'test-letter-from-referral';
     await letterDetailPage.gotoLetter(letterId);
 
     // Verify letter is loaded
