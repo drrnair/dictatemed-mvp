@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
+import { TextHighlightMenu, useTextSelection } from './TextHighlightMenu';
 
 interface SourceAnchor {
   id: string;
@@ -23,6 +24,12 @@ interface LetterEditorProps {
   onContentChange: (content: string) => void;
   onSourceClick: (anchorId: string) => void;
   onSave: () => Promise<void>;
+  /** Called when user wants to ask about selected text */
+  onAskAboutText?: (selectedText: string) => void;
+  /** Called when user wants to find citations for selected text */
+  onCiteText?: (selectedText: string) => void;
+  /** Called when user selects a quick action */
+  onQuickAction?: (action: string, selectedText: string) => void;
 }
 
 interface EditHistoryEntry {
@@ -38,6 +45,9 @@ export function LetterEditor({
   onContentChange,
   onSourceClick,
   onSave,
+  onAskAboutText,
+  onCiteText,
+  onQuickAction,
 }: LetterEditorProps) {
   const [content, setContent] = useState(initialContent);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,8 +62,17 @@ export function LetterEditor({
   const [historyIndex, setHistoryIndex] = useState(0);
 
   const editorRef = useRef<HTMLDivElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout>();
   const contentChangeTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Text selection for highlight menu
+  const {
+    selectedText,
+    selectionPosition,
+    isMenuVisible,
+    clearSelection,
+  } = useTextSelection(editorContainerRef);
 
   // Calculate reading stats
   const characterCount = content.length;
@@ -356,7 +375,7 @@ export function LetterEditor({
       </div>
 
       {/* Editor area */}
-      <div className="flex-1 overflow-auto bg-card">
+      <div ref={editorContainerRef} className="flex-1 overflow-auto bg-card relative">
         <div
           ref={editorRef}
           contentEditable={!readOnly}
@@ -375,6 +394,19 @@ export function LetterEditor({
           dangerouslySetInnerHTML={{ __html: getHighlightedContent() }}
           aria-label="Letter content editor"
         />
+
+        {/* Text highlight menu */}
+        {(onAskAboutText || onCiteText) && (
+          <TextHighlightMenu
+            selectedText={selectedText}
+            position={selectionPosition}
+            isVisible={isMenuVisible && selectedText.length > 2}
+            onAsk={onAskAboutText || (() => {})}
+            onCite={onCiteText || (() => {})}
+            onQuickAction={onQuickAction}
+            onDismiss={clearSelection}
+          />
+        )}
       </div>
 
       {/* Read-only indicator */}

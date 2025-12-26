@@ -386,27 +386,40 @@ npm run lint         # ✅ No errors in new files (only pre-existing warnings)
 
 ---
 
-### [ ] Step 10: Frontend - Letter Editor Integration
+### [x] Step 10: Frontend - Letter Editor Integration
 
 **Goal**: Connect literature chat to letter editing
 
-**Tasks**:
-1. Update `src/components/letters/LetterEditor.tsx`:
-   - Add text selection detection
-   - Show highlight menu on selection
-2. Create `TextHighlightMenu.tsx`:
-   - "Ask" button to open assistant with context
+**Completed**:
+1. Created `src/components/letters/TextHighlightMenu.tsx`:
+   - `TextHighlightMenu` component for text selection actions
+   - "Ask" button to open assistant with selected text context
    - "Cite" button for quick citation search
-   - Quick action dropdown
-3. Update `LetterReviewClient.tsx`:
-   - Add ClinicalAssistantPanel
-   - Add LayoutToggle to toolbar
-   - Wire up citation insertion
+   - Quick action dropdown (Evidence, Dosing, Contraindications, Interactions, Side effects)
+   - Auto-hide after 5 seconds of inactivity
+   - Keyboard accessible (Escape to dismiss)
+   - `useTextSelection` hook for managing text selection state
+2. Updated `src/components/letters/LetterEditor.tsx`:
+   - Added `onAskAboutText`, `onCiteText`, `onQuickAction` callback props
+   - Integrated `useTextSelection` hook for text selection detection
+   - Added `TextHighlightMenu` that appears above selected text
+   - Container ref for managing selection within editor area
+3. Updated `src/app/(dashboard)/letters/[id]/LetterReviewClient.tsx`:
+   - Added `ClinicalAssistantPanel` import and integration
+   - Added `LiteratureToolbarButton` to header toolbar
+   - Added `useLiteratureStore` for panel state management
+   - Added handlers: `handleAskAboutText`, `handleCiteText`, `handleQuickAction`
+   - Added `handleInsertCitation` for inserting citations into letter content
+   - Added `formatCitationForLetter` helper function
+   - Side panel layout renders next to main content
+   - Popup/drawer layouts render as overlays
+4. Updated `src/components/letters/index.ts`:
+   - Exported `LetterEditor`, `TextHighlightMenu`, and `useTextSelection`
 
-**Verification**:
+**Verification**: ✅
 ```bash
-npm run typecheck
-npm run lint
+npm run typecheck    # ✅ No errors
+npm run lint         # ✅ No new errors (only pre-existing warnings)
 ```
 
 ---

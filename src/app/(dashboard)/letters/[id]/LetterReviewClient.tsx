@@ -15,6 +15,8 @@ import {
 import { DifferentialView } from '@/components/letters/DifferentialView';
 import { SendLetterDialog } from '@/components/letters/SendLetterDialog';
 import { SendHistory } from '@/components/letters/SendHistory';
+import { ClinicalAssistantPanel, LiteratureToolbarButton } from '@/components/literature';
+import { useLiteratureStore } from '@/stores/literature.store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -28,6 +30,7 @@ import {
 import { Send, History } from 'lucide-react';
 import { logger } from '@/lib/logger';
 import type { SendStatus, ContactType } from '@prisma/client';
+import type { Citation } from '@/domains/literature';
 
 // Proper type definitions instead of `any`
 interface SourceAnchor {
@@ -117,6 +120,26 @@ interface LetterReviewClientProps {
   };
 }
 
+/**
+ * Format a citation for insertion into the letter text.
+ * Creates a standardized citation format suitable for medical letters.
+ */
+function formatCitationForLetter(citation: Citation): string {
+  const parts: string[] = [];
+
+  // Source name
+  parts.push(`(${citation.source}`);
+
+  // Year if available
+  if (citation.year) {
+    parts.push(`, ${citation.year}`);
+  }
+
+  parts.push(')');
+
+  return parts.join('');
+}
+
 export function LetterReviewClient({
   letter,
   currentUser,
@@ -145,6 +168,12 @@ export function LetterReviewClient({
   const [localHallucinationFlags, setLocalHallucinationFlags] = useState<HallucinationFlag[]>(
     () => (letter.hallucinationFlags as HallucinationFlag[] | null) || []
   );
+
+  // Track selected text for literature search context
+  const [selectedText, setSelectedText] = useState('');
+
+  // Literature store
+  const { openPanel, setLetterContext, layout: literatureLayout } = useLiteratureStore();
 
   const isReadOnly = letter.status === 'APPROVED';
   const hasChanges = content !== originalContent;
@@ -444,6 +473,77 @@ export function LetterReviewClient({
     []
   );
 
+  // Literature search handlers
+  const handleAskAboutText = useCallback(
+    (text: string) => {
+      setSelectedText(text);
+      setLetterContext(letter.id, text);
+      openPanel();
+    },
+    [letter.id, setLetterContext, openPanel]
+  );
+
+  const handleCiteText = useCallback(
+    (text: string) => {
+      setSelectedText(text);
+      setLetterContext(letter.id, text);
+      openPanel();
+    },
+    [letter.id, setLetterContext, openPanel]
+  );
+
+  const handleQuickAction = useCallback(
+    (action: string, text: string) => {
+      setSelectedText(text);
+      // Create a contextual query based on the action
+      const queryPrefix = {
+        'evidence': 'Evidence and guidelines for',
+        'dosing': 'Dosing information for',
+        'contraindications': 'Contraindications for',
+        'interactions': 'Drug interactions with',
+        'side-effects': 'Side effects of',
+      }[action] || 'Information about';
+
+      setLetterContext(letter.id, `${queryPrefix} ${text}`);
+      openPanel();
+    },
+    [letter.id, setLetterContext, openPanel]
+  );
+
+  // Insert citation into letter content
+  const handleInsertCitation = useCallback(
+    (citation: Citation) => {
+      if (isReadOnly) return;
+
+      // Format citation for insertion
+      const citationText = formatCitationForLetter(citation);
+
+      // Insert at current cursor position or append
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const editorElement = document.querySelector('[data-letter-id]');
+
+        if (editorElement?.contains(range.commonAncestorContainer)) {
+          // Insert at cursor position
+          range.deleteContents();
+          range.insertNode(document.createTextNode(citationText));
+          range.collapse(false);
+
+          // Trigger content update
+          const newContent = editorElement.textContent || '';
+          setContent(newContent);
+          return;
+        }
+      }
+
+      // Fallback: append to end
+      const newContent = content + ' ' + citationText;
+      setContent(newContent);
+    },
+    [isReadOnly, content]
+  );
+
   const formatLetterType = (type: string) => {
     return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (l) => l.toUpperCase());
   };
@@ -466,6 +566,9 @@ export function LetterReviewClient({
       </Badge>
     );
   };
+
+  // Determine if we should show side panel layout
+  const showSideLayout = literatureLayout === 'side';
 
   return (
     <div className="flex h-screen flex-col">
@@ -540,6 +643,12 @@ export function LetterReviewClient({
                 {showDiff ? 'Hide' : 'Show'} Changes
               </Button>
             )}
+
+            {/* Literature search button */}
+            <LiteratureToolbarButton
+              selectedText={selectedText}
+              className="min-h-touch"
+            />
 
             {/* Preview button */}
             <Button
@@ -709,9 +818,21 @@ export function LetterReviewClient({
               onContentChange={setContent}
               onSourceClick={handleEditorSourceClick}
               onSave={handleSaveDraft}
+              onAskAboutText={handleAskAboutText}
+              onCiteText={handleCiteText}
+              onQuickAction={handleQuickAction}
             />
           </div>
         </main>
+
+        {/* Clinical Literature Panel (side layout) */}
+        {showSideLayout && (
+          <ClinicalAssistantPanel
+            letterId={letter.id}
+            selectedText={selectedText}
+            onInsertCitation={!isReadOnly ? handleInsertCitation : undefined}
+          />
+        )}
 
         {/* Send History Panel (for approved letters) - right side */}
         {isReadOnly && showHistory && (
@@ -842,6 +963,15 @@ export function LetterReviewClient({
           setShowHistory(true);
         }}
       />
+
+      {/* Clinical Literature Panel (popup/drawer layouts) */}
+      {!showSideLayout && (
+        <ClinicalAssistantPanel
+          letterId={letter.id}
+          selectedText={selectedText}
+          onInsertCitation={!isReadOnly ? handleInsertCitation : undefined}
+        />
+      )}
     </div>
   );
 }
