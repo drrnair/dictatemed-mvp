@@ -143,6 +143,7 @@ Do not make assumptions on important decisions — get clarification first.
 ---
 
 ### [ ] Step 4: Upload Queue Hook
+<!-- chat-id: 53c3aa26-ac2c-407e-a66c-61c2105a9104 -->
 
 **Objective**: State management for multi-file upload queue
 
