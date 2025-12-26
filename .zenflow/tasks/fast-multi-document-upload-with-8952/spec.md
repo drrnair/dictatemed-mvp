@@ -5,7 +5,7 @@
 This feature involves:
 - Frontend state management for multi-file uploads with progress tracking
 - New API endpoints for batch operations and fast extraction
-- Database schema changes for tracking extraction phases
+- Database schema changes for tracking extraction phases (✅ **COMPLETED**)
 - Background job processing (simulated via API routes initially)
 - Optimized LLM prompts for fast patient identifier extraction
 
@@ -44,15 +44,15 @@ This feature involves:
 |----------|-----------|
 | **No external job queue** | Keep initial implementation simple; use polling instead of webhooks |
 | **Fast extraction prompt** | Separate optimized prompt for patient identifiers only (name, DOB, MRN) |
-| **Status polling** | Client polls for background processing status every 5 seconds |
-| **Max 10 files** | Balance between user needs and server load |
-| **Max 3 concurrent uploads** | Prevent overwhelming Supabase Storage |
+| **Status polling** | Client polls for background processing status every 2 seconds (`STATUS_POLLING_INTERVAL_MS`) |
+| **Max 10 files** | Balance between user needs and server load (`MAX_BATCH_FILES`) |
+| **Max 3 concurrent uploads** | Prevent overwhelming Supabase Storage (`MAX_CONCURRENT_UPLOADS`) |
 
 ---
 
 ## Source Code Structure Changes
 
-### New Files
+### New Files to Create
 
 ```
 src/
@@ -74,79 +74,121 @@ src/
     └── use-document-upload-queue.ts   # State management for upload queue
 ```
 
-### Modified Files
+### Already Modified Files (✅ COMPLETED)
+
+The following files have already been updated with two-phase extraction support:
+
+```
+src/
+├── domains/referrals/
+│   └── referral.types.ts              # ✅ Added FastExtractedData, batch types, queue types
+└── prisma/
+    └── schema.prisma                  # ✅ Added FastExtractionStatus, FullExtractionStatus enums & fields
+```
+
+### Files to Modify During Implementation
 
 ```
 src/
 ├── components/referral/
 │   └── ReferralUploader.tsx           # Extend to use MultiDocumentUploader
 ├── domains/referrals/
-│   ├── referral.types.ts              # Add new types for fast extraction
+│   ├── referral.service.ts            # Update mapReferralDocument for new fields
 │   └── index.ts                       # Export new types/services
-└── prisma/
-    └── schema.prisma                  # Add fields for two-phase extraction
+└── app/api/referrals/[id]/
+    └── extract-structured/route.ts    # Update to set fullExtractionStatus
 ```
 
 ---
 
-## Data Model Changes
+## Data Model Changes (✅ COMPLETED)
 
-### ReferralDocument Schema Updates
+### Prisma Schema - Already Implemented
 
 ```prisma
+// New enums added to schema.prisma
+enum FastExtractionStatus {
+  PENDING     // Not yet started
+  PROCESSING  // Currently extracting patient identifiers
+  COMPLETE    // Fast extraction successful
+  FAILED      // Fast extraction failed
+}
+
+enum FullExtractionStatus {
+  PENDING     // Not yet started (waiting for fast extraction)
+  PROCESSING  // Currently extracting full context
+  COMPLETE    // Full extraction successful
+  FAILED      // Full extraction failed
+}
+
 model ReferralDocument {
   // ... existing fields ...
 
-  // Two-phase extraction tracking
-  fastExtractionStatus     String?    // 'pending' | 'processing' | 'complete' | 'failed'
-  fastExtractionData       Json?      // { patientName, dob, mrn, confidence }
-  fastExtractionStartedAt  DateTime?
+  // Fast extraction - patient identifiers only (<5 seconds)
+  fastExtractionStatus      FastExtractionStatus? @default(PENDING)
+  fastExtractionData        Json?                 // { patientName, dob, mrn, confidence }
+  fastExtractionStartedAt   DateTime?
   fastExtractionCompletedAt DateTime?
+  fastExtractionError       String?
 
-  fullExtractionStatus     String?    // 'pending' | 'processing' | 'complete' | 'failed'
-  fullExtractionStartedAt  DateTime?
+  // Full extraction - complete context (background, <60 seconds)
+  fullExtractionStatus      FullExtractionStatus? @default(PENDING)
+  fullExtractionStartedAt   DateTime?
   fullExtractionCompletedAt DateTime?
+  fullExtractionError       String?
+
+  @@index([fastExtractionStatus])
+  @@index([fullExtractionStatus])
 }
 ```
 
-### New Types
+### TypeScript Types - Already Implemented
+
+The following types are already defined in `src/domains/referrals/referral.types.ts`:
 
 ```typescript
-// Fast extraction result (patient identifiers only)
-interface FastExtractedData {
-  patientName?: string;
-  dateOfBirth?: string;      // ISO format YYYY-MM-DD
-  mrn?: string;              // MRN/URN/hospital number
-  confidence: {
-    patientName: number;     // 0-1
-    dateOfBirth: number;     // 0-1
-    mrn: number;             // 0-1
-    overall: number;         // 0-1
-  };
-  extractedAt: string;       // ISO timestamp
+// Fast extraction result - using FieldConfidence for per-field tracking
+export interface FastExtractedData {
+  patientName: FieldConfidence;   // { value, confidence, level }
+  dateOfBirth: FieldConfidence;
+  mrn: FieldConfidence;
+  overallConfidence: number;      // 0-1
+  extractedAt: string;            // ISO timestamp
+  modelUsed: string;
+  processingTimeMs: number;
 }
 
-// Document processing status for polling
-interface DocumentProcessingStatus {
-  id: string;
-  filename: string;
-  uploadStatus: 'uploading' | 'uploaded' | 'failed';
-  uploadProgress: number;    // 0-100
-  fastExtractionStatus: 'pending' | 'processing' | 'complete' | 'failed';
-  fastExtractionData?: FastExtractedData;
-  fullExtractionStatus: 'pending' | 'processing' | 'complete' | 'failed';
-  error?: string;
+// Field-level confidence with semantic level
+export interface FieldConfidence {
+  value: string | null;
+  confidence: number;             // 0-1
+  level: ConfidenceLevel;         // 'high' | 'medium' | 'low'
 }
 
-// Batch upload response
-interface BatchUploadResult {
-  documents: Array<{
-    id: string;
-    uploadUrl: string;
-    expiresAt: Date;
-  }>;
-}
+// Batch upload types
+export interface BatchUploadInput { files: BatchUploadFileInput[]; }
+export interface BatchUploadResult { files: BatchUploadFileResult[]; batchId: string; }
+
+// Queue management types (client-side)
+export interface QueuedFile { ... }
+export interface UploadQueueState { ... }
+
+// Constants
+export const MAX_BATCH_FILES = 10;
+export const MAX_BATCH_FILE_SIZE = 20 * 1024 * 1024;  // 20 MB for batch uploads
+export const MAX_CONCURRENT_UPLOADS = 3;
+export const FAST_EXTRACTION_TARGET_MS = 5000;
+export const STATUS_POLLING_INTERVAL_MS = 2000;
 ```
+
+### File Size Configuration
+
+| Context | Constant | Value | Notes |
+|---------|----------|-------|-------|
+| Single file upload | `MAX_REFERRAL_FILE_SIZE` | 10 MB | Existing behavior preserved |
+| Batch upload | `MAX_BATCH_FILE_SIZE` | 20 MB | New constant for multi-file uploads |
+
+**Note**: The existing single-file upload limit (10 MB) is intentionally preserved for backward compatibility. The batch upload uses a separate, higher limit (20 MB) as specified in the requirements.
 
 ---
 
@@ -167,13 +209,35 @@ Create multiple referral documents in one request.
 }
 ```
 
-**Response:**
+**Response (Success):**
 ```json
 {
-  "documents": [
-    { "id": "uuid-1", "uploadUrl": "https://...", "expiresAt": "2024-..." },
-    { "id": "uuid-2", "uploadUrl": "https://...", "expiresAt": "2024-..." }
-  ]
+  "files": [
+    { "id": "uuid-1", "filename": "referral.pdf", "uploadUrl": "https://...", "expiresAt": "2024-..." },
+    { "id": "uuid-2", "filename": "results.png", "uploadUrl": "https://...", "expiresAt": "2024-..." }
+  ],
+  "batchId": "batch-uuid"
+}
+```
+
+**Response (Partial Failure):**
+```json
+{
+  "files": [
+    { "id": "uuid-1", "filename": "referral.pdf", "uploadUrl": "https://...", "expiresAt": "2024-..." }
+  ],
+  "errors": [
+    { "filename": "results.png", "error": "File size exceeds 20MB limit" }
+  ],
+  "batchId": "batch-uuid"
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": "Invalid request",
+  "details": "files array is required and must contain 1-10 items"
 }
 ```
 
@@ -183,18 +247,16 @@ Fast extraction of patient identifiers only (<5 seconds target).
 **Response:**
 ```json
 {
-  "id": "uuid-1",
-  "status": "complete",
+  "documentId": "uuid-1",
+  "status": "COMPLETE",
   "data": {
-    "patientName": "John Smith",
-    "dateOfBirth": "1965-03-15",
-    "mrn": "MRN12345678",
-    "confidence": {
-      "patientName": 0.95,
-      "dateOfBirth": 0.9,
-      "mrn": 0.7,
-      "overall": 0.85
-    }
+    "patientName": { "value": "John Smith", "confidence": 0.95, "level": "high" },
+    "dateOfBirth": { "value": "1965-03-15", "confidence": 0.9, "level": "high" },
+    "mrn": { "value": "MRN12345678", "confidence": 0.7, "level": "medium" },
+    "overallConfidence": 0.85,
+    "extractedAt": "2024-01-15T10:30:00Z",
+    "modelUsed": "claude-sonnet-4",
+    "processingTimeMs": 2340
   }
 }
 ```
@@ -205,19 +267,27 @@ Poll for document processing status.
 **Response:**
 ```json
 {
-  "id": "uuid-1",
+  "documentId": "uuid-1",
   "filename": "referral.pdf",
-  "uploadStatus": "uploaded",
-  "fastExtractionStatus": "complete",
+  "status": "TEXT_EXTRACTED",
+  "fastExtractionStatus": "COMPLETE",
   "fastExtractionData": { ... },
-  "fullExtractionStatus": "processing"
+  "fullExtractionStatus": "PROCESSING",
+  "error": null
 }
 ```
 
 ### Modified Endpoints
 
 #### `POST /api/referrals/[id]/extract-structured`
-Modified to update `fullExtractionStatus` and related timestamps.
+Updated to track full extraction status via new database fields.
+
+**Changes:**
+- Set `fullExtractionStatus = 'PROCESSING'` at start
+- Set `fullExtractionStartedAt = now()` at start
+- Set `fullExtractionStatus = 'COMPLETE'` on success
+- Set `fullExtractionCompletedAt = now()` on success
+- Set `fullExtractionStatus = 'FAILED'` and `fullExtractionError` on failure
 
 ---
 
@@ -229,8 +299,8 @@ Modified to update `fullExtractionStatus` and related timestamps.
 │ MultiDocumentUploader                                   │
 │ ┌─────────────────────────────────────────────────────┐ │
 │ │ DropZone (multi-select enabled)                     │ │
-│ │ - Accept: PDF, PNG, JPEG, HEIC, HEIF, TXT          │ │
-│ │ - Max: 10 files, 20MB each                          │ │
+│ │ - Accept: PDF, PNG, JPEG, HEIC, HEIF, TXT, DOCX, RTF│ │
+│ │ - Max: 10 files, 20MB each (batch mode)             │ │
 │ └─────────────────────────────────────────────────────┘ │
 │                                                         │
 │ ┌─────────────────────────────────────────────────────┐ │
@@ -257,7 +327,7 @@ Modified to update `fullExtractionStatus` and related timestamps.
 ```
 User selects files
     ↓
-Files added to queue (pending)
+Files added to queue (status: 'queued')
     ↓
 Parallel upload (max 3 concurrent)
     ↓
@@ -296,11 +366,11 @@ Return JSON with these fields ONLY:
 }
 
 Rules:
-- Extract name exactly as written
-- Convert dates to YYYY-MM-DD
-- Include any patient ID number (MRN, URN, hospital number)
+- Extract name exactly as written (include titles if present)
+- Convert dates to YYYY-MM-DD format
+- Include any patient ID number (MRN, URN, hospital number, unit number)
 - Return null for missing values
-- Be fast - skip all other information
+- Be fast - skip all other information (GP, referrer, clinical context)
 
 DOCUMENT TEXT:
 {text}
@@ -317,7 +387,7 @@ DOCUMENT TEXT:
 - `DocumentUploadQueue.test.tsx`: Progress tracking, status display
 - `FastExtractionResult.test.tsx`: Confidence indicators, data display
 - `referral-fast-extraction.service.test.ts`: Prompt parsing, error handling
-- `batch/route.test.ts`: Batch document creation
+- `batch/route.test.ts`: Batch document creation, partial failure handling
 
 ### Integration Tests
 - Full upload flow with multiple files
@@ -336,35 +406,14 @@ DOCUMENT TEXT:
 - Verify recording starts while processing continues
 - Test with various file types (PDF, image, HEIC)
 
----
-
-## Implementation Plan
-
-### Phase 1: Multi-File Upload (Foundation)
-1. Create `MultiDocumentUploader` component with multi-select
-2. Implement `DocumentUploadQueue` with progress tracking
-3. Add `POST /api/referrals/batch` endpoint
-4. Handle parallel uploads with concurrency limit (3)
-5. Add unit tests for new components
-
-### Phase 2: Fast Extraction
-1. Add database fields for two-phase extraction
-2. Create fast extraction prompt
-3. Implement `POST /api/referrals/[id]/extract-fast` endpoint
-4. Create `FastExtractionResult` component with confidence display
-5. Add `GET /api/referrals/[id]/status` polling endpoint
-
-### Phase 3: Background Processing
-1. Implement status polling in frontend
-2. Create `BackgroundProcessingIndicator` component
-3. Trigger full extraction after fast extraction
-4. Update consultation context when complete
-
-### Phase 4: Integration
-1. Integrate with existing consultation workflow
-2. Handle "Continue to Recording" flow
-3. Letter generation waits for full extraction
-4. End-to-end testing
+### Run Commands
+```bash
+npm run typecheck              # Type checking
+npm run test                   # Unit tests
+npm run test:integration       # Integration tests
+npm run test:e2e              # E2E tests
+npm run verify                # All checks (lint + typecheck + test)
+```
 
 ---
 
@@ -377,6 +426,7 @@ DOCUMENT TEXT:
 | Background processing fails silently | Status polling with error display, retry option |
 | Partial file failures confuse users | Clear per-file status, allow individual retries |
 | Race conditions in status updates | Optimistic locking, timestamp-based ordering |
+| Batch endpoint partial failures | Return both successes and errors in response |
 
 ---
 
@@ -395,6 +445,6 @@ DOCUMENT TEXT:
 ## Out of Scope
 - OCR for handwritten documents
 - Document translation
-- Automatic patient matching (beyond current logic)
+- Automatic patient matching (beyond current logic in `findMatchingPatient`)
 - Real-time collaboration
 - External job queue (Inngest, BullMQ, etc.) - future enhancement

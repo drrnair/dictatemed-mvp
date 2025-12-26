@@ -33,26 +33,41 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
-### [ ] Step 1: Database Schema & Types
+### [x] Step 1: Database Schema & Types
 <!-- chat-id: 18578dde-7bec-47ec-ac11-8b5866afa7a6 -->
 
 **Objective**: Add database fields and types for two-phase extraction tracking
 
-**Tasks**:
-- [ ] Add new fields to `ReferralDocument` in `prisma/schema.prisma`:
-  - `fastExtractionStatus`, `fastExtractionData`, `fastExtractionStartedAt`, `fastExtractionCompletedAt`
-  - `fullExtractionStatus`, `fullExtractionStartedAt`, `fullExtractionCompletedAt`
-- [ ] Run `npx prisma db push` to apply schema changes
-- [ ] Add new types to `src/domains/referrals/referral.types.ts`:
-  - `FastExtractedData`, `DocumentProcessingStatus`, `BatchUploadResult`
-- [ ] Export new types from domain index
+**Completed**:
+- [x] Added new enums to `prisma/schema.prisma`:
+  - `FastExtractionStatus` (PENDING, PROCESSING, COMPLETE, FAILED)
+  - `FullExtractionStatus` (PENDING, PROCESSING, COMPLETE, FAILED)
+- [x] Added new fields to `ReferralDocument` in `prisma/schema.prisma`:
+  - `fastExtractionStatus`, `fastExtractionData`, `fastExtractionStartedAt`, `fastExtractionCompletedAt`, `fastExtractionError`
+  - `fullExtractionStatus`, `fullExtractionStartedAt`, `fullExtractionCompletedAt`, `fullExtractionError`
+  - Added indexes on `fastExtractionStatus` and `fullExtractionStatus`
+- [x] Generated Prisma client with new schema
+- [x] Added new types to `src/domains/referrals/referral.types.ts`:
+  - `FastExtractionStatus`, `FullExtractionStatus` (re-exported from Prisma)
+  - `ConfidenceLevel`, `FieldConfidence`, `FastExtractedData`
+  - `DocumentProcessingStatus`
+  - `BatchUploadFileInput`, `BatchUploadInput`, `BatchUploadFileResult`, `BatchUploadResult`
+  - `FastExtractionInput`, `FastExtractionResult`
+  - `DocumentStatusInput`, `DocumentStatusResult`
+  - `QueuedFile`, `UploadQueueState`
+  - Constants: `MAX_BATCH_FILES`, `MAX_BATCH_FILE_SIZE`, `MAX_CONCURRENT_UPLOADS`, etc.
+  - Helpers: `getConfidenceLevel()`, `createFieldConfidence()`
+- [x] Types auto-exported via existing barrel export in `src/domains/referrals/index.ts`
+- [x] Updated test mocks with new fields
 
-**Files to modify**:
+**Files modified**:
 - `prisma/schema.prisma`
 - `src/domains/referrals/referral.types.ts`
-- `src/domains/referrals/index.ts`
+- `tests/integration/api/referrals.test.ts`
+- `tests/unit/domains/referrals/referral.service.test.ts`
+- `tests/unit/domains/referrals/referral-extraction.test.ts`
 
-**Verification**: `npm run typecheck && npm run test`
+**Verification**: `npm run typecheck` passed
 
 ---
 

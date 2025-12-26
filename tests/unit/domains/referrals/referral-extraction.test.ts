@@ -369,6 +369,16 @@ describe('referral-extraction.service', () => {
       I am referring this patient for assessment of chest pain.
     `,
     extractedData: null,
+    // Two-phase extraction fields
+    fastExtractionStatus: 'PENDING' as const,
+    fastExtractionData: null,
+    fastExtractionStartedAt: null,
+    fastExtractionCompletedAt: null,
+    fastExtractionError: null,
+    fullExtractionStatus: 'PENDING' as const,
+    fullExtractionStartedAt: null,
+    fullExtractionCompletedAt: null,
+    fullExtractionError: null,
     processingError: null,
     processedAt: null,
     createdAt: new Date('2024-01-01'),
