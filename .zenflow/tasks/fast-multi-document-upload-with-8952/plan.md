@@ -107,6 +107,7 @@ Do not make assumptions on important decisions — get clarification first.
 ---
 
 ### [ ] Step 3: API Endpoints
+<!-- chat-id: 82222b44-30db-4956-a7af-73460426ac0a -->
 
 **Objective**: Create batch, fast extraction, and status polling endpoints
 

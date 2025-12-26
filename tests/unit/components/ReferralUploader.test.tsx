@@ -79,7 +79,8 @@ describe('ReferralUploader', () => {
       render(<ReferralUploader {...defaultProps} />);
 
       expect(screen.getByText(/\.pdf, \.txt/i)).toBeInTheDocument();
-      expect(screen.getByText(/10\.0 MB/i)).toBeInTheDocument();
+      // Size limit was increased from 10 MB to 20 MB for multi-document upload
+      expect(screen.getByText(/20\.0 MB/i)).toBeInTheDocument();
     });
 
     it('has upload button with aria-label', () => {
