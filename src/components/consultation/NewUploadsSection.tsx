@@ -234,7 +234,7 @@ export function NewUploadsSection({
             </label>
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            PDF, PNG, JPEG up to 20MB
+            PDF, PNG, JPEG, HEIC up to 20MB
           </p>
 
           {/* Camera button for mobile */}

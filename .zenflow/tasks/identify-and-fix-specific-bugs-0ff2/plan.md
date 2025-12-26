@@ -117,6 +117,11 @@ psql $SUPABASE_DB_URL -f supabase/migrations/001_create_storage_buckets.sql
    - Updated Supabase bucket allowed MIME types
    - Updated migration file
 
+3. **Fixed UI text** in `NewUploadsSection.tsx`:
+   - Updated drop zone text: "PDF, PNG, JPEG, HEIC up to 20MB"
+
+**Note on HEIC for Referrals**: The referral uploader (`/api/referrals`) intentionally only accepts PDF and text files since it performs AI text extraction. HEIC photo support is only for the clinical documents uploader where photos of reports/ECGs make sense.
+
 **User Action Required**:
 
 Verify these environment variables are set in **Vercel Production**:
