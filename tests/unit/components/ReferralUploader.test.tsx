@@ -11,6 +11,9 @@ import type { ReferralExtractedData } from '@/domains/referrals';
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
+// Store original env value
+const originalEnv = process.env.FEATURE_EXTENDED_UPLOAD_TYPES;
+
 describe('ReferralUploader', () => {
   const defaultProps = {
     onExtractionComplete: vi.fn(),
@@ -42,10 +45,18 @@ describe('ReferralUploader', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset feature flag to undefined (disabled by default)
+    delete process.env.FEATURE_EXTENDED_UPLOAD_TYPES;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    // Restore original env value
+    if (originalEnv !== undefined) {
+      process.env.FEATURE_EXTENDED_UPLOAD_TYPES = originalEnv;
+    } else {
+      delete process.env.FEATURE_EXTENDED_UPLOAD_TYPES;
+    }
   });
 
   describe('Initial render (idle state)', () => {
@@ -139,7 +150,8 @@ describe('ReferralUploader', () => {
       fireEvent.change(input);
 
       await waitFor(() => {
-        expect(screen.getByText(/invalid file type.*pdf or text/i)).toBeInTheDocument();
+        // The error message now shows "Invalid file type. Please upload one of: .pdf, .txt" (or extended extensions)
+        expect(screen.getByText(/invalid file type.*please upload one of/i)).toBeInTheDocument();
       });
     });
 
@@ -832,6 +844,311 @@ describe('ReferralUploader', () => {
 
       // Should have only made 1 attempt (no retry for 4xx)
       expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Extended file types (feature flag)', () => {
+    describe('with feature flag disabled', () => {
+      beforeEach(() => {
+        delete process.env.FEATURE_EXTENDED_UPLOAD_TYPES;
+      });
+
+      it('shows base extensions in UI', () => {
+        render(<ReferralUploader {...defaultProps} />);
+
+        expect(screen.getByText(/\.pdf, \.txt/)).toBeInTheDocument();
+        // Extended extensions should not be shown
+        expect(screen.queryByText(/\.jpg/)).not.toBeInTheDocument();
+      });
+
+      it('rejects JPEG files when feature flag is disabled', async () => {
+        render(<ReferralUploader {...defaultProps} />);
+
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+        const jpegFile = new File(['image data'], 'photo.jpg', {
+          type: 'image/jpeg',
+        });
+
+        Object.defineProperty(input, 'files', {
+          value: [jpegFile],
+          writable: false,
+        });
+
+        fireEvent.change(input);
+
+        await waitFor(() => {
+          expect(screen.getByText(/invalid file type.*please upload one of/i)).toBeInTheDocument();
+        });
+      });
+
+      it('rejects DOCX files with specific message when feature flag is disabled', async () => {
+        render(<ReferralUploader {...defaultProps} />);
+
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+        const docxFile = new File(['docx data'], 'document.docx', {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        });
+
+        Object.defineProperty(input, 'files', {
+          value: [docxFile],
+          writable: false,
+        });
+
+        fireEvent.change(input);
+
+        await waitFor(() => {
+          expect(screen.getByText(/word documents.*not yet supported.*convert to pdf/i)).toBeInTheDocument();
+        });
+      });
+    });
+
+    describe('with feature flag enabled', () => {
+      beforeEach(() => {
+        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+      });
+
+      it('shows extended extensions in UI', () => {
+        render(<ReferralUploader {...defaultProps} />);
+
+        // Should show extended extensions including images
+        expect(screen.getByText(/\.jpg/)).toBeInTheDocument();
+        expect(screen.getByText(/\.png/)).toBeInTheDocument();
+        expect(screen.getByText(/\.docx/)).toBeInTheDocument();
+      });
+
+      it('accepts JPEG files when feature flag is enabled', async () => {
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ id: 'ref-1', uploadUrl: 'https://s3.example.com/upload' }),
+          })
+          .mockResolvedValueOnce({ ok: true }) // S3 upload
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Confirm
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Text extract
+          .mockResolvedValueOnce({ ok: true, json: async () => ({ extractedData: mockExtractedData }) });
+
+        render(<ReferralUploader {...defaultProps} />);
+
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+        const jpegFile = new File(['image data'], 'photo.jpg', {
+          type: 'image/jpeg',
+        });
+
+        Object.defineProperty(input, 'files', {
+          value: [jpegFile],
+          writable: false,
+        });
+
+        fireEvent.change(input);
+
+        await waitFor(() => {
+          expect(screen.getByText('photo.jpg')).toBeInTheDocument();
+        });
+      });
+
+      it('accepts PNG files when feature flag is enabled', async () => {
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ id: 'ref-1', uploadUrl: 'https://s3.example.com/upload' }),
+          })
+          .mockResolvedValueOnce({ ok: true }) // S3 upload
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Confirm
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Text extract
+          .mockResolvedValueOnce({ ok: true, json: async () => ({ extractedData: mockExtractedData }) });
+
+        render(<ReferralUploader {...defaultProps} />);
+
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+        const pngFile = new File(['image data'], 'screenshot.png', {
+          type: 'image/png',
+        });
+
+        Object.defineProperty(input, 'files', {
+          value: [pngFile],
+          writable: false,
+        });
+
+        fireEvent.change(input);
+
+        await waitFor(() => {
+          expect(screen.getByText('screenshot.png')).toBeInTheDocument();
+        });
+      });
+
+      it('accepts HEIC files when feature flag is enabled', async () => {
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ id: 'ref-1', uploadUrl: 'https://s3.example.com/upload' }),
+          })
+          .mockResolvedValueOnce({ ok: true }) // S3 upload
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Confirm
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Text extract
+          .mockResolvedValueOnce({ ok: true, json: async () => ({ extractedData: mockExtractedData }) });
+
+        render(<ReferralUploader {...defaultProps} />);
+
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+        const heicFile = new File(['image data'], 'iphone-photo.heic', {
+          type: 'image/heic',
+        });
+
+        Object.defineProperty(input, 'files', {
+          value: [heicFile],
+          writable: false,
+        });
+
+        fireEvent.change(input);
+
+        await waitFor(() => {
+          expect(screen.getByText('iphone-photo.heic')).toBeInTheDocument();
+        });
+      });
+
+      it('accepts DOCX files when feature flag is enabled', async () => {
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ id: 'ref-1', uploadUrl: 'https://s3.example.com/upload' }),
+          })
+          .mockResolvedValueOnce({ ok: true }) // S3 upload
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Confirm
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Text extract
+          .mockResolvedValueOnce({ ok: true, json: async () => ({ extractedData: mockExtractedData }) });
+
+        render(<ReferralUploader {...defaultProps} />);
+
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+        const docxFile = new File(['docx data'], 'referral.docx', {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        });
+
+        Object.defineProperty(input, 'files', {
+          value: [docxFile],
+          writable: false,
+        });
+
+        fireEvent.change(input);
+
+        await waitFor(() => {
+          expect(screen.getByText('referral.docx')).toBeInTheDocument();
+        });
+      });
+
+      it('accepts RTF files when feature flag is enabled', async () => {
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ id: 'ref-1', uploadUrl: 'https://s3.example.com/upload' }),
+          })
+          .mockResolvedValueOnce({ ok: true }) // S3 upload
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Confirm
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Text extract
+          .mockResolvedValueOnce({ ok: true, json: async () => ({ extractedData: mockExtractedData }) });
+
+        render(<ReferralUploader {...defaultProps} />);
+
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+        const rtfFile = new File(['rtf data'], 'document.rtf', {
+          type: 'application/rtf',
+        });
+
+        Object.defineProperty(input, 'files', {
+          value: [rtfFile],
+          writable: false,
+        });
+
+        fireEvent.change(input);
+
+        await waitFor(() => {
+          expect(screen.getByText('document.rtf')).toBeInTheDocument();
+        });
+      });
+
+      it('still rejects unsupported file types even when feature flag is enabled', async () => {
+        render(<ReferralUploader {...defaultProps} />);
+
+        const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+        const videoFile = new File(['video data'], 'video.mp4', {
+          type: 'video/mp4',
+        });
+
+        Object.defineProperty(input, 'files', {
+          value: [videoFile],
+          writable: false,
+        });
+
+        fireEvent.change(input);
+
+        await waitFor(() => {
+          expect(screen.getByText(/invalid file type.*please upload one of/i)).toBeInTheDocument();
+        });
+      });
+    });
+
+    describe('drag and drop with extended types', () => {
+      beforeEach(() => {
+        process.env.FEATURE_EXTENDED_UPLOAD_TYPES = 'true';
+      });
+
+      it('handles JPEG drag and drop', async () => {
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ id: 'ref-1', uploadUrl: 'https://s3.example.com/upload' }),
+          })
+          .mockResolvedValueOnce({ ok: true }) // S3 upload
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Confirm
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Text extract
+          .mockResolvedValueOnce({ ok: true, json: async () => ({ extractedData: mockExtractedData }) });
+
+        render(<ReferralUploader {...defaultProps} />);
+
+        const dropZone = screen.getByRole('button', { name: /upload referral letter/i });
+        const file = new File(['image content'], 'dropped-image.jpg', { type: 'image/jpeg' });
+
+        const dataTransfer = {
+          files: [file],
+          items: [{ kind: 'file' }],
+        };
+
+        fireEvent.drop(dropZone, { dataTransfer });
+
+        await waitFor(() => {
+          expect(screen.getByText('dropped-image.jpg')).toBeInTheDocument();
+        });
+      });
+
+      it('handles DOCX drag and drop', async () => {
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ id: 'ref-1', uploadUrl: 'https://s3.example.com/upload' }),
+          })
+          .mockResolvedValueOnce({ ok: true }) // S3 upload
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Confirm
+          .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Text extract
+          .mockResolvedValueOnce({ ok: true, json: async () => ({ extractedData: mockExtractedData }) });
+
+        render(<ReferralUploader {...defaultProps} />);
+
+        const dropZone = screen.getByRole('button', { name: /upload referral letter/i });
+        const file = new File(['docx content'], 'dropped-document.docx', {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        });
+
+        const dataTransfer = {
+          files: [file],
+          items: [{ kind: 'file' }],
+        };
+
+        fireEvent.drop(dropZone, { dataTransfer });
+
+        await waitFor(() => {
+          expect(screen.getByText('dropped-document.docx')).toBeInTheDocument();
+        });
+      });
     });
   });
 });

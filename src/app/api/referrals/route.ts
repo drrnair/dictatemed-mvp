@@ -11,6 +11,8 @@ import {
 import {
   ALLOWED_REFERRAL_MIME_TYPES,
   MAX_REFERRAL_FILE_SIZE,
+  isAllowedMimeType,
+  getAcceptedExtensions,
 } from '@/domains/referrals';
 import type { ReferralDocumentStatus } from '@/domains/referrals';
 import {
@@ -22,7 +24,15 @@ import { logger } from '@/lib/logger';
 
 const createReferralSchema = z.object({
   filename: z.string().min(1).max(255),
-  mimeType: z.enum(ALLOWED_REFERRAL_MIME_TYPES),
+  // Validate against all possible MIME types first, then check feature flag at runtime
+  mimeType: z.enum(ALLOWED_REFERRAL_MIME_TYPES).superRefine((val, ctx) => {
+    if (!isAllowedMimeType(val)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `File type not supported. Accepted formats: ${getAcceptedExtensions()}`,
+      });
+    }
+  }),
   sizeBytes: z.number().int().positive().max(MAX_REFERRAL_FILE_SIZE),
 });
 
