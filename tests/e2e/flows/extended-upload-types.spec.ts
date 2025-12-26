@@ -644,15 +644,13 @@ test.describe('Extended Upload Types - Accessibility', () => {
     const dropzone = referralPage.uploadDropzone;
     await expect(dropzone).toBeVisible();
 
-    // Check file input accepts extended types
+    // Check file input is present and has an accept attribute
     const fileInput = referralPage.fileInput;
     const acceptAttribute = await fileInput.getAttribute('accept');
 
-    // With feature flag enabled, should accept images and docx
-    // Note: Exact attribute depends on implementation
-    if (acceptAttribute) {
-      console.log(`File input accept attribute: ${acceptAttribute}`);
-    }
+    // File input should have an accept attribute defining allowed types
+    // The exact value depends on the feature flag state
+    expect(acceptAttribute).toBeTruthy();
 
     // Verify keyboard accessibility
     await dropzone.focus();
