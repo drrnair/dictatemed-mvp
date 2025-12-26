@@ -82,6 +82,7 @@ Implemented Svix signature verification for Resend webhooks.
 ---
 
 ### [ ] Step: Issue 3 - Fix Empty Catch Blocks
+<!-- chat-id: a5f2bab0-6719-4b74-a71b-90ec916b508f -->
 
 Add proper error logging to all empty catch blocks in src/.
 
