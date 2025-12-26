@@ -916,6 +916,235 @@ describe('referral.service', () => {
         }),
       });
     });
+
+    it('should extract text from JPEG image via vision API', async () => {
+      const visionExtractedText = 'Dr. Sarah Chen\nHarbour Medical Centre\n\nDear Specialist,\n\nRe: John Smith\nDOB: 15/03/1965\n\nThis patient needs assessment.';
+      const jpegDoc = {
+        ...mockReferralDocument,
+        mimeType: 'image/jpeg',
+        filename: 'referral-photo.jpg',
+      };
+
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(jpegDoc);
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
+        content: Buffer.from('fake jpeg data'),
+        contentType: 'image/jpeg',
+      });
+      mockIsImageMimeType.mockReturnValue(true);
+      mockIsHeicMimeType.mockReturnValue(false);
+      mockValidateImageByType.mockResolvedValue({
+        valid: true,
+        width: 1920,
+        height: 1080,
+        format: 'jpeg',
+      });
+      mockIsVisionSupportedMimeType.mockReturnValue(true);
+      mockExtractTextFromImageBufferVision.mockResolvedValue({
+        text: visionExtractedText,
+        success: true,
+        inputTokens: 1000,
+        outputTokens: 200,
+      });
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...jpegDoc,
+        contentText: visionExtractedText,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1');
+
+      expect(mockIsImageMimeType).toHaveBeenCalledWith('image/jpeg');
+      expect(mockValidateImageByType).toHaveBeenCalled();
+      expect(mockExtractTextFromImageBufferVision).toHaveBeenCalled();
+      expect(result.status).toBe('TEXT_EXTRACTED');
+      expect(result.textLength).toBeGreaterThan(0);
+    });
+
+    it('should convert HEIC to JPEG before vision extraction', async () => {
+      const visionExtractedText = 'Referral letter content from HEIC image';
+      const heicDoc = {
+        ...mockReferralDocument,
+        mimeType: 'image/heic',
+        filename: 'referral-photo.heic',
+      };
+
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(heicDoc);
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
+        content: Buffer.from('fake heic data'),
+        contentType: 'image/heic',
+      });
+      mockIsImageMimeType.mockReturnValue(true);
+      mockIsHeicMimeType.mockReturnValue(true);
+      mockValidateImageByType.mockResolvedValue({
+        valid: true,
+        width: 4032,
+        height: 3024,
+        format: 'heic',
+      });
+      mockConvertToJpeg.mockResolvedValue({
+        buffer: Buffer.from('converted jpeg'),
+        mimeType: 'image/jpeg',
+        originalFormat: 'image/heic',
+      });
+      mockIsVisionSupportedMimeType.mockReturnValue(true);
+      mockExtractTextFromImageBufferVision.mockResolvedValue({
+        text: visionExtractedText,
+        success: true,
+        inputTokens: 1500,
+        outputTokens: 100,
+      });
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...heicDoc,
+        contentText: visionExtractedText,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1');
+
+      expect(mockIsHeicMimeType).toHaveBeenCalledWith('image/heic');
+      expect(mockConvertToJpeg).toHaveBeenCalledWith(expect.any(Buffer), 'image/heic');
+      expect(mockExtractTextFromImageBufferVision).toHaveBeenCalled();
+      expect(result.status).toBe('TEXT_EXTRACTED');
+    });
+
+    it('should extract text from Word document via mammoth', async () => {
+      const docxText = 'Dear Specialist,\n\nI am referring this patient for assessment of chest pain.';
+      const docxDoc = {
+        ...mockReferralDocument,
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        filename: 'referral-letter.docx',
+      };
+
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(docxDoc);
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
+        content: Buffer.from('PK\x03\x04 fake docx zip'),
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      });
+      mockIsImageMimeType.mockReturnValue(false);
+      mockIsDocxMimeType.mockReturnValue(true);
+      mockValidateAndExtractDocx.mockResolvedValue({
+        text: docxText,
+        success: true,
+        messages: [],
+      });
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...docxDoc,
+        contentText: docxText,
+        status: 'TEXT_EXTRACTED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      const result = await referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1');
+
+      expect(mockIsDocxMimeType).toHaveBeenCalledWith(docxDoc.mimeType);
+      expect(mockValidateAndExtractDocx).toHaveBeenCalled();
+      expect(result.status).toBe('TEXT_EXTRACTED');
+      expect(result.textLength).toBeGreaterThan(0);
+    });
+
+    it('should handle Word document extraction failure', async () => {
+      const docxDoc = {
+        ...mockReferralDocument,
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        filename: 'corrupted.docx',
+      };
+
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(docxDoc);
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
+        content: Buffer.from('not a valid docx'),
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      });
+      mockIsImageMimeType.mockReturnValue(false);
+      mockIsDocxMimeType.mockReturnValue(true);
+      mockValidateAndExtractDocx.mockResolvedValue({
+        text: '',
+        success: false,
+        messages: [],
+        error: 'Invalid Word document: File does not have the expected .docx structure',
+      });
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...docxDoc,
+        status: 'FAILED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      await expect(
+        referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1')
+      ).rejects.toThrow('Invalid Word document');
+    });
+
+    it('should handle image validation failure', async () => {
+      const jpegDoc = {
+        ...mockReferralDocument,
+        mimeType: 'image/jpeg',
+        filename: 'corrupted.jpg',
+      };
+
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(jpegDoc);
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
+        content: Buffer.from('not a valid image'),
+        contentType: 'image/jpeg',
+      });
+      mockIsImageMimeType.mockReturnValue(true);
+      mockIsHeicMimeType.mockReturnValue(false);
+      mockValidateImageByType.mockResolvedValue({
+        valid: false,
+        width: 0,
+        height: 0,
+        format: 'unknown',
+        error: 'Invalid image file: Input buffer contains unsupported image format',
+      });
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...jpegDoc,
+        status: 'FAILED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      await expect(
+        referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1')
+      ).rejects.toThrow('Invalid image');
+    });
+
+    it('should handle vision extraction returning no readable text', async () => {
+      const jpegDoc = {
+        ...mockReferralDocument,
+        mimeType: 'image/jpeg',
+        filename: 'blurry-photo.jpg',
+      };
+
+      vi.mocked(prisma.referralDocument.findFirst).mockResolvedValue(jpegDoc);
+      vi.mocked(supabaseStorage.getFileContent).mockResolvedValue({
+        content: Buffer.from('fake jpeg data'),
+        contentType: 'image/jpeg',
+      });
+      mockIsImageMimeType.mockReturnValue(true);
+      mockIsHeicMimeType.mockReturnValue(false);
+      mockValidateImageByType.mockResolvedValue({
+        valid: true,
+        width: 1920,
+        height: 1080,
+        format: 'jpeg',
+      });
+      mockIsVisionSupportedMimeType.mockReturnValue(true);
+      mockExtractTextFromImageBufferVision.mockResolvedValue({
+        text: '',
+        success: false,
+        error: 'No readable text found in the image. The document may be too blurry, dark, or not contain text.',
+        inputTokens: 500,
+        outputTokens: 20,
+      });
+      vi.mocked(prisma.referralDocument.update).mockResolvedValue({
+        ...jpegDoc,
+        status: 'FAILED' as ReferralDocumentStatus,
+      });
+      vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any);
+
+      await expect(
+        referralService.extractTextFromDocument('user-1', 'practice-1', 'ref-doc-1')
+      ).rejects.toThrow('No readable text found');
+    });
   });
 
   describe('findMatchingPatient', () => {
