@@ -18,47 +18,113 @@ Do not make assumptions on important decisions — get clarification first.
 
 ## Workflow Steps
 
-### [ ] Step: Technical Specification
+### [x] Step: Technical Specification
 
-Assess the task's difficulty, as underestimating it leads to poor outcomes.
-- easy: Straightforward implementation, trivial bug fix or feature
-- medium: Moderate complexity, some edge cases or caveats to consider
-- hard: Complex logic, many caveats, architectural considerations, or high-risk changes
+**Completed:** Technical specification created at `.zenflow/tasks/migrate-from-aws-bedrock-to-dire-3e7b/spec.md`
 
-Create a technical specification for the task that is appropriate for the complexity level:
-- Review the existing codebase architecture and identify reusable components.
-- Define the implementation approach based on established patterns in the project.
-- Identify all source code files that will be created or modified.
-- Define any necessary data model, API, or interface changes.
-- Describe verification steps using the project's test and lint commands.
-
-Save the output to `{@artifacts_path}/spec.md` with:
-- Technical context (language, dependencies)
-- Implementation approach
-- Source code structure changes
-- Data model / API / interface changes
-- Verification approach
-
-If the task is complex enough, create a detailed implementation plan based on `{@artifacts_path}/spec.md`:
-- Break down the work into concrete tasks (incrementable, testable milestones)
-- Each task should reference relevant contracts and include verification steps
-- Replace the Implementation step below with the planned tasks
-
-Rule of thumb for step size: each step should represent a coherent unit of work (e.g., implement a component, add an API endpoint, write tests for a module). Avoid steps that are too granular (single function).
-
-Save to `{@artifacts_path}/plan.md`. If the feature is trivial and doesn't warrant this breakdown, keep the Implementation step below as is.
+**Assessment:** Medium difficulty
+- Creating a new Anthropic client alongside existing Bedrock infrastructure
+- Building a unified abstraction layer for provider switching
+- Updating 6 domain service files
+- Adding feature flag support for zero-downtime migration
 
 ---
 
-### [ ] Step: Implementation
+### [ ] Step 1: Setup & Dependencies
 
-Implement the task according to the technical specification and general engineering best practices.
+Install the Anthropic SDK and update environment configuration.
 
-1. Break the task into steps where possible.
-2. Implement the required changes in the codebase.
-3. Add and run relevant tests and linters.
-4. Perform basic manual verification if applicable.
-5. After completion, write a report to `{@artifacts_path}/report.md` describing:
-   - What was implemented
-   - How the solution was tested
-   - The biggest issues or challenges encountered
+**Tasks:**
+1. Add `@anthropic-ai/sdk` to package.json dependencies
+2. Update `.env.example` with `ANTHROPIC_API_KEY` and `USE_ANTHROPIC_API` variables
+
+**Verification:**
+- `npm install` succeeds
+- `npm run typecheck` passes
+
+---
+
+### [ ] Step 2: Create Anthropic Client Module
+
+Create the direct Anthropic API client in `src/infrastructure/anthropic/`.
+
+**Tasks:**
+1. Create `src/infrastructure/anthropic/types.ts` - Error types and retry configs
+2. Create `src/infrastructure/anthropic/client.ts` - SDK initialization
+3. Create `src/infrastructure/anthropic/text-generation.ts` - Text generation functions
+4. Create `src/infrastructure/anthropic/vision.ts` - Image analysis functions
+5. Create `src/infrastructure/anthropic/index.ts` - Unified exports
+
+**Verification:**
+- `npm run typecheck` passes
+- `npm run lint` passes
+
+---
+
+### [ ] Step 3: Create Unified AI Layer
+
+Create the provider-switching abstraction layer in `src/infrastructure/ai/`.
+
+**Tasks:**
+1. Create `src/infrastructure/ai/types.ts` - Shared types for both providers
+2. Create `src/infrastructure/ai/text-generation.ts` - Provider-switching text generation
+3. Create `src/infrastructure/ai/vision.ts` - Provider-switching vision
+4. Create `src/infrastructure/ai/index.ts` - Unified exports matching Bedrock interface
+
+**Verification:**
+- `npm run typecheck` passes
+- `npm run lint` passes
+- Exports match current Bedrock interface
+
+---
+
+### [ ] Step 4: Migrate Domain Services
+
+Update all domain services to use the unified AI layer.
+
+**Tasks:**
+1. Update `src/domains/letters/letter.service.ts` - Change import from `@/infrastructure/bedrock` to `@/infrastructure/ai`
+2. Update `src/domains/letters/model-selection.ts` - Change import path
+3. Update `src/domains/referrals/vision-extraction.ts` - Change import path
+4. Update `src/domains/referrals/referral-extraction.service.ts` - Change import path
+5. Update `src/domains/referrals/referral-fast-extraction.service.ts` - Change import path
+6. Update `src/domains/style/style-analyzer.ts` - Change import path
+
+**Verification:**
+- `npm run typecheck` passes
+- `npm run lint` passes
+
+---
+
+### [ ] Step 5: Update Tests
+
+Update all test files to mock the new unified AI layer.
+
+**Tasks:**
+1. Update `tests/unit/domains/letters/model-selection.test.ts` - Update mock path
+2. Update `tests/unit/domains/referrals/vision-extraction.test.ts` - Update mock path
+3. Update `tests/unit/domains/referrals/referral-extraction.test.ts` - Update mock path
+4. Update `tests/unit/domains/referrals/fast-patient-extraction.test.ts` - Update mock path
+5. Update `tests/unit/domains/style/learning-pipeline.test.ts` - Update mock path
+6. Update `tests/integration/style/learning-flow.test.ts` - Update mock path
+7. Update `tests/integration/api/referrals.test.ts` - Update mock path
+
+**Verification:**
+- `npm run test` passes (all unit tests)
+- `npm run test:integration` passes (all integration tests)
+
+---
+
+### [ ] Step 6: Final Verification & Report
+
+Run full verification and create implementation report.
+
+**Tasks:**
+1. Run full test suite: `npm run verify`
+2. Verify feature flag switching works (USE_ANTHROPIC_API=true/false)
+3. Create report at `.zenflow/tasks/migrate-from-aws-bedrock-to-dire-3e7b/report.md`
+
+**Verification:**
+- `npm run verify` passes
+- Feature flag correctly switches between providers
+- Report documents implementation and testing
