@@ -50,6 +50,7 @@ Install the Anthropic SDK and update environment configuration.
 ---
 
 ### [ ] Step 2: Create Anthropic Client Module
+<!-- chat-id: 3cdd8e76-fb68-44fb-95a4-7de6dc730de6 -->
 
 Create the direct Anthropic API client in `src/infrastructure/anthropic/`.
 
