@@ -30,7 +30,7 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
-### [ ] Step 1: Setup & Dependencies
+### [x] Step 1: Setup & Dependencies
 
 Install the Anthropic SDK and update environment configuration.
 
@@ -41,6 +41,11 @@ Install the Anthropic SDK and update environment configuration.
 **Verification:**
 - `npm install` succeeds
 - `npm run typecheck` passes
+
+**Completed:**
+- Added `@anthropic-ai/sdk@^0.39.0` to package.json dependencies
+- Updated `.env.example` with `USE_ANTHROPIC_API` and `ANTHROPIC_API_KEY` variables
+- All verifications passed
 
 ---
 
