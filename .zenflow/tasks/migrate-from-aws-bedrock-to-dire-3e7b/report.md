@@ -225,6 +225,59 @@ Once the Anthropic API has been running stably in production for 2+ weeks:
 
 ---
 
+## Known Limitations
+
+### 1. Connection Verification Incurs API Cost
+
+The `verifyAnthropicConnection()` function in `src/infrastructure/anthropic/client.ts` makes an actual API call to verify connectivity. This:
+- Incurs a small token cost (~10 output tokens) each time it's called
+- Is **not** called automatically on startup (only available for manual verification)
+- Can be used optionally during deployment to validate configuration
+
+### 2. Test Mocks Assume Anthropic Provider
+
+Test mock responses hardcode `provider: 'anthropic'` in their return values. This means:
+- Tests verify the unified layer interface, not individual provider implementations
+- Both providers share test coverage through the abstraction layer
+- Provider-specific integration tests would need to be added for deeper coverage
+
+### 3. Duplicate Retry Configuration
+
+Retry configuration exists in both:
+- `src/infrastructure/ai/types.ts` (unified layer)
+- `src/infrastructure/anthropic/types.ts` (Anthropic-specific)
+
+The Anthropic-specific configuration is used internally by the Anthropic module. This duplication can be consolidated during the cleanup phase.
+
+---
+
+## Descoped Items (Future Enhancements)
+
+The following items from the original task specification were not implemented in this migration:
+
+### Performance Testing Scripts
+
+The task description mentioned creating `scripts/test-api-performance.ts` for benchmarking. This was descoped as:
+- The unified layer already logs latency and token usage
+- Production monitoring can compare providers using the `provider` field in responses
+- A dedicated performance script can be added post-migration if needed
+
+### Admin Dashboard Endpoint
+
+The task description mentioned creating `src/app/api/admin/performance/route.ts` for performance comparison. This was descoped as:
+- Performance metrics are logged to the application logger
+- External monitoring tools (e.g., Datadog, CloudWatch) can aggregate this data
+- A dashboard endpoint can be added post-migration based on operational needs
+
+### Performance Monitor Class
+
+The task description mentioned creating `src/lib/performance-monitor.ts`. This was descoped as:
+- The unified layer logs all relevant metrics via the existing logger
+- In-memory metric aggregation adds complexity without clear benefit
+- Production monitoring should use external tools for reliability
+
+---
+
 ## Notes
 
 - The Anthropic SDK is initialized lazily on first use when `USE_ANTHROPIC_API=true`
