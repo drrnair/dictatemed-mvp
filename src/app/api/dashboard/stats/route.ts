@@ -113,12 +113,7 @@ export async function GET() {
           letterType: true,
           status: true,
           createdAt: true,
-          patient: {
-            select: {
-              firstName: true,
-              lastName: true,
-            },
-          },
+          patientId: true,
         },
         orderBy: {
           createdAt: 'desc',
@@ -133,9 +128,9 @@ export async function GET() {
 
     // Format recent activity
     const recentActivity = recentLetters.map((letter) => {
-      const patient = letter.patient;
-      const patientInitials = patient
-        ? `${patient.firstName?.charAt(0) || ''}${patient.lastName?.charAt(0) || ''}`
+      // Patient data is encrypted - use patientId for initials or fallback
+      const patientInitials = letter.patientId
+        ? letter.patientId.substring(0, 2).toUpperCase()
         : '??';
 
       // Format letter type for display

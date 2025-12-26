@@ -228,24 +228,41 @@ logger.error('Error saving draft', { letterId: letter.id, error });
 
 ---
 
-### [ ] Step: Issue 8 - Error Tracking Preparation
-<!-- chat-id: e6197209-75fb-4a89-9cb7-10d8f6a4d363 -->
+### [x] Step: Issue 8 - Error Tracking Preparation
 
-Prepare error logger for Sentry integration.
+Prepared error logger for Sentry integration with PHI filtering.
 
-**Files to modify:**
-- `src/lib/error-logger.ts`
-- `.env.example` (document NEXT_PUBLIC_SENTRY_DSN)
+**Files modified:**
+- `src/lib/error-logger.ts` - Added Sentry integration points and PHI filtering
+- `.env.example` - Documented NEXT_PUBLIC_SENTRY_DSN with setup instructions
 
-**Implementation:**
-1. Add Sentry DSN placeholder check
-2. Add conditional Sentry capture in error methods
-3. Document setup steps for production
-4. Defer full Sentry wizard installation
+**Implementation completed:**
+1. Added comprehensive Sentry integration guide in file header
+2. Created `isSentryAvailable()` function to detect Sentry DSN
+3. Created `captureToSentry()` function with commented Sentry code ready to uncomment
+4. Created `filterPHI()` function to redact patient data before sending to external services:
+   - Filters patientName, patientId, dateOfBirth, nhsNumber, medicareNumber, etc.
+   - Recursively filters nested objects
+   - Applied to both Sentry capture and batch endpoint fallback
+5. Added `mapSeverityToSentryLevel()` function (commented, ready for use)
+6. Integrated `captureToSentry()` call into `logError()` method
+7. Updated `sendToExternalService()` to skip batch sending when Sentry is active
+8. Documented setup steps in .env.example with clear instructions
+
+**Key security feature:** PHI is automatically filtered before any external transmission:
+```typescript
+const phiKeys = [
+  'patientName', 'patientId', 'dateOfBirth', 'dob',
+  'nhsNumber', 'medicareNumber', 'mrn', 'medicalRecordNumber',
+  'address', 'phone', 'email', 'ssn', 'diagnosis', 'medication', ...
+];
+```
 
 **Verification:**
-- Error logger functions correctly
-- Ready for Sentry integration when needed
+- `npx tsc --noEmit src/lib/error-logger.ts` passes ✅
+- Error logger functions correctly without Sentry installed ✅
+- PHI filtering prevents sensitive data leakage ✅
+- Ready for Sentry integration: just uncomment imports and calls ✅
 
 ---
 

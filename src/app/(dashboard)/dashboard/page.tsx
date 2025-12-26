@@ -71,7 +71,7 @@ async function getDashboardStats(userId: string, practiceId: string): Promise<Da
         letterType: true,
         status: true,
         createdAt: true,
-        patient: { select: { firstName: true, lastName: true } },
+        patientId: true,
       },
       orderBy: { createdAt: 'desc' },
       take: 5,
@@ -81,9 +81,9 @@ async function getDashboardStats(userId: string, practiceId: string): Promise<Da
   const timeSavedHours = Math.round((approvedThisMonth * 15) / 60);
 
   const recentActivity = recentLetters.map((letter) => {
-    const patient = letter.patient;
-    const patientInitials = patient
-      ? `${patient.firstName?.charAt(0) || ''}${patient.lastName?.charAt(0) || ''}`
+    // Patient data is encrypted - use patientId for initials or fallback
+    const patientInitials = letter.patientId
+      ? letter.patientId.substring(0, 2).toUpperCase()
       : '??';
 
     const letterType = letter.letterType
@@ -193,16 +193,15 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats row - Time Saved highlighted */}
-      {/* TODO: Replace placeholder values with real data from API */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <TimeSavedCard hours={0} />
-        <StatCard title="Letters Today" value="0" icon="today" />
-        <StatCard title="Pending Review" value="0" icon="pending" />
-        <StatCard title="This Month" value="0" icon="month" />
+        <TimeSavedCard hours={stats.timeSavedHours} />
+        <StatCard title="Letters Today" value={String(stats.lettersToday)} icon="today" />
+        <StatCard title="Pending Review" value={String(stats.pendingReview)} icon="pending" />
+        <StatCard title="This Month" value={String(stats.thisMonth)} icon="month" />
       </div>
 
       {/* Recent Activity section */}
-      <RecentActivitySection />
+      <RecentActivitySection recentActivity={stats.recentActivity} />
     </div>
   );
 }
@@ -431,16 +430,17 @@ function StatCard({
 }
 
 // Recent activity section with status badges
-function RecentActivitySection() {
-  // Placeholder - would be populated with real data
-  const recentActivity: {
+function RecentActivitySection({
+  recentActivity,
+}: {
+  recentActivity: {
     id: string;
     patientInitials: string;
     letterType: string;
     status: 'pending' | 'approved';
     time: string;
-  }[] = [];
-
+  }[];
+}) {
   return (
     <section>
       <div className="flex items-center justify-between mb-4">
