@@ -2,6 +2,7 @@
 // Supabase client configuration for storage and database operations
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
 
 // Supabase client singletons
 let supabaseClientInstance: SupabaseClient | null = null;
@@ -153,7 +154,7 @@ export async function validateSupabaseConnection(): Promise<void> {
     const missingBuckets = requiredBuckets.filter((b) => !bucketNames.includes(b));
 
     if (missingBuckets.length > 0) {
-      console.warn(
+      logger.warn(
         `Missing Supabase storage buckets: ${missingBuckets.join(', ')}. ` +
           'Run the storage bucket migration to create them.'
       );

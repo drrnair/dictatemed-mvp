@@ -1,6 +1,8 @@
 // src/lib/offline-detection.ts
 // Network status monitoring service for offline-first PWA
 
+import { logger } from '@/lib/logger';
+
 export type NetworkStatus = 'online' | 'offline' | 'slow';
 
 export interface NetworkStatusEvent {
@@ -152,7 +154,7 @@ class OfflineDetectionService {
       try {
         listener(event);
       } catch (error) {
-        console.error('Error in network status listener:', error);
+        logger.error('Error in network status listener', { error });
       }
     });
   }

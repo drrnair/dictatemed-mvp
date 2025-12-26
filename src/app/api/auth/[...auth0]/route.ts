@@ -3,6 +3,9 @@
 
 import { handleAuth } from '@auth0/nextjs-auth0';
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
+
+const log = logger.child({ module: 'auth0-handler' });
 
 // Use default Auth0 handlers with error handling
 export const GET = async (req: Request, ctx: { params: { auth0: string[] } }) => {
@@ -10,7 +13,9 @@ export const GET = async (req: Request, ctx: { params: { auth0: string[] } }) =>
     const handler = handleAuth();
     return handler(req, ctx);
   } catch (error) {
-    console.error('Auth0 error:', error);
+    log.error('Auth0 error', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       {
         error: 'Authentication error',

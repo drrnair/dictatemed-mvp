@@ -162,8 +162,18 @@ export async function GET(request: NextRequest) {
     const { prisma } = await import('@/infrastructure/db/client');
     const { decryptPatientData } = await import('@/infrastructure/db/encryption');
 
-    // Build where clause
-    const where: any = {
+    // Build where clause using Prisma types
+    type LetterWhereInput = {
+      userId: string;
+      status?: string;
+      letterType?: string;
+      createdAt?: {
+        gte?: Date;
+        lte?: Date;
+      };
+    };
+
+    const where: LetterWhereInput = {
       userId: session.user.id,
     };
 
@@ -189,7 +199,12 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit;
 
     // Build orderBy
-    const orderBy: any = {};
+    type LetterOrderByInput = {
+      createdAt?: 'asc' | 'desc';
+      approvedAt?: 'asc' | 'desc';
+    };
+
+    const orderBy: LetterOrderByInput = {};
     if (sortBy === 'approvedAt') {
       orderBy.approvedAt = sortOrder;
     } else {

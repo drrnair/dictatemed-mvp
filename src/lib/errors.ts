@@ -1,6 +1,8 @@
 // src/lib/errors.ts
 // Structured error handling with categorized error types
 
+import { logger } from '@/lib/logger';
+
 export enum ErrorCode {
   // Authentication & Authorization (1xxx)
   UNAUTHORIZED = 1001,
@@ -151,7 +153,7 @@ export function errorResponse(error: AppError | Error): {
   }
 
   // Unknown errors - log and return generic
-  console.error('Unhandled error:', error);
+  logger.error('Unhandled error', { error });
   return {
     status: 500,
     body: {

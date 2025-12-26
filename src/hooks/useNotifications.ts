@@ -57,7 +57,11 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       }
 
       const data = await response.json();
-      const fetchedNotifications: Notification[] = data.notifications.map((n: any) => ({
+      // API returns notifications with createdAt as ISO string, convert to Date
+      interface NotificationApiResponse extends Omit<Notification, 'createdAt'> {
+        createdAt: string;
+      }
+      const fetchedNotifications: Notification[] = (data.notifications as NotificationApiResponse[]).map((n) => ({
         ...n,
         createdAt: new Date(n.createdAt),
       }));

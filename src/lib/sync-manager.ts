@@ -2,6 +2,7 @@
 // Base sync manager for offline-first background synchronization
 
 import { offlineDetection, type NetworkStatus } from './offline-detection';
+import { logger } from '@/lib/logger';
 
 export interface SyncResult {
   success: boolean;
@@ -190,7 +191,7 @@ export abstract class BaseSyncManager<T extends SyncableItem> {
       try {
         listener(event);
       } catch (error) {
-        console.error('Error in sync event listener:', error);
+        logger.error('Error in sync event listener', { error, eventType: event.type });
       }
     });
   }
@@ -362,7 +363,7 @@ class AutoSyncManager {
   async syncAll(): Promise<void> {
     const promises = this.syncManagers.map((manager) =>
       manager.sync().catch((error) => {
-        console.error('Sync manager error:', error);
+        logger.error('Sync manager error', { error });
       })
     );
 
