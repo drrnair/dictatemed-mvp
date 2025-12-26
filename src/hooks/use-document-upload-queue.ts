@@ -120,18 +120,22 @@ export function useDocumentUploadQueue(): UseDocumentUploadQueueResult {
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
 
   // Polling intervals (keyed by document ID)
+  // TODO: Used in Step 6 for full extraction status polling
   const pollingIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Clean up on unmount
+  // Store ref values in local variables to avoid stale references in cleanup
   useEffect(() => {
+    const abortControllers = abortControllersRef.current;
+    const pollingIntervals = pollingIntervalsRef.current;
     return () => {
       // Abort all in-flight requests
-      abortControllersRef.current.forEach((controller) => controller.abort());
-      abortControllersRef.current.clear();
+      abortControllers.forEach((controller) => controller.abort());
+      abortControllers.clear();
 
       // Clear all polling intervals
-      pollingIntervalsRef.current.forEach((interval) => clearInterval(interval));
-      pollingIntervalsRef.current.clear();
+      pollingIntervals.forEach((interval) => clearInterval(interval));
+      pollingIntervals.clear();
     };
   }, []);
 
@@ -462,8 +466,6 @@ export function useDocumentUploadQueue(): UseDocumentUploadQueueResult {
       );
 
       // Step 2: Upload files in parallel with concurrency limit
-      const uploadPromises: Promise<void>[] = [];
-
       for (let i = 0; i < filesToUpload.length; i += MAX_CONCURRENT_UPLOADS) {
         const batch = filesToUpload.slice(i, i + MAX_CONCURRENT_UPLOADS);
 
@@ -481,7 +483,6 @@ export function useDocumentUploadQueue(): UseDocumentUploadQueueResult {
 
         // Wait for this batch to complete before starting next
         await Promise.all(batchPromises);
-        uploadPromises.push(...batchPromises);
       }
     } finally {
       setIsProcessing(false);

@@ -175,6 +175,8 @@ Do not make assumptions on important decisions — get clarification first.
 - `src/hooks/use-document-upload-queue.ts`
 - `tests/unit/hooks/use-document-upload-queue.test.ts`
 
+**Note**: `src/components/referral/DocumentUploadQueue.tsx` was also created during this step as a supporting UI component for the hook. It logically belongs to Step 5 but was implemented early. Step 5 should add unit tests for this component.
+
 **Verification**: `npm run typecheck` passed, 31 unit tests passing
 
 ---
