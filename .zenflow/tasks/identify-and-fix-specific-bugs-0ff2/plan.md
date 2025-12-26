@@ -125,10 +125,52 @@ psql $SUPABASE_DB_URL -f supabase/migrations/001_create_storage_buckets.sql
    - `src/components/referral/ReferralUploader.tsx`: Updated UI text and error messages
    - Supabase bucket already has required MIME types
 
-**User Action Required**:
+**User Action Completed**:
 
-Verify these environment variables are set in **Vercel Production**:
+Environment variables added to Vercel Production:
 - `NEXT_PUBLIC_SUPABASE_URL` = `https://rhrasddllgyqbmhirkwq.supabase.co`
-- `SUPABASE_SERVICE_ROLE_KEY` = (from Supabase Dashboard → Settings → API)
+- `SUPABASE_SERVICE_ROLE_KEY` = (service_role key from Supabase)
 
-Go to: Vercel Dashboard → Your Project → Settings → Environment Variables
+**Status**: ✅ Upload now working - PDF successfully uploaded.
+
+---
+
+## Task Complete
+
+All bugs identified in this task have been fixed:
+1. ✅ Account deletion - Fixed FK constraint issue
+2. ✅ Subspecialty dropdown - Increased max-height
+3. ✅ PDF upload error - Created storage buckets, improved error handling
+4. ✅ Field mismatches & HEIC support - Fixed API/component contract, added iPhone photo support
+
+---
+
+## Future Enhancement: Fast Multi-Document Upload with Background Processing
+
+**Requested by user** - To be implemented as a separate task.
+
+### Requirements:
+
+1. **Multiple document selection** - Allow specialist to select multiple documents at once in file picker (batch selection)
+
+2. **Fast key info extraction** - Quickly extract critical patient identifiers:
+   - Patient name
+   - Date of birth
+   - Unique patient number (MRN)
+
+3. **Background processing** - Detailed context extraction (referral reason, medical history, etc.) should happen in background while specialist continues with recording
+
+4. **Non-blocking workflow** - Specialist should NOT wait for full document processing before starting consultation recording
+
+### Technical Considerations:
+- Current `ReferralUploader` only allows single file upload
+- `NewUploadsSection` already supports multiple files but is for consultation documents
+- May need OCR/vision AI for image-based document extraction
+- Consider WebSocket or polling for background job status updates
+
+### Suggested Implementation Approach:
+1. Add `multiple` attribute to ReferralUploader file input
+2. Create fast extraction endpoint for key patient identifiers only
+3. Queue detailed extraction as background job
+4. Update UI to show "Processing in background..." status
+5. Allow recording to start while extraction continues
