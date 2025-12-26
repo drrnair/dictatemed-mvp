@@ -1,7 +1,7 @@
 // src/domains/style/style-analyzer.ts
 // Claude-powered style analyzer for learning physician writing preferences
 
-import { generateTextWithRetry, MODELS } from '@/infrastructure/bedrock';
+import { generateTextWithRetry, MODELS } from '@/infrastructure/ai';
 import { logger } from '@/lib/logger';
 import type { StyleEdit, StyleAnalysisResult } from './style.types';
 

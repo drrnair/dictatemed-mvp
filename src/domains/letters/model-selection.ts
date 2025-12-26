@@ -1,7 +1,7 @@
 // src/domains/letters/model-selection.ts
 // Intelligent model selection for letter generation
 
-import { MODELS, type ModelId, estimateCost, estimateTokenCount } from '@/infrastructure/bedrock';
+import { MODELS, type ModelId, estimateCost, estimateTokenCount } from '@/infrastructure/ai';
 import type { LetterType } from './letter.types';
 import type { LetterSources } from './prompts/generation';
 import { logger } from '@/lib/logger';

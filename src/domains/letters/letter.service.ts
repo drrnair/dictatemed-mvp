@@ -2,7 +2,7 @@
 // Letter generation domain service
 
 import { prisma } from '@/infrastructure/db/client';
-import { generateTextWithRetry, type ModelId } from '@/infrastructure/bedrock';
+import { generateTextWithRetry, type ModelId } from '@/infrastructure/ai';
 import { logger } from '@/lib/logger';
 import type { Letter as PrismaLetterModel, Subspecialty } from '@prisma/client';
 import type {

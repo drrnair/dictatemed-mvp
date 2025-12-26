@@ -3,7 +3,7 @@
 
 import type { Subspecialty } from '@prisma/client';
 import { prisma } from '@/infrastructure/db/client';
-import { generateTextWithRetry, MODELS } from '@/infrastructure/bedrock';
+import { generateTextWithRetry, MODELS } from '@/infrastructure/ai';
 import { logger } from '@/lib/logger';
 import {
   analyzeDiff,

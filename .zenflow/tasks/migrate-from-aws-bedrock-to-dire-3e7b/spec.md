@@ -72,6 +72,7 @@ interface TextGenerationResponse {
   outputTokens: number;
   stopReason: string;
   modelId: string;
+  provider: AIProvider;  // NEW: Added field indicating which provider was used
 }
 
 // Vision
@@ -88,8 +89,17 @@ interface VisionResponse {
   inputTokens: number;
   outputTokens: number;
   stopReason: string;
+  provider: AIProvider;  // NEW: Added field indicating which provider was used
 }
 ```
+
+### Breaking Changes in Unified Layer
+
+The unified AI layer introduces the following intentional breaking changes:
+
+1. **Abstract Model IDs**: `MODELS.OPUS` and `MODELS.SONNET` now return abstract identifiers (`'opus'`, `'sonnet'`) instead of provider-specific model IDs. This is transparent to consuming code since all functions accept and handle these abstract IDs internally.
+
+2. **Provider Field in Responses**: Both `TextGenerationResponse` and `VisionResponse` now include a `provider: AIProvider` field (`'anthropic' | 'bedrock'`) indicating which provider handled the request. Consuming code should handle this additional field gracefully (TypeScript will allow extra fields in object destructuring).
 
 ### Services Using Bedrock (8 files)
 

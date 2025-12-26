@@ -17,7 +17,7 @@
 
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/infrastructure/db/client';
-import { generateTextWithRetry, MODELS } from '@/infrastructure/bedrock/text-generation';
+import { generateTextWithRetry, MODELS } from '@/infrastructure/ai';
 import { logger } from '@/lib/logger';
 import type { FastExtractedData, FastExtractionResult, FastExtractionStatus } from './referral.types';
 import { FAST_EXTRACTION_TARGET_MS } from './referral.types';
