@@ -261,24 +261,72 @@ export function ConsultationContextForm({
 
   // Determine if referral has been applied
   const hasAppliedReferral = !!value.referralDocumentId;
+  const hasMultiDocUpload = (value.referralDocumentIds?.length ?? 0) > 0;
+
+  // Show background processing if explicitly set or if we have documents processing
+  const shouldShowBackgroundProcessing = showBackgroundProcessing || isMultiDocProcessing;
+  const effectiveProcessingCount = processingDocumentCount || uploadedDocumentIds.length;
 
   return (
     <Card>
       <CardHeader className="pb-4">
-        <CardTitle className="text-lg">Consultation Context</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">Consultation Context</CardTitle>
+          {/* Background processing indicator */}
+          {shouldShowBackgroundProcessing && effectiveProcessingCount > 0 && (
+            <BackgroundProcessingIndicator
+              status="PROCESSING"
+              documentsProcessing={effectiveProcessingCount}
+              documentsTotal={effectiveProcessingCount}
+              variant="inline"
+            />
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Referral Upload Section - only show if no patient selected and no referral applied */}
-        {!value.patient && !hasAppliedReferral && (
+        {!value.patient && !hasAppliedReferral && !hasMultiDocUpload && (
           <div className="rounded-lg border border-dashed border-border/60 p-4 bg-muted/30">
             <h3 className="text-sm font-medium mb-3">
               Upload referral or previous letter (optional)
             </h3>
             <ReferralUploader
               onExtractionComplete={handleExtractionComplete}
+              onFastExtractionComplete={handleFastExtractionComplete}
+              onContinue={handleMultiDocContinue}
               onRemove={handleRemoveReferral}
               disabled={disabled}
+              multiDocument={multiDocumentUpload}
             />
+          </div>
+        )}
+
+        {/* Multi-document upload indicator */}
+        {hasMultiDocUpload && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-primary mb-1">
+                  {value.referralDocumentIds?.length} document{(value.referralDocumentIds?.length ?? 0) !== 1 ? 's' : ''} uploaded
+                </h3>
+                {value.fastExtractionData?.patientName?.value && (
+                  <p className="text-sm text-muted-foreground">
+                    Patient: {value.fastExtractionData.patientName.value}
+                    {value.fastExtractionData.dateOfBirth?.value && (
+                      <> • DOB: {value.fastExtractionData.dateOfBirth.value}</>
+                    )}
+                  </p>
+                )}
+              </div>
+              {isMultiDocProcessing && (
+                <BackgroundProcessingIndicator
+                  status="PROCESSING"
+                  documentsProcessing={effectiveProcessingCount}
+                  documentsTotal={effectiveProcessingCount}
+                  variant="inline"
+                />
+              )}
+            </div>
           </div>
         )}
 

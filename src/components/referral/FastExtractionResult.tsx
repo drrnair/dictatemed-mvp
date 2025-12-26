@@ -19,9 +19,21 @@ import { cn } from '@/lib/utils';
 import { ConfidenceIndicator } from './ConfidenceIndicator';
 import type { FastExtractedData, FieldConfidence } from '@/domains/referrals';
 
+/**
+ * Props for the FastExtractionResult component.
+ *
+ * Note: The `onEdit` callback is called when the user saves an edited value.
+ * The parent component must update the `data` prop for changes to reflect in the UI.
+ */
 export interface FastExtractionResultProps {
+  /** Extracted patient data with confidence scores */
   data: FastExtractedData;
+  /**
+   * Callback when user edits a field. Called with field name and new value.
+   * Parent must update `data` prop for changes to display.
+   */
   onEdit?: (field: 'patientName' | 'dateOfBirth' | 'mrn', value: string) => void;
+  /** Additional CSS classes to apply to the container */
   className?: string;
 }
 

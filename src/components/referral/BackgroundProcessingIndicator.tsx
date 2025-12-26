@@ -7,13 +7,23 @@ import { Loader2, CheckCircle2, AlertCircle, FileText, Info } from 'lucide-react
 import { cn } from '@/lib/utils';
 import type { FullExtractionStatus } from '@/domains/referrals';
 
+/**
+ * Props for the BackgroundProcessingIndicator component.
+ */
 export interface BackgroundProcessingIndicatorProps {
+  /** Current processing status from the full extraction */
   status: FullExtractionStatus | 'not_started';
+  /** Number of documents currently being processed */
   documentsProcessing?: number;
+  /** Number of documents that have completed processing */
   documentsComplete?: number;
+  /** Total number of documents in the batch */
   documentsTotal?: number;
+  /** Error message to display if processing failed */
   error?: string;
+  /** Additional CSS classes to apply to the container */
   className?: string;
+  /** Display variant: 'inline' for minimal display, 'banner' for prominent display */
   variant?: 'inline' | 'banner';
 }
 

@@ -438,7 +438,8 @@ describe('useDocumentUploadQueue', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve(createFastExtractionResponse()),
-        });
+        })
+        .mockResolvedValueOnce({ ok: true }); // Background full extraction (fire-and-forget)
 
       act(() => {
         result.current.addFiles([createMockFile('file1.pdf')]);
@@ -476,7 +477,8 @@ describe('useDocumentUploadQueue', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve(fastExtractionResponse),
-        });
+        })
+        .mockResolvedValueOnce({ ok: true }); // Background full extraction (fire-and-forget)
 
       act(() => {
         result.current.addFiles([createMockFile('file1.pdf')]);

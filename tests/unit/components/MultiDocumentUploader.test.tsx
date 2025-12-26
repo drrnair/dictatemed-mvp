@@ -111,7 +111,8 @@ describe('MultiDocumentUploader', () => {
     it('shows maximum file count', () => {
       render(<MultiDocumentUploader />);
 
-      expect(screen.getByText('Maximum 10 files')).toBeInTheDocument();
+      // Text is now combined with file size in the restrictions line
+      expect(screen.getByText(/Maximum 10 files/)).toBeInTheDocument();
     });
 
     it('shows accepted file formats', () => {
