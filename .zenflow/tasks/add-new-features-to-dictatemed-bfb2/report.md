@@ -46,11 +46,14 @@ Successfully implemented support for expanded file upload types in the DictateME
 | `tests/unit/domains/referrals/image-utils.test.ts` | Unit tests for image utilities |
 | `tests/unit/domains/referrals/docx-utils.test.ts` | Unit tests for DOCX utilities |
 | `tests/unit/domains/referrals/vision-extraction.test.ts` | Unit tests for vision extraction |
-| `tests/e2e/flows/extended-upload-types.spec.ts` | E2E tests for new file types |
+| `tests/unit/domains/referrals/referral.types.test.ts` | Unit tests for MIME type helpers |
+| `tests/e2e/flows/extended-upload-types.spec.ts` | E2E tests for new file types (22 tests) |
 | `scripts/generate-test-fixtures.ts` | Test fixture generation script |
 | `tests/e2e/fixtures/referrals/image-referral-001.jpg` | Test JPEG fixture |
 | `tests/e2e/fixtures/referrals/image-referral-001.png` | Test PNG fixture |
 | `tests/e2e/fixtures/referrals/docx-referral-001.docx` | Test DOCX fixture |
+
+*Note: Task artifacts (`spec.md`, `report.md`, `plan.md`) not counted above.*
 
 ---
 
@@ -70,6 +73,7 @@ Successfully implemented support for expanded file upload types in the DictateME
 | `tests/e2e/page-objects/ReferralUploadPage.ts` | Updated file input selector |
 | `tests/e2e/fixtures/referrals/README.md` | Documented new fixtures |
 | `package.json` | Added dependencies and scripts |
+| `package-lock.json` | Lock file updated with new dependencies |
 | `.env.example` | Added feature flag documentation |
 
 ---
@@ -104,10 +108,11 @@ Duration: 772ms
 
 ### E2E Tests
 ```
-Tests:    54 defined (18 tests × 3 browsers)
+Tests:    66 defined (22 tests × 3 browsers)
 Browsers: Chromium, Firefox, WebKit
+Status:   Validated via --list (syntax verified, not executed)
 ```
-*Note: E2E tests require authentication credentials (E2E_TEST_USER_EMAIL/PASSWORD)*
+*Note: E2E tests were validated for syntax but not executed due to credential requirements (E2E_TEST_USER_EMAIL/PASSWORD). Tests will run in CI with proper credentials.*
 
 ### Test Coverage for New Code
 
