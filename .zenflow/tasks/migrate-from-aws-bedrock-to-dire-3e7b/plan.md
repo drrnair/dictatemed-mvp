@@ -25,7 +25,7 @@ Do not make assumptions on important decisions — get clarification first.
 **Assessment:** Medium difficulty
 - Creating a new Anthropic client alongside existing Bedrock infrastructure
 - Building a unified abstraction layer for provider switching
-- Updating 6 domain service files
+- Updating 8 domain service files
 - Adding feature flag support for zero-downtime migration
 
 ---
@@ -77,6 +77,7 @@ Create the direct Anthropic API client in `src/infrastructure/anthropic/`.
 ---
 
 ### [ ] Step 3: Create Unified AI Layer
+<!-- chat-id: f378496d-4dbb-4a27-aa9c-da5020ebf349 -->
 
 Create the provider-switching abstraction layer in `src/infrastructure/ai/`.
 
@@ -104,6 +105,8 @@ Update all domain services to use the unified AI layer.
 4. Update `src/domains/referrals/referral-extraction.service.ts` - Change import path
 5. Update `src/domains/referrals/referral-fast-extraction.service.ts` - Change import path
 6. Update `src/domains/style/style-analyzer.ts` - Change import path
+7. Update `src/domains/style/learning-pipeline.ts` - Change import path
+8. Update `src/domains/documents/extraction.service.ts` - Change import path
 
 **Verification:**
 - `npm run typecheck` passes
