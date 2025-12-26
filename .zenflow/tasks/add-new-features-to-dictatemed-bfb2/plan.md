@@ -350,6 +350,7 @@ npm run test -- tests/unit/components/ReferralUploader.test.tsx  # ✅ 48 tests 
 ---
 
 ### [ ] Step: Write E2E Tests
+<!-- chat-id: c520a9ba-227f-4908-813e-a6b255b0e7b4 -->
 
 Create end-to-end tests for the complete upload flow with new file types.
 
