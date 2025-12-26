@@ -143,6 +143,7 @@ Implemented Upstash Redis support for distributed rate limiting.
 - `src/lib/rate-limit.ts` - Added Redis-based rate limiting with in-memory fallback
 - `package.json` - Added @upstash/redis (^1.36.0), @upstash/ratelimit (^2.0.7)
 - `.env.example` - Documented UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN
+- `tests/unit/lib/rate-limit.test.ts` - Added 20 unit tests
 
 **Implementation completed:**
 1. Installed Upstash packages (`@upstash/redis`, `@upstash/ratelimit`)
@@ -160,9 +161,19 @@ Implemented Upstash Redis support for distributed rate limiting.
 - Backward compatible: Existing synchronous API unchanged
 - Per-resource limiters: Each resource type gets its own Ratelimit instance with custom prefix
 
+**Review feedback addressed:**
+1. Fixed logging spam: Added `redisInitAttempted` flag to log "Redis not configured" only once
+2. Removed unused `config` variable in `checkRateLimitAsync()`
+3. Added 20 unit tests covering all rate limiting functions
+4. Added migration guide documentation in file header comments
+
+**Note on API endpoints:** Existing API endpoints use synchronous `checkRateLimit()` which
+works but doesn't use Redis. A follow-up migration to `checkRateLimitAsync()` is documented
+in the rate-limit.ts file header. The current implementation is backward compatible.
+
 **Verification:**
 - `npm run typecheck` passes ✅
-- `npm run test` - All 1032 tests pass ✅
+- `npm run test` - All 1052 tests pass (20 new) ✅
 - Existing rate-limited endpoints continue to work ✅
 - In-memory fallback works in development (no Redis configured) ✅
 

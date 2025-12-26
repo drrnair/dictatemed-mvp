@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
+import { prisma } from '@/infrastructure/db/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,9 +18,117 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
+interface DashboardStats {
+  draftCount: number;
+  lettersToday: number;
+  pendingReview: number;
+  thisMonth: number;
+  timeSavedHours: number;
+  recentActivity: {
+    id: string;
+    patientInitials: string;
+    letterType: string;
+    status: 'pending' | 'approved';
+    time: string;
+  }[];
+}
+
+async function getDashboardStats(userId: string, practiceId: string): Promise<DashboardStats> {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [
+    draftCount,
+    lettersToday,
+    pendingReview,
+    thisMonth,
+    approvedThisMonth,
+    recentLetters,
+  ] = await Promise.all([
+    prisma.letter.count({
+      where: { userId, status: 'DRAFT' },
+    }),
+    prisma.letter.count({
+      where: { userId, createdAt: { gte: todayStart } },
+    }),
+    prisma.letter.count({
+      where: {
+        user: { practiceId },
+        status: { in: ['DRAFT', 'IN_REVIEW'] },
+      },
+    }),
+    prisma.letter.count({
+      where: { userId, createdAt: { gte: monthStart } },
+    }),
+    prisma.letter.count({
+      where: { userId, status: 'APPROVED', createdAt: { gte: monthStart } },
+    }),
+    prisma.letter.findMany({
+      where: { user: { practiceId } },
+      select: {
+        id: true,
+        letterType: true,
+        status: true,
+        createdAt: true,
+        patient: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }),
+  ]);
+
+  const timeSavedHours = Math.round((approvedThisMonth * 15) / 60);
+
+  const recentActivity = recentLetters.map((letter) => {
+    const patient = letter.patient;
+    const patientInitials = patient
+      ? `${patient.firstName?.charAt(0) || ''}${patient.lastName?.charAt(0) || ''}`
+      : '??';
+
+    const letterType = letter.letterType
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+    const diff = now.getTime() - new Date(letter.createdAt).getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    let time: string;
+    if (days > 0) time = `${days}d ago`;
+    else if (hours > 0) time = `${hours}h ago`;
+    else if (minutes > 0) time = `${minutes}m ago`;
+    else time = 'Just now';
+
+    return {
+      id: letter.id,
+      patientInitials,
+      letterType,
+      status: (letter.status === 'APPROVED' ? 'approved' : 'pending') as 'pending' | 'approved',
+      time,
+    };
+  });
+
+  return {
+    draftCount,
+    lettersToday,
+    pendingReview,
+    thisMonth,
+    timeSavedHours,
+    recentActivity,
+  };
+}
+
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   const greeting = getGreeting();
+
+  // Fetch real stats if user is authenticated
+  const stats = user
+    ? await getDashboardStats(user.id, user.practiceId)
+    : { draftCount: 0, lettersToday: 0, pendingReview: 0, thisMonth: 0, timeSavedHours: 0, recentActivity: [] };
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -43,7 +152,7 @@ export default async function DashboardPage() {
           title="Draft Letters"
           description="Review and approve pending letters"
           href="/letters?status=draft"
-          count={0} // TODO: Fetch actual draft count
+          count={stats.draftCount}
           icon={
             <svg
               className="h-5 w-5"
