@@ -47,7 +47,7 @@ Successfully implemented support for expanded file upload types in the DictateME
 | `tests/unit/domains/referrals/docx-utils.test.ts` | Unit tests for DOCX utilities |
 | `tests/unit/domains/referrals/vision-extraction.test.ts` | Unit tests for vision extraction |
 | `tests/unit/domains/referrals/referral.types.test.ts` | Unit tests for MIME type helpers |
-| `tests/e2e/flows/extended-upload-types.spec.ts` | E2E tests for new file types (22 tests) |
+| `tests/e2e/flows/extended-upload-types.spec.ts` | E2E tests for new file types (40 tests) |
 | `scripts/generate-test-fixtures.ts` | Test fixture generation script |
 | `tests/e2e/fixtures/referrals/image-referral-001.jpg` | Test JPEG fixture |
 | `tests/e2e/fixtures/referrals/image-referral-001.png` | Test PNG fixture |
@@ -108,7 +108,7 @@ Duration: 772ms
 
 ### E2E Tests
 ```
-Tests:    66 defined (22 tests × 3 browsers)
+Tests:    120 defined (40 tests × 3 browsers)
 Browsers: Chromium, Firefox, WebKit
 Status:   Validated via --list (syntax verified, not executed)
 ```
