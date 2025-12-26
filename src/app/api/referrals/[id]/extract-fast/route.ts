@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { getSession } from '@/lib/auth';
 import { extractFastPatientData } from '@/domains/referrals/referral-fast-extraction.service';
 import { logger } from '@/lib/logger';
-import { checkRateLimit, createRateLimitKey } from '@/lib/rate-limit';
+import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const rateLimit = checkRateLimit(rateLimitKey, 'referrals');
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded', retryAfterMs: rateLimit.retryAfterMs },
+        { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfterMs },
         { status: 429 }
       );
     }
@@ -113,11 +113,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       hasData: !!result.data,
     });
 
+    const rateLimitHeaders = getRateLimitHeaders(rateLimit);
+
     // Check for specific error conditions in failed results
     if (result.status === 'FAILED' && result.error) {
       // Document not found
       if (result.error.includes('document not found')) {
-        return NextResponse.json({ error: 'Referral document not found' }, { status: 404 });
+        return NextResponse.json(
+          { error: 'Referral document not found' },
+          { status: 404, headers: rateLimitHeaders }
+        );
       }
 
       // No text content - need to extract text first
@@ -127,16 +132,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             error: 'Document text has not been extracted yet. Please extract text first.',
             details: 'Call POST /api/referrals/:id/extract-text before fast extraction.',
           },
-          { status: 400 }
+          { status: 400, headers: rateLimitHeaders }
         );
       }
 
       // Other failures - return 200 with FAILED status
       // Client can check status field to determine outcome
-      return NextResponse.json(result);
+      return NextResponse.json(result, { headers: rateLimitHeaders });
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json(result, { headers: rateLimitHeaders });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
 

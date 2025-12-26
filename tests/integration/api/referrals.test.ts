@@ -1073,6 +1073,7 @@ describe('Referrals API', () => {
   describe('GET /api/referrals/:id/status - Status polling', () => {
     beforeEach(() => {
       vi.mocked(auth.getSession).mockResolvedValue({ user: mockUser });
+      mockCheckRateLimit.mockReturnValue({ allowed: true, remaining: 59, resetAt: new Date() });
     });
 
     it('returns document processing status', async () => {
@@ -1164,6 +1165,20 @@ describe('Referrals API', () => {
       const response = await GET_STATUS(request, { params: Promise.resolve({ id: mockReferralDocument.id }) });
 
       expect(response.status).toBe(401);
+    });
+
+    it('handles rate limiting', async () => {
+      mockCheckRateLimit.mockReturnValue({
+        allowed: false,
+        remaining: 0,
+        resetAt: new Date(),
+        retryAfterMs: 60000,
+      });
+
+      const request = createRequest(`http://localhost:3000/api/referrals/${mockReferralDocument.id}/status`);
+      const response = await GET_STATUS(request, { params: Promise.resolve({ id: mockReferralDocument.id }) });
+
+      expect(response.status).toBe(429);
     });
 
     it('sets cache control header for short caching', async () => {

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/infrastructure/db/client';
 import { logger } from '@/lib/logger';
+import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
 import type {
   DocumentStatusResult,
   FastExtractedData,
@@ -78,7 +79,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { practiceId } = session.user;
+    const { id: userId, practiceId } = session.user;
+
+    // Rate limit: use referrals config (10 requests per minute)
+    // Status polling is frequent but lightweight, so use same config
+    const rateLimitKey = createRateLimitKey(userId, 'referrals');
+    const rateLimit = checkRateLimit(rateLimitKey, 'referrals');
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfterMs },
+        { status: 429, headers: getRateLimitHeaders(rateLimit) }
+      );
+    }
 
     const { id: rawId } = await params;
     const validation = validateIdParam(rawId);
@@ -140,14 +152,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     };
 
     // Cache for 1 second - short cache since we're polling
+    // Include rate limit headers for client visibility
     return NextResponse.json(response, {
       headers: {
         'Cache-Control': 'private, max-age=1',
+        ...getRateLimitHeaders(rateLimit),
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-
     log.error('Get referral status failed', {}, error instanceof Error ? error : undefined);
 
     return NextResponse.json(
