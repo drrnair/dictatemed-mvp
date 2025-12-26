@@ -9,6 +9,8 @@ import { UserManagement } from '@/components/settings/UserManagement';
 import { PracticeSettings } from '@/components/settings/PracticeSettings';
 import { logger } from '@/lib/logger';
 
+import type { JsonValue } from '@prisma/client/runtime/library';
+
 /** Practice settings configuration values */
 type SettingValue = string | number | boolean | undefined;
 
@@ -26,7 +28,8 @@ interface SettingsData {
 interface Practice {
   id: string;
   name: string;
-  settings: SettingsData;
+  /** Settings from Prisma (JsonValue) - normalized to SettingsData in component */
+  settings: JsonValue;
   letterhead: string | null;
   createdAt: Date;
   updatedAt: Date;
