@@ -155,6 +155,7 @@ npm run test -- tests/unit/domains/referrals/  # ✅ 175 total tests pass (no re
 ---
 
 ### [ ] Step: Expand MIME Type Constants
+<!-- chat-id: f952c9d3-ea90-402f-b787-33b141aed05f -->
 
 Update type definitions to support new file types.
 
