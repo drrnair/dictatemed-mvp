@@ -60,6 +60,7 @@ function createDefaultMockHookResult(
     failedFiles: [],
     processingFiles: [],
     completedFiles: [],
+    patientConflict: null,
     addFiles: vi.fn().mockReturnValue([]),
     removeFile: vi.fn(),
     retryFile: vi.fn(),

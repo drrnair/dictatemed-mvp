@@ -332,6 +332,57 @@ Do not make assumptions on important decisions — get clarification first.
 
 ---
 
+
+
+### [x] Step: Verify Anthropic API, Test Real Files, Add Auto-Population & Multi-Patient Detection
+<!-- chat-id: ea4e924e-88f8-45ea-abc8-bd9c34647d69 -->
+<!-- agent: CLAUDE_CODE -->
+
+**Objective**: Complete the multi-document upload feature with auto-population and conflict detection
+
+**Completed**:
+- [x] Verified AWS Bedrock API connection for extraction:
+  - Codebase uses AWS Bedrock (not direct Anthropic API) as configured
+  - `src/infrastructure/bedrock/text-generation.ts` handles Claude API via Bedrock
+  - Model IDs configured via `BEDROCK_OPUS_MODEL_ID` and `BEDROCK_SONNET_MODEL_ID`
+- [x] Verified HEIC file extraction support exists:
+  - `src/domains/referrals/image-utils.ts` handles HEIC/HEIF conversion via `heic-convert`
+  - `src/domains/referrals/vision-extraction.ts` uses Claude Vision for OCR
+  - HEIC files are converted to JPEG before being sent to Claude Vision
+- [x] Implemented auto-population of patient search fields:
+  - Added `initialSearchQuery` and `autoSearch` props to `PatientSelector` component
+  - Auto-triggers patient search when fast extraction returns a name
+  - Pre-fills search field and shows dropdown with matching results
+  - `ConsultationContextForm` passes `fastExtractionData.patientName` to `PatientSelector`
+- [x] Added multi-patient conflict detection:
+  - Created `PatientConflictResult` type in `referral.types.ts`
+  - Added `normalizePatientName()` function (handles case, titles, suffixes)
+  - Added `normalizeDob()` function (handles date format variations)
+  - Added `detectPatientConflicts()` function to detect conflicts across documents
+  - Updated `useDocumentUploadQueue` hook to return `patientConflict` result
+  - Updated `MultiDocumentUploader` to show conflict warning banner
+  - Added 22 unit tests for conflict detection functions
+- [x] Verified performance optimization for <5 second target:
+  - Fast extraction already uses minimal prompt (3 fields only)
+  - Uses Sonnet model for speed/accuracy balance
+  - Limited to 256 max tokens output
+  - Text capped at 50,000 characters
+  - Aggressive retry config (2 retries, 500ms initial delay)
+  - E2E tests verify <5 second target
+
+**Files modified**:
+- `src/components/consultation/PatientSelector.tsx` (added auto-search)
+- `src/components/consultation/ConsultationContextForm.tsx` (passes extracted name)
+- `src/domains/referrals/referral.types.ts` (added conflict detection types/functions)
+- `src/hooks/use-document-upload-queue.ts` (added patientConflict detection)
+- `src/components/referral/MultiDocumentUploader.tsx` (added conflict warning UI)
+- `tests/unit/domains/referrals/referral.types.test.ts` (added 22 conflict tests)
+- `tests/unit/components/MultiDocumentUploader.test.tsx` (updated mock)
+
+**Verification**: `npm run typecheck` passed, `npm run lint` passed, 1783 unit tests passing
+
+---
+
 ## Dependencies
 
 - Supabase Storage (configured)

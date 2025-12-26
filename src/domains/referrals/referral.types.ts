@@ -514,3 +514,178 @@ export function createFieldConfidence(
     level: getConfidenceLevel(confidence),
   };
 }
+
+// ============ Multi-Patient Conflict Detection ============
+
+/**
+ * Result of comparing patient identifiers across multiple documents.
+ * Used to detect when uploaded documents might belong to different patients.
+ */
+export interface PatientConflictResult {
+  /** Whether a conflict was detected */
+  hasConflict: boolean;
+  /** Type of conflict if any */
+  conflictType?: 'name' | 'dob' | 'both';
+  /** Description of the conflict for display */
+  conflictDescription?: string;
+  /** Unique patient names found across documents */
+  uniqueNames: string[];
+  /** Unique DOBs found across documents */
+  uniqueDobs: string[];
+  /** The suggested/best patient identifier to use (highest confidence) */
+  suggestedPatient?: {
+    name: string | null;
+    dob: string | null;
+    mrn: string | null;
+    confidence: number;
+  };
+}
+
+/**
+ * Normalize a patient name for comparison.
+ * Handles case differences, extra spaces, and common variations.
+ */
+export function normalizePatientName(name: string | null | undefined): string {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+    // Handle common title variations
+    .replace(/^(mr|mrs|ms|miss|dr|prof)\.?\s+/i, '')
+    // Remove trailing suffixes
+    .replace(/\s+(jr|sr|i{1,3}|iv|v)\.?$/i, '');
+}
+
+/**
+ * Normalize a date of birth for comparison.
+ * Handles different date formats and normalizes to YYYY-MM-DD.
+ */
+export function normalizeDob(dob: string | null | undefined): string {
+  if (!dob) return '';
+  // Already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+    return dob;
+  }
+  // Try DD/MM/YYYY format
+  const ddmmyyyy = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(dob);
+  if (ddmmyyyy) {
+    const [, day, month, year] = ddmmyyyy;
+    return `${year}-${month!.padStart(2, '0')}-${day!.padStart(2, '0')}`;
+  }
+  return dob.trim();
+}
+
+/**
+ * Detect patient conflicts across multiple documents' fast extraction data.
+ *
+ * @param extractionData Array of fast extraction data from multiple documents
+ * @returns Conflict result with details if conflicts found
+ */
+export function detectPatientConflicts(
+  extractionData: (FastExtractedData | undefined | null)[]
+): PatientConflictResult {
+  // Filter to non-null extraction data with at least one patient identifier
+  const validData = extractionData.filter(
+    (d): d is FastExtractedData =>
+      d !== null &&
+      d !== undefined &&
+      (d.patientName?.value !== null || d.dateOfBirth?.value !== null)
+  );
+
+  if (validData.length <= 1) {
+    // No conflict possible with 0-1 documents
+    const firstData = validData[0];
+    return {
+      hasConflict: false,
+      uniqueNames: firstData?.patientName?.value ? [firstData.patientName.value] : [],
+      uniqueDobs: firstData?.dateOfBirth?.value ? [firstData.dateOfBirth.value] : [],
+      suggestedPatient: firstData
+        ? {
+            name: firstData.patientName?.value ?? null,
+            dob: firstData.dateOfBirth?.value ?? null,
+            mrn: firstData.mrn?.value ?? null,
+            confidence: firstData.overallConfidence,
+          }
+        : undefined,
+    };
+  }
+
+  // Collect unique normalized names and DOBs
+  const normalizedNames = new Map<string, { original: string; confidence: number }>();
+  const normalizedDobs = new Map<string, { original: string; confidence: number }>();
+
+  for (const data of validData) {
+    if (data.patientName?.value) {
+      const normalized = normalizePatientName(data.patientName.value);
+      if (normalized) {
+        const existing = normalizedNames.get(normalized);
+        if (!existing || data.patientName.confidence > existing.confidence) {
+          normalizedNames.set(normalized, {
+            original: data.patientName.value,
+            confidence: data.patientName.confidence,
+          });
+        }
+      }
+    }
+
+    if (data.dateOfBirth?.value) {
+      const normalized = normalizeDob(data.dateOfBirth.value);
+      if (normalized) {
+        const existing = normalizedDobs.get(normalized);
+        if (!existing || data.dateOfBirth.confidence > existing.confidence) {
+          normalizedDobs.set(normalized, {
+            original: data.dateOfBirth.value,
+            confidence: data.dateOfBirth.confidence,
+          });
+        }
+      }
+    }
+  }
+
+  // Extract unique values
+  const uniqueNames = Array.from(normalizedNames.values()).map((v) => v.original);
+  const uniqueDobs = Array.from(normalizedDobs.values()).map((v) => v.original);
+
+  // Determine conflict
+  const nameConflict = normalizedNames.size > 1;
+  const dobConflict = normalizedDobs.size > 1;
+  const hasConflict = nameConflict || dobConflict;
+
+  // Find the best suggestion (highest overall confidence)
+  const bestData = validData.reduce((best, current) =>
+    current.overallConfidence > (best?.overallConfidence ?? 0) ? current : best
+  );
+
+  let conflictType: 'name' | 'dob' | 'both' | undefined;
+  let conflictDescription: string | undefined;
+
+  if (hasConflict) {
+    if (nameConflict && dobConflict) {
+      conflictType = 'both';
+      conflictDescription = `Multiple patients detected: ${uniqueNames.join(', ')}`;
+    } else if (nameConflict) {
+      conflictType = 'name';
+      conflictDescription = `Different names found: ${uniqueNames.join(', ')}`;
+    } else {
+      conflictType = 'dob';
+      conflictDescription = `Different dates of birth found: ${uniqueDobs.join(', ')}`;
+    }
+  }
+
+  return {
+    hasConflict,
+    conflictType,
+    conflictDescription,
+    uniqueNames,
+    uniqueDobs,
+    suggestedPatient: bestData
+      ? {
+          name: bestData.patientName?.value ?? null,
+          dob: bestData.dateOfBirth?.value ?? null,
+          mrn: bestData.mrn?.value ?? null,
+          confidence: bestData.overallConfidence,
+        }
+      : undefined,
+  };
+}

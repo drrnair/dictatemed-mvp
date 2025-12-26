@@ -15,6 +15,10 @@ import {
   isFileSizeValid,
   formatFileSize,
   MAX_REFERRAL_FILE_SIZE,
+  normalizePatientName,
+  normalizeDob,
+  detectPatientConflicts,
+  type FastExtractedData,
 } from '@/domains/referrals/referral.types';
 
 describe('referral.types', () => {
@@ -370,6 +374,178 @@ describe('referral.types', () => {
     it('should be 20 MB', () => {
       // Updated from 10 MB to 20 MB to support larger scanned documents and photos
       expect(MAX_REFERRAL_FILE_SIZE).toBe(20 * 1024 * 1024);
+    });
+  });
+
+  describe('normalizePatientName', () => {
+    it('should handle null and undefined', () => {
+      expect(normalizePatientName(null)).toBe('');
+      expect(normalizePatientName(undefined)).toBe('');
+      expect(normalizePatientName('')).toBe('');
+    });
+
+    it('should lowercase and trim', () => {
+      expect(normalizePatientName('  John Smith  ')).toBe('john smith');
+      expect(normalizePatientName('JOHN SMITH')).toBe('john smith');
+    });
+
+    it('should collapse multiple spaces', () => {
+      expect(normalizePatientName('John   Smith')).toBe('john smith');
+    });
+
+    it('should remove common title prefixes', () => {
+      expect(normalizePatientName('Mr. John Smith')).toBe('john smith');
+      expect(normalizePatientName('Mrs. Jane Smith')).toBe('jane smith');
+      expect(normalizePatientName('Ms Jane Smith')).toBe('jane smith');
+      expect(normalizePatientName('Dr. John Smith')).toBe('john smith');
+      expect(normalizePatientName('Prof. John Smith')).toBe('john smith');
+    });
+
+    it('should remove common suffixes', () => {
+      expect(normalizePatientName('John Smith Jr')).toBe('john smith');
+      expect(normalizePatientName('John Smith Sr.')).toBe('john smith');
+      expect(normalizePatientName('John Smith III')).toBe('john smith');
+    });
+  });
+
+  describe('normalizeDob', () => {
+    it('should handle null and undefined', () => {
+      expect(normalizeDob(null)).toBe('');
+      expect(normalizeDob(undefined)).toBe('');
+      expect(normalizeDob('')).toBe('');
+    });
+
+    it('should pass through YYYY-MM-DD format', () => {
+      expect(normalizeDob('1990-05-15')).toBe('1990-05-15');
+    });
+
+    it('should convert DD/MM/YYYY to YYYY-MM-DD', () => {
+      expect(normalizeDob('15/05/1990')).toBe('1990-05-15');
+      expect(normalizeDob('1/5/1990')).toBe('1990-05-01');
+    });
+
+    it('should handle dot and dash separators', () => {
+      expect(normalizeDob('15.05.1990')).toBe('1990-05-15');
+      expect(normalizeDob('15-05-1990')).toBe('1990-05-15');
+    });
+
+    it('should trim whitespace', () => {
+      expect(normalizeDob('  1990-05-15  ')).toBe('1990-05-15');
+    });
+  });
+
+  describe('detectPatientConflicts', () => {
+    // Helper to create FastExtractedData
+    function createExtractedData(
+      name: string | null,
+      dob: string | null,
+      overallConfidence = 0.85
+    ): FastExtractedData {
+      return {
+        patientName: { value: name, confidence: 0.85, level: 'high' },
+        dateOfBirth: { value: dob, confidence: 0.85, level: 'high' },
+        mrn: { value: null, confidence: 0, level: 'low' },
+        overallConfidence,
+        extractedAt: new Date().toISOString(),
+        modelUsed: 'claude-sonnet-4-20250514',
+        processingTimeMs: 2500,
+      };
+    }
+
+    it('should return no conflict for empty array', () => {
+      const result = detectPatientConflicts([]);
+      expect(result.hasConflict).toBe(false);
+      expect(result.uniqueNames).toHaveLength(0);
+      expect(result.uniqueDobs).toHaveLength(0);
+    });
+
+    it('should return no conflict for single document', () => {
+      const data = createExtractedData('John Smith', '1990-05-15');
+      const result = detectPatientConflicts([data]);
+      expect(result.hasConflict).toBe(false);
+      expect(result.uniqueNames).toEqual(['John Smith']);
+      expect(result.uniqueDobs).toEqual(['1990-05-15']);
+    });
+
+    it('should return no conflict when all documents have same patient', () => {
+      const data1 = createExtractedData('John Smith', '1990-05-15');
+      const data2 = createExtractedData('John Smith', '1990-05-15');
+      const result = detectPatientConflicts([data1, data2]);
+      expect(result.hasConflict).toBe(false);
+    });
+
+    it('should return no conflict for case differences', () => {
+      const data1 = createExtractedData('John Smith', '1990-05-15');
+      const data2 = createExtractedData('JOHN SMITH', '1990-05-15');
+      const result = detectPatientConflicts([data1, data2]);
+      expect(result.hasConflict).toBe(false);
+    });
+
+    it('should return no conflict for title differences', () => {
+      const data1 = createExtractedData('John Smith', '1990-05-15');
+      const data2 = createExtractedData('Mr. John Smith', '1990-05-15');
+      const result = detectPatientConflicts([data1, data2]);
+      expect(result.hasConflict).toBe(false);
+    });
+
+    it('should detect name conflict', () => {
+      const data1 = createExtractedData('John Smith', '1990-05-15');
+      const data2 = createExtractedData('Jane Doe', '1990-05-15');
+      const result = detectPatientConflicts([data1, data2]);
+      expect(result.hasConflict).toBe(true);
+      expect(result.conflictType).toBe('name');
+      expect(result.uniqueNames).toHaveLength(2);
+      expect(result.uniqueNames).toContain('John Smith');
+      expect(result.uniqueNames).toContain('Jane Doe');
+    });
+
+    it('should detect DOB conflict', () => {
+      const data1 = createExtractedData('John Smith', '1990-05-15');
+      const data2 = createExtractedData('John Smith', '1985-03-20');
+      const result = detectPatientConflicts([data1, data2]);
+      expect(result.hasConflict).toBe(true);
+      expect(result.conflictType).toBe('dob');
+      expect(result.uniqueDobs).toHaveLength(2);
+    });
+
+    it('should detect both name and DOB conflict', () => {
+      const data1 = createExtractedData('John Smith', '1990-05-15');
+      const data2 = createExtractedData('Jane Doe', '1985-03-20');
+      const result = detectPatientConflicts([data1, data2]);
+      expect(result.hasConflict).toBe(true);
+      expect(result.conflictType).toBe('both');
+    });
+
+    it('should normalize DOB formats when comparing', () => {
+      const data1 = createExtractedData('John Smith', '1990-05-15');
+      const data2 = createExtractedData('John Smith', '15/05/1990');
+      const result = detectPatientConflicts([data1, data2]);
+      expect(result.hasConflict).toBe(false);
+    });
+
+    it('should skip null/undefined extraction data', () => {
+      const data1 = createExtractedData('John Smith', '1990-05-15');
+      const result = detectPatientConflicts([null, data1, undefined]);
+      expect(result.hasConflict).toBe(false);
+      expect(result.uniqueNames).toEqual(['John Smith']);
+    });
+
+    it('should return suggested patient with highest confidence', () => {
+      const data1 = createExtractedData('John Smith', '1990-05-15', 0.75);
+      const data2 = createExtractedData('Jane Doe', '1985-03-20', 0.95);
+      const result = detectPatientConflicts([data1, data2]);
+      expect(result.suggestedPatient).toBeDefined();
+      expect(result.suggestedPatient?.name).toBe('Jane Doe');
+      expect(result.suggestedPatient?.confidence).toBe(0.95);
+    });
+
+    it('should include conflict description', () => {
+      const data1 = createExtractedData('John Smith', '1990-05-15');
+      const data2 = createExtractedData('Jane Doe', '1990-05-15');
+      const result = detectPatientConflicts([data1, data2]);
+      expect(result.conflictDescription).toBeDefined();
+      expect(result.conflictDescription).toContain('John Smith');
+      expect(result.conflictDescription).toContain('Jane Doe');
     });
   });
 });
