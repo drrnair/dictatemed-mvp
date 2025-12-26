@@ -72,6 +72,7 @@ Do not make assumptions on important decisions — get clarification first.
 ---
 
 ### [ ] Step 2: Fast Extraction Service & Prompt
+<!-- chat-id: ade68013-ca7a-4d12-89df-8ca0eb4b916b -->
 
 **Objective**: Create optimized extraction for patient identifiers (<5 seconds)
 
