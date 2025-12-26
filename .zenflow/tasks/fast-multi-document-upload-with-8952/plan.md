@@ -239,6 +239,7 @@ Do not make assumptions on important decisions — get clarification first.
 ---
 
 ### [ ] Step 6: Integration & Background Processing
+<!-- chat-id: 08732c8f-cf9f-4cab-9105-63573805d3cd -->
 
 **Objective**: Connect components to workflow, handle full extraction
 
