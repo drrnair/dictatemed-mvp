@@ -18,12 +18,12 @@ vi.mock('@/infrastructure/db/client', () => ({
   },
 }));
 
-// Mock Bedrock text generation
-vi.mock('@/infrastructure/bedrock/text-generation', () => ({
+// Mock AI text generation (unified layer)
+vi.mock('@/infrastructure/ai', () => ({
   generateTextWithRetry: vi.fn(),
   MODELS: {
-    SONNET: 'anthropic.claude-sonnet-4-20250514-v1:0',
-    OPUS: 'anthropic.claude-opus-4-20250514-v1:0',
+    SONNET: 'sonnet',
+    OPUS: 'opus',
   },
 }));
 
@@ -49,7 +49,7 @@ import {
 } from '@/domains/referrals/extractors/referral-letter';
 import { extractStructuredData } from '@/domains/referrals/referral-extraction.service';
 import { prisma } from '@/infrastructure/db/client';
-import { generateTextWithRetry, MODELS } from '@/infrastructure/bedrock/text-generation';
+import { generateTextWithRetry, MODELS } from '@/infrastructure/ai';
 
 describe('referral-letter extractor', () => {
   describe('parseReferralExtraction', () => {
@@ -411,6 +411,7 @@ describe('referral-extraction.service', () => {
     outputTokens: 200,
     stopReason: 'end_turn',
     modelId: MODELS.SONNET,
+    provider: 'anthropic' as const,
   };
 
   describe('extractStructuredData', () => {

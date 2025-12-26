@@ -29,11 +29,11 @@ vi.mock('@/infrastructure/db/client', () => ({
   },
 }));
 
-vi.mock('@/infrastructure/bedrock', () => ({
+vi.mock('@/infrastructure/ai', () => ({
   generateTextWithRetry: vi.fn(),
   MODELS: {
-    SONNET: 'claude-sonnet',
-    OPUS: 'claude-opus',
+    SONNET: 'sonnet',
+    OPUS: 'opus',
   },
 }));
 
@@ -54,7 +54,7 @@ vi.mock('@/domains/style/subspecialty-profile.service', () => ({
 }));
 
 // Import after mocking
-import { generateTextWithRetry } from '@/infrastructure/bedrock';
+import { generateTextWithRetry } from '@/infrastructure/ai';
 
 describe('learning-pipeline', () => {
   beforeEach(() => {

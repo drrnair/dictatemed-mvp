@@ -8,7 +8,7 @@ import {
   compareCosts,
   type ModelSelectionInput,
 } from '@/domains/letters/model-selection';
-import { MODELS } from '@/infrastructure/bedrock';
+import { MODELS } from '@/infrastructure/ai';
 
 // Mock logger
 vi.mock('@/lib/logger', () => ({
@@ -26,12 +26,11 @@ vi.mock('@/lib/logger', () => ({
   },
 }));
 
-// Mock bedrock module
-vi.mock('@/infrastructure/bedrock', () => ({
+// Mock AI module (unified layer)
+vi.mock('@/infrastructure/ai', () => ({
   MODELS: {
-    SONNET: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
-    OPUS: 'anthropic.claude-3-5-sonnet-20241022-v2:0', // Same for testing
-    HAIKU: 'anthropic.claude-3-haiku-20240307-v1:0',
+    SONNET: 'sonnet',
+    OPUS: 'opus',
   },
   estimateCost: vi.fn(() => ({
     inputCost: 0.001,

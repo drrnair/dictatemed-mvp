@@ -7,7 +7,7 @@ import {
   analyzeImage,
   analyzeMultipleImages,
   fetchImageAsBase64,
-} from '@/infrastructure/bedrock/vision';
+} from '@/infrastructure/ai';
 import { logger } from '@/lib/logger';
 import type { DocumentType, ExtractedData, EchoReportData, AngiogramReportData, LabResultData, GenericData } from './document.types';
 import { ECHO_EXTRACTION_PROMPT, parseEchoExtraction } from './extractors/echo-report';

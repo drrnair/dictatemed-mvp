@@ -2,10 +2,10 @@
 // Unit tests for vision-based text extraction using Claude Vision
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { analyzeImage } from '@/infrastructure/bedrock/vision';
+import { analyzeImage } from '@/infrastructure/ai/vision';
 
-// Mock the Bedrock vision module
-vi.mock('@/infrastructure/bedrock/vision', () => ({
+// Mock the AI vision module (unified layer)
+vi.mock('@/infrastructure/ai/vision', () => ({
   analyzeImage: vi.fn(),
 }));
 
@@ -131,6 +131,7 @@ General Practitioner`;
         inputTokens: 1234,
         outputTokens: 567,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision(sampleBase64, 'image/jpeg');
@@ -158,6 +159,7 @@ General Practitioner`;
         inputTokens: 100,
         outputTokens: 5,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision(sampleBase64, 'image/png');
@@ -175,6 +177,7 @@ General Practitioner`;
         inputTokens: 100,
         outputTokens: 5,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision(sampleBase64, 'image/jpeg');
@@ -275,6 +278,7 @@ General Practitioner`;
           inputTokens: 100,
           outputTokens: 10,
           stopReason: 'end_turn',
+          provider: 'anthropic',
         });
 
         const result = await extractTextFromImageVision(sampleBase64, mimeType);
@@ -304,6 +308,7 @@ Signed: Dr. Jane Doe`;
         inputTokens: 200,
         outputTokens: 100,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision(sampleBase64, 'image/jpeg');
@@ -325,6 +330,7 @@ Please advise.`;
         inputTokens: 150,
         outputTokens: 50,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision(sampleBase64, 'image/jpeg');
@@ -343,6 +349,7 @@ Please advise.`;
         inputTokens: 100,
         outputTokens: 20,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       // Create a simple buffer (doesn't need to be a valid image for the mock)
@@ -379,6 +386,7 @@ Please advise.`;
         inputTokens: 50,
         outputTokens: 5,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const emptyBuffer = Buffer.from([]);
@@ -424,6 +432,7 @@ Please advise.`;
         inputTokens: 5000, // Large input for image
         outputTokens: 200, // Text output
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision('base64data', 'image/jpeg');
@@ -447,6 +456,7 @@ Please advise.`;
         inputTokens: 3000,
         outputTokens: 5,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision('base64data', 'image/png');

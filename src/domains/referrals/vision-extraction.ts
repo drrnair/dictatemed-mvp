@@ -1,13 +1,13 @@
 // src/domains/referrals/vision-extraction.ts
-// Vision-based text extraction for referral images using Claude Vision via Bedrock
+// Vision-based text extraction for referral images using Claude Vision
 //
 // Uses Claude Sonnet 4 for accurate OCR of medical referral documents,
 // including handwritten notes and scanned letters.
 //
-// NOTE: This module is SERVER-SIDE ONLY. It uses Node.js Buffer and AWS Bedrock.
+// NOTE: This module is SERVER-SIDE ONLY. It uses Node.js Buffer.
 // Do not import in client-side code or browser bundles.
 
-import { analyzeImage, type VisionRequest } from '@/infrastructure/bedrock/vision';
+import { analyzeImage, type VisionRequest } from '@/infrastructure/ai';
 import { logger } from '@/lib/logger';
 
 /**
