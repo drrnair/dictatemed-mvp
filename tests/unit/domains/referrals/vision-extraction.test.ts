@@ -131,6 +131,7 @@ General Practitioner`;
         inputTokens: 1234,
         outputTokens: 567,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision(sampleBase64, 'image/jpeg');
@@ -158,6 +159,7 @@ General Practitioner`;
         inputTokens: 100,
         outputTokens: 5,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision(sampleBase64, 'image/png');
@@ -175,6 +177,7 @@ General Practitioner`;
         inputTokens: 100,
         outputTokens: 5,
         stopReason: 'end_turn',
+        provider: 'anthropic',
       });
 
       const result = await extractTextFromImageVision(sampleBase64, 'image/jpeg');
@@ -275,6 +278,7 @@ General Practitioner`;
           inputTokens: 100,
           outputTokens: 10,
           stopReason: 'end_turn',
+          provider: 'anthropic',
         });
 
         const result = await extractTextFromImageVision(sampleBase64, mimeType);

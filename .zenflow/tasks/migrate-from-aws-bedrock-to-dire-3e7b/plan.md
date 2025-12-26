@@ -140,7 +140,7 @@ Update all domain services to use the unified AI layer.
 
 ---
 
-### [ ] Step 5: Update Tests
+### [x] Step 5: Update Tests
 <!-- chat-id: 2bee8144-c2ee-471e-b60b-0a43b68a4049 -->
 
 Update all test files to mock the new unified AI layer.
@@ -157,6 +157,20 @@ Update all test files to mock the new unified AI layer.
 **Verification:**
 - `npm run test` passes (all unit tests)
 - `npm run test:integration` passes (all integration tests)
+
+**Completed:**
+- Updated all 7 test files to mock `@/infrastructure/ai` instead of `@/infrastructure/bedrock`:
+  - `tests/unit/domains/letters/model-selection.test.ts` - Changed mock and import from `@/infrastructure/bedrock` to `@/infrastructure/ai`
+  - `tests/unit/domains/referrals/vision-extraction.test.ts` - Changed mock and import from `@/infrastructure/bedrock/vision` to `@/infrastructure/ai/vision`
+  - `tests/unit/domains/referrals/referral-extraction.test.ts` - Changed mock and import from `@/infrastructure/bedrock/text-generation` to `@/infrastructure/ai`
+  - `tests/unit/domains/referrals/fast-patient-extraction.test.ts` - Changed mock and import from `@/infrastructure/bedrock/text-generation` to `@/infrastructure/ai`
+  - `tests/unit/domains/style/learning-pipeline.test.ts` - Changed mock and import from `@/infrastructure/bedrock` to `@/infrastructure/ai`
+  - `tests/integration/style/learning-flow.test.ts` - Changed mock and import from `@/infrastructure/bedrock` to `@/infrastructure/ai`
+  - `tests/integration/api/referrals.test.ts` - Changed mock and import from `@/infrastructure/bedrock/text-generation` to `@/infrastructure/ai`
+- Updated mock MODELS to use abstract IDs (`'sonnet'`, `'opus'`) instead of Bedrock-specific model IDs
+- All verifications passed:
+  - `npm run test`: 61 test files, 1783 tests passed
+  - `npm run test:integration`: 15 test files, 414 tests passed
 
 ---
 
