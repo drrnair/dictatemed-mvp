@@ -92,20 +92,28 @@ npm run test -- tests/unit/domains/referrals/  # ✅ 109 total tests pass (no re
 
 ---
 
-### [ ] Step: Create Word Document Utilities Module
+### [x] Step: Create Word Document Utilities Module
 
-Create utilities for Word document (.docx) text extraction.
+**Status**: Complete
 
-**Tasks**:
-1. Create `src/domains/referrals/docx-utils.ts`
-2. Implement `extractDocxText()` using mammoth
-3. Handle extraction errors gracefully
-4. Create unit tests in `tests/unit/domains/referrals/docx-utils.test.ts`
+Created Word document text extraction utilities using mammoth.
 
-**Verification**:
+**Completed Tasks**:
+1. ✅ Created `src/domains/referrals/docx-utils.ts` with:
+   - `extractDocxText()` - extracts raw text from .docx files using mammoth
+   - `isValidDocxBuffer()` - validates ZIP signature (docx structure check)
+   - `validateAndExtractDocx()` - combines validation and extraction
+   - `isDocxMimeType()` - type guard for DOCX MIME type
+   - Constants: `DOCX_MIME_TYPES`
+   - Graceful error handling - returns structured result, never throws
+2. ✅ Mammoth has built-in TypeScript types (`node_modules/mammoth/lib/index.d.ts`) - no additional declarations needed
+3. ✅ Created unit tests in `tests/unit/domains/referrals/docx-utils.test.ts` - 31 passing tests
+
+**Verification Results**:
 ```bash
-npm run test -- tests/unit/domains/referrals/docx-utils.test.ts
-npm run typecheck
+npm run typecheck  # ✅ Passes
+npm run test -- tests/unit/domains/referrals/docx-utils.test.ts  # ✅ 31 tests pass
+npm run test -- tests/unit/domains/referrals/  # ✅ 140 total tests pass (no regressions)
 ```
 
 **Files Created**:
