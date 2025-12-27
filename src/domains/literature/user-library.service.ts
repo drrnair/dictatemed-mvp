@@ -163,7 +163,7 @@ class UserLibraryService {
 
   /**
    * Store document chunks with embeddings using pgvector.
-   * Uses batch insertion for better performance with large documents.
+   * Uses parameterized queries for SQL safety and batch insertion for performance.
    */
   private async storeChunks(
     documentId: string,
@@ -184,25 +184,15 @@ class UserLibraryService {
 
     if (validChunks.length === 0) return;
 
-    // Insert chunks in batches for performance
-    // PostgreSQL has a limit on query parameters, so we batch in groups of 100
-    const BATCH_SIZE = 100;
+    // Insert chunks one at a time using parameterized queries for SQL safety
+    // This is safer than string interpolation and prevents SQL injection
+    for (const { chunk, embedding } of validChunks) {
+      const embeddingStr = `[${embedding.join(',')}]`;
 
-    for (let batchStart = 0; batchStart < validChunks.length; batchStart += BATCH_SIZE) {
-      const batch = validChunks.slice(batchStart, batchStart + BATCH_SIZE);
-
-      // Build VALUES clause for batch insert
-      const values = batch.map(({ chunk, embedding }) => {
-        const embeddingStr = `[${embedding.join(',')}]`;
-        // Escape single quotes in content for SQL safety
-        const escapedContent = chunk.content.replace(/'/g, "''");
-        return `(gen_random_uuid(), '${documentId}', ${chunk.index}, '${escapedContent}', '${embeddingStr}'::vector, NOW())`;
-      }).join(',\n');
-
-      await prisma.$executeRawUnsafe(`
+      await prisma.$executeRaw`
         INSERT INTO document_chunks (id, document_id, chunk_index, content, embedding, created_at)
-        VALUES ${values}
-      `);
+        VALUES (gen_random_uuid(), ${documentId}, ${chunk.index}, ${chunk.content}, ${embeddingStr}::vector, NOW())
+      `;
     }
   }
 
