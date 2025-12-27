@@ -1,7 +1,9 @@
 # Spec and build
 
 ## Configuration
-- **Artifacts Path**: {@artifacts_path} → `.zenflow/tasks/{task_id}`
+- **Artifacts Path**: `.zenflow/tasks/polish-clinical-literature-chat-0e98`
+- **Difficulty**: Hard
+- **Spec**: See `spec.md` for full technical specification
 
 ---
 
@@ -18,47 +20,191 @@ Do not make assumptions on important decisions — get clarification first.
 
 ## Workflow Steps
 
-### [ ] Step: Technical Specification
+### [x] Step: Technical Specification
 
-Assess the task's difficulty, as underestimating it leads to poor outcomes.
-- easy: Straightforward implementation, trivial bug fix or feature
-- medium: Moderate complexity, some edge cases or caveats to consider
-- hard: Complex logic, many caveats, architectural considerations, or high-risk changes
-
-Create a technical specification for the task that is appropriate for the complexity level:
-- Review the existing codebase architecture and identify reusable components.
-- Define the implementation approach based on established patterns in the project.
-- Identify all source code files that will be created or modified.
-- Define any necessary data model, API, or interface changes.
-- Describe verification steps using the project's test and lint commands.
-
-Save the output to `{@artifacts_path}/spec.md` with:
-- Technical context (language, dependencies)
-- Implementation approach
-- Source code structure changes
-- Data model / API / interface changes
-- Verification approach
-
-If the task is complex enough, create a detailed implementation plan based on `{@artifacts_path}/spec.md`:
-- Break down the work into concrete tasks (incrementable, testable milestones)
-- Each task should reference relevant contracts and include verification steps
-- Replace the Implementation step below with the planned tasks
-
-Rule of thumb for step size: each step should represent a coherent unit of work (e.g., implement a component, add an API endpoint, write tests for a module). Avoid steps that are too granular (single function).
-
-Save to `{@artifacts_path}/plan.md`. If the feature is trivial and doesn't warrant this breakdown, keep the Implementation step below as is.
+Created comprehensive technical specification in `spec.md` covering:
+- Task difficulty assessment: **Hard**
+- Technical context (stack, existing architecture)
+- Implementation approach (extend design system, not replace)
+- 17 source files to modify/create
+- Verification approach with automated and manual checklists
+- Risk considerations and mitigations
 
 ---
 
-### [ ] Step: Implementation
+### [ ] Step: Design System Setup
 
-Implement the task according to the technical specification and general engineering best practices.
+Configure typography, colors, and animations in Tailwind and CSS.
 
-1. Break the task into steps where possible.
-2. Implement the required changes in the codebase.
-3. Add and run relevant tests and linters.
-4. Perform basic manual verification if applicable.
-5. After completion, write a report to `{@artifacts_path}/report.md` describing:
-   - What was implemented
-   - How the solution was tested
-   - The biggest issues or challenges encountered
+**Tasks:**
+1. Update `tailwind.config.js` with:
+   - Font families: `letter-serif`, `ui-sans`, `clinical-mono`
+   - Clinical color scales
+   - Animation keyframes
+2. Update `src/app/globals.css` with:
+   - CSS custom properties for animations
+   - `@keyframes citation-flash`
+3. Update `src/app/layout.tsx` with:
+   - Google Fonts: Inter, IBM Plex Mono
+
+**Verification:**
+- `npm run typecheck`
+- `npm run lint`
+
+---
+
+### [ ] Step: Animation Utilities
+
+Create shared animation constants and Framer Motion variants.
+
+**Tasks:**
+1. Create `src/styles/clinical-animations.ts`:
+   - Custom easing curves
+   - Duration constants
+   - Panel animation variants
+   - Card cascade variants
+
+**Verification:**
+- TypeScript compiles
+- No lint errors
+
+---
+
+### [ ] Step: Layout Components Polish
+
+Enhance the three layout components with distinctive animations.
+
+**Tasks:**
+1. Update `SidePanelLayout.tsx`:
+   - Custom easing for slide
+   - Staggered content fade-in
+   - 42% width (not fixed pixels)
+   - Subtle inner shadow
+2. Update `PopupLayout.tsx`:
+   - Custom easing curves
+   - Refined backdrop blur
+3. Update `DrawerLayout.tsx`:
+   - Custom drag easing
+   - Polished handle
+
+**Verification:**
+- Manual test: open/close each layout
+- Animation smoothness at 60fps
+
+---
+
+### [ ] Step: Search Input Polish
+
+Transform the search input to clinical-grade design.
+
+**Tasks:**
+1. Update `LiteratureSearchInput.tsx`:
+   - Larger padding and rounded corners
+   - Animated keyboard shortcut badge
+   - Clinical blue focus ring
+   - Shadow progression on hover/focus
+   - Icon color transition
+
+**Verification:**
+- Manual test: focus states, hover states
+- Keyboard navigation works
+
+---
+
+### [ ] Step: Search Results Polish
+
+Enhance results display with clinical styling.
+
+**Tasks:**
+1. Update `LiteratureSearchResults.tsx`:
+   - Section headers with icons
+   - Dosing box with mono font
+   - Warning box with border emphasis
+2. Update `CitationCard.tsx`:
+   - Left accent border per source
+   - Larger icon badges
+   - Improved hover states
+   - Line-clamp for overflow
+
+**Verification:**
+- Visual inspection with mock data
+- Overflow handling works
+
+---
+
+### [ ] Step: Badge Components Polish
+
+Polish confidence and source badges.
+
+**Tasks:**
+1. Update `ConfidenceBadge.tsx`:
+   - Pill shape with icons
+   - Clinical labels (not just "Low")
+   - Border for definition
+2. Update `LiteratureSourceBadge.tsx`:
+   - Source-specific colors
+   - Connected pulse animation
+   - Improved contrast
+
+**Verification:**
+- Visual inspection of all badge states
+
+---
+
+### [ ] Step: Loading & Empty States
+
+Create distinctive loading and empty states.
+
+**Tasks:**
+1. Create `LoadingState.tsx`:
+   - Progressive indicator
+   - Source-by-source feedback
+   - Cycling icon animation
+2. Create `EmptyState.tsx`:
+   - Custom SVG illustration
+   - Welcoming copy
+   - Upload CTA
+
+**Verification:**
+- Manual test loading state
+- Empty state renders correctly
+
+---
+
+### [ ] Step: Main Panel Integration
+
+Integrate all polished components in the main panel.
+
+**Tasks:**
+1. Update `ClinicalAssistantPanel.tsx`:
+   - Use new LoadingState
+   - Use new EmptyState
+   - Apply staggered animations
+   - Polish usage indicator
+2. Update `LiteratureToolbarButton.tsx`:
+   - Clinical blue accent
+   - Keyboard shortcut tooltip
+3. Update `LayoutToggle.tsx`:
+   - Clinical styling
+
+**Verification:**
+- Full flow test: open panel, search, view results, close
+
+---
+
+### [ ] Step: Final Testing & Verification
+
+Run all tests and perform comprehensive verification.
+
+**Tasks:**
+1. Run test suite: `npm run test`
+2. Run type check: `npm run typecheck`
+3. Run linter: `npm run lint`
+4. Manual verification checklist from spec.md
+5. Write completion report to `report.md`
+
+**Verification:**
+- All tests pass
+- No type errors
+- No lint errors
+- All manual checklist items verified
