@@ -636,6 +636,11 @@ npm run lint       # ✅ Passes (only pre-existing warnings)
 
 - `src/lib/cache.ts` - Server-side caching with Next.js `unstable_cache`
 
+**Files modified to use cache:**
+
+- `src/app/api/specialties/route.ts` - Uses `getCachedSpecialties()` for listing all specialties (24hr cache)
+- `src/app/api/specialties/[id]/subspecialties/route.ts` - Uses `getCachedSpecialtyById()` for validation (24hr cache)
+
 **Implementation Notes:**
 
 - Created comprehensive caching module with 4 cache tiers:
@@ -655,15 +660,21 @@ npm run lint       # ✅ Passes (only pre-existing warnings)
 - User settings caching:
   - `getCachedUserSpecialties(userId)` - User's selected specialties (30min cache)
   - `getCachedUserSubspecialties(userId)` - User's selected subspecialties (30min cache)
-  - `getCachedUserTemplatePreferences(userId)` - Template favorites/usage (30min cache)
+  - `getCachedUserTemplatePreferences(userId)` - Template favorites/usage (30min cache, returns `Record<string, TemplatePreference>`)
 - Cache tags defined for invalidation: `CACHE_TAGS.SPECIALTIES`, `SUBSPECIALTIES`, `TEMPLATES`, `USER_SETTINGS`
 - Documentation includes `revalidateTag()` usage examples for mutations
+
+**Review Fixes Applied:**
+
+1. Fixed `getCachedUserTemplatePreferences` to return `Record<string, TemplatePreference>` instead of `Map` (Map doesn't serialize with `unstable_cache`)
+2. Added actual usage of cache functions in specialty API routes (cache was previously defined but not used)
+3. Added `TemplatePreference` interface export for type-safe usage
 
 **Verification:**
 
 ```bash
-npm run typecheck  # ✅ Passes (cache.ts has no errors)
-npm run lint       # ✅ Passes (src/lib/cache.ts clean)
+npm run typecheck  # ✅ Passes
+npm run lint       # ✅ Passes
 ```
 
 ### [x] Step 5.4: Enable ISR for Static Pages
