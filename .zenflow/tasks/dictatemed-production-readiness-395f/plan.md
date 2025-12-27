@@ -584,6 +584,7 @@ npm run lint       # ✅ Passes (src/lib/cache.ts clean)
 ```
 
 ### [ ] Step 5.4: Enable ISR for Static Pages
+<!-- chat-id: f3c778ec-42b9-44b3-a2e5-395fd4d940ca -->
 
 **Modify:**
 - `src/app/(marketing)/about/page.tsx` - Add `export const revalidate = 3600`
