@@ -306,6 +306,7 @@ Create distinctive loading and empty states.
 ---
 
 ### [ ] Step: Main Panel Integration
+<!-- chat-id: 73e08ea0-9b87-441d-9b43-24eb3cfce96c -->
 
 Integrate all polished components in the main panel.
 
