@@ -427,14 +427,28 @@ npm run typecheck  # ✅ Passes
 npm run lint       # ✅ Passes
 ```
 
-### [ ] Step 4.3: Enable Renovate
+### [x] Step 4.3: Enable Renovate
 <!-- chat-id: 03204b69-9622-4576-86e2-58f9fc58d222 -->
 
-**New file:**
-- `renovate.json` - Auto-merge minor/patch, security alerts
+**New file created:**
+- `renovate.json` - Comprehensive Renovate configuration
+
+**Implementation Notes:**
+- Extends `config:base` for sensible defaults
+- Schedule: Weekly on Mondays before 3am (Sydney timezone)
+- Auto-merge: Minor and patch updates auto-merged via PR
+- Major updates: Require manual review, labeled `major-update`
+- Security alerts: Enabled, run at any time (no schedule restriction), high priority
+- Package grouping configured for: ESLint, React, Next.js, Sentry, testing (Playwright/Vitest), Prisma, TanStack
+- Rate limiting: 2 PRs/hour, 10 concurrent PRs max
+- Dependency dashboard: Enabled for overview of pending updates
+- Semantic commits: Enabled with `deps:` prefix
+- Labels: All PRs labeled `dependencies`, security PRs also get `security` label
 
 **Verification:**
-- Renovate should create PRs for outdated deps
+- Install Renovate GitHub App on the repository to activate
+- Renovate will create initial "Configure Renovate" PR
+- Dependency Dashboard issue will track all pending updates
 
 ---
 

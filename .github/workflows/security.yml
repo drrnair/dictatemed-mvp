@@ -21,6 +21,9 @@ jobs:
   dependency-scan:
     name: Dependency Vulnerability Scan
     runs-on: ubuntu-latest
+    env:
+      # Make secret available as env var for conditional checks
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,9 +38,10 @@ jobs:
         run: npm ci
 
       # Snyk scan (if token configured)
+      # Note: Using env.SNYK_TOKEN for conditional check since secrets.* always appears non-empty
       - name: Run Snyk to check for vulnerabilities
-        if: ${{ secrets.SNYK_TOKEN != '' }}
-        uses: snyk/actions/node@master
+        if: ${{ env.SNYK_TOKEN != '' }}
+        uses: snyk/actions/node@0.4.0
         continue-on-error: true # Don't fail the build, report only
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -45,7 +49,7 @@ jobs:
           args: --severity-threshold=high --json-file-output=snyk-results.json
 
       - name: Upload Snyk results
-        if: ${{ secrets.SNYK_TOKEN != '' && always() }}
+        if: ${{ env.SNYK_TOKEN != '' && hashFiles('snyk-results.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: snyk-results
@@ -87,7 +91,7 @@ jobs:
           fetch-depth: 0 # Full history for comprehensive scanning
 
       - name: Run TruffleHog
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@v3.88.0
         continue-on-error: true # Report but don't block
         with:
           path: ./
