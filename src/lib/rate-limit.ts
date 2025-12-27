@@ -34,6 +34,7 @@
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
 import { logger } from '@/lib/logger';
+import { isProductionEnv } from '@/lib/env-validation';
 
 interface RateLimitConfig {
   requests: number;

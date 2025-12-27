@@ -81,6 +81,7 @@ npm run lint  # Should pass, no empty catches allowed
 - Note: Existing `src/lib/error-handler.ts` already provides standardized error handling with PHI scrubbing - no new file needed
 
 ### [ ] Step 1.3: Require Redis for Rate Limiting in Production
+<!-- chat-id: c2ed5b8e-d1fa-466c-97e0-5259d7f5ac09 -->
 
 **Files to modify:**
 - `src/lib/rate-limit.ts` - Add production enforcement for Redis
