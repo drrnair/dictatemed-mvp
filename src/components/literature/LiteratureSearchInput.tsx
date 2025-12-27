@@ -253,7 +253,7 @@ export function LiteratureSearchInput({
             transition={{ duration: 0.15 }}
             className={cn(
               'absolute top-full left-0 right-0 mt-2 z-10',
-              'bg-white rounded-xl border border-clinical-gray-200',
+              'bg-card rounded-xl border border-clinical-gray-200',
               'shadow-lg overflow-hidden'
             )}
           >
