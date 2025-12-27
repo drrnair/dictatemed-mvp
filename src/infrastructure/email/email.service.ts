@@ -109,21 +109,23 @@ export async function sendLetterEmail(
     hasCC: Boolean(input.ccEmails?.length),
   });
 
-  // Create pending email record first (for audit trail)
-  const sentEmail = await prisma.sentEmail.create({
-    data: {
-      userId: input.userId,
-      letterId: input.letterId,
-      recipientEmail: input.recipientEmail,
-      recipientName: input.recipientName,
-      ccEmails: input.ccEmails || [],
-      subject,
-      status: 'pending',
-    },
+  // Step 1: Create pending email record in transaction (for audit trail)
+  const sentEmail = await prisma.$transaction(async (tx) => {
+    return tx.sentEmail.create({
+      data: {
+        userId: input.userId,
+        letterId: input.letterId,
+        recipientEmail: input.recipientEmail,
+        recipientName: input.recipientName,
+        ccEmails: input.ccEmails || [],
+        subject,
+        status: 'pending',
+      },
+    });
   });
 
+  // Step 2: Send via Resend (external API call - cannot be in transaction)
   try {
-    // Send via Resend
     const { data, error } = await resend.emails.send({
       from: `${input.letterData.senderName} <${fromEmail}>`,
       to: input.recipientEmail,
@@ -139,23 +141,34 @@ export async function sendLetterEmail(
       ],
     });
 
+    // Step 3: Update status based on result in transaction
     if (error) {
       log.error('Resend API error', { error: error.message });
 
-      // Update email record with failure
-      await prisma.sentEmail.update({
-        where: { id: sentEmail.id },
-        data: {
-          status: 'failed',
-          errorMessage: error.message,
-          lastEventAt: new Date(),
-        },
-      });
+      // Update email record with failure and create audit log atomically
+      await prisma.$transaction(async (tx) => {
+        await tx.sentEmail.update({
+          where: { id: sentEmail.id },
+          data: {
+            status: 'failed',
+            errorMessage: error.message,
+            lastEventAt: new Date(),
+          },
+        });
 
-      // Create audit log for failure
-      await createEmailAuditLog(input.userId, input.letterId, sentEmail.id, 'email.send_failed', {
-        error: error.message,
-        recipientEmail: input.recipientEmail,
+        await tx.auditLog.create({
+          data: {
+            userId: input.userId,
+            action: 'email.send_failed',
+            resourceType: 'email',
+            resourceId: sentEmail.id,
+            metadata: {
+              letterId: input.letterId,
+              error: error.message,
+              recipientEmail: input.recipientEmail,
+            },
+          },
+        });
       });
 
       throw new Error(`Failed to send email: ${error.message}`);
@@ -164,25 +177,35 @@ export async function sendLetterEmail(
     const messageId = data?.id || 'unknown';
     const sentAt = new Date();
 
-    // Update email record with success
-    await prisma.sentEmail.update({
-      where: { id: sentEmail.id },
-      data: {
-        providerMessageId: messageId,
-        status: 'sent',
-        sentAt,
-        lastEventAt: sentAt,
-      },
+    // Update email record with success and create audit log atomically
+    await prisma.$transaction(async (tx) => {
+      await tx.sentEmail.update({
+        where: { id: sentEmail.id },
+        data: {
+          providerMessageId: messageId,
+          status: 'sent',
+          sentAt,
+          lastEventAt: sentAt,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: input.userId,
+          action: 'email.sent',
+          resourceType: 'email',
+          resourceId: sentEmail.id,
+          metadata: {
+            letterId: input.letterId,
+            recipientEmail: input.recipientEmail,
+            messageId,
+          },
+        },
+      });
     });
 
     log.info('Letter email sent successfully', {
       emailId: sentEmail.id,
-      messageId,
-    });
-
-    // Create audit log for success
-    await createEmailAuditLog(input.userId, input.letterId, sentEmail.id, 'email.sent', {
-      recipientEmail: input.recipientEmail,
       messageId,
     });
 
@@ -202,17 +225,28 @@ export async function sendLetterEmail(
 
     // Only update if not already marked as failed
     if (currentRecord && currentRecord.status !== 'failed') {
-      await prisma.sentEmail.update({
-        where: { id: sentEmail.id },
-        data: {
-          status: 'failed',
-          errorMessage,
-          lastEventAt: new Date(),
-        },
-      });
+      await prisma.$transaction(async (tx) => {
+        await tx.sentEmail.update({
+          where: { id: sentEmail.id },
+          data: {
+            status: 'failed',
+            errorMessage,
+            lastEventAt: new Date(),
+          },
+        });
 
-      await createEmailAuditLog(input.userId, input.letterId, sentEmail.id, 'email.send_failed', {
-        error: errorMessage,
+        await tx.auditLog.create({
+          data: {
+            userId: input.userId,
+            action: 'email.send_failed',
+            resourceType: 'email',
+            resourceId: sentEmail.id,
+            metadata: {
+              letterId: input.letterId,
+              error: errorMessage,
+            },
+          },
+        });
       });
     }
 

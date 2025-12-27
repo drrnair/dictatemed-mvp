@@ -145,23 +145,20 @@ function severityToSentryLevel(
  * Uses shared PHI scrubber with additional truncation for long strings.
  */
 function scrubContext(context: Record<string, unknown>): Record<string, unknown> {
-  // First apply standard PHI scrubbing
+  // Apply standard PHI scrubbing from shared module
   const scrubbed = scrubObjectPHI(context);
 
-  const scrubbed: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(context)) {
-    if (sensitiveKeys.some((k) => key.toLowerCase().includes(k.toLowerCase()))) {
-      scrubbed[key] = '[REDACTED]';
-    } else if (typeof value === 'string' && value.length > 100) {
-      // Truncate long strings that might contain PHI
-      scrubbed[key] = value.substring(0, 50) + '...[TRUNCATED]';
+  // Additional truncation for any remaining long strings
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(scrubbed)) {
+    if (typeof value === 'string') {
+      result[key] = truncatePHI(value, 100);
     } else {
-      scrubbed[key] = value;
+      result[key] = value;
     }
   }
 
-  return scrubbed;
+  return result;
 }
 
 /**
