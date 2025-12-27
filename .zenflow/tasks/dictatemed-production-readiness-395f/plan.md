@@ -428,6 +428,7 @@ npm run lint       # ✅ Passes
 ```
 
 ### [ ] Step 4.3: Enable Renovate
+<!-- chat-id: 03204b69-9622-4576-86e2-58f9fc58d222 -->
 
 **New file:**
 - `renovate.json` - Auto-merge minor/patch, security alerts
