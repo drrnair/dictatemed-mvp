@@ -1,10 +1,16 @@
 'use client';
 
 import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { motion } from 'framer-motion';
-import { GripVertical, X, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GripVertical, X, ChevronRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  panelVariants,
+  panelContentVariants,
+  easings,
+  durations,
+} from '@/styles/clinical-animations';
 
 interface SidePanelLayoutProps {
   /** Panel content */
@@ -17,7 +23,7 @@ interface SidePanelLayoutProps {
   title?: string;
   /** Header content (replaces default header) */
   headerContent?: ReactNode;
-  /** Initial width percentage (default: 40) */
+  /** Initial width percentage (default: 42 - intentionally asymmetric) */
   initialWidth?: number;
   /** Minimum width in pixels */
   minWidth?: number;

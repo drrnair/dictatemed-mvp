@@ -25,8 +25,12 @@ Do not make assumptions on important decisions — get clarification first.
 Created comprehensive technical specification in `spec.md` covering:
 - Task difficulty assessment: **Hard**
 - Technical context (stack, existing architecture)
+- Component relationship clarification (`ClinicalAssistantPanel` is active, `LiteratureChatPanel` is legacy)
+- Color naming clarification (`clinical-blue` vs existing `clinical` semantic tokens)
+- Dark mode clarification (functional support, not optimized for this task)
+- Font clarification (Inter, not Inter Tight - better Next.js support)
 - Implementation approach (extend design system, not replace)
-- 17 source files to modify/create
+- 15 source files to modify/create
 - Verification approach with automated and manual checklists
 - Risk considerations and mitigations
 
@@ -93,6 +97,7 @@ Create shared animation constants and Framer Motion variants.
 ---
 
 ### [ ] Step: Layout Components Polish
+<!-- chat-id: 6bf28557-a661-4355-ab4e-d33c6cb76c51 -->
 
 Enhance the three layout components with distinctive animations.
 
