@@ -242,6 +242,7 @@ export function getErrorStatusCode(error: unknown): number {
   if (error instanceof UnauthorizedError) return 401;
   if (error instanceof ForbiddenError) return 403;
   if (error instanceof NotFoundError) return 404;
+  if (error instanceof ValidationError) return 400;
   return 500;
 }
 
@@ -253,5 +254,6 @@ export function getSafeErrorMessage(error: unknown): string {
   if (error instanceof UnauthorizedError) return error.message;
   if (error instanceof ForbiddenError) return error.message;
   if (error instanceof NotFoundError) return error.message;
+  if (error instanceof ValidationError) return error.message;
   return 'An unexpected error occurred';
 }

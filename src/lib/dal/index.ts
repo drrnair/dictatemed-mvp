@@ -25,6 +25,7 @@ export {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
+  ValidationError,
   // Auth helpers
   getCurrentUserOrThrow,
   verifyOwnership,

@@ -560,6 +560,57 @@ export async function deleteLetter(letterId: string): Promise<void> {
 }
 
 // =============================================================================
+// Send Operations
+// =============================================================================
+
+export interface LetterForSending {
+  id: string;
+  status: LetterStatus;
+  practiceId: string | null;
+}
+
+/**
+ * Get a letter for sending.
+ * Auth: Practice-level access - any user in the same practice can send.
+ * Validation: Throws ValidationError if letter is not APPROVED.
+ */
+export async function getLetterForSending(letterId: string): Promise<LetterForSending> {
+  const user = await getCurrentUserOrThrow();
+
+  const letter = await prisma.letter.findUnique({
+    where: { id: letterId },
+    select: {
+      id: true,
+      status: true,
+      user: {
+        select: { practiceId: true },
+      },
+    },
+  });
+
+  if (!letter) {
+    throw new NotFoundError(`Letter with ID ${letterId} not found`);
+  }
+
+  // Practice-level access check (any user in same practice can send)
+  if (letter.user.practiceId !== user.practiceId) {
+    const { ForbiddenError } = await import('./base');
+    throw new ForbiddenError(`Not authorized to send letter ${letterId}`);
+  }
+
+  // Validate letter status
+  if (letter.status !== 'APPROVED') {
+    throw new ValidationError('Only approved letters can be sent', 'LETTER_NOT_APPROVED');
+  }
+
+  return {
+    id: letter.id,
+    status: letter.status,
+    practiceId: letter.user.practiceId,
+  };
+}
+
+// =============================================================================
 // Helper to get user for use in other modules
 // =============================================================================
 

@@ -1,13 +1,23 @@
 // src/app/api/letters/[id]/send/route.ts
 // API endpoint for sending a letter
+//
+// Uses the Data Access Layer (DAL) for authenticated data operations.
+// The DAL provides:
+// - Automatic authentication checks
+// - Practice-level access verification (any user in same practice can send)
+// - Status validation (only APPROVED letters can be sent)
+// - Consistent error handling
 
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/infrastructure/db/client';
-import { getSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
 import { z } from 'zod';
 import { sendLetter } from '@/domains/letters/sending.service';
+import {
+  letters as lettersDAL,
+  handleDALError,
+  isDALError,
+} from '@/lib/dal';
 
 const log = logger.child({ module: 'letter-send-api' });
 
@@ -36,50 +46,33 @@ const sendLetterSchema = z.object({
 /**
  * POST /api/letters/:id/send
  * Send an approved letter to recipients
+ *
+ * Uses DAL for:
+ * - Automatic authentication (throws UnauthorizedError)
+ * - Practice-level access verification (throws ForbiddenError)
+ * - Status validation (throws ValidationError if not APPROVED)
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const routeLog = logger.child({ action: 'sendLetter' });
 
+  try {
     const { id: letterId } = await params;
 
+    // Verify letter exists, user has practice-level access, and it's APPROVED
+    // Uses DAL - handles auth, practice verification, and status validation
+    // This throws UnauthorizedError, ForbiddenError, NotFoundError, or ValidationError
+    const letter = await lettersDAL.getLetterForSending(letterId);
+
+    // Get user for rate limiting and sender ID
+    const user = await lettersDAL.getAuthenticatedUser();
+
     // Rate limiting (10 sends per minute)
-    const rateLimitKey = createRateLimitKey(session.user.id, 'letter-sends');
+    const rateLimitKey = createRateLimitKey(user.id, 'letter-sends');
     const rateLimit = checkRateLimit(rateLimitKey, 'sensitive');
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfterMs },
         { status: 429, headers: getRateLimitHeaders(rateLimit) }
-      );
-    }
-
-    // Verify letter exists and user has access
-    const letter = await prisma.letter.findUnique({
-      where: { id: letterId },
-      select: {
-        id: true,
-        status: true,
-        user: {
-          select: { practiceId: true },
-        },
-      },
-    });
-
-    if (!letter) {
-      return NextResponse.json({ error: 'Letter not found' }, { status: 404 });
-    }
-
-    if (letter.user.practiceId !== session.user.practiceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-
-    if (letter.status !== 'APPROVED') {
-      return NextResponse.json(
-        { error: 'Only approved letters can be sent' },
-        { status: 400 }
       );
     }
 
@@ -98,8 +91,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Send the letter
     const result = await sendLetter({
-      letterId,
-      senderId: session.user.id,
+      letterId: letter.id,
+      senderId: user.id,
       recipients: recipients.map((r) => ({
         contactId: r.contactId || null,
         email: r.email,
@@ -111,9 +104,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       coverNote,
     });
 
-    log.info('Letter sent', {
-      action: 'sendLetter',
+    routeLog.info('Letter sent', {
       letterId,
+      userId: user.id,
       recipientCount: result.totalRecipients,
       successCount: result.successful,
       failedCount: result.failed,
@@ -121,25 +114,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(result, { headers: getRateLimitHeaders(rateLimit) });
   } catch (error) {
-    log.error('Failed to send letter', { action: 'sendLetter' }, error as Error);
-
-    if (error instanceof Error) {
-      if (error.message === 'Letter not found') {
-        return NextResponse.json({ error: error.message }, { status: 404 });
-      }
-      if (error.message.includes('Unauthorized')) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-      }
-      if (
-        error.message.includes('approved') ||
-        error.message.includes('content')
-      ) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
-      }
+    // Handle DAL errors (UnauthorizedError, ForbiddenError, NotFoundError, ValidationError)
+    if (isDALError(error)) {
+      return handleDALError(error, routeLog);
     }
 
+    routeLog.error(
+      'Failed to send letter',
+      {},
+      error instanceof Error ? error : undefined
+    );
+
     return NextResponse.json(
-      { error: 'Failed to send letter' },
+      { error: 'Failed to send letter', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }
