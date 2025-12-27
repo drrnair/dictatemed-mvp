@@ -355,6 +355,7 @@ npm run lint       # ✅ Passes
 ## Subtask 4: Security Hardening
 
 ### [ ] Step 4.1: Add Dependency Scanning to CI
+<!-- chat-id: 6271b313-4051-40e5-8225-38f4521c0f4f -->
 
 **New file:**
 - `.github/workflows/security.yml` - Snyk scan, TruffleHog, license check
