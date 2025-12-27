@@ -10,13 +10,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import type { Subspecialty, LetterStatus, LetterType as PrismaLetterType } from '@prisma/client';
+import type { Subspecialty, LetterStatus, LetterType } from '@prisma/client';
 import { getSession } from '@/lib/auth';
 import { generateLetter } from '@/domains/letters/letter.service';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
-import type { LetterType } from '@/domains/letters/letter.types';
-import { letters as lettersDAL, handleDALError, isDALError, UnauthorizedError } from '@/lib/dal';
+import { letters as lettersDAL, handleDALError, isDALError } from '@/lib/dal';
 
 const subspecialtyEnum = z.enum([
   'GENERAL_CARDIOLOGY',
