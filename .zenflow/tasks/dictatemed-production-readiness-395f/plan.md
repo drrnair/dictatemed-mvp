@@ -298,6 +298,7 @@ npm run typecheck  # ✅ Passes
 ```
 
 ### [ ] Step 3.3: Enhance Health Endpoint
+<!-- chat-id: c0a15e55-458b-4ad7-8c76-e6a8494a09f3 -->
 
 **File to modify:**
 - `src/app/api/health/route.ts` - Add Redis check, Anthropic check, response time metrics
