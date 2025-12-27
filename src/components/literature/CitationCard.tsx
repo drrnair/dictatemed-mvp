@@ -1,9 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ExternalLink, Book, Globe, FolderOpen, Plus, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react';
+import { ExternalLink, Book, Globe, FolderOpen, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { buttonHoverEffect } from '@/styles/clinical-animations';
+import { ConfidenceBadge } from './ConfidenceBadge';
 import type { Citation } from '@/domains/literature';
 
 interface CitationCardProps {
@@ -42,33 +43,6 @@ const sourceConfig = {
 } as const;
 
 /**
- * Confidence-specific configuration.
- */
-const confidenceConfig = {
-  high: {
-    icon: CheckCircle,
-    bg: 'bg-verified-100 dark:bg-verified-900/30',
-    border: 'border-verified-300 dark:border-verified-700',
-    text: 'text-verified-800 dark:text-verified-200',
-    label: 'High Confidence',
-  },
-  medium: {
-    icon: AlertCircle,
-    bg: 'bg-caution-100 dark:bg-caution-900/30',
-    border: 'border-caution-300 dark:border-caution-700',
-    text: 'text-caution-800 dark:text-caution-200',
-    label: 'Review Recommended',
-  },
-  low: {
-    icon: AlertTriangle,
-    bg: 'bg-critical-100 dark:bg-critical-900/30',
-    border: 'border-critical-300 dark:border-critical-700',
-    text: 'text-critical-800 dark:text-critical-200',
-    label: 'Verify Manually',
-  },
-} as const;
-
-/**
  * Citation card displaying source information with clinical-grade design.
  *
  * Features:
@@ -86,9 +60,7 @@ export function CitationCard({
   compact = false,
 }: CitationCardProps) {
   const source = sourceConfig[citation.source];
-  const confidence = confidenceConfig[citation.confidence];
   const Icon = source.icon;
-  const ConfidenceIcon = confidence.icon;
 
   return (
     <motion.article
@@ -145,20 +117,8 @@ export function CitationCard({
       {/* Footer: Confidence badge + Actions */}
       {!compact && (
         <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-clinical-gray-100 dark:border-clinical-gray-800">
-          {/* Confidence badge - pill shape with icon */}
-          <div
-            className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border',
-              confidence.bg,
-              confidence.border,
-              confidence.text
-            )}
-          >
-            <ConfidenceIcon className="h-3.5 w-3.5" strokeWidth={2.5} />
-            <span className="text-xs font-semibold tracking-tight">
-              {confidence.label}
-            </span>
-          </div>
+          {/* Reuse ConfidenceBadge component - eliminates duplicate config */}
+          <ConfidenceBadge level={citation.confidence} compact />
 
           {/* Actions */}
           <div className="flex items-center gap-2">
@@ -213,7 +173,9 @@ export function CitationCard({
         <button
           type="button"
           onClick={onClick}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          className="absolute inset-0 w-full h-full cursor-pointer
+                     bg-transparent focus:outline-none focus:ring-2
+                     focus:ring-clinical-blue-500 focus:ring-inset rounded-lg"
           aria-label={`Select citation: ${citation.title}`}
         />
       )}

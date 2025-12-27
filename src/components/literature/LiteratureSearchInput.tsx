@@ -162,7 +162,9 @@ export function LiteratureSearchInput({
           <Search
             className={cn(
               'w-[18px] h-[18px] transition-colors duration-200',
-              isFocused ? 'text-clinical-blue-500' : 'text-clinical-gray-400'
+              isFocused
+                ? 'text-clinical-blue-500'
+                : 'text-clinical-gray-400 dark:text-clinical-gray-500'
             )}
           />
         </div>
@@ -183,8 +185,8 @@ export function LiteratureSearchInput({
           disabled={disabled || isLoading}
           className={cn(
             'flex-1 pl-12 pr-24 py-3.5',
-            'bg-transparent text-[15px] text-clinical-gray-900',
-            'placeholder:text-clinical-gray-500',
+            'bg-transparent text-[15px] text-clinical-gray-900 dark:text-clinical-gray-100',
+            'placeholder:text-clinical-gray-500 dark:placeholder:text-clinical-gray-400',
             'font-ui-sans',
             'focus:outline-none',
             'disabled:opacity-50 disabled:cursor-not-allowed'
@@ -206,10 +208,11 @@ export function LiteratureSearchInput({
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.15 }}
+                  transition={{ duration: durations.fast }}
                   className="kbd-badge"
+                  aria-label="Press Command K to focus search"
                 >
-                  <Command className="w-3 h-3 text-clinical-gray-600" />
+                  <Command className="w-3 h-3 text-clinical-gray-600 dark:text-clinical-gray-400" />
                   <span>K</span>
                 </motion.div>
               )}
@@ -226,15 +229,16 @@ export function LiteratureSearchInput({
               }
             }}
             disabled={!value.trim() || isLoading || disabled}
-            whileHover={{ y: -1 }}
-            whileTap={{ y: 0 }}
+            variants={buttonHoverEffect}
+            whileHover="hover"
+            whileTap="tap"
             className={cn(
               'flex items-center justify-center',
               'w-9 h-9 rounded-lg',
               'transition-colors duration-150',
               value.trim() && !isLoading && !disabled
                 ? 'bg-clinical-blue-600 text-white hover:bg-clinical-blue-700 shadow-sm hover:shadow-md'
-                : 'bg-clinical-gray-100 text-clinical-gray-400 cursor-not-allowed'
+                : 'bg-clinical-gray-100 dark:bg-clinical-gray-800 text-clinical-gray-400 cursor-not-allowed'
             )}
             aria-label="Search literature"
           >
@@ -257,16 +261,16 @@ export function LiteratureSearchInput({
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: durations.fast }}
             className={cn(
               'absolute top-full left-0 right-0 mt-2 z-10',
-              'bg-card rounded-xl border border-clinical-gray-200',
+              'bg-white dark:bg-clinical-gray-900 rounded-xl border border-clinical-gray-200 dark:border-clinical-gray-700',
               'shadow-lg overflow-hidden'
             )}
           >
             {/* Header */}
-            <div className="px-4 py-2.5 border-b border-clinical-gray-100 bg-clinical-gray-50">
-              <div className="flex items-center gap-2 text-xs font-medium text-clinical-gray-600">
+            <div className="px-4 py-2.5 border-b border-clinical-gray-100 dark:border-clinical-gray-800 bg-clinical-gray-50 dark:bg-clinical-gray-800">
+              <div className="flex items-center gap-2 text-xs font-medium text-clinical-gray-600 dark:text-clinical-gray-400">
                 <Sparkles className="w-3.5 h-3.5 text-clinical-blue-500" />
                 <span className="uppercase tracking-wide">
                   {selectedText ? 'Based on selection' : 'Suggestions'}
@@ -287,13 +291,13 @@ export function LiteratureSearchInput({
                   animate={{
                     opacity: 1,
                     x: 0,
-                    transition: { delay: index * 0.03 },
+                    transition: { delay: index * SUGGESTION_STAGGER_DELAY },
                   }}
                   className={cn(
                     'w-full text-left px-3 py-2.5 rounded-lg',
-                    'text-sm text-clinical-gray-700 font-ui-sans',
-                    'hover:bg-clinical-blue-50 hover:text-clinical-blue-700',
-                    'focus:bg-clinical-blue-50 focus:text-clinical-blue-700 focus:outline-none',
+                    'text-sm text-clinical-gray-700 dark:text-clinical-gray-300 font-ui-sans',
+                    'hover:bg-clinical-blue-50 dark:hover:bg-clinical-blue-900/30 hover:text-clinical-blue-700 dark:hover:text-clinical-blue-300',
+                    'focus:bg-clinical-blue-50 dark:focus:bg-clinical-blue-900/30 focus:text-clinical-blue-700 dark:focus:text-clinical-blue-300 focus:outline-none',
                     'transition-colors duration-150'
                   )}
                 >

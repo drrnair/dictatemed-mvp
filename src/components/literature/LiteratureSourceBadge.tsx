@@ -45,7 +45,7 @@ export function LiteratureSourceBadge({
       activeColors: {
         bg: 'bg-orange-500',
         text: 'text-white',
-        border: 'border-orange-500',
+        border: 'border-orange-600', // Darker for visibility
         iconBg: 'bg-orange-400',
       },
       inactiveColors: {

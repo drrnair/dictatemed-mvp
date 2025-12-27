@@ -83,7 +83,9 @@ export function ClinicalLoadingState({
     return () => clearInterval(interval);
   }, []);
 
-  const current = LOADING_STAGES[stage];
+  // TypeScript needs explicit bounds check even though stage is always in range
+  const currentStage = stage % LOADING_STAGES.length;
+  const current = LOADING_STAGES[currentStage]!;
   const Icon = current.icon;
 
   if (compact) {
