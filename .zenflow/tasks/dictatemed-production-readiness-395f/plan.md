@@ -34,7 +34,8 @@ Output: `spec.md`
 
 ## Subtask 1: Critical Security Fixes (Priority: CRITICAL)
 
-### [ ] Step 1.1: E2E Mock Auth Production Guard
+### [x] Step 1.1: E2E Mock Auth Production Guard
+<!-- chat-id: 410a2049-59b5-4999-8975-3688bbfc76b0 -->
 
 **Files to create/modify:**
 - `src/middleware.ts` - Add NODE_ENV check before E2E_MOCK_AUTH bypass
@@ -46,6 +47,11 @@ Output: `spec.md`
 NODE_ENV=production E2E_MOCK_AUTH=true npm run build  # Should fail
 npm run dev  # Should still work with mock auth in dev
 ```
+
+**Implementation Notes:**
+- Modified `src/middleware.ts:39-55` to add NODE_ENV production guard - if E2E_MOCK_AUTH is enabled in production, it logs a SECURITY VIOLATION error and falls through to real auth (does not bypass)
+- Created `src/lib/env-validation.ts` with `validateProductionEnv()` and `assertProductionEnvSafe()` functions that check for dangerous env vars
+- Created `.github/workflows/env-check.yml` workflow that runs on PRs and pushes to main, checking for hardcoded dangerous env vars and verifying security guards exist
 
 ### [ ] Step 1.2: Fix Empty Catch Blocks
 
@@ -333,7 +339,7 @@ Output: `report.md` containing:
 ## Completion Checklist
 
 ### Critical (Must complete for production)
-- [ ] E2E_MOCK_AUTH blocked in production
+- [x] E2E_MOCK_AUTH blocked in production
 - [ ] Empty catch blocks fixed
 - [ ] Redis required for rate limiting
 - [ ] CSP headers active

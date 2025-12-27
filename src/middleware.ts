@@ -35,12 +35,23 @@ export async function middleware(request: NextRequest) {
 
   // E2E Test Mode: Skip authentication when E2E_MOCK_AUTH is enabled
   // This allows E2E tests to run without Auth0 authentication
-  // SECURITY: Only enable this in CI/test environments, never in production
+  // CRITICAL SECURITY: Only allow mock auth in development/test environments
   if (process.env.E2E_MOCK_AUTH === 'true') {
-    // Set a header to indicate mock auth is active (for debugging)
-    const response = NextResponse.next();
-    response.headers.set('X-E2E-Mock-Auth', 'true');
-    return response;
+    if (process.env.NODE_ENV === 'production') {
+      // SECURITY VIOLATION: E2E_MOCK_AUTH should never be enabled in production
+      // Log critical error and continue to real auth check (do NOT bypass)
+      logger.error('SECURITY VIOLATION: E2E_MOCK_AUTH is enabled in production! Ignoring mock auth and requiring real authentication.', {
+        path: pathname,
+        timestamp: new Date().toISOString(),
+      });
+      // Fall through to real auth check below - do NOT return early
+    } else {
+      // Development/test environment - allow mock auth
+      logger.warn('E2E Mock auth enabled for testing', { path: pathname });
+      const response = NextResponse.next();
+      response.headers.set('X-E2E-Mock-Auth', 'true');
+      return response;
+    }
   }
 
   // Check authentication for protected routes
