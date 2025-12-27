@@ -1,9 +1,13 @@
 // src/middleware.ts
-// Next.js middleware for authentication
+// Next.js middleware for authentication and webhook IP validation
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { logger } from '@/lib/logger';
+import {
+  validateWebhookIPMiddleware,
+  type WebhookService,
+} from '@/lib/webhook-ip-validation';
 
 // Routes that don't require authentication
 const publicPaths = [
@@ -12,11 +16,20 @@ const publicPaths = [
   '/login',
   '/api/auth',
   '/api/health',
+  '/api/csp-report',
   '/api/transcription/webhook',
+  '/api/webhooks/resend',
   '/manifest.json',
   '/sw.js',
   '/icons',
 ];
+
+// Webhook paths that require IP validation
+// Map of path prefix to webhook service type
+const webhookPaths: Record<string, WebhookService> = {
+  '/api/transcription/webhook': 'deepgram',
+  '/api/webhooks/resend': 'resend',
+};
 
 // Check if path is public
 function isPublicPath(pathname: string): boolean {
@@ -25,8 +38,31 @@ function isPublicPath(pathname: string): boolean {
   );
 }
 
+// Check if path is a webhook that requires IP validation
+function getWebhookService(pathname: string): WebhookService | null {
+  for (const [path, service] of Object.entries(webhookPaths)) {
+    if (pathname === path || pathname.startsWith(`${path}/`)) {
+      return service;
+    }
+  }
+  return null;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Check webhook IP validation BEFORE allowing public paths
+  // This ensures webhooks are validated even though they're public (no auth required)
+  const webhookService = getWebhookService(pathname);
+  if (webhookService) {
+    const blockResponse = validateWebhookIPMiddleware(request, webhookService);
+    if (blockResponse) {
+      // IP validation failed - return 403 Forbidden
+      return blockResponse;
+    }
+    // IP validation passed (or skipped in dev) - allow through
+    return NextResponse.next();
+  }
 
   // Allow public paths
   if (isPublicPath(pathname)) {
