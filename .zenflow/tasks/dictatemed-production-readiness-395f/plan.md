@@ -805,7 +805,7 @@ Output: `report.md` containing:
 - [x] Webhook IP allowlisting
 - [x] React Query caching (implemented, incorrectly committed with Renovate)
 - [x] Server-side cache wrappers (unstable_cache for specialties, templates, user settings)
-- [ ] Pre-commit hooks
+- [x] Pre-commit hooks
 
 ### Nice to Have
 
