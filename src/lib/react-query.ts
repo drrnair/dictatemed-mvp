@@ -1,7 +1,12 @@
 // src/lib/react-query.ts
 // React Query configuration with optimized defaults for DictateMED
 
-import { QueryClient, QueryClientConfig, QueryCache, MutationCache } from '@tanstack/react-query';
+import {
+  QueryClient,
+  QueryClientConfig,
+  QueryCache,
+  MutationCache,
+} from '@tanstack/react-query';
 import { logError, logHandledError } from '@/lib/error-logger';
 
 /**
@@ -99,9 +104,71 @@ export const queryKeys = {
 } as const;
 
 /**
+ * Global error handler for queries
+ * Logs errors to console and Sentry for debugging
+ */
+function handleQueryError(error: Error, queryKey: unknown): void {
+  // Log to error tracking system
+  logHandledError(error, {
+    operation: 'query_error',
+    queryKey: JSON.stringify(queryKey),
+    component: 'ReactQuery',
+  });
+}
+
+/**
+ * Global error handler for mutations
+ * Logs errors to console and Sentry for debugging
+ */
+function handleMutationError(
+  error: Error,
+  variables: unknown,
+  context: unknown,
+  mutationKey: unknown
+): void {
+  // Log to error tracking system (mutations are more critical than queries)
+  logError(
+    error,
+    {
+      operation: 'mutation_error',
+      mutationKey: mutationKey ? JSON.stringify(mutationKey) : 'unknown',
+      hasVariables: !!variables,
+      hasContext: !!context,
+      component: 'ReactQuery',
+    },
+    'medium'
+  );
+}
+
+/**
+ * Query cache with global error handling
+ */
+const queryCache = new QueryCache({
+  onError: (error, query) => {
+    handleQueryError(error as Error, query.queryKey);
+  },
+});
+
+/**
+ * Mutation cache with global error handling
+ */
+const mutationCache = new MutationCache({
+  onError: (error, variables, context, mutation) => {
+    handleMutationError(
+      error as Error,
+      variables,
+      context,
+      mutation.options.mutationKey
+    );
+  },
+});
+
+/**
  * Query client configuration
  */
 const queryClientConfig: QueryClientConfig = {
+  queryCache,
+  mutationCache,
   defaultOptions: {
     queries: {
       // Data stays fresh for 5 minutes
