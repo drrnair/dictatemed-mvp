@@ -23,6 +23,7 @@
 
 import * as Sentry from '@sentry/nextjs';
 import { logger } from './logger';
+import { scrubObjectPHI, truncatePHI, isSensitiveKey } from './phi-scrubber';
 
 /**
  * Security event severity levels.
@@ -141,22 +142,11 @@ function severityToSentryLevel(
 /**
  * Scrub sensitive data from context before logging.
  * Prevents PHI from appearing in logs.
+ * Uses shared PHI scrubber with additional truncation for long strings.
  */
 function scrubContext(context: Record<string, unknown>): Record<string, unknown> {
-  const sensitiveKeys = [
-    'password',
-    'token',
-    'secret',
-    'key',
-    'authorization',
-    'cookie',
-    'medicare',
-    'dateOfBirth',
-    'dob',
-    'phone',
-    'address',
-    'encryptedData',
-  ];
+  // First apply standard PHI scrubbing
+  const scrubbed = scrubObjectPHI(context);
 
   const scrubbed: Record<string, unknown> = {};
 

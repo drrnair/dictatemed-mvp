@@ -230,32 +230,57 @@ export async function generateLetter(
     });
   }
 
-  // Step 11: Save to database (using Prisma field names)
-  const letter = await prisma.letter.create({
-    data: {
-      userId,
-      patientId: input.patientId,
-      templateId: input.templateId, // Link to template if used
-      letterType: input.letterType,
-      subspecialty: effectiveSubspecialty ?? null, // Store subspecialty for style learning
-      status: 'DRAFT',
-      contentDraft: letterWithoutAnchors, // Prisma uses contentDraft, not draftContent
-      sourceAnchors: anchors as never[],
-      extractedValues: clinicalValues as never[], // Prisma uses extractedValues, not clinicalValues
-      hallucinationFlags: hallucinationFlags as never[],
-      clinicalConcepts: clinicalConcepts as never,
-      primaryModel: response.modelId, // Prisma uses primaryModel, not modelUsed
-      inputTokens: response.inputTokens,
-      outputTokens: response.outputTokens,
-      generationDurationMs: generationDuration,
-      verificationRate: verificationRate.rate,
-      hallucinationRiskScore: hallucinationRisk.score,
-      styleConfidence: styleConfidenceValue ?? null, // Style profile confidence used for conditioning
-      generatedAt: new Date(),
-    },
+  // Step 11: Save to database in a transaction (letter + audit log together)
+  // This ensures atomicity - if audit log fails, the letter creation is rolled back
+  const letter = await prisma.$transaction(async (tx) => {
+    const newLetter = await tx.letter.create({
+      data: {
+        userId,
+        patientId: input.patientId,
+        templateId: input.templateId, // Link to template if used
+        letterType: input.letterType,
+        subspecialty: effectiveSubspecialty ?? null, // Store subspecialty for style learning
+        status: 'DRAFT',
+        contentDraft: letterWithoutAnchors, // Prisma uses contentDraft, not draftContent
+        sourceAnchors: anchors as never[],
+        extractedValues: clinicalValues as never[], // Prisma uses extractedValues, not clinicalValues
+        hallucinationFlags: hallucinationFlags as never[],
+        clinicalConcepts: clinicalConcepts as never,
+        primaryModel: response.modelId, // Prisma uses primaryModel, not modelUsed
+        inputTokens: response.inputTokens,
+        outputTokens: response.outputTokens,
+        generationDurationMs: generationDuration,
+        verificationRate: verificationRate.rate,
+        hallucinationRiskScore: hallucinationRisk.score,
+        styleConfidence: styleConfidenceValue ?? null, // Style profile confidence used for conditioning
+        generatedAt: new Date(),
+      },
+    });
+
+    // Create audit log within the same transaction
+    await tx.auditLog.create({
+      data: {
+        userId,
+        action: 'letter.generate',
+        resourceType: 'letter',
+        resourceId: newLetter.id,
+        metadata: {
+          letterType: input.letterType,
+          subspecialty: effectiveSubspecialty ?? null,
+          modelUsed: response.modelId,
+          inputTokens: response.inputTokens,
+          outputTokens: response.outputTokens,
+          hallucinationRisk: hallucinationRisk.level,
+          styleSource: styleConfig.source,
+          styleConfidence: styleConfidenceValue ?? null,
+        },
+      },
+    });
+
+    return newLetter;
   });
 
-  // Record template usage for recommendations
+  // Record template usage for recommendations (non-critical, outside transaction)
   if (input.templateId) {
     await recordTemplateUsage(userId, input.templateId);
   }
@@ -268,26 +293,6 @@ export async function generateLetter(
     subspecialty: effectiveSubspecialty ?? null,
     styleSource: styleConfig.source,
     styleConfidence: styleConfidenceValue ?? null,
-  });
-
-  // Create audit log
-  await prisma.auditLog.create({
-    data: {
-      userId,
-      action: 'letter.generate',
-      resourceType: 'letter',
-      resourceId: letter.id,
-      metadata: {
-        letterType: input.letterType,
-        subspecialty: effectiveSubspecialty ?? null,
-        modelUsed: response.modelId,
-        inputTokens: response.inputTokens,
-        outputTokens: response.outputTokens,
-        hallucinationRisk: hallucinationRisk.level,
-        styleSource: styleConfig.source,
-        styleConfidence: styleConfidenceValue ?? null,
-      },
-    },
   });
 
   return {
@@ -453,30 +458,35 @@ export async function approveLetter(
     throw new Error('Letter already approved');
   }
 
-  const updated = await prisma.letter.update({
-    where: { id: letterId },
-    data: {
-      status: 'APPROVED',
-      contentFinal: letter.contentDraft, // Prisma uses contentFinal (not approvedContent)
-      approvedAt: new Date(),
-      approvedBy: userId,
-    },
+  // Use transaction to ensure atomicity of letter update + audit log
+  const updated = await prisma.$transaction(async (tx) => {
+    const updatedLetter = await tx.letter.update({
+      where: { id: letterId },
+      data: {
+        status: 'APPROVED',
+        contentFinal: letter.contentDraft, // Prisma uses contentFinal (not approvedContent)
+        approvedAt: new Date(),
+        approvedBy: userId,
+      },
+    });
+
+    // Create audit log within the same transaction
+    await tx.auditLog.create({
+      data: {
+        userId,
+        action: 'letter.approve',
+        resourceType: 'letter',
+        resourceId: letterId,
+        metadata: {
+          letterType: letter.letterType,
+        },
+      },
+    });
+
+    return updatedLetter;
   });
 
   logger.info('Letter approved', { letterId, userId });
-
-  // Create audit log
-  await prisma.auditLog.create({
-    data: {
-      userId,
-      action: 'letter.approve',
-      resourceType: 'letter',
-      resourceId: letterId,
-      metadata: {
-        letterType: letter.letterType,
-      },
-    },
-  });
 
   return mapPrismaLetter(updated);
 }
