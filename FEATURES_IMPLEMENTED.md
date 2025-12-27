@@ -10,7 +10,7 @@
 - **Total Features Implemented:** 47 major features across 10 categories
 - **Fully Working:** 42 features (89%)
 - **Partially Complete:** 5 features (11%)
-- **Pivot Impact:** Successfully generalized - 42 specialties and 60+ subspecialties now supported
+- **Pivot Impact:** Successfully generalized - 42 specialties and 51 subspecialties now supported
 - **Ready for Pilot:** ✅ YES
 - **Tech Stack:** Next.js 14 (App Router), Prisma/PostgreSQL, Auth0, AWS Bedrock (Claude), Deepgram, Supabase Storage, Resend
 
@@ -90,7 +90,7 @@ All core clinical workflows verified functional:
 | Clinical value extraction | ✅ Fully Implemented | `clinical-extraction.ts` | Contains cardiology-specific extractors (LVEF, stenosis) |
 | Hallucination detection | ✅ Fully Implemented | `hallucination-detection.ts`, risk scoring | None - generic |
 | Clinical concept extraction | ✅ Fully Implemented | `clinical-concepts.ts` | None - generic concepts (diagnoses, medications, procedures) |
-| Letter templates | ⚠️ Partially Implemented | `template.registry.ts`, 19 seed templates | **Pivot incomplete:** Templates are cardiology-specific (PCI, TAVI, EP Study, etc.) |
+| Letter templates | ⚠️ Partially Implemented | `template.registry.ts`, 16 seed templates | **Pivot incomplete:** Templates are cardiology-specific (PCI, TAVI, EP Study, etc.) |
 | Template recommendations | ✅ Fully Implemented | `/api/templates/recommendations`, based on subspecialty | None - generic logic |
 | Template favorites | ✅ Fully Implemented | `UserTemplatePreference` model, `/api/templates/[id]/favorite` | None - generic |
 
@@ -149,7 +149,7 @@ All core clinical workflows verified functional:
 | Feature | Status | Implementation | Pivot Impact |
 |---------|--------|----------------|--------------|
 | Global specialty taxonomy | ✅ Fully Implemented | `MedicalSpecialty` model, 42 specialties seeded | **Fully generalized:** All major medical specialties |
-| Subspecialty taxonomy | ✅ Fully Implemented | `MedicalSubspecialty` model, 60+ subspecialties | **Fully generalized:** GP, Cardiology, Neurology, Surgery, etc. |
+| Subspecialty taxonomy | ✅ Fully Implemented | `MedicalSubspecialty` model, 51 subspecialties | **Fully generalized:** GP, Cardiology, Neurology, Surgery, etc. |
 | User specialty selection | ✅ Fully Implemented | `ClinicianSpecialty` junction table | **Fully generalized:** Multi-specialty support |
 | User subspecialty selection | ✅ Fully Implemented | `ClinicianSubspecialty` junction table | **Fully generalized** |
 | Custom specialty requests | ✅ Fully Implemented | `CustomSpecialty` model, pending admin approval | **Fully generalized** |
@@ -172,7 +172,7 @@ All core clinical workflows verified functional:
 
 **Fully Generalized:**
 - **Specialty taxonomy:** 42 medical specialties including General Practice, Internal Medicine, Neurology, Psychiatry, Surgery subspecialties, etc.
-- **Subspecialty support:** 60+ subspecialties across multiple specialties
+- **Subspecialty support:** 51 subspecialties across multiple specialties
 - **User selection flow:** Multi-specialty selection during onboarding with custom specialty requests
 - **Dynamic recommendations:** Template recommendations based on user's selected specialties
 
@@ -184,7 +184,7 @@ All core clinical workflows verified functional:
    - Migration mapping exists in `LEGACY_SUBSPECIALTY_MAPPING`
 
 2. **Letter Templates** (`template.registry.ts`):
-   - 19 seed templates, majority cardiology-specific:
+   - 16 seed templates, majority cardiology-specific:
      - Coronary Angiogram Report
      - PCI Procedure Report
      - TAVI Procedure Report
@@ -273,7 +273,7 @@ All core clinical workflows verified functional:
 
 2. **Letter Templates** - High Impact
    - Location: `src/domains/letters/templates/template.registry.ts`
-   - 17 of 19 templates are cardiology-specific
+   - 14 of 16 templates are cardiology-specific
    - Recommendation: Add templates for other specialties (GP, Neurology, etc.)
 
 3. **Document Types** - Medium Impact

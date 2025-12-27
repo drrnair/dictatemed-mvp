@@ -11,8 +11,8 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Features Implemented | 45+ |
-| Fully Working | 40+ |
+| Total Features Implemented | 47 |
+| Fully Working | 42 |
 | Partially Complete | 5 |
 | Pivot Status | Successfully generalized via medical specialty system |
 
@@ -40,7 +40,7 @@
 | Feature | Status | Implementation | Notes |
 |---------|--------|----------------|-------|
 | 42 medical specialties | ✅ Fully Implemented | `prisma/seeds/medical-specialties.ts`, `MedicalSpecialty` model | Comprehensive list from ABMS/AHPRA |
-| 60+ subspecialties | ✅ Fully Implemented | `MedicalSubspecialty` model, linked to specialties | Priority: Cardiology, Neurology, GP, Surgery |
+| 51 subspecialties | ✅ Fully Implemented | `MedicalSubspecialty` model, linked to specialties | Priority: Cardiology, Neurology, GP, Surgery |
 | Specialty selection UI | ✅ Fully Implemented | `src/components/specialty/SpecialtyCombobox.tsx` | Searchable with synonyms |
 | Subspecialty selection | ✅ Fully Implemented | `src/components/specialty/SubspecialtyPanel.tsx` | Context-aware filtering |
 | User specialty assignment | ✅ Fully Implemented | `ClinicianSpecialty` join table | Many-to-many relationship |
@@ -262,7 +262,7 @@
 - Single workflow for cardiac letters
 
 ### Current Implementation (All-Clinician)
-- **42 medical specialties** with **60+ subspecialties** seeded
+- **42 medical specialties** with **51 subspecialties** seeded
 - Dynamic specialty selection during onboarding
 - User can have multiple specialties (primary + additional)
 - Letter generation is subspecialty-aware for style conditioning
