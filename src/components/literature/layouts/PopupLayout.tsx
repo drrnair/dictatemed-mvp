@@ -213,7 +213,7 @@ export function PopupLayout({
             )}
 
             {/* Content */}
-            <div className="flex-1 overflow-hidden bg-white">{children}</div>
+            <div className="flex-1 overflow-hidden bg-card">{children}</div>
 
             {/* Keyboard hint */}
             <footer className={cn(
