@@ -115,16 +115,22 @@ function initializeRedis(): boolean {
 
   if (!redisUrl || !redisToken) {
     // CRITICAL: In production, Redis is required for effective rate limiting
+    // Note: The app should have already failed at startup via assertProductionEnvSafe()
+    // in instrumentation.ts. This is a defense-in-depth check that logs rather than throws,
+    // since if we got here in production, something is seriously wrong.
     if (isProductionEnv()) {
       logger.error(
         'SECURITY: Rate limiting requires Redis in production. ' +
-          'Without Redis, rate limits are per-instance and ineffective in serverless deployments.'
+          'Without Redis, rate limits are per-instance and ineffective in serverless deployments. ' +
+          'This should have been caught at startup by assertProductionEnvSafe().'
       );
-      throw new RedisRequiredError();
+      // Don't throw here - env-validation.ts handles startup validation.
+      // If we got here, the app was already started (possibly incorrectly).
+      // Log and continue with in-memory as best-effort, but this is a security issue.
+    } else {
+      // In development/test, fallback to in-memory is acceptable
+      logger.debug('Upstash Redis not configured, using in-memory rate limiting');
     }
-
-    // In development/test, fallback to in-memory is acceptable
-    logger.debug('Upstash Redis not configured, using in-memory rate limiting');
     return false;
   }
 

@@ -278,25 +278,32 @@ export async function updateEmailStatus(
     return;
   }
 
-  await prisma.sentEmail.update({
-    where: { id: sentEmail.id },
-    data: {
-      status,
-      lastEventAt: new Date(),
-      webhookPayload: metadata ? JSON.stringify(metadata) : undefined,
-    },
+  // Update status and create audit log atomically
+  await prisma.$transaction(async (tx) => {
+    await tx.sentEmail.update({
+      where: { id: sentEmail.id },
+      data: {
+        status,
+        lastEventAt: new Date(),
+        webhookPayload: metadata ? JSON.stringify(metadata) : undefined,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        userId: sentEmail.userId,
+        action: `email.${status}`,
+        resourceType: 'email',
+        resourceId: sentEmail.id,
+        metadata: {
+          letterId: sentEmail.letterId,
+          ...metadata,
+        },
+      },
+    });
   });
 
   log.info('Email status updated', { emailId: sentEmail.id, status });
-
-  // Create audit log for status change
-  await createEmailAuditLog(
-    sentEmail.userId,
-    sentEmail.letterId,
-    sentEmail.id,
-    `email.${status}`,
-    metadata
-  );
 }
 
 /**
@@ -329,29 +336,6 @@ export async function getLetterEmailHistory(
   return emails;
 }
 
-/**
- * Create an audit log entry for email operations.
- */
-async function createEmailAuditLog(
-  userId: string,
-  letterId: string,
-  emailId: string,
-  action: string,
-  metadata?: Record<string, unknown>
-): Promise<void> {
-  await prisma.auditLog.create({
-    data: {
-      userId,
-      action,
-      resourceType: 'email',
-      resourceId: emailId,
-      metadata: {
-        letterId,
-        ...metadata,
-      },
-    },
-  });
-}
 
 /**
  * Retry sending a failed email.
