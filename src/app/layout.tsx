@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Inter, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 import { PWALifecycle } from '@/components/pwa/PWALifecycle';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { QueryProvider } from '@/components/providers/QueryProvider';
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -89,14 +90,16 @@ export default function RootLayout({
       <body
         className={`${plusJakarta.variable} ${inter.variable} ${ibmPlexMono.variable} font-sans`}
       >
-        <ThemeProvider>
-          {/* Skip to main content link for accessibility */}
-          <a href="#main-content" className="skip-link">
-            Skip to main content
-          </a>
-          {children}
-          <PWALifecycle />
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider>
+            {/* Skip to main content link for accessibility */}
+            <a href="#main-content" className="skip-link">
+              Skip to main content
+            </a>
+            {children}
+            <PWALifecycle />
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );
