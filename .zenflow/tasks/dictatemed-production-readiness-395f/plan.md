@@ -103,6 +103,7 @@ NODE_ENV=production npm run build  # Should error if Redis not configured
 - TypeScript type check passes
 
 ### [ ] Step 1.4: Add Content Security Policy Headers
+<!-- chat-id: b7f19c82-6085-4ef6-8f14-fb14350a4ff7 -->
 
 **Files to modify:**
 - `next.config.js` - Add CSP header to security headers array
