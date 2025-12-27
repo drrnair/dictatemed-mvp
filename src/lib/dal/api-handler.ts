@@ -26,6 +26,7 @@ import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
+  ValidationError,
   isAuthorizationError,
   getErrorStatusCode,
   getSafeErrorMessage,
