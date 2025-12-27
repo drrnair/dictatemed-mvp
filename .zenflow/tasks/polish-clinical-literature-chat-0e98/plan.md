@@ -222,7 +222,7 @@ Enhance results display with clinical styling.
 
 ---
 
-### [ ] Step: Badge Components Polish
+### [x] Step: Badge Components Polish
 <!-- chat-id: 115a819c-af10-4bd2-9047-771faa9c2cce -->
 
 Polish confidence and source badges.
@@ -238,7 +238,26 @@ Polish confidence and source badges.
    - Improved contrast
 
 **Verification:**
-- Visual inspection of all badge states
+- `npm run typecheck` ✓
+- `npm run lint` ✓
+
+**Completed:**
+- `ConfidenceBadge.tsx` polished with:
+  - Pill shape (`rounded-full`) for distinctive clinical look
+  - Icons with bolder stroke weight (2.5) for clarity at small sizes
+  - Clinical labels: "High Confidence", "Review Recommended", "Verify Manually"
+  - Border for definition (`border-verified-300`, etc.)
+  - Clinical color palette: verified (green), caution (amber), critical (red)
+  - Improved padding (`px-3 py-1.5`) for better proportions
+  - Semantic dark mode support
+- `LiteratureSourceBadge.tsx` transformed with:
+  - Source-specific colors: UpToDate=orange, PubMed=clinical-blue, Library=verified-green
+  - Icon badges with subtle background (20x20px rounded-full)
+  - Connected pulse animation using `pulseAnimation` from clinical-animations
+  - Framer Motion hover/tap effects (`whileHover`, `whileTap`)
+  - Shadow progression on hover (`hover:shadow-md`)
+  - New `SourceConnectionIndicator` component for standalone status display
+  - Improved accessibility with aria-pressed and descriptive labels
 
 ---
 

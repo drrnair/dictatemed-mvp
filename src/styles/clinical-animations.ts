@@ -442,16 +442,17 @@ export const loadingTextVariants = {
 
 /**
  * Continuous pulse animation for connected status indicators.
+ * Note: Not using `as const` to allow mutable arrays for Framer Motion's animate prop.
  */
 export const pulseAnimation = {
-  scale: [1, 1.2, 1],
-  opacity: [1, 0.8, 1],
+  scale: [1, 1.2, 1] as number[],
+  opacity: [1, 0.8, 1] as number[],
   transition: {
     duration: 2,
     repeat: Infinity,
-    ease: 'easeInOut',
+    ease: 'easeInOut' as const,
   },
-} as const;
+};
 
 // =============================================================================
 // Citation Flash Animation
