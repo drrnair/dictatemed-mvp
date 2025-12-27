@@ -4,6 +4,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ErrorFallback } from '@/components/common/ErrorFallback';
 import { logError } from '@/lib/error-logger';
 
@@ -14,6 +15,8 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const router = useRouter();
+
   useEffect(() => {
     logError(error, { route: '/dashboard' }, 'high');
   }, [error]);
@@ -33,7 +36,7 @@ export default function DashboardError({
         },
         {
           label: 'Go to Home',
-          onClick: () => (window.location.href = '/'),
+          onClick: () => router.push('/'),
           variant: 'outline',
         },
       ]}

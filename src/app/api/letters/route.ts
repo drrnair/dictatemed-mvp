@@ -11,11 +11,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import type { Subspecialty, LetterStatus, LetterType } from '@prisma/client';
-import { getSession } from '@/lib/auth';
 import { generateLetter } from '@/domains/letters/letter.service';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
-import { letters as lettersDAL, handleDALError, isDALError } from '@/lib/dal';
+import {
+  letters as lettersDAL,
+  handleDALError,
+  isDALError,
+  getCurrentUserOrThrow,
+} from '@/lib/dal';
 
 const subspecialtyEnum = z.enum([
   'GENERAL_CARDIOLOGY',
@@ -81,20 +85,18 @@ const generateLetterSchema = z.object({
 
 /**
  * POST /api/letters - Generate a new letter
+ *
+ * Uses DAL for authentication, domain service for business logic.
  */
 export async function POST(request: NextRequest) {
   const log = logger.child({ action: 'generateLetter' });
 
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+    // Get authenticated user via DAL
+    const user = await getCurrentUserOrThrow();
 
     // Check rate limit (10 requests/min for letters)
-    const rateLimitKey = createRateLimitKey(userId, 'letters');
+    const rateLimitKey = createRateLimitKey(user.id, 'letters');
     const rateLimit = checkRateLimit(rateLimitKey, 'letters');
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -113,13 +115,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await generateLetter(userId, {
+    // Generate letter (domain service has business logic)
+    const result = await generateLetter(user.id, {
       ...validated.data,
       subspecialty: validated.data.subspecialty as Subspecialty | undefined,
     });
 
     log.info('Letter generated', {
       letterId: result.id,
+      userId: user.id,
       letterType: validated.data.letterType,
       subspecialty: validated.data.subspecialty,
       modelUsed: result.modelUsed,
@@ -128,6 +132,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: 201, headers: getRateLimitHeaders(rateLimit) });
   } catch (error) {
+    // Handle DAL errors (UnauthorizedError)
+    if (isDALError(error)) {
+      return handleDALError(error, log);
+    }
+
     log.error(
       'Failed to generate letter',
       {},

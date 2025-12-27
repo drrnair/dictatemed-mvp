@@ -4,6 +4,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ErrorFallback } from '@/components/common/ErrorFallback';
 import { logError } from '@/lib/error-logger';
 
@@ -14,6 +15,8 @@ export default function PatientsError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const router = useRouter();
+
   useEffect(() => {
     logError(error, { route: '/patients' }, 'high');
   }, [error]);
@@ -33,7 +36,7 @@ export default function PatientsError({
         },
         {
           label: 'Go to Dashboard',
-          onClick: () => (window.location.href = '/dashboard'),
+          onClick: () => router.push('/dashboard'),
           variant: 'outline',
         },
       ]}

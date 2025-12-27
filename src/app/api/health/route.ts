@@ -170,9 +170,10 @@ async function checkRedis(): Promise<ServiceStatus> {
 
 /**
  * Check Deepgram API availability
- * Full connectivity check would consume API credits, so we validate config
+ * Full connectivity check would consume API credits, so we validate config only.
+ * This is a synchronous check wrapped in Promise.resolve for API consistency.
  */
-async function checkDeepgram(): Promise<ServiceStatus> {
+function checkDeepgram(): ServiceStatus {
   // In test mode with mocking enabled, skip this check
   if (process.env.MOCK_DEEPGRAM_SERVICE === 'true') {
     return { status: 'up', message: 'mocked' };
@@ -185,8 +186,6 @@ async function checkDeepgram(): Promise<ServiceStatus> {
     };
   }
 
-  // Optionally perform a lightweight API check if needed
-  // For now, config validation is sufficient
   return {
     status: 'up',
     details: {
@@ -197,9 +196,10 @@ async function checkDeepgram(): Promise<ServiceStatus> {
 
 /**
  * Check Anthropic/Claude API availability
- * We only validate config since actual API calls cost money
+ * We only validate config since actual API calls cost money.
+ * This is a synchronous check wrapped in Promise.resolve for API consistency.
  */
-async function checkAnthropic(): Promise<ServiceStatus> {
+function checkAnthropic(): ServiceStatus {
   // In test mode with mocking enabled, skip this check
   if (process.env.MOCK_ANTHROPIC_SERVICE === 'true' || process.env.MOCK_BEDROCK_SERVICE === 'true') {
     return { status: 'up', message: 'mocked' };
@@ -272,8 +272,12 @@ async function checkSupabase(): Promise<ServiceStatus> {
   try {
     const client = getSupabaseServiceClient();
 
-    // Actually verify connectivity by listing buckets
-    const { data: buckets, error } = await client.storage.listBuckets();
+    // Actually verify connectivity by listing buckets with timeout
+    const { data: buckets, error } = await withTimeout(
+      client.storage.listBuckets(),
+      EXTERNAL_CALL_TIMEOUT_MS,
+      'Supabase listBuckets'
+    );
 
     if (error) {
       return {

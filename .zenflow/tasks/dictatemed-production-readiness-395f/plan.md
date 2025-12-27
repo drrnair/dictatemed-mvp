@@ -387,6 +387,7 @@ npm run typecheck  # ✅ Passes
 ```
 
 ### [ ] Step 4.2: Add Webhook IP Allowlisting
+<!-- chat-id: 293ed643-422f-4ba0-a3ef-658573f9d6e0 -->
 
 **File to modify:**
 - `src/middleware.ts` - Add IP validation for /api/transcription/webhook, /api/webhooks/resend
