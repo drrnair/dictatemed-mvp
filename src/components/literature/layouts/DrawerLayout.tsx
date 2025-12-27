@@ -9,9 +9,16 @@ import {
   type ReactNode,
 } from 'react';
 import { motion, AnimatePresence, useDragControls, PanInfo } from 'framer-motion';
-import { GripHorizontal, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Search, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  drawerVariants,
+  overlayVariants,
+  easings,
+  durations,
+  createSpringTransition,
+} from '@/styles/clinical-animations';
 
 interface DrawerLayoutProps {
   /** Panel content */

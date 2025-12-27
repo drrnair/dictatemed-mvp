@@ -218,7 +218,7 @@ export const createCascadeVariants = (index: number) => ({
     y: 0,
     transition: {
       delay: index * durations.stagger,
-      duration: 0.3,
+      duration: durations.card,
       ease: easings.smooth,
     },
   },
@@ -253,7 +253,7 @@ export const staggerChildVariants = {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.3,
+      duration: durations.card,
       ease: easings.smooth,
     },
   },
@@ -400,14 +400,14 @@ export const loadingStageVariants = {
     opacity: 1,
     scale: 1,
     transition: {
-      duration: 0.2,
+      duration: durations.quickExit,
     },
   },
   exit: {
     opacity: 0,
     scale: 0.8,
     transition: {
-      duration: 0.2,
+      duration: durations.quickExit,
     },
   },
 } as const;
@@ -452,6 +452,54 @@ export const pulseAnimation = {
     ease: 'easeInOut',
   },
 } as const;
+
+// =============================================================================
+// Citation Flash Animation
+// =============================================================================
+
+/**
+ * Citation flash animation for when a citation is inserted.
+ * Creates a green highlight that fades out.
+ *
+ * Note: For CSS-based animation, use the `citation-flash` keyframes
+ * defined in globals.css. This variant is for Framer Motion usage.
+ */
+export const citationFlashVariants = {
+  initial: {
+    backgroundColor: 'transparent',
+  },
+  flash: {
+    backgroundColor: [
+      'rgba(34, 197, 94, 0.3)',
+      'rgba(34, 197, 94, 0.4)',
+      'rgba(34, 197, 94, 0.3)',
+      'transparent',
+    ],
+    transition: {
+      duration: 2,
+      ease: 'easeOut',
+      times: [0, 0.25, 0.5, 1],
+    },
+  },
+} as const;
+
+/**
+ * Utility function to trigger citation flash via CSS animation.
+ * Use this when applying to DOM elements outside of Framer Motion.
+ */
+export const triggerCitationFlash = (element: HTMLElement) => {
+  element.style.animation = 'citation-flash 2s ease-out forwards';
+
+  // Clean up after animation completes
+  const cleanup = () => {
+    element.style.animation = '';
+    element.removeEventListener('animationend', cleanup);
+  };
+  element.addEventListener('animationend', cleanup);
+
+  // Scroll to citation
+  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
 
 // =============================================================================
 // Utility Functions
