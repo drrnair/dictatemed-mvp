@@ -1,19 +1,13 @@
 // src/lib/performance.ts
 // Performance measurement utilities for tracking operation timing
+//
+// NOTE: Production analytics integration (e.g., PostHog, Datadog) is not included
+// in this initial implementation. The structured logger output is designed to be
+// compatible with CloudWatch Logs Insights for querying performance metrics.
+// If needed, add analytics integration by extending measureAsync/measureSync
+// to call your analytics service alongside logging.
 
 import { logger } from './logger';
-
-/**
- * Result of a measured operation, including timing data.
- */
-export interface MeasuredResult<T> {
-  /** The result of the operation */
-  result: T;
-  /** Duration in milliseconds */
-  durationMs: number;
-  /** Whether the operation succeeded */
-  success: boolean;
-}
 
 /**
  * Options for performance measurement.
@@ -191,30 +185,47 @@ export function createTimer(
 ) {
   const start = performance.now();
   const checkpoints: Array<{ name: string; elapsed: number }> = [];
+  let stopped = false;
+  let finalDuration: number | null = null;
 
   return {
     /**
      * Record a checkpoint with elapsed time.
+     * Can still record checkpoints after stopping (uses final duration).
      */
     checkpoint(name: string): number {
-      const elapsed = performance.now() - start;
+      const elapsed = stopped ? finalDuration! : performance.now() - start;
       checkpoints.push({ name, elapsed: Math.round(elapsed * 100) / 100 });
       return elapsed;
     },
 
     /**
      * Get elapsed time without stopping.
+     * Returns final duration if already stopped.
      */
     elapsed(): number {
-      return performance.now() - start;
+      return stopped ? finalDuration! : performance.now() - start;
+    },
+
+    /**
+     * Check if timer has been stopped.
+     */
+    isStopped(): boolean {
+      return stopped;
     },
 
     /**
      * Stop the timer and log results.
+     * Subsequent calls return the original duration without re-logging.
      */
     stop(logLevel: 'debug' | 'info' = 'debug'): number {
-      const duration = performance.now() - start;
-      const roundedDuration = Math.round(duration * 100) / 100;
+      if (stopped) {
+        return finalDuration!;
+      }
+
+      stopped = true;
+      finalDuration = performance.now() - start;
+      const roundedDuration = Math.round(finalDuration * 100) / 100;
 
       logger[logLevel](`${operationName} completed`, {
         operation: operationName,
@@ -223,15 +234,21 @@ export function createTimer(
         ...context,
       });
 
-      return duration;
+      return finalDuration;
     },
 
     /**
      * Stop and warn if slow.
+     * Subsequent calls return the original duration without re-logging.
      */
     stopWithThreshold(thresholdMs: number = 1000): number {
-      const duration = performance.now() - start;
-      const roundedDuration = Math.round(duration * 100) / 100;
+      if (stopped) {
+        return finalDuration!;
+      }
+
+      stopped = true;
+      finalDuration = performance.now() - start;
+      const roundedDuration = Math.round(finalDuration * 100) / 100;
 
       const logContext = {
         operation: operationName,
@@ -240,7 +257,7 @@ export function createTimer(
         ...context,
       };
 
-      if (duration >= thresholdMs) {
+      if (finalDuration >= thresholdMs) {
         logger.warn(`Slow operation: ${operationName}`, {
           ...logContext,
           slow: true,
@@ -250,7 +267,7 @@ export function createTimer(
         logger.debug(`${operationName} completed`, logContext);
       }
 
-      return duration;
+      return finalDuration;
     },
   };
 }

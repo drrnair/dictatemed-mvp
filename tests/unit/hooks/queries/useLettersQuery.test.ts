@@ -99,7 +99,7 @@ describe('useLettersQuery', () => {
     });
 
     expect(result.current.data?.letters).toHaveLength(1);
-    expect(result.current.data?.letters[0].id).toBe('letter-123');
+    expect(result.current.data?.letters?.[0]?.id).toBe('letter-123');
     expect(result.current.data?.stats.total).toBe(10);
   });
 

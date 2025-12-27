@@ -129,7 +129,9 @@ export interface ApproveLetterResult {
 // API Functions
 // ============================================================================
 
-async function fetchLetters(filters: LetterFilters): Promise<LetterListResponse> {
+async function fetchLetters(
+  filters: LetterFilters
+): Promise<LetterListResponse> {
   const params = new URLSearchParams();
 
   if (filters.search) params.set('search', filters.search);
@@ -242,6 +244,10 @@ async function deleteLetter(id: string): Promise<void> {
 
 /**
  * Hook for fetching letters list with filtering and pagination
+ *
+ * Stale time: 2 minutes (vs default 5min)
+ * Rationale: Letter list is frequently viewed but doesn't change as
+ * rapidly as recordings. Balance between freshness and API load.
  */
 export function useLettersQuery(
   filters: LetterFilters = {},
@@ -253,13 +259,17 @@ export function useLettersQuery(
   return useQuery({
     queryKey: queryKeys.letters.list(filters),
     queryFn: () => fetchLetters(filters),
-    staleTime: 2 * 60 * 1000, // 2 minutes - letters list can change frequently
+    staleTime: 2 * 60 * 1000,
     ...options,
   });
 }
 
 /**
  * Hook for fetching a single letter by ID
+ *
+ * Stale time: 5 minutes (matches default)
+ * Rationale: Individual letters are stable once created. Uses default
+ * stale time for consistency with global config.
  */
 export function useLetterQuery(
   id: string,
@@ -269,13 +279,17 @@ export function useLetterQuery(
     queryKey: queryKeys.letters.detail(id),
     queryFn: () => fetchLetter(id),
     enabled: !!id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     ...options,
   });
 }
 
 /**
  * Hook for fetching letter stats only
+ *
+ * Stale time: 1 minute (vs default 5min)
+ * Rationale: Stats are displayed on dashboard and should be reasonably
+ * fresh to show accurate pending review counts to users.
  */
 export function useLetterStatsQuery(
   options?: Omit<UseQueryOptions<LetterStats, Error>, 'queryKey' | 'queryFn'>
@@ -286,7 +300,7 @@ export function useLetterStatsQuery(
       const response = await fetchLetters({ limit: 1 });
       return response.stats;
     },
-    staleTime: 1 * 60 * 1000, // 1 minute
+    staleTime: 1 * 60 * 1000,
     ...options,
   });
 }
@@ -318,7 +332,11 @@ export function useCreateLetterMutation(
  * Hook for updating a letter
  */
 export function useUpdateLetterMutation(
-  options?: UseMutationOptions<Letter, Error, { id: string; data: UpdateLetterInput }>
+  options?: UseMutationOptions<
+    Letter,
+    Error,
+    { id: string; data: UpdateLetterInput }
+  >
 ) {
   const queryClient = useQueryClient();
 
@@ -344,7 +362,12 @@ interface ApproveLetterContext {
  */
 export function useApproveLetterMutation(
   options?: Omit<
-    UseMutationOptions<ApproveLetterResult, Error, string, ApproveLetterContext>,
+    UseMutationOptions<
+      ApproveLetterResult,
+      Error,
+      string,
+      ApproveLetterContext
+    >,
     'mutationFn' | 'onMutate' | 'onError' | 'onSettled'
   >
 ) {
@@ -365,14 +388,11 @@ export function useApproveLetterMutation(
 
       // Optimistically update
       if (previousLetter) {
-        queryClient.setQueryData<Letter>(
-          queryKeys.letters.detail(letterId),
-          {
-            ...previousLetter,
-            status: 'APPROVED',
-            approvedAt: new Date(),
-          }
-        );
+        queryClient.setQueryData<Letter>(queryKeys.letters.detail(letterId), {
+          ...previousLetter,
+          status: 'APPROVED',
+          approvedAt: new Date(),
+        });
       }
 
       return { previousLetter };

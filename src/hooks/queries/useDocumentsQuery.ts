@@ -23,11 +23,7 @@ export type DocumentType =
   | 'CORRESPONDENCE'
   | 'OTHER';
 
-export type DocumentStatus =
-  | 'PENDING'
-  | 'PROCESSING'
-  | 'PROCESSED'
-  | 'FAILED';
+export type DocumentStatus = 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
 
 export interface Document {
   id: string;
@@ -152,8 +148,15 @@ async function deleteDocument(id: string): Promise<void> {
 // Query Hooks
 // ============================================================================
 
+/** Maximum consecutive errors before polling stops to prevent infinite retries */
+const MAX_POLL_ERRORS = 3;
+
 /**
  * Hook for fetching documents list with filtering and pagination
+ *
+ * Stale time: 2 minutes (vs default 5min)
+ * Rationale: Documents are uploaded/processed less frequently than recordings
+ * but users still need reasonably fresh data for document management.
  */
 export function useDocumentsQuery(
   filters: DocumentFilters = {},
@@ -165,13 +168,17 @@ export function useDocumentsQuery(
   return useQuery({
     queryKey: queryKeys.documents.list(filters),
     queryFn: () => fetchDocuments(filters),
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 2 * 60 * 1000,
     ...options,
   });
 }
 
 /**
  * Hook for fetching a single document by ID
+ *
+ * Stale time: 5 minutes (matches default)
+ * Rationale: Document metadata rarely changes after initial processing.
+ * Uses default stale time for consistency with global config.
  */
 export function useDocumentQuery(
   id: string,
@@ -181,13 +188,17 @@ export function useDocumentQuery(
     queryKey: queryKeys.documents.detail(id),
     queryFn: () => fetchDocument(id),
     enabled: !!id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     ...options,
   });
 }
 
 /**
  * Hook for polling a document until processing is complete
+ *
+ * Polling terminates when:
+ * - Document reaches terminal state (PROCESSED, FAILED)
+ * - MAX_POLL_ERRORS consecutive fetch errors occur (prevents infinite retries)
  */
 export function useDocumentPollQuery(
   id: string,
@@ -199,6 +210,13 @@ export function useDocumentPollQuery(
     enabled: !!id,
     refetchInterval: (query) => {
       const data = query.state.data;
+      const errorCount = query.state.errorUpdateCount;
+
+      // Stop polling after too many consecutive errors
+      if (errorCount >= MAX_POLL_ERRORS) {
+        return false;
+      }
+
       // Stop polling when document processing is complete
       if (data?.status === 'PROCESSED' || data?.status === 'FAILED') {
         return false;

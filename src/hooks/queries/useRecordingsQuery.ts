@@ -113,7 +113,9 @@ async function fetchRecording(id: string): Promise<Recording> {
   return response.json();
 }
 
-async function createRecording(input: CreateRecordingInput): Promise<Recording> {
+async function createRecording(
+  input: CreateRecordingInput
+): Promise<Recording> {
   const response = await fetch('/api/recordings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -190,8 +192,16 @@ async function deleteRecording(id: string): Promise<void> {
 // Query Hooks
 // ============================================================================
 
+/** Maximum consecutive errors before polling stops to prevent infinite retries */
+const MAX_POLL_ERRORS = 3;
+
 /**
  * Hook for fetching recordings list with filtering and pagination
+ *
+ * Stale time: 1 minute (vs default 5min)
+ * Rationale: Recording status changes frequently during active sessions
+ * (RECORDING -> UPLOADING -> TRANSCRIBING -> COMPLETED). Fresh data
+ * is critical for showing accurate progress to users.
  */
 export function useRecordingsQuery(
   filters: RecordingFilters = {},
@@ -203,13 +213,17 @@ export function useRecordingsQuery(
   return useQuery({
     queryKey: queryKeys.recordings.list(filters),
     queryFn: () => fetchRecordings(filters),
-    staleTime: 1 * 60 * 1000, // 1 minute - recordings can change quickly
+    staleTime: 1 * 60 * 1000,
     ...options,
   });
 }
 
 /**
  * Hook for fetching a single recording by ID
+ *
+ * Stale time: 30 seconds (vs default 5min)
+ * Rationale: Individual recording status is critical for UI feedback during
+ * transcription workflows. Users need real-time status updates.
  */
 export function useRecordingQuery(
   id: string,
@@ -219,13 +233,17 @@ export function useRecordingQuery(
     queryKey: queryKeys.recordings.detail(id),
     queryFn: () => fetchRecording(id),
     enabled: !!id,
-    staleTime: 30 * 1000, // 30 seconds - recording status changes frequently
+    staleTime: 30 * 1000,
     ...options,
   });
 }
 
 /**
  * Hook for polling a recording until it reaches a terminal state
+ *
+ * Polling terminates when:
+ * - Recording reaches terminal state (COMPLETED, FAILED, TRANSCRIBED)
+ * - MAX_POLL_ERRORS consecutive fetch errors occur (prevents infinite retries)
  */
 export function useRecordingPollQuery(
   id: string,
@@ -237,6 +255,13 @@ export function useRecordingPollQuery(
     enabled: !!id,
     refetchInterval: (query) => {
       const data = query.state.data;
+      const errorCount = query.state.errorUpdateCount;
+
+      // Stop polling after too many consecutive errors
+      if (errorCount >= MAX_POLL_ERRORS) {
+        return false;
+      }
+
       // Stop polling when recording reaches terminal state
       if (
         data?.status === 'COMPLETED' ||
