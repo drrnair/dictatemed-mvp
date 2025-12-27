@@ -17,6 +17,7 @@ import {
   letters as lettersDAL,
   handleDALError,
   isDALError,
+  getCurrentUserOrThrow,
 } from '@/lib/dal';
 
 const log = logger.child({ module: 'letter-send-api' });
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const letter = await lettersDAL.getLetterForSending(letterId);
 
     // Get user for rate limiting and sender ID
-    const user = await lettersDAL.getAuthenticatedUser();
+    const user = await getCurrentUserOrThrow();
 
     // Rate limiting (10 sends per minute)
     const rateLimitKey = createRateLimitKey(user.id, 'letter-sends');

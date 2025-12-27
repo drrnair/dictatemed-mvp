@@ -71,8 +71,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 /**
  * PUT /api/letters/:id - Update letter content (physician edits)
  *
- * Note: Uses domain service updateLetterContent which has its own auth checks.
- * We still use DAL's getCurrentUserOrThrow for consistency.
+ * Uses domain service updateLetterContent which throws DAL errors:
+ * - NotFoundError if letter not found or not owned by user
+ * - ValidationError if letter is already approved
  */
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   const log = logger.child({ action: 'updateLetter' });
@@ -93,14 +94,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Use domain service (has its own ownership checks)
+    // Use domain service - throws DAL errors (NotFoundError, ValidationError)
     const letter = await updateLetterContent(user.id, id, validated.data.content);
 
     log.info('Letter updated', { letterId: id, userId: user.id });
 
     return NextResponse.json(letter);
   } catch (error) {
-    // Handle DAL errors first
+    // Handle DAL errors (UnauthorizedError, NotFoundError, ValidationError)
     if (isDALError(error)) {
       return handleDALError(error, log);
     }
@@ -111,16 +112,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       error instanceof Error ? error : undefined
     );
 
-    if (error instanceof Error && error.message === 'Cannot edit approved letter') {
-      return NextResponse.json({ error: error.message, code: 'LETTER_APPROVED' }, { status: 400 });
-    }
-
-    if (error instanceof Error && error.message === 'Letter not found') {
-      return NextResponse.json({ error: error.message, code: 'NOT_FOUND' }, { status: 404 });
-    }
-
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update letter', code: 'INTERNAL_ERROR' },
+      { error: 'Failed to update letter', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }

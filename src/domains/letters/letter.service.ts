@@ -4,6 +4,7 @@
 import { prisma } from '@/infrastructure/db/client';
 import { generateTextWithRetry, type ModelId } from '@/infrastructure/ai';
 import { logger } from '@/lib/logger';
+import { NotFoundError, ValidationError } from '@/lib/dal/base';
 import type { Letter as PrismaLetterModel, Subspecialty } from '@prisma/client';
 import type {
   Letter,
@@ -405,6 +406,8 @@ export async function listLetters(
 
 /**
  * Update letter content (after physician edits).
+ * @throws NotFoundError if letter not found or not owned by user
+ * @throws ValidationError if letter is already approved
  */
 export async function updateLetterContent(
   userId: string,
@@ -416,11 +419,11 @@ export async function updateLetterContent(
   });
 
   if (!letter) {
-    throw new Error('Letter not found');
+    throw new NotFoundError(`Letter with ID ${letterId} not found`);
   }
 
   if (letter.status === 'APPROVED') {
-    throw new Error('Cannot edit approved letter');
+    throw new ValidationError('Cannot edit approved letter', 'LETTER_APPROVED');
   }
 
   const updated = await prisma.letter.update({

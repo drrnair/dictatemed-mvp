@@ -19,6 +19,7 @@ import {
   recordings as recordingsDAL,
   handleDALError,
   isDALError,
+  getCurrentUserOrThrow,
 } from '@/lib/dal';
 
 interface RouteParams {
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const recording = await recordingsDAL.getRecordingForUpload(id);
 
     // Get user for storage path generation
-    const user = await recordingsDAL.getAuthenticatedUser();
+    const user = await getCurrentUserOrThrow();
 
     // Use existing storagePath if available, otherwise generate a new one
     let storagePath = recording.storagePath;
