@@ -138,18 +138,20 @@ const sentryWebpackPluginOptions = {
   // Source maps are used to decode minified stack traces
   dryRun: process.env.CI !== 'true',
 
-  // Routes to exclude from auto-instrumentation
-  // These routes contain PHI and should not send data to Sentry
-  excludeServerRoutes: [
-    // API routes that handle sensitive patient data
-    '/api/letters/[id]',
-    '/api/patients/[id]',
-    '/api/recordings/[id]',
-    '/api/documents/[id]',
-  ],
-
   // Don't create release in non-production
   release: process.env.VERCEL_GIT_COMMIT_SHA || undefined,
+
+  // Webpack configuration for Sentry
+  webpack: {
+    // Routes to exclude from auto-instrumentation
+    // These routes contain PHI and should not send data to Sentry
+    excludeServerRoutes: [
+      '/api/letters/[id]',
+      '/api/patients/[id]',
+      '/api/recordings/[id]',
+      '/api/documents/[id]',
+    ],
+  },
 };
 
 // Apply Sentry wrapper only in production to avoid dev overhead
