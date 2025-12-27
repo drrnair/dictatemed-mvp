@@ -2,7 +2,7 @@
 
 **Date:** December 27, 2025
 **Version:** 5d7870d
-**Overall Completion:** ~92%
+**Overall Completion:** 96%
 
 ---
 
@@ -10,18 +10,25 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total Features** | 58 |
-| **Fully Functional** | 54 (93%) |
-| **Partially Working** | 4 (7%) |
+| **Total Features** | 49 |
+| **Fully Functional** | 47 (96%) |
+| **Partially Working** | 2 (4%) |
 | **Not Implemented** | 0 (0%) |
 | **Ready for Pilot** | Yes |
 
 **Critical Gaps:** None - all core features are production-ready.
 
 **Minor Gaps:**
-- Subscription tier integration (hardcoded to Professional)
-- UpToDate search is stubbed (connection flow works)
-- Rate limiting not configured on some endpoints
+- UpToDate search is stubbed (OAuth connection flow works, search returns empty)
+- Rate limiting not configured on all endpoints (Redis/Upstash optional)
+
+**Known TODOs in Codebase:**
+- `src/domains/recording/webhook.handler.ts:186` - Phase 3: Auto-trigger letter generation
+- `src/domains/literature/orchestration.service.ts:589` - Subscription tier integration
+- `src/domains/literature/user-library.service.ts:377` - Subscription tier integration
+- `src/app/api/literature/history/route.ts:70` - Subscription tier integration
+- `src/domains/referrals/referral.service.ts:1054` - Indexed patient search for large practices
+- `src/hooks/useErrorHandler.ts:189` - Toast implementation (placeholder)
 
 ---
 
@@ -101,7 +108,10 @@
 **Description:** Record consultation audio in ambient (conversation) or dictation mode with real-time audio level visualization.
 
 **Implementation Details:**
-- Key files: `src/domains/recording/recording.service.ts`, `src/hooks/useRecording.ts`
+- Key files:
+  - `src/domains/recording/recording.service.ts:45` - `createRecording()`
+  - `src/domains/recording/recording.service.ts:142` - `confirmUpload()`
+  - `src/hooks/useRecording.ts:28` - MediaRecorder integration
 - Database tables: `Recording`
 - External services: Supabase Storage (audio files)
 - API endpoints: `/api/recordings`, `/api/recordings/[id]`, `/api/recordings/[id]/upload-url`
@@ -123,7 +133,10 @@
 **Description:** Convert audio recordings to text using Deepgram with speaker diarization support.
 
 **Implementation Details:**
-- Key files: `src/domains/recording/transcription.service.ts`, `src/domains/recording/webhook.handler.ts`
+- Key files:
+  - `src/domains/recording/transcription.service.ts:52` - `startTranscription()`
+  - `src/domains/recording/transcription.service.ts:156` - `processTranscriptionResult()`
+  - `src/domains/recording/webhook.handler.ts:42` - Deepgram callback handler
 - Database tables: `Recording` (transcriptRaw, transcriptText, speakers)
 - External services: Deepgram API (async transcription with webhooks)
 - API endpoints: `/api/recordings/[id]/transcribe`, `/api/transcription/webhook`
@@ -148,7 +161,10 @@
 **Description:** Generate clinical letters from consultation transcripts using Claude AI with specialty-aware prompts and style application.
 
 **Implementation Details:**
-- Key files: `src/domains/letters/letter.service.ts`, `src/domains/letters/prompts/generation.ts`
+- Key files:
+  - `src/domains/letters/letter.service.ts:78` - `generateLetter()`
+  - `src/domains/letters/letter.service.ts:245` - `buildPrompt()`
+  - `src/domains/letters/prompts/generation.ts:15` - Prompt templates
 - Database tables: `Letter`, `LetterDocument`
 - External services: Anthropic Claude (Opus/Sonnet), AWS Bedrock (fallback)
 - API endpoints: `/api/consultations/[id]/generate-letter`
@@ -171,9 +187,10 @@
 
 **Implementation Details:**
 - Key files:
-  - `src/domains/letters/hallucination-detection.ts` (413 lines)
-  - `src/domains/letters/clinical-extraction.ts` (365 lines)
-  - `src/domains/letters/clinical-concepts.ts`
+  - `src/domains/letters/hallucination-detection.ts:56` - `detectHallucinations()`
+  - `src/domains/letters/hallucination-detection.ts:142` - Risk scoring
+  - `src/domains/letters/clinical-extraction.ts:38` - `extractClinicalValues()`
+  - `src/domains/letters/clinical-concepts.ts:22` - Concept extraction
 - Database tables: `Letter` (extractedValues, hallucinationFlags, clinicalConcepts)
 - External services: None (pattern-based detection)
 
@@ -181,7 +198,7 @@
 - [x] Core functionality works
 - [x] Edge cases handled
 - [x] Error handling present
-- [x] Tests exist (93 test cases for hallucination detection)
+- [x] Tests exist (29 test cases for hallucination detection)
 - [x] UI/UX complete (verification panel)
 
 **Extracted Value Types:**
@@ -241,7 +258,10 @@
 **Description:** Structured approval process with validation requirements and cryptographic provenance.
 
 **Implementation Details:**
-- Key files: `src/domains/letters/approval.service.ts` (543 lines)
+- Key files:
+  - `src/domains/letters/approval.service.ts:68` - `approveLetter()`
+  - `src/domains/letters/approval.service.ts:185` - Validation requirements
+  - `src/domains/letters/approval.service.ts:312` - Content diff calculation
 - Database tables: `Letter`, `Provenance`
 - API endpoints: `/api/letters/[id]/approve`
 
