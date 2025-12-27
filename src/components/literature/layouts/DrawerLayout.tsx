@@ -219,7 +219,7 @@ export function DrawerLayout({
             style={{ height: `${heightVh}vh` }}
             className={cn(
               'fixed bottom-0 left-0 right-0 z-50',
-              'bg-white rounded-t-2xl',
+              'bg-card rounded-t-2xl',
               'flex flex-col overflow-hidden',
               'border-t border-clinical-gray-200',
               'shadow-elevated',
