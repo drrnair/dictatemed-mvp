@@ -181,11 +181,11 @@ export function SidePanelLayout({
                   opacity: 0,
                   transition: {
                     width: {
-                      duration: 0.28,
+                      duration: durations.panelExit,
                       ease: easings.smooth,
                     },
                     opacity: {
-                      duration: 0.2,
+                      duration: durations.quickExit,
                     },
                   },
                 }}
