@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { motion, AnimatePresence, useDragControls, PanInfo } from 'framer-motion';
-import { X, ChevronDown, ChevronUp, Search, Maximize2 } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Search, Maximize2, GripHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -55,7 +55,7 @@ export function DrawerLayout({
   children,
   isOpen,
   onClose,
-  title = 'Clinical Literature',
+  title = 'Clinical Assistant',
   headerContent,
   initialHeightVh = 50,
   minHeightVh = 30,

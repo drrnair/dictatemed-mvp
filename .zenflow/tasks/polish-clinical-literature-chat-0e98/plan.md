@@ -84,15 +84,23 @@ Create shared animation constants and Framer Motion variants.
 **Completed:**
 - Created `src/styles/clinical-animations.ts` with comprehensive animation system:
   - 5 custom easing curves: `smooth`, `snappy`, `bounce`, `default`, `emphasized`
-  - 8 duration constants: `instant` to `slower`, plus `stagger` and `contentDelay`
-  - Panel variants: `panelVariants`, `panelContentVariants` (42% width, staggered content)
+  - 11 duration constants: `instant`, `fast`, `quickExit`, `normal`, `panelExit`, `card`, `slow`, `slower`, `stagger`, `contentDelay`
+  - Panel variants: `panelVariants`, `createPanelVariants(width)`, `panelContentVariants` (42% desktop, configurable)
   - Card variants: `cardVariants`, `createCascadeVariants`, `staggerContainerVariants`, `staggerChildVariants`
   - Modal variants: `overlayVariants`, `popupVariants`
   - Drawer variants: `drawerVariants` (spring-based)
   - Button effects: `buttonHoverEffect`, `iconButtonEffect`
   - Loading variants: `loadingStageVariants`, `loadingTextVariants`
-  - Pulse animation for connected sources: `pulseAnimation`
+  - Pulse animation: `pulseAnimation` for connected sources
+  - Citation flash: `citationFlashVariants`, `triggerCitationFlash()` utility
   - Utility functions: `createSpringTransition`, `createTweenTransition`
+
+**Review fixes applied:**
+- Fixed misleading "milliseconds" comment → "seconds (Framer Motion format)"
+- Added named duration constants: `quickExit` (0.2), `panelExit` (0.28), `card` (0.3)
+- Replaced all hardcoded durations with named constants
+- Added `createPanelVariants(width)` for responsive width support
+- Added `citationFlashVariants` and `triggerCitationFlash()` for citation insertion
 
 ---
 
