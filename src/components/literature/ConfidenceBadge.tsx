@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, AlertCircle, HelpCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ConfidenceLevel } from '@/domains/literature';
 
@@ -16,10 +16,17 @@ interface ConfidenceBadgeProps {
 }
 
 /**
- * Confidence level indicator badge.
+ * Clinical-grade confidence level indicator badge.
  *
  * Displays the confidence level of a literature search result
- * with appropriate color coding and optional icon.
+ * with pill shape, icon, border emphasis, and clinical color coding.
+ *
+ * Design principles:
+ * - Pill shape (rounded-full) for distinctive look
+ * - Icon communicates meaning at a glance
+ * - Border adds definition (not flat)
+ * - Clinical labels are actionable, not just descriptive
+ * - Color psychology: green=safe, amber=caution, red=danger
  */
 export function ConfidenceBadge({
   level,
@@ -29,44 +36,71 @@ export function ConfidenceBadge({
 }: ConfidenceBadgeProps) {
   const config = {
     high: {
-      label: 'High confidence',
-      shortLabel: 'High',
+      label: 'High Confidence',
+      shortLabel: 'Verified',
       icon: CheckCircle,
-      colors: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      // Verified green - clinical approval, safe
+      bg: 'bg-verified-100 dark:bg-verified-900/30',
+      border: 'border-verified-300 dark:border-verified-700',
+      text: 'text-verified-800 dark:text-verified-300',
+      iconColor: 'text-verified-600 dark:text-verified-400',
     },
     medium: {
-      label: 'Medium confidence',
-      shortLabel: 'Medium',
+      label: 'Review Recommended',
+      shortLabel: 'Review',
       icon: AlertCircle,
-      colors: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-      iconColor: 'text-amber-600 dark:text-amber-400',
+      // Caution amber - clinical warning
+      bg: 'bg-caution-100 dark:bg-caution-900/30',
+      border: 'border-caution-300 dark:border-caution-700',
+      text: 'text-caution-800 dark:text-caution-300',
+      iconColor: 'text-caution-600 dark:text-caution-400',
     },
     low: {
-      label: 'Limited evidence',
-      shortLabel: 'Limited',
-      icon: HelpCircle,
-      colors: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
-      iconColor: 'text-rose-600 dark:text-rose-400',
+      label: 'Verify Manually',
+      shortLabel: 'Verify',
+      icon: AlertTriangle,
+      // Critical red - medical alert
+      bg: 'bg-critical-100 dark:bg-critical-900/30',
+      border: 'border-critical-300 dark:border-critical-700',
+      text: 'text-critical-800 dark:text-critical-300',
+      iconColor: 'text-critical-600 dark:text-critical-400',
     },
   };
 
-  const { label, shortLabel, icon: Icon, colors, iconColor } = config[level];
+  const { label, shortLabel, icon: Icon, bg, border, text, iconColor } = config[level];
 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
-        colors,
+        // Pill shape with border for definition
+        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5',
+        // Typography
+        'text-xs font-semibold tracking-tight',
+        // Colors
+        bg,
+        border,
+        text,
         className
       )}
       aria-label={label}
     >
-      {showIcon && <Icon className={cn('h-3 w-3', iconColor)} aria-hidden="true" />}
-      <span className={compact ? 'hidden sm:inline' : undefined}>
-        {compact ? shortLabel : label}
-      </span>
-      {compact && <span className="sm:hidden">{shortLabel}</span>}
+      {showIcon && (
+        <Icon
+          className={cn('h-3.5 w-3.5 flex-shrink-0', iconColor)}
+          strokeWidth={2.5}
+          aria-hidden="true"
+        />
+      )}
+      {/* Non-compact: always show full label */}
+      {/* Compact: show shortLabel on mobile, full label on desktop */}
+      {compact ? (
+        <>
+          <span className="hidden sm:inline">{label}</span>
+          <span className="sm:hidden">{shortLabel}</span>
+        </>
+      ) : (
+        <span>{label}</span>
+      )}
     </span>
   );
 }

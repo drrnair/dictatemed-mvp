@@ -132,6 +132,77 @@ module.exports = {
           800: '#1e293b',
           900: '#0f172a',
         },
+        /* Clinical Literature Chat - Medical-Grade Color Palette */
+        /* Clinical Blue (primary actions, links, active states) */
+        'clinical-blue': {
+          50: '#f0f7ff',
+          100: '#e0effe',
+          200: '#bae0fd',
+          300: '#7cc5fa',
+          400: '#36a7f5',
+          500: '#0c8ce9',
+          600: '#006ec7',
+          700: '#0157a2',
+          800: '#064a85',
+          900: '#0b3d6e',
+          950: '#07284a',
+        },
+        /* Verified Green (success, connected sources, high confidence) */
+        verified: {
+          50: '#f0fdf5',
+          100: '#dcfce8',
+          200: '#bbf7d1',
+          300: '#86efad',
+          400: '#4ade80',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+          800: '#166534',
+          900: '#14532d',
+          950: '#052e16',
+        },
+        /* Clinical Amber (warnings, caution, medium confidence) */
+        caution: {
+          50: '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',
+          500: '#f59e0b',
+          600: '#d97706',
+          700: '#b45309',
+          800: '#92400e',
+          900: '#78350f',
+          950: '#451a03',
+        },
+        /* Medical Red (critical warnings, errors, low confidence) */
+        critical: {
+          50: '#fef2f2',
+          100: '#fee2e2',
+          200: '#fecaca',
+          300: '#fca5a5',
+          400: '#f87171',
+          500: '#ef4444',
+          600: '#dc2626',
+          700: '#b91c1c',
+          800: '#991b1b',
+          900: '#7f1d1d',
+          950: '#450a0a',
+        },
+        /* Refined Gray (blue undertone for cohesion) */
+        'clinical-gray': {
+          50: '#fafbfc',
+          100: '#f4f6f8',
+          200: '#e8ecf1',
+          300: '#d1d9e0',
+          400: '#a9b4c0',
+          500: '#7e8a98',
+          600: '#5e6a76',
+          700: '#475059',
+          800: '#323940',
+          900: '#1f2529',
+          950: '#0d1013',
+        },
       },
       /* Border Radius - 8px base scale */
       borderRadius: {
@@ -144,6 +215,27 @@ module.exports = {
       /* Font Family - Plus Jakarta Sans */
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        /* Clinical Literature Chat - Medical-Grade Typography */
+        'letter-serif': [
+          'Charter',
+          'Iowan Old Style',
+          'Georgia',
+          'Cambria',
+          'serif',
+        ],
+        'ui-sans': [
+          'var(--font-inter)',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'sans-serif',
+        ],
+        'clinical-mono': [
+          'var(--font-ibm-plex-mono)',
+          'SF Mono',
+          'Monaco',
+          'Consolas',
+          'monospace',
+        ],
       },
       /* Typography - Modern sans-serif, clear hierarchy */
       fontSize: {
@@ -221,6 +313,37 @@ module.exports = {
           from: { opacity: '0', transform: 'translateY(8px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        /* Clinical Literature Chat - Animations */
+        'citation-flash': {
+          '0%': {
+            'background-position': '0% 50%',
+            'background-color': 'rgba(34, 197, 94, 0.3)',
+          },
+          '50%': {
+            'background-position': '100% 50%',
+            'background-color': 'rgba(34, 197, 94, 0.4)',
+          },
+          '100%': {
+            'background-position': '0% 50%',
+            'background-color': 'transparent',
+          },
+        },
+        'source-pulse': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.2)', opacity: '0.8' },
+        },
+        'slide-in-right': {
+          from: { opacity: '0', transform: 'translateX(20px)' },
+          to: { opacity: '1', transform: 'translateX(0)' },
+        },
+        'cascade-in': {
+          from: { opacity: '0', transform: 'translateY(16px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        'spin-slow': {
+          from: { transform: 'rotate(0deg)' },
+          to: { transform: 'rotate(360deg)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -228,6 +351,12 @@ module.exports = {
         'pulse-recording': 'pulse 1.5s ease-in-out infinite',
         'fade-in': 'fade-in 0.2s ease-out',
         'fade-in-up': 'fade-in-up 0.4s ease-out',
+        /* Clinical Literature Chat - Animation utilities */
+        'citation-flash': 'citation-flash 2s ease-out forwards',
+        'source-pulse': 'source-pulse 2s ease-in-out infinite',
+        'slide-in-right': 'slide-in-right 0.25s cubic-bezier(0.32, 0.72, 0, 1)',
+        'cascade-in': 'cascade-in 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+        'spin-slow': 'spin-slow 1s linear infinite',
       },
       /* Minimum hit area for accessibility */
       minHeight: {

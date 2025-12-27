@@ -2,9 +2,13 @@
 
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  overlayVariants,
+  popupVariants,
+} from '@/styles/clinical-animations';
 
 interface PopupLayoutProps {
   /** Panel content */
@@ -17,7 +21,7 @@ interface PopupLayoutProps {
   title?: string;
   /** Header content (replaces default header) */
   headerContent?: ReactNode;
-  /** Width of popup (default: 600px) */
+  /** Width of popup (default: 640px) */
   width?: number | string;
   /** Maximum height as viewport percentage (default: 80) */
   maxHeightVh?: number;
@@ -41,9 +45,9 @@ export function PopupLayout({
   children,
   isOpen,
   onClose,
-  title = 'Clinical Literature',
+  title = 'Clinical Assistant',
   headerContent,
-  width = 600,
+  width = 640,
   maxHeightVh = 80,
   showCloseButton = true,
   className,
@@ -129,13 +133,16 @@ export function PopupLayout({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop with refined blur */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className={cn(
+              'fixed inset-0 z-50',
+              'bg-clinical-gray-950/40 backdrop-blur-md'
+            )}
             onClick={handleBackdropClick}
             aria-hidden="true"
           />
@@ -143,19 +150,20 @@ export function PopupLayout({
           {/* Panel */}
           <motion.div
             ref={panelRef}
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            variants={popupVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             style={{
               width: typeof width === 'number' ? `${width}px` : width,
               maxHeight: `${maxHeightVh}vh`,
             }}
             className={cn(
               'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
-              'bg-card rounded-xl shadow-2xl z-50',
+              'bg-card rounded-2xl z-50',
               'flex flex-col overflow-hidden',
-              'border border-border/50',
+              'border border-clinical-gray-200',
+              'shadow-elevated',
               className
             )}
             role="dialog"
@@ -165,36 +173,66 @@ export function PopupLayout({
           >
             {/* Header */}
             {headerContent || (
-              <div className="flex items-center justify-between p-4 border-b shrink-0">
-                <h2
-                  id="popup-panel-title"
-                  className="font-semibold text-foreground"
-                >
-                  {title}
-                </h2>
+              <header className={cn(
+                'flex items-center justify-between px-6 py-5',
+                'bg-clinical-gray-50 border-b border-clinical-gray-200',
+                'shrink-0'
+              )}>
+                <div className="flex items-center gap-3">
+                  {/* Icon badge */}
+                  <div className={cn(
+                    'w-9 h-9 rounded-lg',
+                    'bg-clinical-blue-100',
+                    'flex items-center justify-center'
+                  )}>
+                    <Search className="w-5 h-5 text-clinical-blue-600" />
+                  </div>
+                  <h2
+                    id="popup-panel-title"
+                    className="text-lg font-semibold text-clinical-gray-900 tracking-tight font-ui-sans"
+                  >
+                    {title}
+                  </h2>
+                </div>
                 {showCloseButton && (
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={onClose}
-                    className="h-8 w-8"
+                    className={cn(
+                      'h-8 w-8 rounded-lg',
+                      'hover:bg-clinical-gray-200 active:bg-clinical-gray-300',
+                      'transition-colors duration-150 group'
+                    )}
                     aria-label="Close"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-5 w-5 text-clinical-gray-500 group-hover:text-clinical-gray-700" />
                   </Button>
                 )}
-              </div>
+              </header>
             )}
 
             {/* Content */}
-            <div className="flex-1 overflow-hidden">{children}</div>
+            <div className="flex-1 overflow-hidden bg-card">{children}</div>
 
             {/* Keyboard hint */}
-            <div className="px-4 py-2 border-t bg-muted/30 shrink-0">
-              <p className="text-xs text-muted-foreground text-center">
-                Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">Esc</kbd> to close
+            <footer className={cn(
+              'px-6 py-3 border-t border-clinical-gray-200',
+              'bg-clinical-gray-50 shrink-0'
+            )}>
+              <p className="text-xs text-clinical-gray-500 text-center font-ui-sans">
+                Press{' '}
+                <kbd className={cn(
+                  'px-2 py-1 rounded-md text-xs font-clinical-mono font-medium',
+                  'bg-white border border-clinical-gray-300',
+                  'text-clinical-gray-600',
+                  'shadow-sm'
+                )}>
+                  Esc
+                </kbd>
+                {' '}to close
               </p>
-            </div>
+            </footer>
           </motion.div>
         </>
       )}

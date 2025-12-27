@@ -1,11 +1,15 @@
 'use client';
 
-import { AlertTriangle, Pill, BookOpen, FileText, ExternalLink } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { AlertTriangle, Pill, BookOpen, FileText, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { CitationCard } from './CitationCard';
 import { ConfidenceBadge } from './ConfidenceBadge';
+import {
+  staggerContainerVariants,
+  staggerChildVariants,
+  durations,
+} from '@/styles/clinical-animations';
 import type { LiteratureSearchResult, Citation } from '@/domains/literature';
 
 interface LiteratureSearchResultsProps {
@@ -40,115 +44,155 @@ export function LiteratureSearchResults({
   className,
 }: LiteratureSearchResultsProps) {
   return (
-    <div className={cn('space-y-4', className)}>
+    <motion.div
+      className={cn('space-y-5', className)}
+      variants={staggerContainerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Answer summary */}
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">Summary</h3>
+      <motion.section variants={staggerChildVariants} className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-clinical-blue-100 dark:bg-clinical-blue-900/30">
+              <Sparkles className="h-4 w-4 text-clinical-blue-600 dark:text-clinical-blue-400" />
+            </div>
+            <h3 className="text-sm font-semibold text-clinical-gray-900 dark:text-clinical-gray-100">
+              Summary
+            </h3>
+          </div>
           <ConfidenceBadge level={result.confidence} compact />
         </div>
-        <p className="text-sm text-foreground/90 leading-relaxed">
+        <p className="text-sm text-clinical-gray-700 dark:text-clinical-gray-300 leading-relaxed pl-9">
           {result.answer}
         </p>
-      </section>
+      </motion.section>
 
       {/* Key recommendations */}
       {result.recommendations && result.recommendations.length > 0 && (
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-            <BookOpen className="h-4 w-4 text-primary" />
-            Key Recommendations
-          </h3>
-          <ul className="space-y-1.5">
+        <motion.section variants={staggerChildVariants} className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-verified-100 dark:bg-verified-900/30">
+              <BookOpen className="h-4 w-4 text-verified-600 dark:text-verified-400" />
+            </div>
+            <h3 className="text-sm font-semibold text-clinical-gray-900 dark:text-clinical-gray-100">
+              Key Recommendations
+            </h3>
+          </div>
+          <ul className="space-y-2 pl-9">
             {result.recommendations.map((rec, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-2 text-sm text-foreground/80"
+                className="flex items-start gap-2.5 text-sm text-clinical-gray-700 dark:text-clinical-gray-300"
               >
-                <span className="text-primary mt-1.5 flex-shrink-0">•</span>
-                <span>{rec}</span>
+                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-verified-500 flex-shrink-0" />
+                <span className="leading-relaxed">{rec}</span>
               </li>
             ))}
           </ul>
-        </section>
+        </motion.section>
       )}
 
-      {/* Dosing information */}
+      {/* Dosing information - Clinical mono font for precision */}
       {result.dosing && (
-        <section className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 p-3">
-          <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-1.5 mb-2">
-            <Pill className="h-4 w-4" />
-            Dosing Information
-          </h3>
-          <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">
-            {result.dosing}
-          </p>
-        </section>
+        <motion.section
+          variants={staggerChildVariants}
+          className="rounded-xl border-2 border-clinical-blue-200 bg-clinical-blue-50
+                     dark:border-clinical-blue-800 dark:bg-clinical-blue-950/30 p-4"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-clinical-blue-200 dark:bg-clinical-blue-800">
+              <Pill className="h-4 w-4 text-clinical-blue-700 dark:text-clinical-blue-300" />
+            </div>
+            <h3 className="text-sm font-semibold text-clinical-blue-900 dark:text-clinical-blue-100">
+              Dosing Information
+            </h3>
+          </div>
+          <div className="pl-9">
+            <p className="font-clinical-mono text-sm text-clinical-blue-800 dark:text-clinical-blue-200
+                          whitespace-pre-wrap leading-relaxed tracking-tight">
+              {result.dosing}
+            </p>
+          </div>
+        </motion.section>
       )}
 
-      {/* Warnings */}
+      {/* Warnings - Emphasized border for visibility */}
       {result.warnings && result.warnings.length > 0 && (
-        <section className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3">
-          <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-1.5 mb-2">
-            <AlertTriangle className="h-4 w-4" />
-            Contraindications &amp; Warnings
-          </h3>
-          <ul className="space-y-1">
+        <motion.section
+          variants={staggerChildVariants}
+          className="rounded-xl border-2 border-caution-400 bg-caution-50
+                     dark:border-caution-600 dark:bg-caution-950/30 p-4"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-caution-200 dark:bg-caution-800">
+              <AlertTriangle className="h-4 w-4 text-caution-700 dark:text-caution-300" />
+            </div>
+            <h3 className="text-sm font-semibold text-caution-900 dark:text-caution-100">
+              Contraindications &amp; Warnings
+            </h3>
+          </div>
+          <ul className="space-y-2 pl-9">
             {result.warnings.map((warning, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-200"
+                className="flex items-start gap-2.5 text-sm text-caution-800 dark:text-caution-200"
               >
-                <span className="text-amber-600 dark:text-amber-400 mt-1 flex-shrink-0">
-                  •
-                </span>
-                <span>{warning}</span>
+                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-caution-500 flex-shrink-0" />
+                <span className="leading-relaxed">{warning}</span>
               </li>
             ))}
           </ul>
-        </section>
+        </motion.section>
       )}
 
-      {/* Citations */}
+      {/* Citations - Cascading animation */}
       {result.citations && result.citations.length > 0 && (
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            Sources ({result.citations.length})
-          </h3>
-          <div className="space-y-2">
+        <motion.section variants={staggerChildVariants} className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-clinical-gray-100 dark:bg-clinical-gray-800">
+              <FileText className="h-4 w-4 text-clinical-gray-600 dark:text-clinical-gray-400" />
+            </div>
+            <h3 className="text-sm font-semibold text-clinical-gray-900 dark:text-clinical-gray-100">
+              Sources
+              <span className="ml-1.5 text-xs font-normal text-clinical-gray-500">
+                ({result.citations.length})
+              </span>
+            </h3>
+          </div>
+          <div className="space-y-2.5 pl-9">
             {result.citations.map((citation, idx) => (
-              <CitationCard
+              <motion.div
                 key={`${citation.source}-${idx}`}
-                citation={citation}
-                isSelected={selectedCitation === citation}
-                onClick={onCitationClick ? () => onCitationClick(citation) : undefined}
-              />
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  delay: idx * durations.stagger,
+                  duration: durations.card,
+                }}
+              >
+                <CitationCard
+                  citation={citation}
+                  isSelected={selectedCitation === citation}
+                  onClick={onCitationClick ? () => onCitationClick(citation) : undefined}
+                  onInsertCitation={onInsertCitation}
+                />
+              </motion.div>
             ))}
           </div>
-        </section>
+        </motion.section>
       )}
 
-      {/* Insert citation action */}
-      {selectedCitation && onInsertCitation && (
-        <div className="pt-2 border-t">
-          <Button
-            onClick={() => onInsertCitation(selectedCitation)}
-            className="w-full"
-            size="sm"
-          >
-            Insert Citation into Letter
-          </Button>
-        </div>
-      )}
-
-      {/* Response time */}
+      {/* Response time - Subtle footer */}
       {result.responseTimeMs && (
-        <p className="text-xs text-muted-foreground text-right">
+        <motion.p
+          variants={staggerChildVariants}
+          className="text-xs text-clinical-gray-400 dark:text-clinical-gray-500 text-right pt-2"
+        >
           Response time: {(result.responseTimeMs / 1000).toFixed(1)}s
-        </p>
+        </motion.p>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -163,19 +207,24 @@ export function LiteratureResultSummary({
   className?: string;
 }) {
   return (
-    <div className={cn('space-y-2', className)}>
-      <p className="text-sm whitespace-pre-wrap">{result.answer}</p>
+    <div className={cn('space-y-3', className)}>
+      <p className="text-sm text-clinical-gray-700 dark:text-clinical-gray-300 whitespace-pre-wrap leading-relaxed">
+        {result.answer}
+      </p>
 
       {result.recommendations && result.recommendations.length > 0 && (
-        <ul className="space-y-1 text-sm">
+        <ul className="space-y-1.5 text-sm">
           {result.recommendations.slice(0, 3).map((rec, idx) => (
-            <li key={idx} className="flex items-start gap-1.5">
-              <span className="text-primary">•</span>
-              <span className="text-muted-foreground">{rec}</span>
+            <li
+              key={idx}
+              className="flex items-start gap-2 text-clinical-gray-600 dark:text-clinical-gray-400"
+            >
+              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-verified-500 flex-shrink-0" />
+              <span>{rec}</span>
             </li>
           ))}
           {result.recommendations.length > 3 && (
-            <li className="text-xs text-muted-foreground italic">
+            <li className="text-xs text-clinical-gray-500 italic pl-3.5">
               +{result.recommendations.length - 3} more recommendations
             </li>
           )}
@@ -183,8 +232,10 @@ export function LiteratureResultSummary({
       )}
 
       {result.warnings && result.warnings.length > 0 && (
-        <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs">
-          <AlertTriangle className="h-3 w-3" />
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg
+                        bg-caution-100 dark:bg-caution-900/30
+                        text-caution-700 dark:text-caution-300 text-xs font-medium">
+          <AlertTriangle className="h-3.5 w-3.5" />
           <span>{result.warnings.length} warning(s) - see details</span>
         </div>
       )}

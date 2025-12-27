@@ -1,10 +1,16 @@
 'use client';
 
-import { BookOpen } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { BookOpen, Command } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useLiteratureStore } from '@/stores/literature.store';
+import { buttonHoverEffect } from '@/styles/clinical-animations';
 
 interface LiteratureToolbarButtonProps {
   /** Currently selected text in the editor */
@@ -14,7 +20,12 @@ interface LiteratureToolbarButtonProps {
 
 /**
  * Toolbar button to open the literature chat panel.
- * Shows badge when there are unread messages.
+ *
+ * Features:
+ * - Clinical blue accent when active
+ * - Keyboard shortcut tooltip (Cmd+K)
+ * - Unread message indicator
+ * - Motion hover effect
  */
 export function LiteratureToolbarButton({
   selectedText,
@@ -43,24 +54,60 @@ export function LiteratureToolbarButton({
       : 0;
 
   return (
-    <Button
-      variant={isOpen ? 'secondary' : 'ghost'}
-      size="sm"
-      onClick={handleClick}
-      className={cn('relative gap-1.5', className)}
-      aria-label={isOpen ? 'Close literature panel' : 'Open literature panel'}
-      aria-expanded={isOpen}
-    >
-      <BookOpen className="h-4 w-4" />
-      <span className="hidden sm:inline">Literature</span>
-      {unreadCount > 0 && (
-        <Badge
-          variant="destructive"
-          className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <motion.div
+          whileHover={buttonHoverEffect.hover}
+          whileTap={buttonHoverEffect.tap}
         >
-          {unreadCount}
-        </Badge>
-      )}
-    </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClick}
+            className={cn(
+              'relative gap-2 font-medium',
+              'transition-colors duration-150',
+              isOpen
+                ? 'bg-clinical-blue-100 text-clinical-blue-700 hover:bg-clinical-blue-200'
+                : 'text-clinical-gray-600 hover:text-clinical-gray-900 hover:bg-clinical-gray-100',
+              className
+            )}
+            aria-label={isOpen ? 'Close literature panel' : 'Open literature panel'}
+            aria-expanded={isOpen}
+          >
+            <BookOpen className={cn(
+              'h-4 w-4',
+              isOpen ? 'text-clinical-blue-600' : 'text-clinical-gray-500'
+            )} />
+            <span className="hidden sm:inline font-ui-sans">Literature</span>
+
+            {/* Unread indicator */}
+            {unreadCount > 0 && (
+              <span className={cn(
+                'absolute -top-1 -right-1 min-w-4 h-4 px-1',
+                'flex items-center justify-center',
+                'rounded-full text-[10px] font-bold',
+                'bg-clinical-blue-600 text-white',
+                'shadow-sm'
+              )}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </Button>
+        </motion.div>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="px-3 py-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Clinical Literature</span>
+          <kbd className={cn(
+            'inline-flex items-center gap-1 px-2 py-0.5',
+            'bg-clinical-gray-100 border border-clinical-gray-300 rounded',
+            'text-xs font-clinical-mono text-clinical-gray-600'
+          )}>
+            <Command className="w-3 h-3" />K
+          </kbd>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }

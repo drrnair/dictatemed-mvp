@@ -9,9 +9,13 @@ import {
   type ReactNode,
 } from 'react';
 import { motion, AnimatePresence, useDragControls, PanInfo } from 'framer-motion';
-import { GripHorizontal, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Search, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  drawerVariants,
+  overlayVariants,
+} from '@/styles/clinical-animations';
 
 interface DrawerLayoutProps {
   /** Panel content */
@@ -48,7 +52,7 @@ export function DrawerLayout({
   children,
   isOpen,
   onClose,
-  title = 'Clinical Literature',
+  title = 'Clinical Assistant',
   headerContent,
   initialHeightVh = 50,
   minHeightVh = 30,
@@ -188,11 +192,14 @@ export function DrawerLayout({
         <>
           {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 bg-black/20 z-40"
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className={cn(
+              'fixed inset-0 z-40',
+              'bg-clinical-gray-950/30 backdrop-blur-sm'
+            )}
             onClick={onClose}
             aria-hidden="true"
           />
@@ -200,10 +207,10 @@ export function DrawerLayout({
           {/* Drawer */}
           <motion.div
             ref={drawerRef}
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            variants={drawerVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             drag="y"
             dragControls={dragControls}
             dragConstraints={{ top: 0, bottom: 0 }}
@@ -212,47 +219,75 @@ export function DrawerLayout({
             style={{ height: `${heightVh}vh` }}
             className={cn(
               'fixed bottom-0 left-0 right-0 z-50',
-              'bg-card rounded-t-xl shadow-2xl',
+              'bg-card rounded-t-2xl',
               'flex flex-col overflow-hidden',
-              'border-t border-border/50',
+              'border-t border-clinical-gray-200',
+              'shadow-elevated',
               className
             )}
             role="dialog"
             aria-modal="true"
             aria-labelledby="drawer-panel-title"
           >
-            {/* Drag handle */}
+            {/* Drag handle - polished pill */}
             <button
               type="button"
-              className="flex justify-center w-full py-2 cursor-grab active:cursor-grabbing shrink-0 bg-transparent border-0"
+              className={cn(
+                'flex justify-center w-full py-3 shrink-0',
+                'cursor-grab active:cursor-grabbing',
+                'bg-transparent border-0',
+                'touch-manipulation'
+              )}
               onMouseDown={handleResizeStart}
               onTouchStart={handleResizeStart}
               aria-label="Resize drawer"
             >
-              <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+              <div className={cn(
+                'w-10 h-1 rounded-full',
+                'bg-clinical-gray-300',
+                'transition-colors duration-150',
+                'hover:bg-clinical-gray-400'
+              )} />
             </button>
 
             {/* Header */}
             {headerContent || (
-              <div className="flex items-center justify-between px-4 pb-3 border-b shrink-0">
-                <h2
-                  id="drawer-panel-title"
-                  className="font-semibold text-foreground"
-                >
-                  {title}
-                </h2>
+              <header className={cn(
+                'flex items-center justify-between px-5 pb-4',
+                'border-b border-clinical-gray-200 shrink-0'
+              )}>
+                <div className="flex items-center gap-3">
+                  {/* Icon badge */}
+                  <div className={cn(
+                    'w-9 h-9 rounded-lg',
+                    'bg-clinical-blue-100',
+                    'flex items-center justify-center'
+                  )}>
+                    <Search className="w-5 h-5 text-clinical-blue-600" />
+                  </div>
+                  <h2
+                    id="drawer-panel-title"
+                    className="text-lg font-semibold text-clinical-gray-900 tracking-tight font-ui-sans"
+                  >
+                    {title}
+                  </h2>
+                </div>
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={toggleHeight}
-                    className="h-8 w-8"
+                    className={cn(
+                      'h-8 w-8 rounded-lg',
+                      'hover:bg-clinical-gray-100 active:bg-clinical-gray-200',
+                      'transition-colors duration-150'
+                    )}
                     aria-label={isMinimized ? 'Expand drawer' : 'Minimize drawer'}
                   >
                     {isMinimized || heightVh <= minHeightVh ? (
-                      <ChevronUp className="h-4 w-4" />
+                      <ChevronUp className="h-4 w-4 text-clinical-gray-500" />
                     ) : (
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-4 w-4 text-clinical-gray-500" />
                     )}
                   </Button>
                   {heightVh < maxHeightVh && (
@@ -260,23 +295,31 @@ export function DrawerLayout({
                       variant="ghost"
                       size="icon"
                       onClick={maximize}
-                      className="h-8 w-8"
+                      className={cn(
+                        'h-8 w-8 rounded-lg',
+                        'hover:bg-clinical-gray-100 active:bg-clinical-gray-200',
+                        'transition-colors duration-150'
+                      )}
                       aria-label="Maximize drawer"
                     >
-                      <GripHorizontal className="h-4 w-4 rotate-90" />
+                      <Maximize2 className="h-4 w-4 text-clinical-gray-500" />
                     </Button>
                   )}
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={onClose}
-                    className="h-8 w-8"
+                    className={cn(
+                      'h-8 w-8 rounded-lg',
+                      'hover:bg-clinical-gray-100 active:bg-clinical-gray-200',
+                      'transition-colors duration-150 group'
+                    )}
                     aria-label="Close drawer"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-4 w-4 text-clinical-gray-500 group-hover:text-clinical-gray-700" />
                   </Button>
                 </div>
-              </div>
+              </header>
             )}
 
             {/* Content */}

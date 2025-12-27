@@ -19,4 +19,4 @@ export { LiteratureSearchResults, LiteratureResultSummary } from './LiteratureSe
 export { LiteratureSourceBadge } from './LiteratureSourceBadge';
 export { CitationCard, formatCitationText } from './CitationCard';
 export { ConfidenceBadge, getConfidenceVariant } from './ConfidenceBadge';
-export { LayoutToggle, LayoutSelector } from './LayoutToggle';
+export { LayoutToggle } from './LayoutToggle';

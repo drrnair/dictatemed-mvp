@@ -180,3 +180,158 @@
 .card-interactive {
   @apply transition-all duration-200 hover:shadow-md hover:border-slate-300 hover:-translate-y-0.5;
 }
+
+/* ============================================
+   Clinical Literature Chat - Design System
+   ============================================ */
+
+/* Clinical panel animations */
+.clinical-panel-enter {
+  animation: slide-in-right 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.clinical-content-enter {
+  animation: slide-in-right 0.25s cubic-bezier(0.32, 0.72, 0, 1) 0.18s backwards;
+}
+
+/* Citation flash highlight animation */
+.citation-highlight {
+  animation: citation-flash 2s ease-out forwards;
+  background-size: 200% 100%;
+}
+
+/* Source connected pulse indicator */
+.source-connected-pulse {
+  @apply w-2 h-2 rounded-full bg-verified-500 animate-source-pulse;
+}
+
+/* Clinical panel subtle inner shadow */
+.clinical-panel-shadow {
+  box-shadow: inset 1px 0 0 0 rgba(0, 0, 0, 0.03);
+}
+
+/* Clinical search input shadow progression */
+.clinical-search-input {
+  @apply shadow-sm transition-shadow duration-200;
+}
+
+.clinical-search-input:hover {
+  @apply shadow-md;
+}
+
+.clinical-search-input:focus-within {
+  @apply shadow-lg;
+}
+
+/* Clinical source card with left accent */
+.clinical-source-card {
+  @apply bg-card border border-clinical-gray-200 border-l-4 rounded-lg p-6 shadow-sm;
+  @apply hover:shadow-md hover:border-clinical-gray-300 transition-all duration-200;
+}
+
+.clinical-source-card[data-source='uptodate'] {
+  @apply border-l-orange-500;
+}
+
+.clinical-source-card[data-source='pubmed'] {
+  @apply border-l-clinical-blue-500;
+}
+
+.clinical-source-card[data-source='user_library'] {
+  @apply border-l-verified-500;
+}
+
+/* Clinical button lift effect */
+.clinical-button-lift {
+  @apply transition-all duration-150;
+}
+
+.clinical-button-lift:hover {
+  transform: translateY(-1px);
+}
+
+.clinical-button-lift:active {
+  transform: translateY(0);
+}
+
+/* Clinical typography - letter content */
+.clinical-letter-content {
+  @apply font-letter-serif text-[17px] leading-[30px] text-clinical-gray-900;
+  max-width: 68ch;
+}
+
+/* Clinical typography - UI elements */
+.clinical-ui-text {
+  @apply font-ui-sans text-[15px] leading-normal text-clinical-gray-900;
+}
+
+/* Clinical typography - dosing/values */
+.clinical-data-text {
+  @apply font-clinical-mono text-sm font-medium tracking-tight;
+  letter-spacing: -0.02em;
+}
+
+/* Staggered cascade animation delays */
+.cascade-delay-1 {
+  animation-delay: 0.08s;
+  animation-fill-mode: backwards;
+}
+.cascade-delay-2 {
+  animation-delay: 0.16s;
+  animation-fill-mode: backwards;
+}
+.cascade-delay-3 {
+  animation-delay: 0.24s;
+  animation-fill-mode: backwards;
+}
+.cascade-delay-4 {
+  animation-delay: 0.32s;
+  animation-fill-mode: backwards;
+}
+.cascade-delay-5 {
+  animation-delay: 0.40s;
+  animation-fill-mode: backwards;
+}
+
+/* Clinical confidence badges */
+.clinical-badge {
+  @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold tracking-tight;
+}
+
+.clinical-badge-high {
+  @apply bg-verified-100 border-verified-300 text-verified-800;
+}
+
+.clinical-badge-medium {
+  @apply bg-caution-100 border-caution-300 text-caution-800;
+}
+
+.clinical-badge-low {
+  @apply bg-critical-100 border-critical-300 text-critical-800;
+}
+
+/* Clinical loading spinner */
+.clinical-spinner {
+  @apply w-16 h-16 relative;
+}
+
+.clinical-spinner::before {
+  content: '';
+  @apply absolute inset-0 border-4 border-clinical-gray-200 rounded-full;
+}
+
+.clinical-spinner::after {
+  content: '';
+  @apply absolute inset-0 border-4 border-t-clinical-blue-600 rounded-full animate-spin-slow;
+}
+
+/* Focus ring for clinical components */
+.clinical-focus-ring:focus-visible {
+  @apply outline-none ring-2 ring-clinical-blue-500 ring-offset-2;
+}
+
+/* Keyboard shortcut badge */
+.kbd-badge {
+  @apply inline-flex items-center gap-1 px-2 py-1 bg-clinical-gray-100 border border-clinical-gray-300 rounded-md shadow-sm;
+  @apply text-xs font-clinical-mono text-clinical-gray-600 font-medium;
+}
