@@ -3,6 +3,7 @@
 // This file configures Sentry for the browser environment
 
 import * as Sentry from '@sentry/nextjs';
+import { scrubPHI, scrubObjectPHI, scrubURLPHI } from './src/lib/phi-scrubber';
 
 Sentry.init({
   // DSN is loaded from environment variable
