@@ -42,6 +42,7 @@ export interface Document {
 }
 
 export interface DocumentFilters {
+  [key: string]: unknown;
   page?: number;
   limit?: number;
   type?: DocumentType;

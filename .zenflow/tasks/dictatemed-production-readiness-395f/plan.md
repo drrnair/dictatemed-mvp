@@ -611,11 +611,11 @@ Output: `report.md` containing:
 ### Medium Priority
 - [x] Dependency scanning in CI
 - [x] Webhook IP allowlisting
-- [ ] React Query caching
+- [x] React Query caching (implemented, incorrectly committed with Renovate)
 - [ ] Pre-commit hooks
 
 ### Nice to Have
-- [ ] Optimistic updates
+- [x] Optimistic updates (included in useApproveLetterMutation)
 - [ ] ISR for marketing pages
 - [ ] Performance helpers
 - [x] Enhanced health endpoint
