@@ -178,7 +178,7 @@ npm run lint       # ✅ Passes (only unrelated warnings in other files)
 - `src/lib/dal/api-handler.ts` - Added ValidationError handling to isDALError() and handleDALError()
 - `src/lib/dal/letters.ts` - Added `saveLetterDraft()`, `getLetterForSending()` functions with auth/validation
 - `src/lib/dal/recordings.ts` - Added `getRecordingForUpload()`, `setRecordingStoragePath()` functions
-- `src/app/api/letters/route.ts` - Updated GET to use DAL listLetters()
+- `src/app/api/letters/route.ts` - Updated GET to use DAL listLetters(), POST to use getCurrentUserOrThrow()
 - `src/app/api/letters/[id]/route.ts` - Updated PATCH to use saveLetterDraft(), DELETE to use deleteLetter()
 - `src/app/api/letters/[id]/send/route.ts` - Updated to use getLetterForSending() for practice-level auth
 - `src/app/api/recordings/[id]/upload-url/route.ts` - Updated to use getRecordingForUpload(), setRecordingStoragePath()
