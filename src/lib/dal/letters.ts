@@ -509,6 +509,7 @@ export async function approveLetter(letterId: string): Promise<LetterDetail> {
 /**
  * Delete a letter.
  * Auth: Verified ownership - throws ForbiddenError if not owner.
+ * Validation: Throws ValidationError if letter is already approved.
  * Audit: Logs deletion for compliance (destructive action).
  */
 export async function deleteLetter(letterId: string): Promise<void> {
@@ -521,11 +522,20 @@ export async function deleteLetter(letterId: string): Promise<void> {
     letterId,
   });
 
-  // Get letter details before deletion for audit log
+  // Get letter details before deletion for audit log and validation
   const letter = await prisma.letter.findUnique({
     where: { id: letterId },
     select: { letterType: true, patientId: true, status: true },
   });
+
+  if (!letter) {
+    throw new NotFoundError(`Letter with ID ${letterId} not found`);
+  }
+
+  // Safety check: don't allow deleting approved letters
+  if (letter.status === 'APPROVED') {
+    throw new ValidationError('Cannot delete approved letter', 'LETTER_APPROVED');
+  }
 
   await prisma.letter.delete({
     where: { id: letterId },
@@ -541,9 +551,9 @@ export async function deleteLetter(letterId: string): Promise<void> {
       resourceType: 'letter',
       resourceId: letterId,
       metadata: {
-        letterType: letter?.letterType,
-        patientId: letter?.patientId,
-        previousStatus: letter?.status,
+        letterType: letter.letterType,
+        patientId: letter.patientId,
+        previousStatus: letter.status,
       },
     },
   });
