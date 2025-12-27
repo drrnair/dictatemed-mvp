@@ -10,6 +10,7 @@ import {
   getCurrentUserOrThrow,
   verifyOwnership,
   NotFoundError,
+  ValidationError,
   type AuthUser,
 } from './base';
 
@@ -197,6 +198,21 @@ export async function createRecording(
 
   log.info('Recording created', { recordingId: recording.id });
 
+  // PHI creation audit log for compliance
+  await prisma.auditLog.create({
+    data: {
+      userId: user.id,
+      action: 'recording.create',
+      resourceType: 'recording',
+      resourceId: recording.id,
+      metadata: {
+        patientId: data.patientId,
+        mode: data.mode,
+        consultationId: data.consultationId,
+      },
+    },
+  });
+
   return recording;
 }
 
@@ -315,9 +331,6 @@ export interface RecordingForUpload {
  * Validation: Throws ValidationError if recording is not in UPLOADING status.
  */
 export async function getRecordingForUpload(recordingId: string): Promise<RecordingForUpload> {
-  // Import ValidationError inline to avoid linter removal
-  const { ValidationError } = await import('./base');
-
   const user = await getCurrentUserOrThrow();
   await verifyOwnership('recording', recordingId, user.id);
 
@@ -366,13 +379,3 @@ export async function setRecordingStoragePath(
   });
 }
 
-// =============================================================================
-// Helper
-// =============================================================================
-
-/**
- * Get the current authenticated user.
- */
-export async function getAuthenticatedUser(): Promise<AuthUser> {
-  return getCurrentUserOrThrow();
-}
