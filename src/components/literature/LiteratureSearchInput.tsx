@@ -4,6 +4,13 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Search, Send, Loader2, Sparkles, Command } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { durations, buttonHoverEffect } from '@/styles/clinical-animations';
+
+/**
+ * Stagger delay for dropdown suggestions.
+ * Using faster delay (30ms) than standard stagger (80ms) for snappier dropdown feel.
+ */
+const SUGGESTION_STAGGER_DELAY = 0.03;
 
 interface LiteratureSearchInputProps {
   /** Current query value */
@@ -144,10 +151,10 @@ export function LiteratureSearchInput({
         className={cn(
           'relative flex items-center gap-2',
           'clinical-search-input rounded-xl',
-          'bg-white border transition-all duration-200',
+          'bg-white dark:bg-clinical-gray-900 border transition-all duration-200',
           isFocused
             ? 'border-transparent ring-2 ring-clinical-blue-500'
-            : 'border-clinical-gray-300 hover:border-clinical-gray-400'
+            : 'border-clinical-gray-300 dark:border-clinical-gray-700 hover:border-clinical-gray-400 dark:hover:border-clinical-gray-600'
         )}
       >
         {/* Search icon (left) */}
