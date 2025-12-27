@@ -6,6 +6,12 @@ import { z } from 'zod';
 import { getSession } from '@/lib/auth';
 import { getLetter, updateLetterContent } from '@/domains/letters/letter.service';
 import { logger } from '@/lib/logger';
+import {
+  handleDALError,
+  isDALError,
+  ForbiddenError,
+  NotFoundError,
+} from '@/lib/dal';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -114,7 +120,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getSession();
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
     }
 
     const { id } = await params;
@@ -132,18 +138,23 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     // Import prisma client
     const { prisma } = await import('@/infrastructure/db/client');
 
-    // Verify letter belongs to user
+    // Verify letter belongs to user - throw DAL errors for consistent handling
     const letter = await prisma.letter.findFirst({
       where: { id, userId: session.user.id },
     });
 
     if (!letter) {
-      return NextResponse.json({ error: 'Letter not found' }, { status: 404 });
+      // Check if letter exists but belongs to another user
+      const exists = await prisma.letter.findUnique({ where: { id } });
+      if (exists) {
+        throw new ForbiddenError('You do not have permission to access this letter');
+      }
+      throw new NotFoundError(`Letter with ID ${id} not found`);
     }
 
     if (letter.status === 'APPROVED') {
       return NextResponse.json(
-        { error: 'Cannot edit approved letter' },
+        { error: 'Cannot edit approved letter', code: 'LETTER_APPROVED' },
         { status: 400 }
       );
     }
@@ -161,6 +172,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(updated);
   } catch (error) {
+    // Use DAL error handler for consistent error responses
+    if (isDALError(error)) {
+      return handleDALError(error, log);
+    }
+
     log.error(
       'Failed to patch letter',
       {},
@@ -168,7 +184,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to save draft' },
+      { error: 'Failed to save draft', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }
@@ -183,7 +199,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getSession();
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 });
     }
 
     const { id } = await params;
@@ -191,19 +207,24 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     // Import prisma client
     const { prisma } = await import('@/infrastructure/db/client');
 
-    // Verify letter belongs to user before deleting
+    // Verify letter belongs to user before deleting - use DAL errors
     const letter = await prisma.letter.findFirst({
       where: { id, userId: session.user.id },
     });
 
     if (!letter) {
-      return NextResponse.json({ error: 'Letter not found' }, { status: 404 });
+      // Check if letter exists but belongs to another user
+      const exists = await prisma.letter.findUnique({ where: { id } });
+      if (exists) {
+        throw new ForbiddenError('You do not have permission to delete this letter');
+      }
+      throw new NotFoundError(`Letter with ID ${id} not found`);
     }
 
     // Don't allow deleting approved letters (safety check)
     if (letter.status === 'APPROVED') {
       return NextResponse.json(
-        { error: 'Cannot delete approved letter' },
+        { error: 'Cannot delete approved letter', code: 'LETTER_APPROVED' },
         { status: 400 }
       );
     }
@@ -231,6 +252,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
+    // Use DAL error handler for consistent error responses
+    if (isDALError(error)) {
+      return handleDALError(error, log);
+    }
+
     log.error(
       'Failed to delete letter',
       {},
@@ -238,7 +264,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     );
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete letter' },
+      { error: 'Failed to delete letter', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }
