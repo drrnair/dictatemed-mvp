@@ -64,3 +64,29 @@ Implement the task according to the technical specification and general engineer
    - What was implemented
    - How the solution was tested
    - The biggest issues or challenges encountered
+
+### [x] Step: Document All Implemented & Functional Features
+<!-- chat-id: c849f3a6-6abc-4e29-84f7-191db3824ab9 -->
+<!-- agent: CLAUDE_CODE -->
+
+Create a comprehensive, up-to-date inventory of all features currently built into DictateMED, identifying which are fully functional, partially working, or not yet implemented.
+
+**Completed:** 2025-12-27
+
+**Deliverables:**
+- Updated `FEATURES_IMPLEMENTED.md` with:
+  - Executive summary with verification status
+  - 47 features audited across 10 categories
+  - 42 fully working (89%), 5 partially complete (11%)
+  - Quick reference matrix for pilot readiness
+  - Known TODOs from codebase with priorities
+  - API endpoint summary (70+ routes documented)
+  - Specialty handling analysis (post-pivot status)
+  - Third-party integration status
+
+**Key Findings:**
+- ✅ Core clinical workflow complete: Recording → Transcription → Letter Generation → Approval → Sending
+- ✅ Specialty system fully generalized (42 specialties, 60+ subspecialties)
+- ✅ Style learning per-subspecialty operational
+- ⚠️ Dashboard statistics are placeholder only (not blocking)
+- ⚠️ Resend webhook signature verification is TODO (not blocking)
