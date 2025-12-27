@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { BookOpen, Settings, AlertCircle, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BookOpen, Settings, AlertCircle, Plus, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useLiteratureStore } from '@/stores/literature.store';
@@ -20,7 +19,12 @@ import { CitationCard } from './CitationCard';
 import { ClinicalLoadingState } from './ClinicalLoadingState';
 import { ClinicalEmptyState } from './ClinicalEmptyState';
 import { ConfidenceBadge } from './ConfidenceBadge';
-import { staggerContainerVariants, staggerChildVariants } from '@/styles/clinical-animations';
+import {
+  staggerContainerVariants,
+  staggerChildVariants,
+  cardVariants,
+  buttonHoverEffect,
+} from '@/styles/clinical-animations';
 import type { Citation, ConfidenceLevel } from '@/domains/literature';
 
 interface ClinicalAssistantPanelProps {
@@ -197,50 +201,65 @@ export function ClinicalAssistantPanel({
             />
           )}
 
-          {/* Chat messages */}
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                'flex flex-col gap-2',
-                message.role === 'user' ? 'items-end' : 'items-start'
-              )}
+          {/* Chat messages with staggered animation */}
+          {messages.length > 0 && (
+            <motion.div
+              variants={staggerContainerVariants}
+              initial="hidden"
+              animate="visible"
+              className="space-y-4"
             >
-              <div
-                className={cn(
-                  'rounded-lg px-3 py-2 max-w-[90%]',
-                  message.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted'
-                )}
-              >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-              </div>
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  variants={staggerChildVariants}
+                  className={cn(
+                    'flex flex-col gap-2',
+                    message.role === 'user' ? 'items-end' : 'items-start'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'rounded-xl px-4 py-3 max-w-[90%] shadow-sm',
+                      message.role === 'user'
+                        ? 'bg-clinical-blue-600 text-white'
+                        : 'bg-white border border-clinical-gray-200'
+                    )}
+                  >
+                    <p className={cn(
+                      'text-sm whitespace-pre-wrap font-ui-sans',
+                      message.role === 'assistant' && 'text-clinical-gray-800'
+                    )}>
+                      {message.content}
+                    </p>
+                  </div>
 
-              {/* Citations */}
-              {message.citations && message.citations.length > 0 && (
-                <div className="flex flex-col gap-1.5 w-full max-w-[90%]">
-                  <span className="text-xs text-muted-foreground">
-                    {message.citations.length} source
-                    {message.citations.length > 1 ? 's' : ''}
-                  </span>
-                  {message.citations.map((citation, idx) => (
-                    <CitationCard
-                      key={`${citation.source}-${idx}`}
-                      citation={citation}
-                      isSelected={selectedCitation === citation}
-                      onClick={() => handleCitationClick(citation)}
-                    />
-                  ))}
-                </div>
-              )}
+                  {/* Citations */}
+                  {message.citations && message.citations.length > 0 && (
+                    <div className="flex flex-col gap-1.5 w-full max-w-[90%]">
+                      <span className="text-xs text-clinical-gray-500 font-medium">
+                        {message.citations.length} source
+                        {message.citations.length > 1 ? 's' : ''}
+                      </span>
+                      {message.citations.map((citation, idx) => (
+                        <CitationCard
+                          key={`${citation.source}-${idx}`}
+                          citation={citation}
+                          isSelected={selectedCitation === citation}
+                          onClick={() => handleCitationClick(citation)}
+                        />
+                      ))}
+                    </div>
+                  )}
 
-              {/* Confidence indicator */}
-              {message.confidence && (
-                <ConfidenceIndicator level={message.confidence} />
-              )}
-            </div>
-          ))}
+                  {/* Confidence indicator - use ConfidenceBadge */}
+                  {message.confidence && (
+                    <ConfidenceBadge level={message.confidence} compact />
+                  )}
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
 
           {/* Current search result (if using result state) */}
           {result && !isSearching && (
