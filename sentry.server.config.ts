@@ -3,6 +3,7 @@
 // This file configures Sentry for the Node.js server environment
 
 import * as Sentry from '@sentry/nextjs';
+import { scrubPHI, scrubObjectPHI, scrubURLPHI, isSensitiveKey } from './src/lib/phi-scrubber';
 
 Sentry.init({
   // DSN is loaded from environment variable
@@ -81,9 +82,8 @@ Sentry.init({
     // Scrub tags
     if (event.tags) {
       const safeTags: Record<string, string> = {};
-      const sensitiveTagKeys = ['userId', 'patientId', 'email', 'name'];
       for (const [key, value] of Object.entries(event.tags)) {
-        if (sensitiveTagKeys.some((k) => key.toLowerCase().includes(k.toLowerCase()))) {
+        if (isSensitiveKey(key)) {
           safeTags[key] = '[REDACTED]';
         } else if (typeof value === 'string') {
           safeTags[key] = scrubPHI(value);

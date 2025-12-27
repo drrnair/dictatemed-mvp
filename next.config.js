@@ -14,6 +14,12 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
  * 4. Allow necessary external services (Supabase, APIs, etc.)
  *
  * SECURITY: Review and update this policy when adding new external services
+ *
+ * NOTE on report-uri: This directive is deprecated in favor of `report-to`,
+ * but `report-uri` still has better browser support (especially Safari).
+ * The newer `report-to` directive requires a corresponding `Report-To` HTTP
+ * header with JSON configuration. We retain `report-uri` for compatibility.
+ * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/report-to
  */
 const ContentSecurityPolicy = `
   default-src 'self';
