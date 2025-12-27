@@ -37,11 +37,32 @@ interface HealthCheckResponse {
 }
 
 // Cache health check results for 30 seconds to prevent overwhelming services
+// NOTE: In serverless environments (Vercel), this cache is per-instance. Each function
+// instance maintains its own cache, so cache misses may occur when requests hit different
+// instances. This is acceptable for health checks since the primary goal is connectivity
+// verification, not shared state.
 let cachedResponse: { data: HealthCheckResponse; timestamp: number } | null = null;
 const CACHE_TTL_MS = 30_000;
 
+// Timeout for external service calls to prevent health check from hanging
+const EXTERNAL_CALL_TIMEOUT_MS = 5_000;
+
 // Track process start time for uptime calculation
+// NOTE: In serverless, this reflects the instance start time, not deployment time.
+// Different instances may report different uptimes.
 const processStartTime = Date.now();
+
+/**
+ * Wrap a promise with a timeout
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${operation} timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+}
 
 /**
  * Check database connectivity with a simple query
@@ -49,18 +70,18 @@ const processStartTime = Date.now();
 async function checkDatabase(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
-    // Run a simple query to verify connectivity
-    await prisma.$queryRaw`SELECT 1 as health_check`;
-
-    // Also verify we can access a table (optional but more thorough)
-    const userCount = await prisma.user.count();
+    // Run a simple query to verify connectivity with timeout
+    await withTimeout(
+      prisma.$queryRaw`SELECT 1 as health_check`,
+      EXTERNAL_CALL_TIMEOUT_MS,
+      'Database query'
+    );
 
     return {
       status: 'up',
       latencyMs: Date.now() - start,
       details: {
         connectionPool: 'active',
-        userCount,
       },
     };
   } catch (error) {

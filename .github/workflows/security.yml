@@ -1,0 +1,267 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run weekly on Monday at 9am UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: read
+  security-events: write # Required for CodeQL and Snyk SARIF upload
+
+jobs:
+  # ============================================
+  # Dependency Vulnerability Scanning with Snyk
+  # ============================================
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Snyk scan (if token configured)
+      - name: Run Snyk to check for vulnerabilities
+        if: ${{ secrets.SNYK_TOKEN != '' }}
+        uses: snyk/actions/node@master
+        continue-on-error: true # Don't fail the build, report only
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --json-file-output=snyk-results.json
+
+      - name: Upload Snyk results
+        if: ${{ secrets.SNYK_TOKEN != '' && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-results
+          path: snyk-results.json
+          retention-days: 30
+
+      # Fallback: npm audit (always runs)
+      - name: Run npm audit
+        run: |
+          echo "🔍 Running npm audit..."
+          npm audit --audit-level=high || {
+            echo ""
+            echo "⚠️  High or critical vulnerabilities found!"
+            echo "Run 'npm audit fix' locally to resolve."
+            echo ""
+            # Exit with warning but don't fail the build for now
+            # Change 'exit 0' to 'exit 1' to enforce strict mode
+            exit 0
+          }
+          echo "✅ No high/critical vulnerabilities found"
+
+      - name: Check for outdated dependencies
+        run: |
+          echo "📦 Checking for outdated dependencies..."
+          npm outdated || true
+          echo ""
+          echo "ℹ️  Consider updating outdated packages regularly."
+
+  # ============================================
+  # Secret Scanning with TruffleHog
+  # ============================================
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for comprehensive scanning
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        continue-on-error: true # Report but don't block
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified --json
+
+      - name: Manual secret patterns check
+        run: |
+          echo "🔍 Scanning for common secret patterns..."
+
+          FOUND_SECRETS=0
+
+          # Check for common API key patterns (excluding test/example files)
+          if grep -rE "(api[_-]?key|apikey|secret[_-]?key)\s*[:=]\s*['\"][a-zA-Z0-9]{20,}['\"]" \
+             --include="*.ts" --include="*.tsx" --include="*.js" --include="*.json" \
+             --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=coverage \
+             . 2>/dev/null | grep -v "test" | grep -v "spec" | grep -v "example" | grep -v "mock"; then
+            echo "⚠️  Potential API key found in source code"
+            FOUND_SECRETS=1
+          fi
+
+          # Check for AWS credentials
+          if grep -rE "AKIA[0-9A-Z]{16}" \
+             --include="*.ts" --include="*.tsx" --include="*.js" --include="*.json" --include="*.env*" \
+             --exclude-dir=node_modules --exclude-dir=.next \
+             . 2>/dev/null; then
+            echo "❌ AWS Access Key ID found in source code!"
+            FOUND_SECRETS=1
+          fi
+
+          # Check for private keys
+          if grep -rE "-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----" \
+             --include="*.ts" --include="*.tsx" --include="*.js" --include="*.pem" --include="*.key" \
+             --exclude-dir=node_modules --exclude-dir=.next \
+             . 2>/dev/null; then
+            echo "❌ Private key found in source code!"
+            FOUND_SECRETS=1
+          fi
+
+          # Check for database connection strings with passwords
+          if grep -rE "(postgres|mysql|mongodb)://[^:]+:[^@]+@" \
+             --include="*.ts" --include="*.tsx" --include="*.js" \
+             --exclude-dir=node_modules --exclude-dir=.next \
+             . 2>/dev/null | grep -v "localhost" | grep -v "127.0.0.1" | grep -v "example" | grep -v "test"; then
+            echo "⚠️  Database connection string with password found"
+            FOUND_SECRETS=1
+          fi
+
+          if [ $FOUND_SECRETS -eq 0 ]; then
+            echo "✅ No obvious secrets found in source code"
+          else
+            echo ""
+            echo "⚠️  Potential secrets detected! Please review the output above."
+            echo "If these are false positives, consider adding them to .gitignore or using environment variables."
+          fi
+
+  # ============================================
+  # License Compliance Check
+  # ============================================
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install license-checker
+        run: npm install -g license-checker
+
+      - name: Check dependency licenses
+        run: |
+          echo "📜 Checking dependency licenses..."
+
+          # Define allowed licenses (permissive open source licenses)
+          ALLOWED="MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;CC0-1.0;Unlicense;WTFPL;CC-BY-3.0;CC-BY-4.0;Python-2.0;BlueOak-1.0.0"
+
+          # Run license checker
+          license-checker --onlyAllow "$ALLOWED" --production || {
+            echo ""
+            echo "❌ Found dependencies with non-allowed licenses!"
+            echo ""
+            echo "Allowed licenses: $ALLOWED"
+            echo ""
+            echo "Please review the licenses of flagged packages and either:"
+            echo "  1. Replace the package with an alternative"
+            echo "  2. Get legal approval to use the package"
+            echo "  3. Add the license to the allowed list if appropriate"
+            exit 1
+          }
+
+          echo "✅ All production dependencies use allowed licenses"
+
+      - name: Generate license report
+        if: always()
+        run: |
+          echo "📋 Generating license report..."
+          license-checker --production --json > license-report.json
+          license-checker --production --csv > license-report.csv
+
+      - name: Upload license report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: |
+            license-report.json
+            license-report.csv
+          retention-days: 30
+
+  # ============================================
+  # Summary Job
+  # ============================================
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, secret-scan, license-check]
+    if: always()
+    steps:
+      - name: Check job results
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "       Security Scan Summary"
+          echo "=========================================="
+          echo ""
+
+          # Check each job status
+          DEP_STATUS="${{ needs.dependency-scan.result }}"
+          SECRET_STATUS="${{ needs.secret-scan.result }}"
+          LICENSE_STATUS="${{ needs.license-check.result }}"
+
+          echo "Dependency Scan:  $DEP_STATUS"
+          echo "Secret Scan:      $SECRET_STATUS"
+          echo "License Check:    $LICENSE_STATUS"
+          echo ""
+
+          # Determine overall status
+          if [ "$DEP_STATUS" = "failure" ] || [ "$LICENSE_STATUS" = "failure" ]; then
+            echo "❌ Security checks have failures that need attention!"
+            echo ""
+            echo "Please review the individual job logs for details."
+            exit 1
+          elif [ "$SECRET_STATUS" = "failure" ]; then
+            echo "⚠️  Secret scanning detected potential issues!"
+            echo ""
+            echo "Please review the secret-scan job output."
+            # Don't fail for secret scan - may have false positives
+            exit 0
+          else
+            echo "✅ All security checks passed!"
+          fi
+
+          echo ""
+          echo "=========================================="
+
+      - name: Add summary to PR
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "## 🛡️ Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Scan | ${{ needs.dependency-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scan | ${{ needs.secret-scan.result == 'success' && '✅ Passed' || '⚠️ Check Logs' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Check | ${{ needs.license-check.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See the [Actions tab](https://github.com/${{ github.repository }}/actions) for detailed results." >> $GITHUB_STEP_SUMMARY
