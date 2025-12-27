@@ -261,7 +261,7 @@ Polish confidence and source badges.
 
 ---
 
-### [ ] Step: Loading & Empty States
+### [x] Step: Loading & Empty States
 <!-- chat-id: 3cb7ff94-d5b0-4dc0-a414-6b9f4100b3d3 -->
 
 Create distinctive loading and empty states.
@@ -277,8 +277,31 @@ Create distinctive loading and empty states.
    - Upload CTA
 
 **Verification:**
-- Manual test loading state
-- Empty state renders correctly
+- `npm run typecheck` ✓
+- `npm run lint` ✓
+
+**Completed:**
+- Created `src/components/literature/ClinicalLoadingState.tsx`:
+  - Progressive loading indicator with 4 stages (Library → PubMed → UpToDate → Synthesis)
+  - Source-by-source feedback with cycling icons
+  - Custom spinner with centered icon badge (source-specific colors)
+  - Smooth crossfade between stages using `loadingStageVariants` and `loadingTextVariants`
+  - Progress dots showing current stage with scale animation
+  - Compact mode for inline display
+  - Screen reader support via `aria-live="polite"`
+  - Also exported `InlineLoadingState` for simple spinner + text
+- Created `src/components/literature/ClinicalEmptyState.tsx`:
+  - 3 variants: `search` (initial state), `library` (empty library), `results` (no results)
+  - Custom SVG illustrations for each variant:
+    - `SearchIllustration`: Magnifying glass with sparkles (clinical-blue)
+    - `LibraryIllustration`: Document stack with medical cross (verified-green)
+    - `NoResultsIllustration`: Document with question mark (caution-amber)
+  - Welcoming, helpful copy for each variant
+  - Context indicator when text is selected (clinical-blue box)
+  - Optional CTA button (Upload for library, Search for others)
+  - Quick tips section for search variant with example queries
+  - Staggered entrance animations via `staggerContainerVariants`
+  - Also exported `CompactEmptyState` for minimal inline use
 
 ---
 

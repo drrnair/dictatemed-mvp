@@ -64,7 +64,7 @@ export function LiteratureSourceBadge({
       activeColors: {
         bg: 'bg-clinical-blue-500',
         text: 'text-white',
-        border: 'border-clinical-blue-500',
+        border: 'border-clinical-blue-600', // Darker for visibility
         iconBg: 'bg-clinical-blue-400',
       },
       inactiveColors: {
@@ -83,7 +83,7 @@ export function LiteratureSourceBadge({
       activeColors: {
         bg: 'bg-verified-500',
         text: 'text-white',
-        border: 'border-verified-500',
+        border: 'border-verified-600', // Darker for visibility
         iconBg: 'bg-verified-400',
       },
       inactiveColors: {

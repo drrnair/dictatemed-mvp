@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useCallback, useRef } from 'react';
-import { BookOpen, Settings, RefreshCw, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { BookOpen, Settings, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useLiteratureStore } from '@/stores/literature.store';
@@ -16,6 +16,10 @@ import { LiteratureSearchResults } from './LiteratureSearchResults';
 import { LiteratureSourceBadge } from './LiteratureSourceBadge';
 import { LayoutToggle } from './LayoutToggle';
 import { CitationCard } from './CitationCard';
+import { ClinicalLoadingState } from './ClinicalLoadingState';
+import { ClinicalEmptyState } from './ClinicalEmptyState';
+import { ConfidenceBadge } from './ConfidenceBadge';
+import { staggerContainerVariants, staggerChildVariants } from '@/styles/clinical-animations';
 import type { Citation, ConfidenceLevel } from '@/domains/literature';
 
 interface ClinicalAssistantPanelProps {
