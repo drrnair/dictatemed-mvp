@@ -387,6 +387,12 @@ npm run typecheck  # ✅ Passes
 - License check is strict - fails if non-allowed license found
 - Artifacts: snyk-results.json, license-report.json/csv (30 day retention)
 
+**Review Fixes Applied:**
+1. Fixed Snyk secret conditional check - moved `SNYK_TOKEN` to job-level `env:` so `env.SNYK_TOKEN != ''` works correctly (secrets.* always appears non-empty in conditionals)
+2. Pinned Snyk action to `@0.4.0` instead of `@master` for stability
+3. Pinned TruffleHog action to `@v3.88.0` instead of `@main` for stability
+4. Added `hashFiles('snyk-results.json') != ''` check before artifact upload to prevent errors when file doesn't exist
+
 **Verification:**
 ```bash
 # Workflow file syntax is valid YAML
@@ -455,6 +461,7 @@ npm run lint       # ✅ Passes
 ## Subtask 5: Performance & Caching
 
 ### [ ] Step 5.1: Install and Configure React Query
+<!-- chat-id: 97de75b3-cedd-45db-8c72-74267b6e4846 -->
 
 **Install:**
 ```bash
