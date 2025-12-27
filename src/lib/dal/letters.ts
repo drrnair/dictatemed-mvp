@@ -12,6 +12,7 @@ import {
   getCurrentUserOrThrow,
   verifyOwnership,
   NotFoundError,
+  ValidationError,
   type AuthUser,
 } from './base';
 
@@ -402,6 +403,62 @@ export async function updateLetter(
     updatedAt: letter.updatedAt,
     patient,
   };
+}
+
+/**
+ * Save a letter draft (PATCH operation).
+ * Auth: Verified ownership - throws ForbiddenError if not owner.
+ * Validation: Throws ValidationError if letter is already approved.
+ */
+export async function saveLetterDraft(
+  letterId: string,
+  contentFinal: string
+): Promise<{
+  id: string;
+  status: LetterStatus;
+  contentFinal: string | null;
+  updatedAt: Date;
+}> {
+  const user = await getCurrentUserOrThrow();
+  await verifyOwnership('letter', letterId, user.id);
+
+  const log = logger.child({
+    action: 'dal.saveLetterDraft',
+    userId: user.id,
+    letterId,
+  });
+
+  // Check if letter is already approved
+  const existing = await prisma.letter.findUnique({
+    where: { id: letterId },
+    select: { status: true },
+  });
+
+  if (!existing) {
+    throw new NotFoundError(`Letter with ID ${letterId} not found`);
+  }
+
+  if (existing.status === 'APPROVED') {
+    throw new ValidationError('Cannot edit approved letter', 'LETTER_APPROVED');
+  }
+
+  const letter = await prisma.letter.update({
+    where: { id: letterId },
+    data: {
+      contentFinal,
+      status: 'IN_REVIEW',
+    },
+    select: {
+      id: true,
+      status: true,
+      contentFinal: true,
+      updatedAt: true,
+    },
+  });
+
+  log.info('Letter draft saved', { letterId, status: letter.status });
+
+  return letter;
 }
 
 /**

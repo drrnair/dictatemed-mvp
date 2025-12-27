@@ -61,11 +61,12 @@ const CLEANUP_PROBABILITY = 0.05; // 5% chance to run cleanup on each request
  */
 function cleanupExpiredEntries(): void {
   const now = Date.now();
-  for (const [ip, record] of reportCounts.entries()) {
+  // Use forEach for TypeScript compatibility (avoids downlevelIteration requirement)
+  reportCounts.forEach((record, ip) => {
     if (now > record.resetAt) {
       reportCounts.delete(ip);
     }
-  }
+  });
 }
 
 function isRateLimited(ip: string): boolean {

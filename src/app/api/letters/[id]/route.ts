@@ -10,13 +10,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getSession } from '@/lib/auth';
-import { getLetter as getLetterService, updateLetterContent } from '@/domains/letters/letter.service';
+import { updateLetterContent } from '@/domains/letters/letter.service';
 import { logger } from '@/lib/logger';
 import {
   handleDALError,
   isDALError,
   letters as lettersDAL,
+  getCurrentUserOrThrow,
 } from '@/lib/dal';
 
 interface RouteParams {

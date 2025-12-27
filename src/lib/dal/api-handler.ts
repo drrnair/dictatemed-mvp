@@ -98,6 +98,13 @@ export function handleDALError(error: unknown, log?: MinimalLogger): NextRespons
     );
   }
 
+  if (error instanceof ValidationError) {
+    return NextResponse.json(
+      { error: message, code: error.code },
+      { status: 400 }
+    );
+  }
+
   // Generic error - don't expose internal details
   return NextResponse.json(
     { error: 'An unexpected error occurred', code: 'INTERNAL_ERROR' },
@@ -112,7 +119,8 @@ export function isDALError(error: unknown): boolean {
   return (
     error instanceof UnauthorizedError ||
     error instanceof ForbiddenError ||
-    error instanceof NotFoundError
+    error instanceof NotFoundError ||
+    error instanceof ValidationError
   );
 }
 
