@@ -91,10 +91,16 @@ export function ConfidenceBadge({
           aria-hidden="true"
         />
       )}
-      <span className={compact ? 'hidden sm:inline' : undefined}>
-        {compact ? shortLabel : label}
-      </span>
-      {compact && <span className="sm:hidden">{shortLabel}</span>}
+      {/* Non-compact: always show full label */}
+      {/* Compact: show shortLabel on mobile, full label on desktop */}
+      {compact ? (
+        <>
+          <span className="hidden sm:inline">{label}</span>
+          <span className="sm:hidden">{shortLabel}</span>
+        </>
+      ) : (
+        <span>{label}</span>
+      )}
     </span>
   );
 }

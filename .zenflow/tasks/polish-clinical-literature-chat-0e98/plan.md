@@ -30,7 +30,7 @@ Created comprehensive technical specification in `spec.md` covering:
 - Dark mode clarification (functional support, not optimized for this task)
 - Font clarification (Inter, not Inter Tight - better Next.js support)
 - Implementation approach (extend design system, not replace)
-- 15 source files to modify/create
+- 17 source files to modify/create
 - Verification approach with automated and manual checklists
 - Risk considerations and mitigations
 
