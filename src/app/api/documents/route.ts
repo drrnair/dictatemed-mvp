@@ -1,9 +1,15 @@
 // src/app/api/documents/route.ts
 // Document creation and listing API
+//
+// Uses the Data Access Layer (DAL) for authenticated data operations.
+// The DAL provides:
+// - Automatic authentication checks
+// - Ownership verification
+// - Consistent error handling
+// - Audit logging for PHI access
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getSession } from '@/lib/auth';
 import {
   createDocument,
   listDocuments,
@@ -11,6 +17,11 @@ import {
 import type { DocumentType, DocumentStatus } from '@/domains/documents/document.types';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import {
+  handleDALError,
+  isDALError,
+  getCurrentUserOrThrow,
+} from '@/lib/dal';
 
 const createDocumentSchema = z.object({
   name: z.string().min(1).max(255),
@@ -30,20 +41,18 @@ const listDocumentsSchema = z.object({
 
 /**
  * POST /api/documents - Create a new document and get upload URL
+ *
+ * Uses DAL for authentication, domain service for business logic.
  */
 export async function POST(request: NextRequest) {
   const log = logger.child({ action: 'createDocument' });
 
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+    // Get authenticated user via DAL
+    const user = await getCurrentUserOrThrow();
 
     // Check rate limit (20 requests/min for documents)
-    const rateLimitKey = createRateLimitKey(userId, 'documents');
+    const rateLimitKey = createRateLimitKey(user.id, 'documents');
     const rateLimit = checkRateLimit(rateLimitKey, 'documents');
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -62,16 +71,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await createDocument(userId, validated.data);
+    // Create document (domain service has additional business logic)
+    const result = await createDocument(user.id, validated.data);
 
     log.info('Document created', {
       documentId: result.id,
-      userId,
+      userId: user.id,
       name: validated.data.name,
     });
 
     return NextResponse.json(result, { status: 201, headers: getRateLimitHeaders(rateLimit) });
   } catch (error) {
+    // Handle DAL errors (UnauthorizedError)
+    if (isDALError(error)) {
+      return handleDALError(error, log);
+    }
+
     log.error(
       'Failed to create document',
       {},
@@ -87,15 +102,15 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/documents - List documents with filters
+ *
+ * Uses DAL for authentication, domain service for business logic.
  */
 export async function GET(request: NextRequest) {
   const log = logger.child({ action: 'listDocuments' });
 
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Get authenticated user via DAL
+    const user = await getCurrentUserOrThrow();
 
     const { searchParams } = new URL(request.url);
     const query = {
@@ -115,10 +130,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const result = await listDocuments(session.user.id, validated.data);
+    // List documents (domain service handles ownership filtering)
+    const result = await listDocuments(user.id, validated.data);
 
     return NextResponse.json(result);
   } catch (error) {
+    // Handle DAL errors (UnauthorizedError)
+    if (isDALError(error)) {
+      return handleDALError(error, log);
+    }
+
     log.error(
       'Failed to list documents',
       {},

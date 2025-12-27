@@ -298,6 +298,75 @@ export async function deleteRecording(recordingId: string): Promise<void> {
 }
 
 // =============================================================================
+// Upload Operations
+// =============================================================================
+
+export interface RecordingForUpload {
+  id: string;
+  status: RecordingStatus;
+  mode: RecordingMode;
+  storagePath: string | null;
+  consultationId: string | null;
+}
+
+/**
+ * Get a recording ready for upload.
+ * Auth: Verified ownership - throws ForbiddenError if not owner.
+ * Validation: Throws ValidationError if recording is not in UPLOADING status.
+ */
+export async function getRecordingForUpload(recordingId: string): Promise<RecordingForUpload> {
+  // Import ValidationError inline to avoid linter removal
+  const { ValidationError } = await import('./base');
+
+  const user = await getCurrentUserOrThrow();
+  await verifyOwnership('recording', recordingId, user.id);
+
+  const recording = await prisma.recording.findUnique({
+    where: { id: recordingId },
+    select: {
+      id: true,
+      status: true,
+      mode: true,
+      storagePath: true,
+      consultationId: true,
+    },
+  });
+
+  if (!recording) {
+    throw new NotFoundError(`Recording with ID ${recordingId} not found`);
+  }
+
+  // Validate recording status
+  if (recording.status !== 'UPLOADING') {
+    throw new ValidationError('Recording is not in UPLOADING status', 'RECORDING_INVALID_STATUS');
+  }
+
+  return recording;
+}
+
+/**
+ * Update recording storage path.
+ * Auth: Verified ownership - throws ForbiddenError if not owner.
+ */
+export async function setRecordingStoragePath(
+  recordingId: string,
+  storagePath: string
+): Promise<void> {
+  const user = await getCurrentUserOrThrow();
+  await verifyOwnership('recording', recordingId, user.id);
+
+  await prisma.recording.update({
+    where: { id: recordingId },
+    data: { storagePath },
+  });
+
+  logger.info('Recording storage path updated', {
+    recordingId,
+    userId: user.id,
+  });
+}
+
+// =============================================================================
 // Helper
 // =============================================================================
 

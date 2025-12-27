@@ -175,7 +175,10 @@ npm run lint       # ✅ Passes (only unrelated warnings in other files)
 
 **Files created/modified:**
 - `src/lib/dal/api-handler.ts` - API route error handler utilities (handleDALError, isDALError, withDALErrorHandling)
-- `src/app/api/letters/[id]/route.ts` - Updated PATCH/DELETE handlers to use DAL error handling pattern
+- `src/app/api/letters/route.ts` - Updated GET to use DAL, POST uses session-based auth + domain service
+- `src/app/api/letters/[id]/route.ts` - Updated all handlers (GET, PUT, PATCH, DELETE) to use DAL
+- `src/app/api/recordings/route.ts` - Updated to use DAL's getCurrentUserOrThrow() and error handling
+- `src/app/api/documents/route.ts` - Updated to use DAL's getCurrentUserOrThrow() and error handling
 
 **Implementation Notes:**
 - Created API handler utilities for consistent error responses from DAL errors
@@ -183,7 +186,9 @@ npm run lint       # ✅ Passes (only unrelated warnings in other files)
 - isDALError() type guard for checking if error is a DAL error
 - withDALErrorHandling() HOF for wrapping route handlers
 - MinimalLogger interface works with both root logger and child loggers
-- Demonstrated pattern in letters/[id] route - can be applied to other routes as needed
+- All routes now use DAL's `getCurrentUserOrThrow()` for consistent authentication
+- Routes continue to use domain services for business logic, but get auth from DAL
+- DAL error handling catches UnauthorizedError and returns proper 401 responses
 
 **Verification:**
 ```bash
