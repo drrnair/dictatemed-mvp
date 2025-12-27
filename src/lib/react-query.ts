@@ -16,6 +16,11 @@ export const DEFAULT_STALE_TIME = 5 * 60 * 1000;
 export const DEFAULT_GC_TIME = 10 * 60 * 1000;
 
 /**
+ * Filter object type - allows any object with string keys
+ */
+type FilterObject = { [key: string]: unknown };
+
+/**
  * Query key factory for consistent key generation
  * Enables efficient cache invalidation and query management
  */
@@ -24,7 +29,7 @@ export const queryKeys = {
   letters: {
     all: ['letters'] as const,
     lists: () => [...queryKeys.letters.all, 'list'] as const,
-    list: (filters: Record<string, unknown>) =>
+    list: <T extends FilterObject>(filters: T) =>
       [...queryKeys.letters.lists(), filters] as const,
     details: () => [...queryKeys.letters.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.letters.details(), id] as const,
@@ -37,7 +42,7 @@ export const queryKeys = {
   recordings: {
     all: ['recordings'] as const,
     lists: () => [...queryKeys.recordings.all, 'list'] as const,
-    list: (filters: Record<string, unknown>) =>
+    list: <T extends FilterObject>(filters: T) =>
       [...queryKeys.recordings.lists(), filters] as const,
     details: () => [...queryKeys.recordings.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.recordings.details(), id] as const,
@@ -47,7 +52,7 @@ export const queryKeys = {
   documents: {
     all: ['documents'] as const,
     lists: () => [...queryKeys.documents.all, 'list'] as const,
-    list: (filters: Record<string, unknown>) =>
+    list: <T extends FilterObject>(filters: T) =>
       [...queryKeys.documents.lists(), filters] as const,
     details: () => [...queryKeys.documents.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.documents.details(), id] as const,
@@ -57,7 +62,7 @@ export const queryKeys = {
   patients: {
     all: ['patients'] as const,
     lists: () => [...queryKeys.patients.all, 'list'] as const,
-    list: (filters: Record<string, unknown>) =>
+    list: <T extends FilterObject>(filters: T) =>
       [...queryKeys.patients.lists(), filters] as const,
     details: () => [...queryKeys.patients.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.patients.details(), id] as const,
