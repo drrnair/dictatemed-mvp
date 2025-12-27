@@ -333,17 +333,25 @@ export function useUpdateLetterMutation(
   });
 }
 
+// Context type for approve letter mutation
+interface ApproveLetterContext {
+  previousLetter: Letter | undefined;
+}
+
 /**
  * Hook for approving a letter with optimistic update
  */
 export function useApproveLetterMutation(
-  options?: UseMutationOptions<ApproveLetterResult, Error, string>
+  options?: Omit<
+    UseMutationOptions<ApproveLetterResult, Error, string, ApproveLetterContext>,
+    'mutationFn' | 'onMutate' | 'onError' | 'onSettled'
+  >
 ) {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<ApproveLetterResult, Error, string, ApproveLetterContext>({
     mutationFn: approveLetter,
-    onMutate: async (letterId) => {
+    onMutate: async (letterId): Promise<ApproveLetterContext> => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({
         queryKey: queryKeys.letters.detail(letterId),

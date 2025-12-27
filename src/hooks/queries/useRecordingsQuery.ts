@@ -305,17 +305,25 @@ export function useGetUploadUrlMutation(
   });
 }
 
+// Context type for transcribe recording mutation
+interface TranscribeRecordingContext {
+  previousRecording: Recording | undefined;
+}
+
 /**
  * Hook for transcribing a recording
  */
 export function useTranscribeRecordingMutation(
-  options?: UseMutationOptions<Recording, Error, string>
+  options?: Omit<
+    UseMutationOptions<Recording, Error, string, TranscribeRecordingContext>,
+    'mutationFn' | 'onMutate' | 'onError' | 'onSettled'
+  >
 ) {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<Recording, Error, string, TranscribeRecordingContext>({
     mutationFn: transcribeRecording,
-    onMutate: async (recordingId) => {
+    onMutate: async (recordingId): Promise<TranscribeRecordingContext> => {
       // Optimistically update status
       await queryClient.cancelQueries({
         queryKey: queryKeys.recordings.detail(recordingId),
