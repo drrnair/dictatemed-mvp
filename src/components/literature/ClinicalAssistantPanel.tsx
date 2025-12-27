@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Settings, AlertCircle, Plus, AlertTriangle } from 'lucide-react';
+import { BookOpen, Settings, AlertCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -25,7 +25,7 @@ import {
   cardVariants,
   buttonHoverEffect,
 } from '@/styles/clinical-animations';
-import type { Citation, ConfidenceLevel } from '@/domains/literature';
+import type { Citation } from '@/domains/literature';
 
 interface ClinicalAssistantPanelProps {
   /** Current letter ID for context */
@@ -391,25 +391,3 @@ export function ClinicalAssistantPanel({
   );
 }
 
-/**
- * Confidence level indicator component.
- */
-function ConfidenceIndicator({ level }: { level: ConfidenceLevel }) {
-  const colors = {
-    high: 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30',
-    medium: 'text-amber-600 bg-amber-100 dark:text-amber-400 dark:bg-amber-900/30',
-    low: 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30',
-  };
-
-  const labels = {
-    high: 'High confidence',
-    medium: 'Medium confidence',
-    low: 'Limited evidence',
-  };
-
-  return (
-    <span className={cn('text-xs px-2 py-0.5 rounded-full', colors[level])}>
-      {labels[level]}
-    </span>
-  );
-}

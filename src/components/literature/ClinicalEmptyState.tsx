@@ -18,6 +18,8 @@ interface ClinicalEmptyStateProps {
   onUpload?: () => void;
   /** Callback when search is clicked (search variant) */
   onSearch?: () => void;
+  /** Callback when a quick tip is selected (pre-fills the query) */
+  onQuerySelect?: (query: string) => void;
   /** Additional class names */
   className?: string;
 }
@@ -209,6 +211,7 @@ export function ClinicalEmptyState({
   selectedText,
   onUpload,
   onSearch,
+  onQuerySelect,
   className,
 }: ClinicalEmptyStateProps) {
   const config = {
@@ -315,7 +318,7 @@ export function ClinicalEmptyState({
       )}
 
       {/* Quick tips (search variant only) */}
-      {variant === 'search' && (
+      {variant === 'search' && onQuerySelect && (
         <motion.div
           variants={staggerChildVariants}
           className="mt-8 text-left max-w-sm"
@@ -328,10 +331,10 @@ export function ClinicalEmptyState({
               { icon: FileText, text: 'Dosing for metformin in renal impairment' },
               { icon: BookOpen, text: 'First-line treatment for H. pylori' },
               { icon: Sparkles, text: 'Contraindications for ACE inhibitors' },
-            ].map((tip, idx) => (
+            ].map((tip) => (
               <button
-                key={idx}
-                onClick={onSearch}
+                key={tip.text}
+                onClick={() => onQuerySelect(tip.text)}
                 className="flex items-center gap-2 w-full text-left px-3 py-2
                          bg-clinical-gray-50 hover:bg-clinical-gray-100
                          rounded-lg text-sm text-clinical-gray-700

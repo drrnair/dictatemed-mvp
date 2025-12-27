@@ -1,5 +1,6 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import { Columns, Maximize2, PanelBottom } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useLiteratureStore } from '@/stores/literature.store';
+import { durations, easings } from '@/styles/clinical-animations';
 
 type LiteraturePanelLayout = 'side' | 'popup' | 'drawer';
 
@@ -43,7 +45,7 @@ const LAYOUT_CONFIG: Record<
     icon: Maximize2,
     label: 'Popup',
     description: 'Centered floating window',
-    shortcut: 'Cmd+K',
+    shortcut: '⌘K',
   },
   drawer: {
     icon: PanelBottom,
