@@ -276,12 +276,24 @@ export function ClinicalAssistantPanel({
             <ClinicalLoadingState />
           )}
 
-          {/* Error message */}
+          {/* Error message with clinical styling */}
           {error && (
-            <div className="flex items-center gap-2 text-destructive bg-destructive/10 rounded-lg p-3">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span className="text-sm">{error}</span>
-            </div>
+            <motion.div
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              className="flex items-start gap-3 bg-critical-50 border border-critical-200 rounded-xl p-4"
+            >
+              <div className="w-8 h-8 rounded-lg bg-critical-100 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="h-4 w-4 text-critical-600" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-critical-800 font-ui-sans">
+                  Search Error
+                </p>
+                <p className="text-sm text-critical-700 mt-0.5">{error}</p>
+              </div>
+            </motion.div>
           )}
 
           <div ref={messagesEndRef} />
