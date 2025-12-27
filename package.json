@@ -32,7 +32,8 @@
     "db:teardown:e2e": "npx tsx scripts/teardown-e2e-test-data.ts",
     "db:studio": "prisma studio",
     "generate:referral-pdfs": "npx tsx scripts/generate-referral-pdfs.ts",
-    "generate:test-fixtures": "npx tsx scripts/generate-test-fixtures.ts"
+    "generate:test-fixtures": "npx tsx scripts/generate-test-fixtures.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -103,7 +104,9 @@
     "eslint": "^8.56.0",
     "eslint-config-next": "^14.2.0",
     "eslint-plugin-jsx-a11y": "^6.8.0",
+    "husky": "^9.1.7",
     "jsdom": "^24.0.0",
+    "lint-staged": "^16.2.7",
     "postcss": "^8.4.33",
     "prettier": "^3.2.0",
     "prettier-plugin-tailwindcss": "^0.5.11",

@@ -1,6 +1,9 @@
 // src/hooks/queries/index.ts
 // Barrel export for all React Query hooks
 
+// Re-export queryKeys for external cache invalidation
+export { queryKeys } from '@/lib/react-query';
+
 // Letters
 export {
   useLettersQuery,
@@ -38,6 +41,7 @@ export {
   type RecordingListResponse,
   type CreateRecordingInput,
   type UpdateRecordingInput,
+  type UploadUrlResponse,
 } from './useRecordingsQuery';
 
 // Documents

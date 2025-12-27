@@ -1,7 +1,8 @@
 // src/lib/react-query.ts
 // React Query configuration with optimized defaults for DictateMED
 
-import { QueryClient, QueryClientConfig } from '@tanstack/react-query';
+import { QueryClient, QueryClientConfig, QueryCache, MutationCache } from '@tanstack/react-query';
+import { logError, logHandledError } from '@/lib/error-logger';
 
 /**
  * Default stale time for queries (5 minutes)

@@ -608,6 +608,7 @@ npm run lint       # ✅ Passes
 ## Subtask 6: Developer Experience
 
 ### [ ] Step 6.1: Add Pre-commit Hooks
+<!-- chat-id: 95f67764-4905-4c20-a98f-91099c71708e -->
 
 **Install:**
 ```bash
