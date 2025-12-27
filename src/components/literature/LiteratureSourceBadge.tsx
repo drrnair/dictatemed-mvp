@@ -152,10 +152,10 @@ export function LiteratureSourceBadge({
                   config.pulseColor
                 )}
                 animate={{
-                  scale: [...pulseAnimation.scale],
-                  opacity: [...pulseAnimation.opacity],
+                  scale: pulseAnimation.scale,
+                  opacity: pulseAnimation.opacity,
                 }}
-                transition={{ ...pulseAnimation.transition }}
+                transition={pulseAnimation.transition}
               />
               {/* Solid dot */}
               <span
@@ -217,10 +217,10 @@ export function SourceConnectionIndicator({
                 pulseColors[source]
               )}
               animate={{
-                scale: [...pulseAnimation.scale],
-                opacity: [...pulseAnimation.opacity],
+                scale: pulseAnimation.scale,
+                opacity: pulseAnimation.opacity,
               }}
-              transition={{ ...pulseAnimation.transition }}
+              transition={pulseAnimation.transition}
             />
             {/* Solid dot */}
             <span

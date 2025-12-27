@@ -119,26 +119,33 @@ export function ClinicalAssistantPanel({
     [onInsertCitation, selectCitation]
   );
 
-  // Panel header content
+  // Panel header content with clinical styling
   const headerContent = (
-    <div className="flex flex-col gap-3 p-4 border-b shrink-0">
+    <div className="flex flex-col gap-3 p-4 border-b border-clinical-gray-200 shrink-0 bg-white">
       {/* Title row */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold text-foreground">Clinical Literature</h2>
-          {queriesThisMonth > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {queriesThisMonth}/{queryLimit}
-            </Badge>
-          )}
+        <div className="flex items-center gap-3">
+          {/* Icon badge */}
+          <div className="w-9 h-9 rounded-xl bg-clinical-blue-100 flex items-center justify-center">
+            <BookOpen className="h-5 w-5 text-clinical-blue-600" strokeWidth={2} />
+          </div>
+          <div>
+            <h2 className="font-semibold text-clinical-gray-900 font-ui-sans">
+              Clinical Literature
+            </h2>
+            {queriesThisMonth > 0 && (
+              <p className="text-xs text-clinical-gray-500 font-clinical-mono">
+                {queriesThisMonth}/{queryLimit} queries
+              </p>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-1">
           <LayoutToggle compact />
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-8 w-8 text-clinical-gray-500 hover:text-clinical-gray-700 hover:bg-clinical-gray-100"
             aria-label="Settings"
           >
             <Settings className="h-4 w-4" />
@@ -147,52 +154,46 @@ export function ClinicalAssistantPanel({
       </div>
 
       {/* Source filters */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Sources:</span>
-        <div className="flex gap-1.5">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-clinical-gray-500 font-medium">Sources:</span>
+        <div className="flex gap-1.5 flex-wrap">
           <LiteratureSourceBadge
             source="uptodate"
             active={activeSources.includes('uptodate')}
             onClick={() => toggleSource('uptodate')}
+            showLabel={false}
           />
           <LiteratureSourceBadge
             source="pubmed"
             active={activeSources.includes('pubmed')}
             onClick={() => toggleSource('pubmed')}
+            showLabel={false}
           />
           <LiteratureSourceBadge
             source="user_library"
             active={activeSources.includes('user_library')}
             onClick={() => toggleSource('user_library')}
+            showLabel={false}
           />
         </div>
       </div>
     </div>
   );
 
-  // Panel content
+  // Panel content with clinical polish
   const panelContent = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-clinical-gray-50">
       {headerContent}
 
       {/* Messages area */}
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
-          {/* Empty state */}
-          {messages.length === 0 && !result && (
-            <div className="text-center py-8">
-              <BookOpen className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-muted-foreground text-sm">
-                Ask clinical questions about diagnoses, treatments, medications,
-                or guidelines.
-              </p>
-              {selectedText && (
-                <p className="text-primary text-xs mt-2">
-                  Context: &ldquo;{selectedText.substring(0, 100)}
-                  {selectedText.length > 100 ? '...' : ''}&rdquo;
-                </p>
-              )}
-            </div>
+          {/* Empty state - use ClinicalEmptyState */}
+          {messages.length === 0 && !result && !isSearching && (
+            <ClinicalEmptyState
+              variant="search"
+              selectedText={selectedText}
+            />
           )}
 
           {/* Chat messages */}
@@ -250,12 +251,9 @@ export function ClinicalAssistantPanel({
             />
           )}
 
-          {/* Loading indicator */}
+          {/* Loading indicator - use ClinicalLoadingState */}
           {isSearching && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              <span className="text-sm">Searching literature...</span>
-            </div>
+            <ClinicalLoadingState />
           )}
 
           {/* Error message */}
