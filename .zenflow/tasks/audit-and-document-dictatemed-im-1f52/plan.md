@@ -86,7 +86,7 @@ Create a comprehensive, up-to-date inventory of all features currently built int
 
 **Key Findings:**
 - ✅ Core clinical workflow complete: Recording → Transcription → Letter Generation → Approval → Sending
-- ✅ Specialty system fully generalized (42 specialties, 60+ subspecialties)
+- ✅ Specialty system fully generalized (42 specialties, 51 subspecialties)
 - ✅ Style learning per-subspecialty operational
 - ⚠️ Dashboard statistics are placeholder only (not blocking)
 - ⚠️ Resend webhook signature verification is TODO (not blocking)
