@@ -159,6 +159,7 @@ module.exports = {
           700: '#15803d',
           800: '#166534',
           900: '#14532d',
+          950: '#052e16',
         },
         /* Clinical Amber (warnings, caution, medium confidence) */
         caution: {
@@ -172,6 +173,7 @@ module.exports = {
           700: '#b45309',
           800: '#92400e',
           900: '#78350f',
+          950: '#451a03',
         },
         /* Medical Red (critical warnings, errors, low confidence) */
         critical: {
@@ -185,6 +187,7 @@ module.exports = {
           700: '#b91c1c',
           800: '#991b1b',
           900: '#7f1d1d',
+          950: '#450a0a',
         },
         /* Refined Gray (blue undertone for cohesion) */
         'clinical-gray': {

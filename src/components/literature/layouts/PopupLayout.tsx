@@ -160,7 +160,7 @@ export function PopupLayout({
             }}
             className={cn(
               'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
-              'bg-white rounded-2xl z-50',
+              'bg-card rounded-2xl z-50',
               'flex flex-col overflow-hidden',
               'border border-clinical-gray-200',
               'shadow-elevated',
