@@ -54,6 +54,7 @@ npm run dev  # Should still work with mock auth in dev
 - Created `.github/workflows/env-check.yml` workflow that runs on PRs and pushes to main, checking for hardcoded dangerous env vars and verifying security guards exist
 
 ### [ ] Step 1.2: Fix Empty Catch Blocks
+<!-- chat-id: 418ca9ce-d22f-48fd-9ca3-ec55e638557c -->
 
 **Files to modify:**
 - `src/infrastructure/anthropic/unified-service.ts:416` - Add error logging for cost tracking failure

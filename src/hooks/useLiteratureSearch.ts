@@ -98,8 +98,14 @@ export function useLiteratureSearch(
           setUsage(data.usage.queriesThisMonth, data.usage.queryLimit);
         }
       }
-    } catch {
-      // Silently fail - usage stats are non-critical
+    } catch (error) {
+      // Usage stats are non-critical - log for debugging but don't interrupt UX
+      // This can fail due to network issues or if user navigates away quickly
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[useLiteratureSearch] Failed to refresh usage stats:',
+          error instanceof Error ? error.message : 'Unknown error'
+        );
+      }
     }
   }, [setUsage]);
 
