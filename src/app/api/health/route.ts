@@ -328,15 +328,20 @@ async function checkSupabase(): Promise<ServiceStatus> {
 
 /**
  * Perform all health checks in parallel
+ * Note: checkDeepgram and checkAnthropic are synchronous (config-only checks)
+ * but we wrap them in Promise.resolve for consistency with Promise.all
  */
 async function performHealthCheck(): Promise<HealthCheckResponse> {
-  const [database, redis, deepgram, anthropic, supabase] = await Promise.all([
+  // Run async checks in parallel, sync checks are immediate
+  const [database, redis, supabase] = await Promise.all([
     checkDatabase(),
     checkRedis(),
-    checkDeepgram(),
-    checkAnthropic(),
     checkSupabase(),
   ]);
+
+  // Sync checks (config validation only)
+  const deepgram = checkDeepgram();
+  const anthropic = checkAnthropic();
 
   const checks = { database, redis, deepgram, anthropic, supabase };
 
