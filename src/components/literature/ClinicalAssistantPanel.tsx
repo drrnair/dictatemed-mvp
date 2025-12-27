@@ -300,21 +300,36 @@ export function ClinicalAssistantPanel({
         </div>
       </ScrollArea>
 
-      {/* Selected citation actions */}
-      {selectedCitation && onInsertCitation && (
-        <div className="p-3 border-t bg-primary/5 shrink-0">
-          <Button
-            onClick={() => handleInsertCitation(selectedCitation)}
-            className="w-full"
-            size="sm"
+      {/* Selected citation actions with clinical styling */}
+      <AnimatePresence>
+        {selectedCitation && onInsertCitation && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-t border-clinical-gray-200 bg-clinical-blue-50 shrink-0 overflow-hidden"
           >
-            Insert Citation into Letter
-          </Button>
-        </div>
-      )}
+            <div className="p-3">
+              <motion.div
+                whileHover={buttonHoverEffect.hover}
+                whileTap={buttonHoverEffect.tap}
+              >
+                <Button
+                  onClick={() => handleInsertCitation(selectedCitation)}
+                  className="w-full bg-clinical-blue-600 hover:bg-clinical-blue-700 text-white shadow-sm"
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Insert Citation into Letter
+                </Button>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Search input */}
-      <div className="p-4 border-t shrink-0">
+      {/* Search input with clinical styling */}
+      <div className="p-4 border-t border-clinical-gray-200 bg-white shrink-0">
         <LiteratureSearchInput
           value={query}
           onChange={setQuery}
