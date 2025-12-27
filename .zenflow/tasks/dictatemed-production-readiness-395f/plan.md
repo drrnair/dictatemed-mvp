@@ -747,6 +747,8 @@ npx lint-staged    # ✅ Runs on staged files
 
 ### [ ] Step 6.2: Add Performance Measurement Helper
 
+<!-- chat-id: 4d88c9b7-7c09-462e-b40b-1301904c02f7 -->
+
 **New file:**
 
 - `src/lib/performance.ts` - measureAsync() helper
