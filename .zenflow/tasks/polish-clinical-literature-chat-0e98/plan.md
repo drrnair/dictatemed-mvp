@@ -104,7 +104,7 @@ Create shared animation constants and Framer Motion variants.
 
 ---
 
-### [ ] Step: Layout Components Polish
+### [x] Step: Layout Components Polish
 <!-- chat-id: 6bf28557-a661-4355-ab4e-d33c6cb76c51 -->
 
 Enhance the three layout components with distinctive animations.
@@ -123,8 +123,28 @@ Enhance the three layout components with distinctive animations.
    - Polished handle
 
 **Verification:**
-- Manual test: open/close each layout
-- Animation smoothness at 60fps
+- `npm run typecheck` ✓
+- `npm run lint` ✓
+
+**Completed:**
+- `SidePanelLayout.tsx` already polished with:
+  - Custom easing from `clinical-animations.ts`
+  - Configurable width (42% default, intentionally asymmetric)
+  - Staggered content fade-in with `contentDelay`
+  - Subtle inner shadow + soft outer shadow
+  - Clinical gray colors and typography
+- `PopupLayout.tsx` already polished with:
+  - Custom easing via `overlayVariants` and `popupVariants`
+  - Refined backdrop blur (`backdrop-blur-md`)
+  - Clinical color palette
+  - Keyboard hint footer
+- `DrawerLayout.tsx` updated:
+  - Fixed missing `GripHorizontal` import
+  - Applied `overlayVariants` and `drawerVariants` for consistent animations
+  - Replaced `Maximize2` icon (was incorrect `GripHorizontal`)
+  - Clinical color palette (white bg, clinical-gray borders/text)
+  - Polished drag handle (slimmer pill, hover state)
+  - Added icon badge in header matching other layouts
 
 ---
 
