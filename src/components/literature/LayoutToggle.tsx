@@ -176,9 +176,15 @@ export function LayoutToggle({
 /**
  * Inline layout selector with dropdown.
  *
- * Features:
+ * @deprecated This component is incomplete - dropdown functionality is not yet implemented.
+ * Use `LayoutToggle` instead for a fully functional layout switcher.
+ *
+ * TODO: Implement dropdown using Radix UI Select or Popover for full functionality.
+ *
+ * Features (when complete):
  * - Clinical styling with blue accent
  * - Displays current layout with icon
+ * - Dropdown menu for layout selection
  */
 export function LayoutSelector({ className }: { className?: string }) {
   const { layout } = useLiteratureStore();
@@ -203,7 +209,7 @@ export function LayoutSelector({ className }: { className?: string }) {
           <Icon className="h-3.5 w-3.5 text-clinical-blue-500" />
           <span className="text-xs">{config.label}</span>
         </Button>
-        {/* Dropdown would be implemented here with Radix UI Select or Popover */}
+        {/* TODO: Implement dropdown with Radix UI Select or Popover */}
       </div>
     </div>
   );
