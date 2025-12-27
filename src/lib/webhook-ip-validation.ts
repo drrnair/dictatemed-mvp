@@ -9,6 +9,13 @@
 // - Deepgram: No static IPs published, relies on HMAC signature verification
 //   We allow configurable IPs or skip IP check (signature is primary security)
 //
+// IPv6 Note:
+// - Resend also publishes an IPv6 range (2600:1f24:64:8000::/52)
+// - This module only supports IPv4 validation for simplicity
+// - IPv6 addresses will fail validation unless added via RESEND_WEBHOOK_IPS env var
+// - Most cloud providers (including Vercel) report IPv4 in x-forwarded-for headers
+// - If you receive IPv6 webhooks, add the range to RESEND_WEBHOOK_IPS env var
+//
 // Usage:
 //   import { validateWebhookIP } from '@/lib/webhook-ip-validation';
 //   const result = validateWebhookIP(request, 'resend');
@@ -18,11 +25,16 @@
 
 import { NextRequest } from 'next/server';
 import { securityLogger } from './security-logger';
+import { logger } from './logger';
 
 /**
- * Known Resend webhook IP addresses.
+ * Known Resend webhook IPv4 addresses.
  * Source: https://resend.com/docs/dashboard/webhooks/introduction
  * Last verified: 2025-01
+ *
+ * Note: Resend also publishes IPv6 range 2600:1f24:64:8000::/52
+ * which is not included here (IPv4 only implementation).
+ * Use RESEND_WEBHOOK_IPS env var to add IPv6 support if needed.
  */
 const RESEND_WEBHOOK_IPS = [
   '44.228.126.217',
@@ -84,37 +96,46 @@ export function getClientIP(request: NextRequest): string {
 
 /**
  * Check if an IP address is in a CIDR range.
- * Supports IPv4 only for simplicity.
+ * Supports IPv4 only. IPv6 addresses will return false.
+ *
+ * @param ip - The IP address to check
+ * @param cidr - Either an exact IP or CIDR notation (e.g., "192.168.1.0/24")
+ * @returns true if the IP is in the range, false otherwise
  */
 function ipInCIDR(ip: string, cidr: string): boolean {
-  // Check if it's a CIDR range
-  if (!cidr.includes('/')) {
-    return ip === cidr;
-  }
+  try {
+    // Check if it's a CIDR range
+    if (!cidr.includes('/')) {
+      return ip === cidr;
+    }
 
-  const parts = cidr.split('/');
-  const range = parts[0];
-  const bits = parts[1];
+    const parts = cidr.split('/');
+    const range = parts[0];
+    const bits = parts[1];
 
-  if (!range || !bits) {
+    if (!range || !bits) {
+      return false;
+    }
+
+    const mask = parseInt(bits, 10);
+
+    if (isNaN(mask) || mask < 0 || mask > 32) {
+      return false;
+    }
+
+    const ipNum = ipToNumber(ip);
+    const rangeNum = ipToNumber(range);
+
+    if (ipNum === null || rangeNum === null) {
+      return false;
+    }
+
+    const maskNum = ~((1 << (32 - mask)) - 1);
+    return (ipNum & maskNum) === (rangeNum & maskNum);
+  } catch {
+    // Defensive: any parsing error means no match
     return false;
   }
-
-  const mask = parseInt(bits, 10);
-
-  if (isNaN(mask) || mask < 0 || mask > 32) {
-    return false;
-  }
-
-  const ipNum = ipToNumber(ip);
-  const rangeNum = ipToNumber(range);
-
-  if (ipNum === null || rangeNum === null) {
-    return false;
-  }
-
-  const maskNum = ~((1 << (32 - mask)) - 1);
-  return (ipNum & maskNum) === (rangeNum & maskNum);
 }
 
 /**

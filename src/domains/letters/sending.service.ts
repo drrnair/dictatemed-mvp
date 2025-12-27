@@ -93,28 +93,25 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
   const results: RecipientSendResult[] = [];
 
   for (const recipient of recipients) {
-    // Step 1: Create LetterSend record with SENDING status in a transaction
-    // This ensures the record is created atomically before attempting to send
-    const letterSend = await prisma.$transaction(async (tx) => {
-      const record = await tx.letterSend.create({
-        data: {
-          letterId,
-          patientId: letter.patient?.id || null,
-          senderId,
-          patientContactId: recipient.contactId || null,
-          recipientName: recipient.name,
-          recipientEmail: recipient.email,
-          recipientType: recipient.type || null,
-          channel: recipient.channel,
-          subject,
-          coverNote: coverNote || null,
-          status: 'SENDING', // Start as SENDING since we immediately attempt to send
-        },
-      });
-      return record;
+    // Create LetterSend record with SENDING status
+    // Note: Single operations don't need transactions - Prisma operations are atomic
+    const letterSend = await prisma.letterSend.create({
+      data: {
+        letterId,
+        patientId: letter.patient?.id || null,
+        senderId,
+        patientContactId: recipient.contactId || null,
+        recipientName: recipient.name,
+        recipientEmail: recipient.email,
+        recipientType: recipient.type || null,
+        channel: recipient.channel,
+        subject,
+        coverNote: coverNote || null,
+        status: 'SENDING', // Start as SENDING since we immediately attempt to send
+      },
     });
 
-    // Step 2: Attempt to send email (external API call - cannot be in transaction)
+    // Attempt to send email (external API call)
     try {
       const emailBody = buildEmailBody(patientName, coverNote);
 
@@ -132,17 +129,15 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
         ],
       });
 
-      // Step 3: Update status based on result (separate transaction for atomicity)
+      // Update status based on result
       if (sendResult.success) {
-        await prisma.$transaction(async (tx) => {
-          await tx.letterSend.update({
-            where: { id: letterSend.id },
-            data: {
-              status: 'SENT',
-              sentAt: new Date(),
-              externalId: sendResult.messageId || null,
-            },
-          });
+        await prisma.letterSend.update({
+          where: { id: letterSend.id },
+          data: {
+            status: 'SENT',
+            sentAt: new Date(),
+            externalId: sendResult.messageId || null,
+          },
         });
 
         results.push({
@@ -160,15 +155,13 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
           recipient: recipient.email,
         });
       } else {
-        await prisma.$transaction(async (tx) => {
-          await tx.letterSend.update({
-            where: { id: letterSend.id },
-            data: {
-              status: 'FAILED',
-              failedAt: new Date(),
-              errorMessage: sendResult.error || 'Unknown error',
-            },
-          });
+        await prisma.letterSend.update({
+          where: { id: letterSend.id },
+          data: {
+            status: 'FAILED',
+            failedAt: new Date(),
+            errorMessage: sendResult.error || 'Unknown error',
+          },
         });
 
         results.push({
@@ -188,17 +181,15 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
         });
       }
     } catch (error) {
-      // Update to FAILED in transaction for atomicity
+      // Update to FAILED on exception
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      await prisma.$transaction(async (tx) => {
-        await tx.letterSend.update({
-          where: { id: letterSend.id },
-          data: {
-            status: 'FAILED',
-            failedAt: new Date(),
-            errorMessage,
-          },
-        });
+      await prisma.letterSend.update({
+        where: { id: letterSend.id },
+        data: {
+          status: 'FAILED',
+          failedAt: new Date(),
+          errorMessage,
+        },
       });
 
       results.push({
@@ -213,21 +204,19 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
     }
   }
 
-  // Create audit log entry in transaction for atomicity
-  await prisma.$transaction(async (tx) => {
-    await tx.auditLog.create({
-      data: {
-        userId: senderId,
-        action: 'letter.send',
-        resourceType: 'letter',
-        resourceId: letterId,
-        metadata: {
-          recipientCount: recipients.length,
-          successCount: results.filter((r) => r.status === 'SENT').length,
-          failedCount: results.filter((r) => r.status === 'FAILED').length,
-        },
+  // Create audit log entry for the entire send operation
+  await prisma.auditLog.create({
+    data: {
+      userId: senderId,
+      action: 'letter.send',
+      resourceType: 'letter',
+      resourceId: letterId,
+      metadata: {
+        recipientCount: recipients.length,
+        successCount: results.filter((r) => r.status === 'SENT').length,
+        failedCount: results.filter((r) => r.status === 'FAILED').length,
       },
-    });
+    },
   });
 
   return {
@@ -301,19 +290,17 @@ export async function retrySend(input: RetrySendInput): Promise<RecipientSendRes
   const pdfBuffer = await generateLetterPdf(letterSend.letterId);
   const pdfFilename = `${sanitizeFilename(patientName)}_Letter_${format(new Date(), 'yyyyMMdd')}.pdf`;
 
-  // Step 1: Update status to SENDING in transaction
-  await prisma.$transaction(async (tx) => {
-    await tx.letterSend.update({
-      where: { id: sendId },
-      data: {
-        status: 'SENDING',
-        errorMessage: null,
-        failedAt: null,
-      },
-    });
+  // Update status to SENDING before attempting send
+  await prisma.letterSend.update({
+    where: { id: sendId },
+    data: {
+      status: 'SENDING',
+      errorMessage: null,
+      failedAt: null,
+    },
   });
 
-  // Step 2: Attempt to send email (external API call - cannot be in transaction)
+  // Attempt to send email (external API call)
   try {
     const emailAdapter = getEmailAdapter();
     const emailBody = buildEmailBody(patientName, letterSend.coverNote || undefined);
@@ -332,17 +319,15 @@ export async function retrySend(input: RetrySendInput): Promise<RecipientSendRes
       ],
     });
 
-    // Step 3: Update status based on result in transaction
+    // Update status based on result
     if (sendResult.success) {
-      await prisma.$transaction(async (tx) => {
-        await tx.letterSend.update({
-          where: { id: sendId },
-          data: {
-            status: 'SENT',
-            sentAt: new Date(),
-            externalId: sendResult.messageId || null,
-          },
-        });
+      await prisma.letterSend.update({
+        where: { id: sendId },
+        data: {
+          status: 'SENT',
+          sentAt: new Date(),
+          externalId: sendResult.messageId || null,
+        },
       });
 
       log.info('Letter retry succeeded', { action: 'retrySend', sendId });
@@ -355,15 +340,13 @@ export async function retrySend(input: RetrySendInput): Promise<RecipientSendRes
         messageId: sendResult.messageId,
       };
     } else {
-      await prisma.$transaction(async (tx) => {
-        await tx.letterSend.update({
-          where: { id: sendId },
-          data: {
-            status: 'FAILED',
-            failedAt: new Date(),
-            errorMessage: sendResult.error || 'Unknown error',
-          },
-        });
+      await prisma.letterSend.update({
+        where: { id: sendId },
+        data: {
+          status: 'FAILED',
+          failedAt: new Date(),
+          errorMessage: sendResult.error || 'Unknown error',
+        },
       });
 
       return {
@@ -376,15 +359,13 @@ export async function retrySend(input: RetrySendInput): Promise<RecipientSendRes
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    await prisma.$transaction(async (tx) => {
-      await tx.letterSend.update({
-        where: { id: sendId },
-        data: {
-          status: 'FAILED',
-          failedAt: new Date(),
-          errorMessage,
-        },
-      });
+    await prisma.letterSend.update({
+      where: { id: sendId },
+      data: {
+        status: 'FAILED',
+        failedAt: new Date(),
+        errorMessage,
+      },
     });
 
     return {

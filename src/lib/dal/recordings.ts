@@ -11,7 +11,6 @@ import {
   verifyOwnership,
   NotFoundError,
   ValidationError,
-  type AuthUser,
 } from './base';
 
 // =============================================================================

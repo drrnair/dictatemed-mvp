@@ -10,7 +10,6 @@ import {
   getCurrentUserOrThrow,
   verifyOwnership,
   NotFoundError,
-  type AuthUser,
 } from './base';
 
 // =============================================================================
@@ -211,6 +210,22 @@ export async function createDocument(
 
   log.info('Document created', { documentId: document.id });
 
+  // PHI creation audit log for compliance
+  await prisma.auditLog.create({
+    data: {
+      userId: user.id,
+      action: 'document.create',
+      resourceType: 'document',
+      resourceId: document.id,
+      metadata: {
+        patientId: data.patientId,
+        documentType: data.documentType,
+        filename: data.filename,
+        consultationId: data.consultationId,
+      },
+    },
+  });
+
   return {
     id: document.id,
     userId: document.userId,
@@ -369,13 +384,3 @@ export async function permanentlyDeleteDocument(documentId: string): Promise<voi
   log.info('Document permanently deleted', { documentId });
 }
 
-// =============================================================================
-// Helper
-// =============================================================================
-
-/**
- * Get the current authenticated user.
- */
-export async function getAuthenticatedUser(): Promise<AuthUser> {
-  return getCurrentUserOrThrow();
-}

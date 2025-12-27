@@ -13,7 +13,6 @@ import {
   verifyOwnership,
   NotFoundError,
   ValidationError,
-  type AuthUser,
 } from './base';
 
 // =============================================================================
@@ -370,8 +369,12 @@ export async function updateLetter(
           name: patientData.name,
           dateOfBirth: patientData.dateOfBirth,
         };
-      } catch {
-        // Already logged in getLetter pattern
+      } catch (error) {
+        log.debug('Failed to decrypt patient data in updateLetter', {
+          letterId,
+          patientId: letter.patientId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
     }
   }
@@ -610,14 +613,3 @@ export async function getLetterForSending(letterId: string): Promise<LetterForSe
   };
 }
 
-// =============================================================================
-// Helper to get user for use in other modules
-// =============================================================================
-
-/**
- * Get the current authenticated user.
- * Use this when you need the user in letter-related operations outside this module.
- */
-export async function getAuthenticatedUser(): Promise<AuthUser> {
-  return getCurrentUserOrThrow();
-}

@@ -3,6 +3,18 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Create mock functions that can be shared between prisma and transaction client
+const letterSendMock = {
+  create: vi.fn(),
+  update: vi.fn(),
+  findUnique: vi.fn(),
+  findMany: vi.fn(),
+};
+
+const auditLogMock = {
+  create: vi.fn(),
+};
+
 // Mock Prisma before importing the service
 vi.mock('@/infrastructure/db/client', () => ({
   prisma: {
@@ -12,15 +24,16 @@ vi.mock('@/infrastructure/db/client', () => ({
     user: {
       findUnique: vi.fn(),
     },
-    letterSend: {
-      create: vi.fn(),
-      update: vi.fn(),
-      findUnique: vi.fn(),
-      findMany: vi.fn(),
-    },
-    auditLog: {
-      create: vi.fn(),
-    },
+    letterSend: letterSendMock,
+    auditLog: auditLogMock,
+    // Transaction passes the callback a transaction client (tx) with same methods
+    $transaction: vi.fn(async (callback: (tx: any) => Promise<any>) => {
+      // Execute callback with a mock transaction client that uses the same mocks
+      return callback({
+        letterSend: letterSendMock,
+        auditLog: auditLogMock,
+      });
+    }),
   },
 }));
 
