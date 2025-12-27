@@ -187,7 +187,7 @@
 
 /* Clinical panel animations */
 .clinical-panel-enter {
-  animation: slide-in-right 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  animation: slide-in-right 0.35s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .clinical-content-enter {
@@ -198,25 +198,6 @@
 .citation-highlight {
   animation: citation-flash 2s ease-out forwards;
   background-size: 200% 100%;
-}
-
-@keyframes citation-flash-gradient {
-  0% {
-    background: linear-gradient(
-      90deg,
-      rgba(34, 197, 94, 0.3) 0%,
-      rgba(34, 197, 94, 0.4) 50%,
-      rgba(34, 197, 94, 0.3) 100%
-    );
-    background-size: 200% 100%;
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background: transparent;
-  }
 }
 
 /* Source connected pulse indicator */
@@ -244,7 +225,7 @@
 
 /* Clinical source card with left accent */
 .clinical-source-card {
-  @apply bg-white border border-clinical-gray-200 border-l-4 rounded-lg p-6 shadow-sm;
+  @apply bg-card border border-clinical-gray-200 border-l-4 rounded-lg p-6 shadow-sm;
   @apply hover:shadow-md hover:border-clinical-gray-300 transition-all duration-200;
 }
 
@@ -293,18 +274,23 @@
 /* Staggered cascade animation delays */
 .cascade-delay-1 {
   animation-delay: 0.08s;
+  animation-fill-mode: backwards;
 }
 .cascade-delay-2 {
   animation-delay: 0.16s;
+  animation-fill-mode: backwards;
 }
 .cascade-delay-3 {
   animation-delay: 0.24s;
+  animation-fill-mode: backwards;
 }
 .cascade-delay-4 {
   animation-delay: 0.32s;
+  animation-fill-mode: backwards;
 }
 .cascade-delay-5 {
   animation-delay: 0.40s;
+  animation-fill-mode: backwards;
 }
 
 /* Clinical confidence badges */

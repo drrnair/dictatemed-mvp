@@ -8,8 +8,6 @@ import { cn } from '@/lib/utils';
 import {
   overlayVariants,
   popupVariants,
-  easings,
-  durations,
 } from '@/styles/clinical-animations';
 
 interface PopupLayoutProps {

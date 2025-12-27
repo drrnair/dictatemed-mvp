@@ -6,8 +6,6 @@ import { GripVertical, X, ChevronRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
-  panelVariants,
-  panelContentVariants,
   easings,
   durations,
 } from '@/styles/clinical-animations';
