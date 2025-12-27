@@ -145,131 +145,51 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/letters - List letters with filtering
  * Query params: search, type, status, startDate, endDate, page, limit, sortBy, sortOrder
+ *
+ * Uses DAL for centralized auth and data access.
+ * The DAL handles:
+ * - Authentication (throws UnauthorizedError if not logged in)
+ * - Ownership filtering (only returns user's letters)
+ * - Patient data decryption
+ * - Stats calculation
  */
 export async function GET(request: NextRequest) {
   const log = logger.child({ action: 'listLetters' });
 
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
-    const letterType = searchParams.get('type') as LetterType | null;
-    const status = searchParams.get('status');
+
+    // Parse query parameters
+    const search = searchParams.get('search') || undefined;
+    const letterType = searchParams.get('type') as PrismaLetterType | undefined;
+    const status = (searchParams.get('status') as LetterStatus) || undefined;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 20;
-    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortBy = searchParams.get('sortBy') === 'approvedAt' ? 'approvedAt' : 'createdAt';
     const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
 
-    // Import dependencies
-    const { prisma } = await import('@/infrastructure/db/client');
-    const { decryptPatientData } = await import('@/infrastructure/db/encryption');
-
-    // Build where clause dynamically with proper Prisma types
-    const where: Prisma.LetterWhereInput = {
-      userId: session.user.id,
-      ...(status && { status: status as LetterStatus }),
-      ...(letterType && { letterType: letterType as PrismaLetterType }),
-      ...((startDate || endDate) && {
-        createdAt: {
-          ...(startDate && { gte: new Date(startDate) }),
-          ...(endDate && { lte: new Date(endDate) }),
-        },
-      }),
-    };
-
-    // Calculate offset from page
-    const offset = (page - 1) * limit;
-
-    // Build orderBy with proper Prisma type
-    const orderBy: Prisma.LetterOrderByWithRelationInput =
-      sortBy === 'approvedAt'
-        ? { approvedAt: sortOrder }
-        : { createdAt: sortOrder };
-
-    // Fetch letters with patient data
-    const [letters, total] = await Promise.all([
-      prisma.letter.findMany({
-        where,
-        orderBy,
-        take: limit,
-        skip: offset,
-        include: {
-          patient: true,
-        },
-      }),
-      prisma.letter.count({ where }),
-    ]);
-
-    // Decrypt patient data and filter by search if needed
-    let processedLetters = letters.map((letter) => {
-      let patientName = 'Unknown Patient';
-      if (letter.patient?.encryptedData) {
-        try {
-          const patientData = decryptPatientData(letter.patient.encryptedData);
-          patientName = patientData.name;
-        } catch (error) {
-          log.warn('Failed to decrypt patient data', { patientId: letter.patientId });
-        }
-      }
-
-      return {
-        id: letter.id,
-        patientId: letter.patientId,
-        patientName,
-        letterType: letter.letterType,
-        status: letter.status,
-        createdAt: letter.createdAt,
-        approvedAt: letter.approvedAt,
-        hallucinationRiskScore: letter.hallucinationRiskScore,
-      };
+    // Use DAL - handles auth and ownership automatically
+    const result = await lettersDAL.listLetters({
+      search,
+      letterType,
+      status,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
     });
 
-    // Apply client-side search filter (since patient data is encrypted)
-    if (search) {
-      const searchLower = search.toLowerCase();
-      processedLetters = processedLetters.filter((letter) =>
-        letter.patientName.toLowerCase().includes(searchLower)
-      );
+    return NextResponse.json(result);
+  } catch (error) {
+    // Handle DAL errors (UnauthorizedError, etc.)
+    if (isDALError(error)) {
+      return handleDALError(error, log);
     }
 
-    // Calculate stats
-    const allLetters = await prisma.letter.findMany({
-      where: { userId: session.user.id },
-      select: {
-        status: true,
-        approvedAt: true,
-      },
-    });
-
-    const stats = {
-      total: allLetters.length,
-      pendingReview: allLetters.filter((l) => l.status === 'IN_REVIEW' || l.status === 'DRAFT').length,
-      approvedThisWeek: allLetters.filter((l) => {
-        if (!l.approvedAt) return false;
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return new Date(l.approvedAt) >= weekAgo;
-      }).length,
-    };
-
-    return NextResponse.json({
-      letters: processedLetters,
-      pagination: {
-        page,
-        limit,
-        total: search ? processedLetters.length : total,
-        totalPages: Math.ceil((search ? processedLetters.length : total) / limit),
-        hasMore: page * limit < (search ? processedLetters.length : total),
-      },
-      stats,
-    });
-  } catch (error) {
     log.error(
       'Failed to list letters',
       {},
