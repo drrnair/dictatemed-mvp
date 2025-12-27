@@ -42,6 +42,7 @@ export interface Recording {
 }
 
 export interface RecordingFilters {
+  [key: string]: unknown;
   page?: number;
   limit?: number;
   status?: RecordingStatus;

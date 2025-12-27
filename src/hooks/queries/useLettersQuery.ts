@@ -49,6 +49,7 @@ export interface LetterStats {
 }
 
 export interface LetterFilters {
+  [key: string]: unknown;
   search?: string;
   type?: LetterType | '';
   status?: LetterStatus | '';

@@ -401,8 +401,9 @@ npm run typecheck  # ⚠️ Errors in unrelated React Query hooks (pre-existing)
 ### [x] Step 4.2: Add Webhook IP Allowlisting
 <!-- chat-id: 293ed643-422f-4ba0-a3ef-658573f9d6e0 -->
 
-**New file created:**
+**New files created:**
 - `src/lib/webhook-ip-validation.ts` - Webhook IP validation module
+- `tests/unit/lib/webhook-ip-validation.test.ts` - Unit tests (25 tests)
 
 **Files modified:**
 - `src/middleware.ts` - Added IP validation for webhook paths before allowing public access
@@ -410,7 +411,7 @@ npm run typecheck  # ⚠️ Errors in unrelated React Query hooks (pre-existing)
 **Implementation Notes:**
 - Created comprehensive IP validation module with:
   - `getClientIP()` - Extracts client IP from proxy headers (x-forwarded-for, x-vercel-forwarded-for, x-real-ip, cf-connecting-ip)
-  - `ipInCIDR()` - Validates IP against CIDR ranges for flexible allowlisting
+  - `ipInCIDR()` - Validates IP against CIDR ranges with try-catch for defensive error handling
   - `validateWebhookIP()` - Core validation function with service-specific logic
   - `validateWebhookIPMiddleware()` - Middleware helper that returns 403 response if blocked
 - **Resend IPs** (from docs): 44.228.126.217, 50.112.21.217, 52.24.126.164, 54.148.139.208
@@ -419,17 +420,31 @@ npm run typecheck  # ⚠️ Errors in unrelated React Query hooks (pre-existing)
 - **Deepgram IPs**: Not published (relies on HMAC signature verification as primary security)
   - IP validation only enabled if `DEEPGRAM_WEBHOOK_IPS` env var is set
   - Signature verification remains the primary security mechanism
+- **IPv6 Limitation**: Module only supports IPv4 validation
+  - Resend IPv6 range (2600:1f24:64:8000::/52) not included by default
+  - Documented in module header with instructions for adding via env var
+  - Most cloud providers (Vercel) report IPv4 in x-forwarded-for
 - Middleware integration:
   - Checks webhook paths BEFORE allowing public paths (defense in depth)
   - Returns 403 Forbidden for blocked IPs in production
   - Logs warning but allows in development for testing
 - Security logging: Uses `securityLogger.suspicious()` for blocked webhook attempts
 - Added `/api/webhooks/resend` and `/api/csp-report` to public paths list
+- Logging: Added info-level logging when custom IPs are used via env vars
+
+**Unit Test Coverage (25 tests):**
+- `getClientIP()`: 8 tests covering all proxy header combinations
+- `validateWebhookIP()` for Resend: 4 tests (known IPs, blocked IPs, dev mode, custom IPs)
+- `validateWebhookIP()` for Deepgram: 2 tests (skip validation, with configured IPs)
+- CIDR range support: 4 tests (/24, /32, /8, /16 ranges)
+- Edge cases: 4 tests (malformed CIDR, invalid mask, IPv6, empty IP)
+- `validateWebhookIPMiddleware()`: 3 tests (allow, block 403, dev mode)
 
 **Verification:**
 ```bash
-npm run typecheck  # ✅ Passes
+npm run typecheck  # ✅ Passes (excluding pre-existing hooks/queries errors)
 npm run lint       # ✅ Passes
+npm test -- tests/unit/lib/webhook-ip-validation.test.ts  # ✅ 25 tests pass
 ```
 
 ### [x] Step 4.3: Enable Renovate
