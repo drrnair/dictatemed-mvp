@@ -103,6 +103,10 @@ async function checkDatabase(): Promise<ServiceStatus> {
  * Check Redis connectivity for rate limiting
  * Uses the isRedisRateLimitingActive() function which safely handles
  * production checks without throwing
+ *
+ * IMPORTANT: Per security requirements (Issue 1.3), Redis is REQUIRED in production.
+ * If Redis is not configured in production, this returns 'down' (not 'degraded')
+ * to ensure the health check properly reflects the security issue.
  */
 async function checkRedis(): Promise<ServiceStatus> {
   const start = Date.now();
@@ -127,14 +131,29 @@ async function checkRedis(): Promise<ServiceStatus> {
       };
     }
 
-    // Redis not configured - this is degraded in production, acceptable in dev
+    // Redis not configured
     const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      // SECURITY: Redis is REQUIRED in production for effective rate limiting.
+      // Without Redis, rate limits are per-instance and easily bypassed.
+      // Return 'down' to ensure health check fails appropriately.
+      return {
+        status: 'down',
+        latencyMs: latency,
+        message: 'SECURITY: Redis not configured - rate limiting ineffective in production',
+        details: {
+          provider: 'none',
+          ratelimiting: 'disabled',
+          required: true,
+        },
+      };
+    }
+
+    // In development, in-memory fallback is acceptable
     return {
-      status: isProduction ? 'degraded' : 'up',
+      status: 'up',
       latencyMs: latency,
-      message: isProduction
-        ? 'Redis not configured - rate limiting using in-memory fallback'
-        : 'Using in-memory rate limiting (acceptable for development)',
+      message: 'Using in-memory rate limiting (acceptable for development)',
       details: {
         provider: 'memory',
         ratelimiting: 'fallback',

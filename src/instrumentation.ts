@@ -21,8 +21,13 @@ export async function register() {
     // Initialize Sentry server config
     await import('../sentry.server.config');
 
+    // Use structured logger for startup message
     if (process.env.NODE_ENV === 'production') {
-      console.log('[STARTUP] Environment validation passed, Sentry initialized');
+      const { logger } = await import('@/lib/logger');
+      logger.info('Startup complete', {
+        action: 'startup',
+        resource: 'environment',
+      });
     }
   }
 
