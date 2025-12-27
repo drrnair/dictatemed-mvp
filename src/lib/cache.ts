@@ -369,14 +369,25 @@ export const getCachedUserSubspecialties = unstable_cache(
 );
 
 /**
+ * Template preference data structure
+ */
+export interface TemplatePreference {
+  isFavorite: boolean;
+  usageCount: number;
+  lastUsedAt: Date | null;
+}
+
+/**
  * Get user's template preferences (cached for 30 minutes per user)
  *
  * Template preferences include favorites and usage counts.
+ * Returns a plain object keyed by templateId for JSON serialization compatibility.
  *
  * @param userId - The user's ID
+ * @returns Record<templateId, TemplatePreference> for efficient lookup
  */
 export const getCachedUserTemplatePreferences = unstable_cache(
-  async (userId: string) => {
+  async (userId: string): Promise<Record<string, TemplatePreference>> => {
     const preferences = await prisma.userTemplatePreference.findMany({
       where: { userId },
       select: {
@@ -387,8 +398,8 @@ export const getCachedUserTemplatePreferences = unstable_cache(
       },
     });
 
-    // Convert to a map for efficient lookup
-    const preferencesMap = new Map(
+    // Return plain object for JSON serialization (Map doesn't serialize with unstable_cache)
+    return Object.fromEntries(
       preferences.map((p) => [
         p.templateId,
         {
@@ -398,8 +409,6 @@ export const getCachedUserTemplatePreferences = unstable_cache(
         },
       ])
     );
-
-    return preferencesMap;
   },
   ['user-template-preferences'],
   {

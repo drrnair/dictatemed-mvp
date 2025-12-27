@@ -6,9 +6,9 @@ import { getSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import {
   getSubspecialtiesForSpecialty,
-  getSpecialtyById,
   subspecialtiesApiQuerySchema,
 } from '@/domains/specialties';
+import { getCachedSpecialtyById } from '@/lib/cache';
 
 const log = logger.child({ module: 'subspecialties-api' });
 
@@ -30,10 +30,13 @@ export async function GET(request: NextRequest, context: RouteParams) {
 
     const { id: specialtyId } = await context.params;
 
-    // Validate specialty exists
-    const specialty = await getSpecialtyById(specialtyId);
+    // Validate specialty exists (cached for 24 hours)
+    const specialty = await getCachedSpecialtyById(specialtyId);
     if (!specialty) {
-      return NextResponse.json({ error: 'Specialty not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Specialty not found' },
+        { status: 404 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -66,7 +69,11 @@ export async function GET(request: NextRequest, context: RouteParams) {
       ...result,
     });
   } catch (error) {
-    log.error('Failed to get subspecialties', { action: 'getSubspecialties' }, error as Error);
+    log.error(
+      'Failed to get subspecialties',
+      { action: 'getSubspecialties' },
+      error as Error
+    );
     return NextResponse.json(
       { error: 'Failed to get subspecialties' },
       { status: 500 }
