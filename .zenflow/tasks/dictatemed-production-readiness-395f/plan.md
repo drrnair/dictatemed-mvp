@@ -100,8 +100,9 @@ NODE_ENV=production npm run build  # Should error if Redis not configured
 - Updated `checkRateLimit()` (sync) to call `initializeRedis()` at the start, ensuring the production check happens for all rate limit calls
 - Updated `checkRateLimitAsync()` to not catch `RedisRequiredError` - lets it propagate up
 - Updated `env-validation.ts` to require `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in production (changed from warning to error)
-- All 20 rate-limit unit tests pass (run in non-production environment)
-- TypeScript type check passes
+- Fixed `isRedisRateLimitingActive()` to gracefully handle `RedisRequiredError` (returns false instead of throwing) for safe diagnostic checks
+- Added 4 new unit tests: RedisRequiredError class behavior, isRedisRateLimitingActive(), and production behavior documentation
+- All 24 rate-limit unit tests pass (run in non-production environment)
 
 ### [x] Step 1.4: Add Content Security Policy Headers
 <!-- chat-id: b7f19c82-6085-4ef6-8f14-fb14350a4ff7 -->

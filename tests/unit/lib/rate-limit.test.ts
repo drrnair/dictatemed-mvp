@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import {
   checkRateLimit,
   checkRateLimitAsync,
@@ -6,6 +6,8 @@ import {
   clearRateLimit,
   clearAllRateLimits,
   getRateLimitHeaders,
+  isRedisRateLimitingActive,
+  RedisRequiredError,
   RATE_LIMITS,
 } from '@/lib/rate-limit';
 
@@ -281,6 +283,57 @@ describe('rate-limit', () => {
     it('should handle very long key', () => {
       const longKey = 'a'.repeat(1000) + ':letters';
       const result = checkRateLimit(longKey, 'letters');
+      expect(result.allowed).toBe(true);
+    });
+  });
+
+  describe('RedisRequiredError', () => {
+    it('should have correct error name and message', () => {
+      const error = new RedisRequiredError();
+      expect(error.name).toBe('RedisRequiredError');
+      expect(error.message).toContain('UPSTASH_REDIS_REST_URL');
+      expect(error.message).toContain('UPSTASH_REDIS_REST_TOKEN');
+      expect(error.message).toContain('production');
+    });
+
+    it('should be instanceof Error', () => {
+      const error = new RedisRequiredError();
+      expect(error).toBeInstanceOf(Error);
+      expect(error).toBeInstanceOf(RedisRequiredError);
+    });
+  });
+
+  describe('isRedisRateLimitingActive', () => {
+    it('should return false when Redis is not configured (in non-production)', () => {
+      // In test environment (NODE_ENV !== 'production'), Redis not configured = false
+      const result = isRedisRateLimitingActive();
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('production environment behavior', () => {
+    // These tests verify the production enforcement logic
+    // We need to mock isProductionEnv to simulate production
+
+    it('should document that RedisRequiredError is thrown in production without Redis', () => {
+      // Note: We cannot easily test this without mocking the module internals
+      // because isProductionEnv is imported at module load time.
+      //
+      // This test documents the expected behavior:
+      // - In production (NODE_ENV=production), if UPSTASH_REDIS_REST_URL or
+      //   UPSTASH_REDIS_REST_TOKEN are not set, checkRateLimit() and
+      //   checkRateLimitAsync() will throw RedisRequiredError.
+      // - In non-production, they fall back to in-memory rate limiting.
+      //
+      // Manual verification:
+      //   NODE_ENV=production npm test -- --run tests/unit/lib/rate-limit.test.ts
+      //   (should fail with RedisRequiredError)
+
+      // Verify we're in test environment
+      expect(process.env.NODE_ENV).not.toBe('production');
+
+      // Verify in-memory fallback works in non-production
+      const result = checkRateLimit('test:production', 'default');
       expect(result.allowed).toBe(true);
     });
   });

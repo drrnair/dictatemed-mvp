@@ -315,10 +315,22 @@ export function clearAllRateLimits(): void {
 
 /**
  * Check if Redis rate limiting is active.
+ * This is a safe check that won't throw in production - useful for logging/diagnostics.
+ *
+ * @returns true if Redis is configured and initialized, false otherwise
  */
 export function isRedisRateLimitingActive(): boolean {
-  initializeRedis();
-  return redisClient !== null && redisLimiters !== null;
+  try {
+    initializeRedis();
+    return redisClient !== null && redisLimiters !== null;
+  } catch (error) {
+    // In production without Redis, initializeRedis() throws RedisRequiredError
+    // We catch it here to allow this function to be used for safe checks
+    if (error instanceof RedisRequiredError) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 /**

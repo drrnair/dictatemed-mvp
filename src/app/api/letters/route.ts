@@ -1,14 +1,22 @@
 // src/app/api/letters/route.ts
 // Letter generation and listing API
+//
+// Uses the Data Access Layer (DAL) for authenticated data operations.
+// The DAL provides:
+// - Automatic authentication checks
+// - Ownership verification
+// - Consistent error handling
+// - Audit logging for PHI access
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import type { Prisma, Subspecialty, LetterStatus, LetterType as PrismaLetterType } from '@prisma/client';
+import type { Subspecialty, LetterStatus, LetterType as PrismaLetterType } from '@prisma/client';
 import { getSession } from '@/lib/auth';
-import { generateLetter, listLetters } from '@/domains/letters/letter.service';
+import { generateLetter } from '@/domains/letters/letter.service';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import type { LetterType } from '@/domains/letters/letter.types';
+import { letters as lettersDAL, handleDALError, isDALError, UnauthorizedError } from '@/lib/dal';
 
 const subspecialtyEnum = z.enum([
   'GENERAL_CARDIOLOGY',
