@@ -46,11 +46,11 @@ export function SidePanelLayout({
   children,
   isOpen,
   onClose,
-  title = 'Clinical Literature',
+  title = 'Clinical Assistant',
   headerContent,
-  initialWidth = 400,
-  minWidth = 320,
-  maxWidth = 640,
+  initialWidth = 42, // Percentage - intentionally asymmetric (not 50% or 40%)
+  minWidth = 380,
+  maxWidth = 720,
   className,
 }: SidePanelLayoutProps) {
   const [width, setWidth] = useState(initialWidth);
