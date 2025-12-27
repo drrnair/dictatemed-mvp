@@ -35,7 +35,7 @@ export const easings = {
 // =============================================================================
 
 /**
- * Standardized duration values in milliseconds.
+ * Standardized duration values in seconds (Framer Motion format).
  * Consistent timing creates cohesive feel.
  */
 export const durations = {
@@ -45,8 +45,17 @@ export const durations = {
   /** Fast transitions (150ms) - hover states, quick feedback */
   fast: 0.15,
 
+  /** Quick exit transitions (200ms) - panel/modal exits */
+  quickExit: 0.2,
+
   /** Normal transitions (250ms) - default for most animations */
   normal: 0.25,
+
+  /** Panel exit (280ms) - slightly longer than quick exit */
+  panelExit: 0.28,
+
+  /** Card entrance (300ms) - deliberate card reveals */
+  card: 0.3,
 
   /** Slow transitions (350ms) - deliberate movements, panels */
   slow: 0.35,
@@ -66,8 +75,10 @@ export const durations = {
 // =============================================================================
 
 /**
- * Side panel animation variants.
+ * Side panel animation variants (desktop: 42% width).
  * Panel expands first, then content fades in.
+ *
+ * For responsive widths, use createPanelVariants() instead.
  */
 export const panelVariants = {
   closed: {
@@ -93,15 +104,55 @@ export const panelVariants = {
     opacity: 0,
     transition: {
       width: {
-        duration: 0.28,
+        duration: durations.panelExit,
         ease: easings.smooth,
       },
       opacity: {
-        duration: 0.2,
+        duration: durations.quickExit,
       },
     },
   },
 } as const;
+
+/**
+ * Creates panel variants with custom width.
+ * Use for responsive designs where width varies by breakpoint.
+ *
+ * @param width - Panel width (e.g., '42%', '50%', '100%')
+ */
+export const createPanelVariants = (width: string) => ({
+  closed: {
+    width: 0,
+    opacity: 0,
+  },
+  open: {
+    width,
+    opacity: 1,
+    transition: {
+      width: {
+        duration: durations.slow,
+        ease: easings.smooth,
+      },
+      opacity: {
+        duration: durations.normal,
+        delay: 0.1,
+      },
+    },
+  },
+  exit: {
+    width: 0,
+    opacity: 0,
+    transition: {
+      width: {
+        duration: durations.panelExit,
+        ease: easings.smooth,
+      },
+      opacity: {
+        duration: durations.quickExit,
+      },
+    },
+  },
+});
 
 /**
  * Panel content animation variants.
@@ -147,7 +198,7 @@ export const cardVariants = {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.3,
+      duration: durations.card,
       ease: easings.smooth,
     },
   },

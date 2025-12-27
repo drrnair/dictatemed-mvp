@@ -53,19 +53,28 @@ export function SidePanelLayout({
   maxWidth = 720,
   className,
 }: SidePanelLayoutProps) {
-  const [width, setWidth] = useState(initialWidth);
+  const [widthPercent, setWidthPercent] = useState(initialWidth);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
 
+  // Calculate pixel width from percentage, clamped to min/max
+  const getClampedWidth = useCallback(
+    (percent: number) => {
+      const pixelWidth = (percent / 100) * window.innerWidth;
+      return Math.max(minWidth, Math.min(maxWidth, pixelWidth));
+    },
+    [minWidth, maxWidth]
+  );
+
   // Handle resize start
   const handleResizeStart = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
       e.preventDefault();
       setIsResizing(true);
-      startWidthRef.current = width;
+      startWidthRef.current = widthPercent;
 
       const clientX = 'touches' in e ? e.touches[0]!.clientX : e.clientX;
       startXRef.current = clientX;
@@ -75,12 +84,13 @@ export function SidePanelLayout({
           'touches' in moveEvent
             ? moveEvent.touches[0]!.clientX
             : moveEvent.clientX;
-        const delta = startXRef.current - moveClientX;
-        const newWidth = Math.max(
-          minWidth,
-          Math.min(maxWidth, startWidthRef.current + delta)
+        const deltaX = startXRef.current - moveClientX;
+        const deltaPercent = (deltaX / window.innerWidth) * 100;
+        const newPercent = Math.max(
+          (minWidth / window.innerWidth) * 100,
+          Math.min((maxWidth / window.innerWidth) * 100, startWidthRef.current + deltaPercent)
         );
-        setWidth(newWidth);
+        setWidthPercent(newPercent);
       };
 
       const handleEnd = () => {
@@ -96,7 +106,7 @@ export function SidePanelLayout({
       document.addEventListener('mouseup', handleEnd);
       document.addEventListener('touchend', handleEnd);
     },
-    [width, minWidth, maxWidth]
+    [widthPercent, minWidth, maxWidth]
   );
 
   // Toggle minimize
@@ -104,115 +114,202 @@ export function SidePanelLayout({
     setIsMinimized((prev) => !prev);
   }, []);
 
-  if (!isOpen) return null;
-
-  // Minimized state - thin edge strip
-  if (isMinimized) {
-    return (
-      <motion.div
-        initial={{ x: 48 }}
-        animate={{ x: 0 }}
-        exit={{ x: 48 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed top-0 right-0 h-full w-12 bg-card border-l shadow-lg z-50 flex flex-col items-center py-4"
-      >
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleMinimize}
-          className="h-10 w-10"
-          aria-label="Expand panel"
-        >
-          <ChevronRight className="h-5 w-5 rotate-180" />
-        </Button>
-      </motion.div>
-    );
-  }
-
   return (
-    <>
-      {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Panel */}
-      <motion.div
-        ref={panelRef}
-        initial={{ x: '100%' }}
-        animate={{ x: 0 }}
-        exit={{ x: '100%' }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        style={{ width: `${width}px` }}
-        className={cn(
-          'fixed top-0 right-0 h-full bg-card border-l shadow-lg z-50',
-          'flex flex-col',
-          isResizing && 'select-none',
-          className
-        )}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="side-panel-title"
-      >
-        {/* Resize handle */}
-        <button
-          type="button"
-          className={cn(
-            'absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize',
-            'hover:bg-primary/20 transition-colors',
-            'flex items-center justify-center',
-            'bg-transparent border-0 p-0',
-            isResizing && 'bg-primary/20'
-          )}
-          onMouseDown={handleResizeStart}
-          onTouchStart={handleResizeStart}
-          aria-label="Resize panel"
-        >
-          <div className="absolute -left-2 top-1/2 -translate-y-1/2 opacity-0 hover:opacity-100 transition-opacity">
-            <GripVertical className="h-6 w-6 text-muted-foreground" />
-          </div>
-        </button>
-
-        {/* Header */}
-        {headerContent || (
-          <div className="flex items-center justify-between p-4 border-b shrink-0">
-            <h2
-              id="side-panel-title"
-              className="font-semibold text-foreground"
+    <AnimatePresence mode="wait">
+      {isOpen && (
+        <>
+          {/* Minimized state - thin edge strip */}
+          {isMinimized ? (
+            <motion.div
+              initial={{ x: 48, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 48, opacity: 0 }}
+              transition={{
+                duration: durations.normal,
+                ease: easings.smooth,
+              }}
+              className={cn(
+                'fixed top-0 right-0 h-full w-12 z-50',
+                'bg-clinical-gray-50 border-l border-clinical-gray-200',
+                'flex flex-col items-center py-6',
+                'shadow-soft'
+              )}
             >
-              {title}
-            </h2>
-            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={toggleMinimize}
-                className="h-8 w-8"
-                aria-label="Minimize panel"
+                className="h-10 w-10 hover:bg-clinical-gray-100"
+                aria-label="Expand panel"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-5 w-5 rotate-180 text-clinical-gray-600" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
+            </motion.div>
+          ) : (
+            <>
+              {/* Backdrop - only on mobile */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: durations.fast }}
+                className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
                 onClick={onClose}
-                className="h-8 w-8"
-                aria-label="Close panel"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+                aria-hidden="true"
+              />
 
-        {/* Content */}
-        <div className="flex-1 overflow-hidden">{children}</div>
-      </motion.div>
-    </>
+              {/* Panel */}
+              <motion.aside
+                ref={panelRef}
+                initial={{ width: 0, opacity: 0 }}
+                animate={{
+                  width: `${widthPercent}%`,
+                  opacity: 1,
+                  transition: {
+                    width: {
+                      duration: durations.slow,
+                      ease: easings.smooth,
+                    },
+                    opacity: {
+                      duration: durations.normal,
+                      delay: 0.1,
+                    },
+                  },
+                }}
+                exit={{
+                  width: 0,
+                  opacity: 0,
+                  transition: {
+                    width: {
+                      duration: 0.28,
+                      ease: easings.smooth,
+                    },
+                    opacity: {
+                      duration: 0.2,
+                    },
+                  },
+                }}
+                className={cn(
+                  'fixed top-0 right-0 h-full z-50',
+                  'bg-clinical-gray-50 border-l border-clinical-gray-200',
+                  'flex flex-col overflow-hidden',
+                  isResizing && 'select-none',
+                  className
+                )}
+                style={{
+                  // Subtle inner shadow for depth without drama
+                  boxShadow: 'inset 1px 0 0 0 rgba(0,0,0,0.03), -4px 0 24px -8px rgba(0,0,0,0.08)',
+                  minWidth: `${minWidth}px`,
+                  maxWidth: `${maxWidth}px`,
+                }}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="side-panel-title"
+              >
+                {/* Content fades in after panel expands */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{
+                    opacity: 1,
+                    x: 0,
+                    transition: {
+                      delay: durations.contentDelay,
+                      duration: durations.normal,
+                      ease: easings.smooth,
+                    },
+                  }}
+                  exit={{
+                    opacity: 0,
+                    x: 20,
+                    transition: { duration: durations.fast },
+                  }}
+                  className="flex-1 flex flex-col h-full"
+                >
+                  {/* Resize handle */}
+                  <button
+                    type="button"
+                    className={cn(
+                      'absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize',
+                      'hover:bg-clinical-blue-500/20 transition-colors duration-150',
+                      'flex items-center justify-center',
+                      'bg-transparent border-0 p-0 group',
+                      isResizing && 'bg-clinical-blue-500/20'
+                    )}
+                    onMouseDown={handleResizeStart}
+                    onTouchStart={handleResizeStart}
+                    aria-label="Resize panel"
+                  >
+                    <div className={cn(
+                      'absolute -left-2 top-1/2 -translate-y-1/2',
+                      'opacity-0 group-hover:opacity-100 transition-opacity duration-150'
+                    )}>
+                      <GripVertical className="h-6 w-6 text-clinical-gray-400" />
+                    </div>
+                  </button>
+
+                  {/* Header */}
+                  {headerContent || (
+                    <header className={cn(
+                      'flex items-center justify-between px-8 py-6',
+                      'bg-white border-b border-clinical-gray-200',
+                      'shrink-0'
+                    )}>
+                      <div className="flex items-center gap-3">
+                        {/* Icon badge */}
+                        <div className={cn(
+                          'w-9 h-9 rounded-lg',
+                          'bg-clinical-blue-100',
+                          'flex items-center justify-center'
+                        )}>
+                          <Search className="w-5 h-5 text-clinical-blue-600" />
+                        </div>
+                        <h2
+                          id="side-panel-title"
+                          className="text-lg font-semibold text-clinical-gray-900 tracking-tight font-ui-sans"
+                        >
+                          {title}
+                        </h2>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={toggleMinimize}
+                          className={cn(
+                            'h-8 w-8 rounded-lg',
+                            'hover:bg-clinical-gray-100 active:bg-clinical-gray-200',
+                            'transition-colors duration-150'
+                          )}
+                          aria-label="Minimize panel"
+                        >
+                          <ChevronRight className="h-4 w-4 text-clinical-gray-500" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={onClose}
+                          className={cn(
+                            'h-8 w-8 rounded-lg',
+                            'hover:bg-clinical-gray-100 active:bg-clinical-gray-200',
+                            'transition-colors duration-150 group'
+                          )}
+                          aria-label="Close clinical assistant"
+                        >
+                          <X className="h-5 w-5 text-clinical-gray-500 group-hover:text-clinical-gray-700" />
+                        </Button>
+                      </div>
+                    </header>
+                  )}
+
+                  {/* Scrollable content */}
+                  <div className="flex-1 overflow-hidden">{children}</div>
+                </motion.div>
+              </motion.aside>
+            </>
+          )}
+        </>
+      )}
+    </AnimatePresence>
   );
 }
