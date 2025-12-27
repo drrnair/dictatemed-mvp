@@ -561,7 +561,9 @@ npm test -- tests/unit/lib/webhook-ip-validation.test.ts  # ✅ 25 tests pass
   - Retry with exponential backoff (up to 2 retries for queries, 1 for mutations)
   - Window focus refetch disabled (medical app - intentional)
   - Singleton pattern for browser client
+  - **Global error handling** via QueryCache/MutationCache with integration to error-logger
 - `src/components/providers/QueryProvider.tsx` - QueryClientProvider with DevTools (bottom-left)
+  - Uses `useState` for stable client reference (prevents issues with StrictMode/SSR)
 - `src/hooks/queries/useLettersQuery.ts` - Complete letters hooks:
   - `useLettersQuery` - List with filters, pagination
   - `useLetterQuery` - Single letter by ID

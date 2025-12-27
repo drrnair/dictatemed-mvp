@@ -120,6 +120,7 @@ function handleQueryError(error: Error, queryKey: unknown): void {
  * Global error handler for mutations
  * Logs errors to console and Sentry for debugging
  */
+<<<<<<< Updated upstream
 function handleMutationError(
   error: Error,
   variables: unknown,
@@ -138,6 +139,17 @@ function handleMutationError(
     },
     'medium'
   );
+=======
+function handleMutationError(error: Error, variables: unknown, context: unknown, mutationKey: unknown): void {
+  // Log to error tracking system (mutations are more critical than queries)
+  logError(error, {
+    operation: 'mutation_error',
+    mutationKey: mutationKey ? JSON.stringify(mutationKey) : 'unknown',
+    hasVariables: !!variables,
+    hasContext: !!context,
+    component: 'ReactQuery',
+  }, 'medium');
+>>>>>>> Stashed changes
 }
 
 /**
@@ -154,12 +166,16 @@ const queryCache = new QueryCache({
  */
 const mutationCache = new MutationCache({
   onError: (error, variables, context, mutation) => {
+<<<<<<< Updated upstream
     handleMutationError(
       error as Error,
       variables,
       context,
       mutation.options.mutationKey
     );
+=======
+    handleMutationError(error as Error, variables, context, mutation.options.mutationKey);
+>>>>>>> Stashed changes
   },
 });
 
