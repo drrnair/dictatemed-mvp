@@ -2,8 +2,9 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Settings, AlertCircle } from 'lucide-react';
+import { BookOpen, Settings, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useLiteratureStore } from '@/stores/literature.store';
