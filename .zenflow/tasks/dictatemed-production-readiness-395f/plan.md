@@ -170,6 +170,7 @@ npm run lint       # ✅ Passes (only unrelated warnings in other files)
 ```
 
 ### [ ] Step 2.2: Migrate API Routes to DAL
+<!-- chat-id: c15afa23-ce5f-46a0-85a1-8f36e38ca22f -->
 
 **Files to modify:**
 - `src/app/api/letters/route.ts` - Use DAL for letter operations
