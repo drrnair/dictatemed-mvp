@@ -1,7 +1,12 @@
 // src/app/(marketing)/page.tsx
 // Landing page - composed of all section components
+// Uses ISR to serve static content with periodic revalidation
 
 import { Navigation } from '@/components/landing/Navigation';
+
+// Revalidate landing page every hour (3600 seconds)
+// Content is mostly static but may have minor updates
+export const revalidate = 3600;
 import { Hero } from '@/components/landing/Hero';
 import { SocialProof } from '@/components/landing/SocialProof';
 import { ProblemSolution } from '@/components/landing/ProblemSolution';

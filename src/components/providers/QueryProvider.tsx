@@ -4,6 +4,7 @@
 'use client';
 
 import * as React from 'react';
+import { useState } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { getQueryClient } from '@/lib/react-query';
@@ -15,11 +16,15 @@ interface QueryProviderProps {
 /**
  * QueryProvider wraps the application with React Query's QueryClientProvider
  * and includes DevTools in development for debugging queries
+ *
+ * Uses useState to ensure stable QueryClient reference across:
+ * - React StrictMode double-renders in development
+ * - SSR/hydration scenarios
  */
 export function QueryProvider({ children }: QueryProviderProps) {
-  // Use getQueryClient to ensure we have a singleton on the client
-  // and a new instance on each server request
-  const queryClient = getQueryClient();
+  // useState ensures stable client reference across renders
+  // getQueryClient() handles server vs client singleton logic
+  const [queryClient] = useState(() => getQueryClient());
 
   return (
     <QueryClientProvider client={queryClient}>
