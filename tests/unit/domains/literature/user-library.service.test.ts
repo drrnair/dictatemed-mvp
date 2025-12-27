@@ -19,6 +19,14 @@ vi.mock('@/infrastructure/db/client', () => ({
     $executeRaw: vi.fn(),
     $executeRawUnsafe: vi.fn(),
     $queryRaw: vi.fn(),
+    // Transaction support - executes the callback with the prisma instance
+    $transaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => {
+      // Create a mock transaction context with the same methods
+      const txMock = {
+        $executeRaw: vi.fn(),
+      };
+      return callback(txMock);
+    }),
   },
 }));
 

@@ -520,7 +520,7 @@ npm run test:integration       # ✅ 43 literature API tests passed
 <!-- agent: CLAUDE_CODE -->
 
 ## Overview
-Comprehensive verification of the Clinical Literature Chat implementation completed.
+Comprehensive verification of the Clinical Literature Chat implementation completed with additional fixes based on review feedback.
 
 ## Verification Completed
 
@@ -540,15 +540,42 @@ Comprehensive verification of the Clinical Literature Chat implementation comple
 - **Settings UI**: UpToDate management, library upload, PubMed status
 - **Keyboard Shortcuts**: Cmd+K (toggle), Escape (close), Enter (submit)
 
-### Security Fix Applied ✅
-- Fixed SQL injection vulnerability in `storeChunks` method
-- Changed from `$executeRawUnsafe` with string interpolation to `$executeRaw` with parameterized queries
+### Fixes Applied Based on Review Feedback ✅
+
+1. **Performance Fix in storeChunks** (`user-library.service.ts:164-216`)
+   - Changed from sequential single inserts to batched transaction inserts
+   - Uses `Promise.all` within batches of 50 for parallel execution
+   - Added embedding dimension validation (1536 for text-embedding-3-small)
+   - Maintains SQL safety with parameterized queries
+
+2. **Input Validation for minSimilarity** (`user-library.service.ts:230-238`)
+   - Added validation to clamp `minSimilarity` to valid range (0-1)
+   - Added validation for `limit` parameter (clamped to 1-20)
+   - Logs warning when invalid values provided
+
+3. **Error Visibility for Source Failures** (`orchestration.service.ts:173-247, types.ts:38-46`)
+   - Added `SourceFailure` type to track failed searches
+   - Added `sourcesSearched` and `sourceFailures` fields to `LiteratureSearchResult`
+   - Modified `executeSearches` to track and return both successes and failures
+   - User can now see which sources failed in the response
+
+4. **Added UnifiedAnthropicService Tests** (`tests/unit/infrastructure/anthropic/unified-service.test.ts`)
+   - 16 new tests for types, configuration, and module exports
+   - Tests for `DEFAULT_UNIFIED_CONFIG`, `ChatMessage`, `ChatRequest`, `UnifiedTextRequest`, etc.
 
 ### Test Results ✅
-- **Unit Tests**: 1885 passed
+- **Unit Tests**: 1901 passed (+16 new)
 - **Integration Tests**: 457 passed (43 literature-specific)
 - **TypeScript**: Compiles without errors
 - **ESLint**: No errors
+
+### Known Technical Debt (Documented)
+1. **Hardcoded Tier Configuration**: `getUserTierConfig()` returns Professional tier for all users
+   - Location: `user-library.service.ts:347-350`, `orchestration.service.ts:555-570`
+   - Action: Implement subscription system integration when billing is ready
+2. **UpToDate API Stub**: Returns empty results until API credentials are configured
+   - Location: `uptodate.service.ts:227-230`
+   - Action: Implement actual UpToDate API calls when credentials obtained
 
 ## Summary
 

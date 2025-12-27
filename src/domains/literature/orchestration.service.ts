@@ -15,6 +15,7 @@ import type {
   ConfidenceLevel,
   LiteratureSourceType,
   SubscriptionTier,
+  SourceFailure,
 } from './types';
 import { TIER_LIMITS } from './types';
 import type { PubMedArticleResult } from '@/infrastructure/pubmed';
@@ -106,8 +107,8 @@ class LiteratureOrchestrationService {
       // Step 3: Determine which sources to search
       const sourcesToSearch = this.determineSources(params.sources, tierConfig);
 
-      // Step 4: Execute parallel searches
-      const sourceResults = await this.executeSearches(params, sourcesToSearch);
+      // Step 4: Execute parallel searches (now returns failures too)
+      const { results: sourceResults, failures, successfulSources } = await this.executeSearches(params, sourcesToSearch);
 
       // Step 5: Synthesize results with AI
       const synthesized = await this.synthesizeResults(params, sourceResults);
@@ -121,12 +122,15 @@ class LiteratureOrchestrationService {
         query: params.query.substring(0, 100),
         sourceCount: sourceResults.length,
         citationCount: synthesized.citations.length,
+        failedSources: failures.length,
         responseTimeMs,
       });
 
       return {
         ...synthesized,
         responseTimeMs,
+        sourcesSearched: successfulSources,
+        sourceFailures: failures.length > 0 ? failures : undefined,
       };
     } catch (error) {
       log.error(
@@ -167,13 +171,16 @@ class LiteratureOrchestrationService {
 
   /**
    * Execute searches across multiple sources in parallel.
+   * Tracks both successful results and failures for user visibility.
    */
   private async executeSearches(
     params: LiteratureSearchParams,
     sources: LiteratureSourceType[]
-  ): Promise<SourceResult[]> {
+  ): Promise<{ results: SourceResult[]; failures: SourceFailure[]; successfulSources: LiteratureSourceType[] }> {
     const log = logger.child({ action: 'executeSearches', userId: params.userId });
     const results: SourceResult[] = [];
+    const failures: SourceFailure[] = [];
+    const successfulSources: LiteratureSourceType[] = [];
 
     const searchPromises: Promise<void>[] = [];
 
@@ -183,9 +190,14 @@ class LiteratureOrchestrationService {
         this.searchPubMed(params.query)
           .then((pubmedResults) => {
             results.push(...pubmedResults);
+            if (pubmedResults.length > 0) {
+              successfulSources.push('pubmed');
+            }
           })
           .catch((error) => {
-            log.warn('PubMed search failed', { error: error instanceof Error ? error.message : 'Unknown' });
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            log.warn('PubMed search failed', { error: errorMessage });
+            failures.push({ source: 'pubmed', error: 'PubMed temporarily unavailable' });
           })
       );
     }
@@ -196,9 +208,14 @@ class LiteratureOrchestrationService {
         this.searchUpToDate(params.userId, params.query, params.specialty)
           .then((upToDateResults) => {
             results.push(...upToDateResults);
+            if (upToDateResults.length > 0) {
+              successfulSources.push('uptodate');
+            }
           })
           .catch((error) => {
-            log.warn('UpToDate search failed', { error: error instanceof Error ? error.message : 'Unknown' });
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            log.warn('UpToDate search failed', { error: errorMessage });
+            failures.push({ source: 'uptodate', error: 'UpToDate temporarily unavailable' });
           })
       );
     }
@@ -209,9 +226,14 @@ class LiteratureOrchestrationService {
         this.searchUserLibrary(params.userId, params.query)
           .then((libraryResults) => {
             results.push(...libraryResults);
+            if (libraryResults.length > 0) {
+              successfulSources.push('user_library');
+            }
           })
           .catch((error) => {
-            log.warn('User library search failed', { error: error instanceof Error ? error.message : 'Unknown' });
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            log.warn('User library search failed', { error: errorMessage });
+            failures.push({ source: 'user_library', error: 'Personal library search failed' });
           })
       );
     }
@@ -220,10 +242,11 @@ class LiteratureOrchestrationService {
 
     log.info('Searches complete', {
       sourceCount: results.length,
-      sources: Array.from(new Set(results.map((r) => r.type))),
+      successfulSources,
+      failedSources: failures.map((f) => f.source),
     });
 
-    return results;
+    return { results, failures, successfulSources };
   }
 
   /**
@@ -323,6 +346,7 @@ class LiteratureOrchestrationService {
         recommendations: [],
         citations: [],
         confidence: 'low',
+        sourcesSearched: [],
       };
     }
 
@@ -468,6 +492,9 @@ class LiteratureOrchestrationService {
     // Determine confidence level
     const confidence = this.determineConfidence(sourceResults, content);
 
+    // Get unique source types that had results
+    const sourcesSearched = Array.from(new Set(sourceResults.map((r) => r.type)));
+
     return {
       answer: content,
       recommendations: recommendations.slice(0, 5), // Limit to 5 recommendations
@@ -475,6 +502,7 @@ class LiteratureOrchestrationService {
       warnings: warnings.length > 0 ? warnings.slice(0, 3) : undefined,
       citations,
       confidence,
+      sourcesSearched,
     };
   }
 

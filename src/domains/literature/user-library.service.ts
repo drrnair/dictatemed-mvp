@@ -163,7 +163,8 @@ class UserLibraryService {
 
   /**
    * Store document chunks with embeddings using pgvector.
-   * Uses parameterized queries for SQL safety and batch insertion for performance.
+   * Uses batched parameterized queries for SQL safety AND performance.
+   * Chunks are inserted in batches within a transaction to minimize round-trips.
    */
   private async storeChunks(
     documentId: string,
@@ -178,22 +179,40 @@ class UserLibraryService {
       const chunk = chunks[i];
       const embedding = embeddings[i];
       if (chunk && embedding) {
+        // Validate embedding dimensions (text-embedding-3-small uses 1536 dimensions)
+        if (embedding.length !== 1536) {
+          logger.warn('Unexpected embedding dimension', {
+            expected: 1536,
+            actual: embedding.length,
+            chunkIndex: chunk.index,
+          });
+        }
         validChunks.push({ chunk, embedding });
       }
     }
 
     if (validChunks.length === 0) return;
 
-    // Insert chunks one at a time using parameterized queries for SQL safety
-    // This is safer than string interpolation and prevents SQL injection
-    for (const { chunk, embedding } of validChunks) {
-      const embeddingStr = `[${embedding.join(',')}]`;
+    // Insert chunks in batches using a transaction for performance
+    // Each batch uses parameterized queries to prevent SQL injection
+    const BATCH_SIZE = 50; // Balance between performance and transaction size
 
-      await prisma.$executeRaw`
-        INSERT INTO document_chunks (id, document_id, chunk_index, content, embedding, created_at)
-        VALUES (gen_random_uuid(), ${documentId}, ${chunk.index}, ${chunk.content}, ${embeddingStr}::vector, NOW())
-      `;
-    }
+    await prisma.$transaction(async (tx) => {
+      for (let batchStart = 0; batchStart < validChunks.length; batchStart += BATCH_SIZE) {
+        const batch = validChunks.slice(batchStart, batchStart + BATCH_SIZE);
+
+        // Use Promise.all within each batch for parallel inserts within the transaction
+        await Promise.all(
+          batch.map(({ chunk, embedding }) => {
+            const embeddingStr = `[${embedding.join(',')}]`;
+            return tx.$executeRaw`
+              INSERT INTO document_chunks (id, document_id, chunk_index, content, embedding, created_at)
+              VALUES (gen_random_uuid(), ${documentId}, ${chunk.index}, ${chunk.content}, ${embeddingStr}::vector, NOW())
+            `;
+          })
+        );
+      }
+    });
   }
 
   /**
@@ -206,12 +225,22 @@ class UserLibraryService {
     minSimilarity?: number;
   }): Promise<UserLibrarySearchResult> {
     const log = logger.child({ action: 'searchUserLibrary', userId: params.userId });
-    const limit = params.limit || 5;
-    const minSimilarity = params.minSimilarity || 0.7;
+    const limit = Math.min(Math.max(params.limit || 5, 1), 20); // Clamp to 1-20
+
+    // Validate and clamp minSimilarity to valid range (0-1)
+    let minSimilarity = params.minSimilarity ?? 0.7;
+    if (minSimilarity < 0 || minSimilarity > 1 || !Number.isFinite(minSimilarity)) {
+      log.warn('Invalid minSimilarity value, using default', {
+        provided: params.minSimilarity,
+        default: 0.7,
+      });
+      minSimilarity = 0.7;
+    }
 
     log.info('Searching user library', {
       query: params.query.substring(0, 100),
       limit,
+      minSimilarity,
     });
 
     try {

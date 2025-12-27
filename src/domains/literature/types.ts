@@ -36,6 +36,16 @@ export interface Citation {
 }
 
 /**
+ * Information about source search failures.
+ */
+export interface SourceFailure {
+  /** Source that failed */
+  source: LiteratureSourceType;
+  /** Error message */
+  error: string;
+}
+
+/**
  * Search result from literature sources.
  */
 export interface LiteratureSearchResult {
@@ -53,6 +63,10 @@ export interface LiteratureSearchResult {
   confidence: ConfidenceLevel;
   /** Response time in milliseconds */
   responseTimeMs: number;
+  /** Sources that were successfully searched */
+  sourcesSearched: LiteratureSourceType[];
+  /** Sources that failed (for user visibility) */
+  sourceFailures?: SourceFailure[];
 }
 
 /**
