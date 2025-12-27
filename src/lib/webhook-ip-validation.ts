@@ -92,7 +92,14 @@ function ipInCIDR(ip: string, cidr: string): boolean {
     return ip === cidr;
   }
 
-  const [range, bits] = cidr.split('/');
+  const parts = cidr.split('/');
+  const range = parts[0];
+  const bits = parts[1];
+
+  if (!range || !bits) {
+    return false;
+  }
+
   const mask = parseInt(bits, 10);
 
   if (isNaN(mask) || mask < 0 || mask > 32) {
