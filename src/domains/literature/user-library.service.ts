@@ -163,33 +163,46 @@ class UserLibraryService {
 
   /**
    * Store document chunks with embeddings using pgvector.
+   * Uses batch insertion for better performance with large documents.
    */
   private async storeChunks(
     documentId: string,
     chunks: { content: string; index: number }[],
     embeddings: number[][]
   ): Promise<void> {
-    // Use raw SQL to insert with vector type
+    if (chunks.length === 0) return;
+
+    // Build batch of valid chunks
+    const validChunks: Array<{ chunk: { content: string; index: number }; embedding: number[] }> = [];
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
       const embedding = embeddings[i];
+      if (chunk && embedding) {
+        validChunks.push({ chunk, embedding });
+      }
+    }
 
-      if (!chunk || !embedding) continue;
+    if (validChunks.length === 0) return;
 
-      // Format embedding as pgvector string: '[1.0, 2.0, 3.0]'
-      const embeddingStr = `[${embedding.join(',')}]`;
+    // Insert chunks in batches for performance
+    // PostgreSQL has a limit on query parameters, so we batch in groups of 100
+    const BATCH_SIZE = 100;
 
-      await prisma.$executeRaw`
+    for (let batchStart = 0; batchStart < validChunks.length; batchStart += BATCH_SIZE) {
+      const batch = validChunks.slice(batchStart, batchStart + BATCH_SIZE);
+
+      // Build VALUES clause for batch insert
+      const values = batch.map(({ chunk, embedding }) => {
+        const embeddingStr = `[${embedding.join(',')}]`;
+        // Escape single quotes in content for SQL safety
+        const escapedContent = chunk.content.replace(/'/g, "''");
+        return `(gen_random_uuid(), '${documentId}', ${chunk.index}, '${escapedContent}', '${embeddingStr}'::vector, NOW())`;
+      }).join(',\n');
+
+      await prisma.$executeRawUnsafe(`
         INSERT INTO document_chunks (id, document_id, chunk_index, content, embedding, created_at)
-        VALUES (
-          gen_random_uuid(),
-          ${documentId},
-          ${chunk.index},
-          ${chunk.content},
-          ${embeddingStr}::vector,
-          NOW()
-        )
-      `;
+        VALUES ${values}
+      `);
     }
   }
 

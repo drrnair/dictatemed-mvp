@@ -17,6 +17,7 @@ vi.mock('@/infrastructure/db/client', () => ({
       count: vi.fn(),
     },
     $executeRaw: vi.fn(),
+    $executeRawUnsafe: vi.fn(),
     $queryRaw: vi.fn(),
   },
 }));

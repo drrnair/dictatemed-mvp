@@ -233,6 +233,7 @@ export class TextChunker {
     // Now group segments into chunks respecting maxTokens
     let currentChunk = '';
     let currentStartOffset = 0;
+    let textPosition = 0; // Track actual position in original text
     let chunkIndex = 0;
 
     for (const segment of segments) {
@@ -240,6 +241,9 @@ export class TextChunker {
 
       if (currentChunk.length + segmentLength <= maxChars) {
         // Add to current chunk
+        if (currentChunk.length === 0) {
+          currentStartOffset = textPosition;
+        }
         currentChunk += segment;
       } else {
         // Current chunk is full, save it and start new chunk
@@ -253,15 +257,19 @@ export class TextChunker {
           });
           chunkIndex++;
 
-          // Start new chunk with overlap
+          // Start new chunk with overlap from the end of current chunk
           const overlapStart = Math.max(0, currentChunk.length - overlapChars);
-          currentChunk = currentChunk.slice(overlapStart) + segment;
+          const overlapText = currentChunk.slice(overlapStart);
+          currentChunk = overlapText + segment;
+          // New chunk starts where overlap portion began in original text
           currentStartOffset = currentStartOffset + overlapStart;
         } else {
           // Segment itself is too long, need to force split
           currentChunk = segment;
+          currentStartOffset = textPosition;
         }
       }
+      textPosition += segmentLength;
     }
 
     // Add remaining chunk
