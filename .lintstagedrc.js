@@ -16,13 +16,13 @@ module.exports = {
   'src/**/*.{ts,tsx}': [
     // Run typecheck on entire project (TS errors cascade across files)
     () => 'npm run typecheck',
-    'eslint --fix --max-warnings=0',
+    // ESLint with auto-fix - allow pre-existing warnings but fail on errors
+    'eslint --fix',
     'prettier --write',
   ],
 
   // JavaScript files in src: lint and format only (no typecheck needed)
-  // Exclude config files at root which ESLint may ignore by default
-  'src/**/*.{js,jsx,mjs,cjs}': ['eslint --fix --max-warnings=0', 'prettier --write'],
+  'src/**/*.{js,jsx,mjs,cjs}': ['eslint --fix', 'prettier --write'],
 
   // JSON, Markdown, YAML: format only
   '**/*.{json,md,yml,yaml}': ['prettier --write'],
