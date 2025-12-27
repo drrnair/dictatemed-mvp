@@ -298,7 +298,11 @@ describe('useApproveLetterMutation', () => {
       }
     });
 
-    expect(result.current.isError).toBe(true);
+    // Wait for error state to be set
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
     expect(result.current.error?.message).toBe('Letter already approved');
   });
 
@@ -377,7 +381,11 @@ describe('useDeleteLetterMutation', () => {
       '/api/letters/letter-123',
       expect.objectContaining({ method: 'DELETE' })
     );
-    expect(result.current.isSuccess).toBe(true);
+
+    // Wait for success state
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
   });
 
   it('should remove letter from cache after deletion', async () => {
