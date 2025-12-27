@@ -61,7 +61,8 @@ Configure typography, colors, and animations in Tailwind and CSS.
 
 ---
 
-### [ ] Step: Animation Utilities
+### [x] Step: Animation Utilities
+<!-- chat-id: 8696da54-070b-4f49-b796-97fc679152cd -->
 
 Create shared animation constants and Framer Motion variants.
 
@@ -73,8 +74,21 @@ Create shared animation constants and Framer Motion variants.
    - Card cascade variants
 
 **Verification:**
-- TypeScript compiles
-- No lint errors
+- TypeScript compiles ✓
+- No lint errors ✓
+
+**Completed:**
+- Created `src/styles/clinical-animations.ts` with comprehensive animation system:
+  - 5 custom easing curves: `smooth`, `snappy`, `bounce`, `default`, `emphasized`
+  - 8 duration constants: `instant` to `slower`, plus `stagger` and `contentDelay`
+  - Panel variants: `panelVariants`, `panelContentVariants` (42% width, staggered content)
+  - Card variants: `cardVariants`, `createCascadeVariants`, `staggerContainerVariants`, `staggerChildVariants`
+  - Modal variants: `overlayVariants`, `popupVariants`
+  - Drawer variants: `drawerVariants` (spring-based)
+  - Button effects: `buttonHoverEffect`, `iconButtonEffect`
+  - Loading variants: `loadingStageVariants`, `loadingTextVariants`
+  - Pulse animation for connected sources: `pulseAnimation`
+  - Utility functions: `createSpringTransition`, `createTweenTransition`
 
 ---
 

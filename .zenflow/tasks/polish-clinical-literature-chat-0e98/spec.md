@@ -2,7 +2,7 @@
 
 ## Task Difficulty: **Hard**
 
-This task involves significant UI/UX overhaul across 10+ components with:
+This task involves significant UI/UX overhaul across 11+ components with:
 - Custom typography system integration
 - Custom color palette implementation
 - Animation system with custom easing curves
@@ -25,146 +25,241 @@ This task involves significant UI/UX overhaul across 10+ components with:
 - **Keyboard Shortcuts:** react-hotkeys-hook 4.6 (already installed)
 
 ### Existing Architecture
+
 The Clinical Literature Chat feature has:
-1. **Main wrapper:** `ClinicalAssistantPanel.tsx` - orchestrates layouts
-2. **Three layouts:** `SidePanelLayout.tsx`, `PopupLayout.tsx`, `DrawerLayout.tsx`
-3. **Search components:** `LiteratureSearchInput.tsx`, `LiteratureSearchResults.tsx`
-4. **Card components:** `CitationCard.tsx`, `ConfidenceBadge.tsx`, `LiteratureSourceBadge.tsx`
-5. **Toolbar:** `LiteratureToolbarButton.tsx`, `LayoutToggle.tsx`
+
+1. **Main wrappers:**
+   - `ClinicalAssistantPanel.tsx` - Primary orchestrator, manages layouts
+   - `LiteratureChatPanel.tsx` - Alternative chat implementation (legacy, kept for reference but `ClinicalAssistantPanel` is the active component)
+
+2. **Three layouts:**
+   - `SidePanelLayout.tsx` - Side panel (desktop default)
+   - `PopupLayout.tsx` - Centered modal (Cmd+K)
+   - `DrawerLayout.tsx` - Bottom sheet (mobile/tablet)
+
+3. **Search components:**
+   - `LiteratureSearchInput.tsx` - Search input with suggestions
+   - `LiteratureSearchResults.tsx` - Results display
+
+4. **Card components:**
+   - `CitationCard.tsx` - Individual citation display
+   - `ConfidenceBadge.tsx` - Confidence level indicator
+   - `LiteratureSourceBadge.tsx` - Source filter badges
+
+5. **Toolbar:**
+   - `LiteratureToolbarButton.tsx` - Panel toggle button
+   - `LayoutToggle.tsx` - Layout mode switcher
+
 6. **State:** `literature.store.ts` - Zustand store with persistence
+
 7. **Domain types:** `domains/literature/types.ts`
 
+### Relationship: ClinicalAssistantPanel vs LiteratureChatPanel
+
+- **ClinicalAssistantPanel** is the active, production component used in `LetterReviewClient.tsx`
+- **LiteratureChatPanel** is an alternative implementation with inline panel logic
+- Both share the same store and types
+- This task focuses on polishing **ClinicalAssistantPanel** and its layout components
+- `LiteratureChatPanel` may be deprecated in the future but is not modified in this task
+
 ### Current State Analysis
-**Typography:** Uses system defaults via `--font-sans` CSS variable
-**Colors:** Uses generic semantic colors (`primary`, `secondary`, `muted`)
-**Animations:** Basic spring animations, no custom easing
-**Spacing:** Standard Tailwind spacing, not medical-optimized
-**Accessibility:** Basic ARIA labels, no keyboard shortcuts for panel
+
+**Typography:** Uses system defaults via `--font-sans` CSS variable. Charter, Inter, and IBM Plex Mono font families now added.
+
+**Colors:**
+- Existing semantic colors: `clinical.verified`, `clinical.warning`, `clinical.critical`, `clinical.info` (CSS variable-based)
+- New clinical palette: `clinical-blue`, `verified`, `caution`, `critical`, `clinical-gray` (direct hex values)
+
+**Animations:** Basic spring animations enhanced with custom easing keyframes (`citation-flash`, `source-pulse`, `slide-in-right`, `cascade-in`)
+
+**Spacing:** Standard Tailwind spacing with 8px-base CSS variables
+
+**Accessibility:** Basic ARIA labels, keyboard shortcuts via react-hotkeys-hook
+
+---
+
+## Color Naming Clarification
+
+The task description uses `clinical` as the primary blue scale name, but to avoid conflict with the existing `clinical` semantic tokens (which use CSS variables for theme awareness), we use:
+
+| Task Description | Implementation | Purpose |
+|-----------------|----------------|---------|
+| `clinical.500` | `clinical-blue-500` | Primary blue actions |
+| `verified.500` | `verified-500` | Success/high confidence |
+| `caution.500` | `caution-500` | Warning/medium confidence |
+| `critical.500` | `critical-500` | Error/low confidence |
+| (gray scale) | `clinical-gray-500` | Refined neutral gray |
+
+The existing `clinical.verified`, `clinical.warning`, etc. remain for backward compatibility with existing app components.
+
+---
+
+## Dark Mode Clarification
+
+**Task Aesthetic:** Light mode optimized, professional medical interface
+
+**Implementation Approach:** The app must continue to function correctly in dark mode for users who prefer it, but this task does **not** optimize the dark mode experience. The new clinical tokens (`clinical-blue`, `verified`, `caution`, `critical`, `clinical-gray`) use direct hex values that work in both modes. Dark mode will receive basic functional support but is not the design focus.
+
+---
+
+## Font Configuration
+
+### Fonts Used
+
+| Family | Tailwind Class | Purpose | Source |
+|--------|---------------|---------|--------|
+| Charter | `font-letter-serif` | Letter content | System (macOS) / Georgia fallback |
+| Inter | `font-ui-sans` | UI elements | Google Fonts via Next.js |
+| IBM Plex Mono | `font-clinical-mono` | Clinical data (dosing) | Google Fonts via Next.js |
+
+### CSS Variables Required
+
+The `ui-sans` and `clinical-mono` families reference CSS variables that must be defined in `layout.tsx`:
+
+```typescript
+import { Inter, IBM_Plex_Mono } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-ibm-plex-mono',
+});
+```
+
+Note: The task description mentions "Inter Tight" but we use standard **Inter** as it's more widely supported by Next.js and the difference is minimal for UI purposes.
 
 ---
 
 ## Implementation Approach
 
-### Design System Additions
+### Design System Additions (Already Applied)
 
-Rather than replacing the existing design system, we'll **extend** it with clinical-specific tokens:
+The following have already been added to `tailwind.config.js`:
 
-1. **Typography:** Add 3 new font families to Tailwind config
-2. **Colors:** Add `clinical` color scale with blue/green/amber/red variants
-3. **Animations:** Add custom easing curves and animation keyframes
-4. **Spacing:** Use existing 8px-base spacing more consistently
+1. **Color Scales:**
+   - `clinical-blue` (50-950) - Primary clinical actions
+   - `verified` (50-900) - Success states
+   - `caution` (50-900) - Warning states
+   - `critical` (50-900) - Error states
+   - `clinical-gray` (50-950) - Refined neutral gray
 
-### Component Updates
+2. **Font Families:**
+   - `letter-serif` - Charter with serif fallbacks
+   - `ui-sans` - Inter with system fallbacks
+   - `clinical-mono` - IBM Plex Mono with monospace fallbacks
 
-Each component will be updated in-place with:
-- New typography classes
-- New color tokens
-- Enhanced animations
-- Improved accessibility
+3. **Animations:**
+   - `citation-flash` - Green gradient sweep for citation insertion
+   - `source-pulse` - Pulse for connected sources
+   - `slide-in-right` - Panel content entrance
+   - `cascade-in` - Staggered card entrance
+   - `spin-slow` - Loading spinner
+
+The following have already been added to `globals.css`:
+
+1. **Utility Classes:**
+   - `.clinical-panel-enter` / `.clinical-content-enter` - Panel animations
+   - `.clinical-search-input` - Shadow progression on focus
+   - `.clinical-source-card` - Card styling with source accents
+   - `.clinical-badge-*` - Confidence badge variants
+   - `.clinical-spinner` - Loading spinner
+   - `.clinical-focus-ring` - Focus indicator
+   - `.kbd-badge` - Keyboard shortcut badge
+   - `.cascade-delay-*` - Animation stagger delays
 
 ---
 
 ## Source Code Changes
 
-### Configuration Files
+### Configuration Files (Done)
 
-#### 1. `tailwind.config.js` (modify)
-Add:
-- Custom font families: `letter-serif`, `ui-sans`, `clinical-mono`
-- Clinical color scales: `clinical`, `verified`, `caution`, `critical`
-- Custom animation keyframes: `citation-flash`, `source-pulse`
-- Custom easing variables
+- ✅ `tailwind.config.js` - Clinical color scales, fonts, animations added
+- ✅ `src/app/globals.css` - Utility classes and keyframes added
 
-#### 2. `src/app/globals.css` (modify)
-Add:
-- Font-face declarations for Charter fallbacks
-- CSS custom properties for animation easings
-- `@keyframes citation-flash` for insertion feedback
-- Focus and hover utility classes
+### Configuration Files (Remaining)
 
-#### 3. `src/app/layout.tsx` (modify)
-- Add Google Fonts: Inter Tight, IBM Plex Mono
+#### 1. `src/app/layout.tsx` (modify)
+Add Google Fonts with CSS variables:
+- Inter with `--font-inter` variable
+- IBM Plex Mono with `--font-ibm-plex-mono` variable
 
-### Component Files
+### Component Files (Remaining)
 
-#### 4. `src/components/literature/ClinicalAssistantPanel.tsx` (modify)
-- Update header with new typography and icon badge
-- Add staggered content animation
+#### 2. `src/components/literature/ClinicalAssistantPanel.tsx` (modify)
+- Update header with clinical typography and icon badge
+- Add staggered content animation using cascade classes
 - Improve loading state with progressive indicator
 - Add empty state illustration
-- Polish usage indicator
+- Polish usage indicator with clinical styling
 
-#### 5. `src/components/literature/layouts/SidePanelLayout.tsx` (modify)
-- Custom easing for slide animation
-- Staggered content fade-in (180ms delay)
-- Subtle inner shadow for depth
-- 42% width instead of fixed px
+#### 3. `src/components/literature/layouts/SidePanelLayout.tsx` (modify)
+- Use custom easing from `cubic-bezier(0.32, 0.72, 0, 1)`
+- Staggered content fade-in with `clinical-content-enter`
+- Add `clinical-panel-shadow` for subtle depth
+- Consider percentage-based width (42%) instead of fixed pixels
 
-#### 6. `src/components/literature/layouts/PopupLayout.tsx` (modify)
-- Custom easing curves
-- Backdrop blur refinement
-- Keyboard hint styling
+#### 4. `src/components/literature/layouts/PopupLayout.tsx` (modify)
+- Apply custom easing curves
+- Refine backdrop blur
 
-#### 7. `src/components/literature/layouts/DrawerLayout.tsx` (modify)
-- Custom drag easing
-- Rounded handle styling
-- Snap point indicators
+#### 5. `src/components/literature/layouts/DrawerLayout.tsx` (modify)
+- Apply custom drag easing
+- Polish drag handle styling
 
-#### 8. `src/components/literature/LiteratureSearchInput.tsx` (modify)
-- Clinical-grade styling with larger padding
-- Animated keyboard shortcut badge
-- Focus ring with clinical blue
-- Shadow progression on hover/focus
+#### 6. `src/components/literature/LiteratureSearchInput.tsx` (modify)
+- Use `clinical-search-input` class for shadow progression
+- Animated keyboard shortcut badge with `kbd-badge`
+- Clinical blue focus ring with `clinical-focus-ring`
 - Icon color transition on focus
 
-#### 9. `src/components/literature/LiteratureSearchResults.tsx` (modify)
-- Section headers with icons
-- Dosing box with clinical mono font
-- Warning box with border emphasis
-- Citation cards with source accent borders
+#### 7. `src/components/literature/LiteratureSearchResults.tsx` (modify)
+- Section headers with clinical styling
+- Dosing box with `font-clinical-mono`
+- Warning box with clinical-gray border
 
-#### 10. `src/components/literature/CitationCard.tsx` (modify)
-- Left accent border per source (orange/blue/green)
-- Larger source icon badges (44px)
+#### 8. `src/components/literature/CitationCard.tsx` (modify)
+- Use `clinical-source-card` class
+- Source-specific left accent borders
+- Larger icon badges (44px)
 - Improved hover states
-- Line-clamp for overflow prevention
 
-#### 11. `src/components/literature/ConfidenceBadge.tsx` (modify)
-- Pill shape with icons
-- Thicker stroke weight on icons
-- Specific clinical labels
-- Border for definition
+#### 9. `src/components/literature/ConfidenceBadge.tsx` (modify)
+- Use `clinical-badge` and `clinical-badge-{level}` classes
+- Add icons (CheckCircle, AlertCircle, AlertTriangle)
+- Clinical labels ("High Confidence", "Review Recommended", "Verify Manually")
 
-#### 12. `src/components/literature/LiteratureSourceBadge.tsx` (modify)
-- Source-specific colors (UpToDate=orange, PubMed=blue, Library=green)
-- Connected pulse animation for active sources
-- Improved active/inactive contrast
+#### 10. `src/components/literature/LiteratureSourceBadge.tsx` (modify)
+- Source-specific colors (orange/blue/green)
+- Connected pulse animation using `source-connected-pulse`
 
-#### 13. `src/components/literature/LiteratureToolbarButton.tsx` (modify)
+#### 11. `src/components/literature/LiteratureToolbarButton.tsx` (modify)
 - Clinical blue accent when active
 - Keyboard shortcut tooltip
-- Improved badge positioning
 
-#### 14. `src/components/literature/LayoutToggle.tsx` (modify)
+#### 12. `src/components/literature/LayoutToggle.tsx` (modify)
 - Clinical styling for toggle group
-- Tooltip improvements
 
 ### New Files
 
-#### 15. `src/styles/clinical-animations.ts` (create)
-- Custom easing curves
-- Duration constants
-- Animation variants for Framer Motion
+#### 13. `src/lib/clinical-animations.ts` (create)
+- Framer Motion variants for panel, content, cards
+- Exported constants for custom easing
+- Stagger configuration for cascading animations
 
-#### 16. `src/components/literature/LoadingState.tsx` (create)
+#### 14. `src/components/literature/ClinicalLoadingState.tsx` (create)
 - Progressive loading indicator
 - Source-by-source feedback
 - Cycling icon animation
 
-#### 17. `src/components/literature/EmptyState.tsx` (create)
+#### 15. `src/components/literature/ClinicalEmptyState.tsx` (create)
 - Custom SVG illustration
 - Welcoming copy
-- Upload CTA button
+- Optional upload CTA
 
 ---
 
@@ -191,60 +286,67 @@ npm run lint
 ### Manual Verification Checklist
 
 #### Typography
-- [ ] Charter font renders for letter content
-- [ ] Inter Tight font renders for UI elements
+- [ ] Charter font renders for letter content (macOS native, Georgia fallback)
+- [ ] Inter font renders for UI elements
 - [ ] IBM Plex Mono renders for clinical data
 - [ ] Fallback fonts work when custom fonts fail to load
 
 #### Colors
-- [ ] Clinical blue palette used for primary actions
-- [ ] Verified green for success states
-- [ ] Caution amber for warnings
-- [ ] Critical red for errors
-- [ ] No generic grays (#888) remaining
+- [ ] `clinical-blue-600` used for primary actions
+- [ ] `verified-*` used for success states
+- [ ] `caution-*` used for warnings
+- [ ] `critical-*` used for errors
+- [ ] `clinical-gray-*` used for neutral elements
+- [ ] Existing `clinical.verified` etc. tokens still work
 
 #### Animations
-- [ ] Panel opens with 300ms custom easing
-- [ ] Content staggers in after panel
-- [ ] Cards cascade with 80ms stagger
-- [ ] Loading spinner smooth at 60fps
-- [ ] Citation flash on insert
+- [ ] Panel opens with custom easing (smooth deceleration)
+- [ ] Content staggers in after panel (180ms delay)
+- [ ] Cards cascade with 80ms stagger each
+- [ ] Loading spinner rotates smoothly
+- [ ] Citation flash on insert (green gradient)
 
 #### Accessibility
-- [ ] Cmd+K opens popup layout
-- [ ] Escape closes panel
+- [ ] Keyboard shortcuts work (Cmd+K, Escape)
 - [ ] Tab navigation works through all interactive elements
-- [ ] Focus indicators visible (2px clinical blue ring)
-- [ ] Screen reader announces search results
+- [ ] Focus indicators visible (clinical blue ring)
+- [ ] Screen reader announces search results (aria-live)
 
 #### Responsiveness
-- [ ] Side panel works at 1440px+
+- [ ] Side panel works at desktop sizes
 - [ ] Popup works at all sizes
 - [ ] Drawer works on tablet/mobile
+
+#### Dark Mode (Functional Only)
+- [ ] All components render correctly in dark mode
+- [ ] Text remains readable
+- [ ] No broken contrast
 
 ---
 
 ## Risk Considerations
 
 1. **Font Loading Performance:** Web fonts can delay first paint
-   - Mitigation: Use `font-display: swap` and system fallbacks
+   - Mitigation: Use `font-display: swap` via Next.js font config
 
 2. **Animation Performance:** Complex animations may jank
-   - Mitigation: Use `will-change` and GPU-accelerated properties only
+   - Mitigation: Use `will-change` sparingly, prefer transform/opacity
 
 3. **Accessibility Regression:** Visual changes may break a11y
-   - Mitigation: Test with keyboard-only navigation and screen reader
+   - Mitigation: Test with keyboard-only navigation
 
-4. **Dark Mode Compatibility:** Current system uses dark mode
-   - Mitigation: Test both light and dark themes for all changes
+4. **Color Token Conflict:** New tokens might clash with existing
+   - Mitigation: Use distinct names (`clinical-blue` vs `clinical`)
 
 ---
 
 ## Dependencies
 
 All required dependencies are already installed:
-- `framer-motion` 11.18.2
-- `lucide-react` 0.330.0
-- `react-hotkeys-hook` 4.6.1
+- `framer-motion` 11.18.2 ✅
+- `lucide-react` 0.330.0 ✅
+- `react-hotkeys-hook` 4.6.1 ✅
+
+Verified in `package.json` lines 40, 68, 65.
 
 No new dependencies needed.
