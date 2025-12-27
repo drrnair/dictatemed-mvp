@@ -33,6 +33,7 @@ Created comprehensive technical specification in `spec.md` covering:
 ---
 
 ### [ ] Step: Design System Setup
+<!-- chat-id: 28cc4850-9593-42b2-9e59-c22de3d72f4a -->
 
 Configure typography, colors, and animations in Tailwind and CSS.
 
