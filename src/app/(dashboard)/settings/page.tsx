@@ -2,7 +2,7 @@
 // Settings page with navigation to sub-settings - Redesigned
 
 import Link from 'next/link';
-import { Building2, Sparkles, Stethoscope, FileText, User, Send, ChevronRight } from 'lucide-react';
+import { Building2, Sparkles, Stethoscope, FileText, User, Send, ChevronRight, BookOpen } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Route } from 'next';
 
@@ -47,6 +47,12 @@ const settingsLinks: Array<{
     description: 'Configure default recipients and email templates for sending letters',
     href: '/settings/letters' as Route,
     icon: Send,
+  },
+  {
+    title: 'Clinical Literature',
+    description: 'Connect UpToDate, manage your personal library, and configure evidence sources',
+    href: '/settings/literature' as Route,
+    icon: BookOpen,
   },
 ];
 

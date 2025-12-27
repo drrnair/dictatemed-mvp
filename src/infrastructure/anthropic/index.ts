@@ -4,6 +4,30 @@
 // Client
 export { getAnthropicClient, verifyAnthropicConnection, resetAnthropicClient } from './client';
 
+// Unified service (recommended for new features)
+export {
+  unifiedAnthropicService,
+  UnifiedAnthropicService,
+  type ChatRequest,
+  type ChatResponse,
+  type ChatMessage,
+  type UnifiedTextRequest,
+  type UnifiedTextResponse,
+  type UnifiedImageRequest,
+  type UnifiedImageResponse,
+  type UnifiedUsageStats,
+  type UnifiedServiceConfig,
+} from './unified-service';
+
+// Chat types
+export {
+  type MessageRole,
+  type ChatTool,
+  type ToolUseResult,
+  type CachedPrompt,
+  DEFAULT_UNIFIED_CONFIG,
+} from './chat-types';
+
 // Text generation (for letter generation)
 export {
   generateText,

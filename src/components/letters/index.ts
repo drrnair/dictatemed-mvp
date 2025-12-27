@@ -10,3 +10,6 @@ export type {
   ExtractedValue,
   HallucinationFlag,
 } from './VerificationPanel';
+
+export { LetterEditor } from './LetterEditor';
+export { TextHighlightMenu, useTextSelection } from './TextHighlightMenu';

@@ -143,3 +143,77 @@ export function validateEncryptionConfig(): void {
     );
   }
 }
+
+/**
+ * Encrypt a plain string using AES-256-GCM.
+ *
+ * Output format: iv:authTag:ciphertext (all base64 encoded)
+ *
+ * @param plaintext - String to encrypt
+ * @returns Encrypted string in format iv:authTag:ciphertext
+ */
+export function encrypt(plaintext: string): string {
+  const key = getEncryptionKey();
+  const iv = randomBytes(IV_LENGTH);
+  const cipher = createCipheriv(ALGORITHM, key, iv);
+
+  const encrypted = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final(),
+  ]);
+  const authTag = cipher.getAuthTag();
+
+  return `${iv.toString('base64')}:${authTag.toString('base64')}:${encrypted.toString('base64')}`;
+}
+
+/**
+ * Decrypt a string encrypted with encrypt().
+ *
+ * @param encryptedString - Encrypted string in format iv:authTag:ciphertext
+ * @returns Decrypted plain string
+ * @throws Error if decryption fails
+ */
+export function decrypt(encryptedString: string): string {
+  const key = getEncryptionKey();
+  const parts = encryptedString.split(':');
+
+  if (parts.length !== 3) {
+    throw new Error(
+      'Invalid encrypted data format. Expected iv:authTag:ciphertext'
+    );
+  }
+
+  const ivB64 = parts[0];
+  const authTagB64 = parts[1];
+  const ciphertextB64 = parts[2];
+
+  if (!ivB64 || !authTagB64 || !ciphertextB64) {
+    throw new Error(
+      'Invalid encrypted data format. Expected iv:authTag:ciphertext'
+    );
+  }
+
+  const iv = Buffer.from(ivB64, 'base64');
+  const authTag = Buffer.from(authTagB64, 'base64');
+  const ciphertext = Buffer.from(ciphertextB64, 'base64');
+
+  if (iv.length !== IV_LENGTH) {
+    throw new Error(`Invalid IV length. Expected ${IV_LENGTH} bytes.`);
+  }
+
+  if (authTag.length !== AUTH_TAG_LENGTH) {
+    throw new Error(
+      `Invalid auth tag length. Expected ${AUTH_TAG_LENGTH} bytes.`
+    );
+  }
+
+  const decipher = createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+
+  const decrypted = Buffer.concat([
+    decipher.update(ciphertext),
+    decipher.final(),
+  ]);
+
+  return decrypted.toString('utf8');
+}
