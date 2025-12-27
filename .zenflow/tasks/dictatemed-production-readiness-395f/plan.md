@@ -331,23 +331,31 @@ npm run typecheck  # ✅ Passes
 <!-- chat-id: 681f8d30-42cb-415c-9225-41cf2953afb2 -->
 
 **Files modified:**
-- `src/domains/letters/letter.service.ts` - Wrapped generateLetter and approveLetter in transactions
+- `src/domains/letters/sending.service.ts` - Wrapped all DB operations in transactions
+- `src/infrastructure/email/email.service.ts` - Wrapped all DB operations in transactions
 - `src/domains/letters/approval.service.ts` - Already uses transaction (no change needed)
 
 **Implementation Notes:**
 - `approval.service.ts:approveLetter()` already correctly uses `prisma.$transaction()` for all critical operations (lines 241-394)
-- Updated `letter.service.ts:generateLetter()` to wrap letter creation + audit log in a transaction (ensures atomicity)
-- Updated `letter.service.ts:approveLetter()` (deprecated) to also use transaction for consistency
-- Email sending operations intentionally NOT wrapped in transaction because:
-  - Email is an external side effect that cannot be rolled back
-  - Each recipient send is tracked independently (QUEUED → SENDING → SENT/FAILED)
-  - If one recipient fails, others should still succeed
-  - Template usage recording is non-critical and runs outside transaction
+- Updated `sending.service.ts:sendLetter()` to use proper transaction pattern:
+  - Step 1: Create LetterSend record with SENDING status in transaction
+  - Step 2: Attempt email send (external API - cannot be in transaction)
+  - Step 3: Update status (SENT/FAILED) and audit log in transaction
+  - Ensures atomicity of DB operations while handling external API calls gracefully
+- Updated `sending.service.ts:retrySend()` with same pattern
+- Updated `email.service.ts:sendLetterEmail()` with same pattern:
+  - Create pending email record in transaction
+  - Send via Resend (external API)
+  - Update status + create audit log atomically in transaction
+- Updated `email.service.ts:updateEmailStatus()` to update status + audit log atomically
+- Removed unused `createEmailAuditLog()` helper function (dead code after refactor)
+- Key insight: External API calls (email sending) cannot be part of a DB transaction because:
+  - If transaction rolls back, email cannot be "unsent"
+  - External calls can be slow and would hold transaction lock too long
 
 **Verification:**
 ```bash
 npm run typecheck  # ✅ Passes
-npm run lint       # ✅ Passes
 ```
 
 ---
