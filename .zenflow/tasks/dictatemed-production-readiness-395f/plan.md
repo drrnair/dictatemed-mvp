@@ -328,6 +328,7 @@ npm run typecheck  # ✅ Passes
 ```
 
 ### [ ] Step 3.4: Add Transaction Wrapping for Critical Operations
+<!-- chat-id: 681f8d30-42cb-415c-9225-41cf2953afb2 -->
 
 **Files to modify:**
 - `src/domains/letters/approval.service.ts` - Wrap in transaction
