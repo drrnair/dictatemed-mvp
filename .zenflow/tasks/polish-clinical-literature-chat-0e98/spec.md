@@ -180,86 +180,84 @@ The following have already been added to `globals.css`:
 
 - ✅ `tailwind.config.js` - Clinical color scales, fonts, animations added
 - ✅ `src/app/globals.css` - Utility classes and keyframes added
+- ✅ `src/app/layout.tsx` - Google Fonts (Inter, IBM Plex Mono) with CSS variables
 
-### Configuration Files (Remaining)
+### Animation Utilities (Done)
 
-#### 1. `src/app/layout.tsx` (modify)
-Add Google Fonts with CSS variables:
-- Inter with `--font-inter` variable
-- IBM Plex Mono with `--font-ibm-plex-mono` variable
+- ✅ `src/styles/clinical-animations.ts` - Framer Motion variants and easing constants
+
+### Layout Components (Done)
+
+- ✅ `src/components/literature/layouts/SidePanelLayout.tsx` - Custom easing, 42% width, staggered content
+- ✅ `src/components/literature/layouts/PopupLayout.tsx` - Custom easing, refined backdrop
+- ✅ `src/components/literature/layouts/DrawerLayout.tsx` - Custom drag easing, polished handle
 
 ### Component Files (Remaining)
 
-#### 2. `src/components/literature/ClinicalAssistantPanel.tsx` (modify)
+#### 1. `src/components/literature/LiteratureSearchInput.tsx` (modify)
+- Use `clinical-search-input` class for shadow progression
+- Animated keyboard shortcut badge with `kbd-badge`
+- Clinical blue focus ring with `clinical-focus-ring`
+- Icon color transition on focus
+
+#### 2. `src/components/literature/LiteratureSearchResults.tsx` (modify)
+- Section headers with clinical styling
+- Dosing box with `font-clinical-mono`
+- Warning box with clinical-gray border
+
+#### 3. `src/components/literature/CitationCard.tsx` (modify)
+- Use `clinical-source-card` class
+- Source-specific left accent borders
+- Larger icon badges (44px)
+- Improved hover states
+
+#### 4. `src/components/literature/ConfidenceBadge.tsx` (modify)
+- Use `clinical-badge` and `clinical-badge-{level}` classes
+- Add icons (CheckCircle, AlertCircle, AlertTriangle)
+- Clinical labels ("High Confidence", "Review Recommended", "Verify Manually")
+
+#### 5. `src/components/literature/LiteratureSourceBadge.tsx` (modify)
+- Source-specific colors (orange/blue/green)
+- Connected pulse animation using `source-connected-pulse`
+
+#### 6. `src/components/literature/LiteratureToolbarButton.tsx` (modify)
+- Clinical blue accent when active
+- Keyboard shortcut tooltip
+
+#### 7. `src/components/literature/LayoutToggle.tsx` (modify)
+- Clinical styling for toggle group
+
+#### 8. `src/components/literature/ClinicalAssistantPanel.tsx` (modify)
 - Update header with clinical typography and icon badge
 - Add staggered content animation using cascade classes
 - Improve loading state with progressive indicator
 - Add empty state illustration
 - Polish usage indicator with clinical styling
 
-#### 3. `src/components/literature/layouts/SidePanelLayout.tsx` (modify)
-- Use custom easing from `cubic-bezier(0.32, 0.72, 0, 1)`
-- Staggered content fade-in with `clinical-content-enter`
-- Add `clinical-panel-shadow` for subtle depth
-- Consider percentage-based width (42%) instead of fixed pixels
+### New Files (Remaining)
 
-#### 4. `src/components/literature/layouts/PopupLayout.tsx` (modify)
-- Apply custom easing curves
-- Refine backdrop blur
-
-#### 5. `src/components/literature/layouts/DrawerLayout.tsx` (modify)
-- Apply custom drag easing
-- Polish drag handle styling
-
-#### 6. `src/components/literature/LiteratureSearchInput.tsx` (modify)
-- Use `clinical-search-input` class for shadow progression
-- Animated keyboard shortcut badge with `kbd-badge`
-- Clinical blue focus ring with `clinical-focus-ring`
-- Icon color transition on focus
-
-#### 7. `src/components/literature/LiteratureSearchResults.tsx` (modify)
-- Section headers with clinical styling
-- Dosing box with `font-clinical-mono`
-- Warning box with clinical-gray border
-
-#### 8. `src/components/literature/CitationCard.tsx` (modify)
-- Use `clinical-source-card` class
-- Source-specific left accent borders
-- Larger icon badges (44px)
-- Improved hover states
-
-#### 9. `src/components/literature/ConfidenceBadge.tsx` (modify)
-- Use `clinical-badge` and `clinical-badge-{level}` classes
-- Add icons (CheckCircle, AlertCircle, AlertTriangle)
-- Clinical labels ("High Confidence", "Review Recommended", "Verify Manually")
-
-#### 10. `src/components/literature/LiteratureSourceBadge.tsx` (modify)
-- Source-specific colors (orange/blue/green)
-- Connected pulse animation using `source-connected-pulse`
-
-#### 11. `src/components/literature/LiteratureToolbarButton.tsx` (modify)
-- Clinical blue accent when active
-- Keyboard shortcut tooltip
-
-#### 12. `src/components/literature/LayoutToggle.tsx` (modify)
-- Clinical styling for toggle group
-
-### New Files
-
-#### 13. `src/lib/clinical-animations.ts` (create)
-- Framer Motion variants for panel, content, cards
-- Exported constants for custom easing
-- Stagger configuration for cascading animations
-
-#### 14. `src/components/literature/ClinicalLoadingState.tsx` (create)
+#### 9. `src/components/literature/ClinicalLoadingState.tsx` (create)
 - Progressive loading indicator
 - Source-by-source feedback
 - Cycling icon animation
 
-#### 15. `src/components/literature/ClinicalEmptyState.tsx` (create)
+#### 10. `src/components/literature/ClinicalEmptyState.tsx` (create)
 - Custom SVG illustration
 - Welcoming copy
 - Optional upload CTA
+
+---
+
+## File Count Summary
+
+| Category | Count | Status |
+|----------|-------|--------|
+| Configuration files | 3 | ✅ Done |
+| Animation utilities | 1 | ✅ Done |
+| Layout components | 3 | ✅ Done |
+| Component modifications | 8 | Remaining |
+| New components | 2 | Remaining |
+| **Total** | **17** | 7 done, 10 remaining |
 
 ---
 
@@ -284,6 +282,11 @@ npm run lint
 ```
 
 ### Manual Verification Checklist
+
+#### Animation Utilities
+- [ ] `src/styles/clinical-animations.ts` exists and exports correctly
+- [ ] Custom easings are properly typed
+- [ ] Framer Motion variants work with AnimatePresence
 
 #### Typography
 - [ ] Charter font renders for letter content (macOS native, Georgia fallback)
