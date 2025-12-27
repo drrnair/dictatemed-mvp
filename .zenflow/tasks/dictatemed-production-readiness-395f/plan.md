@@ -78,7 +78,8 @@ npm run lint  # Should pass, no empty catches allowed
 - Fixed `useLiteratureSearch.ts:101` - Added development-only console.warn for usage stat refresh failures (non-critical)
 - Added ESLint rule `"no-empty": ["error", { "allowEmptyCatch": false }]` to prevent future empty catches
 - Added override for test files (`tests/**/*`) to allow empty catches in E2E test cleanup code
-- Note: Existing `src/lib/error-handler.ts` already provides standardized error handling with PHI scrubbing - no new file needed
+- Note: `src/lib/error-logger.ts` (not error-handler.ts) already provides standardized error handling with PHI scrubbing (`logError()`, `logHandledError()`, `filterPHI()`), making a new file unnecessary
+- Skipped `@typescript-eslint/no-unused-vars` rule: requires installing `@typescript-eslint/eslint-plugin` which is out of scope. The `no-empty` rule provides sufficient protection.
 
 ### [x] Step 1.3: Require Redis for Rate Limiting in Production
 <!-- chat-id: c2ed5b8e-d1fa-466c-97e0-5259d7f5ac09 -->
@@ -127,6 +128,7 @@ npm run dev  # Check console for CSP violations
 ## Subtask 2: Authentication & Authorization
 
 ### [ ] Step 2.1: Create Data Access Layer
+<!-- chat-id: 89ab95a3-ada3-4e78-915b-d35033839ab0 -->
 
 **New files:**
 - `src/lib/dal/base.ts` - Auth helpers: getCurrentUser(), verifyOwnership(), custom errors
