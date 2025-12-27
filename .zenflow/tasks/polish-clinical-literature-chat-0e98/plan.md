@@ -262,6 +262,7 @@ Polish confidence and source badges.
 ---
 
 ### [ ] Step: Loading & Empty States
+<!-- chat-id: 3cb7ff94-d5b0-4dc0-a414-6b9f4100b3d3 -->
 
 Create distinctive loading and empty states.
 
