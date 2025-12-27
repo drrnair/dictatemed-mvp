@@ -198,6 +198,7 @@ export function ClinicalAssistantPanel({
             <ClinicalEmptyState
               variant="search"
               selectedText={selectedText}
+              onQuerySelect={setQuery}
             />
           )}
 

@@ -303,6 +303,17 @@ Create distinctive loading and empty states.
   - Staggered entrance animations via `staggerContainerVariants`
   - Also exported `CompactEmptyState` for minimal inline use
 
+**Review Fixes Applied:**
+- Added `onQuerySelect` prop to `ClinicalEmptyState` for pre-filling search query from quick tips
+- Updated quick tips to use `onQuerySelect(tip.text)` instead of just `onSearch()`
+- Changed array key from `idx` to `tip.text` (stable, unique key)
+- Integrated components in `ClinicalAssistantPanel.tsx`:
+  - Imports `ClinicalLoadingState`, `ClinicalEmptyState`, `ConfidenceBadge`
+  - Uses `ClinicalLoadingState` for loading states
+  - Uses `ClinicalEmptyState` with `onQuerySelect={setQuery}` for empty states
+  - Uses imported `ConfidenceBadge` instead of local `ConfidenceIndicator`
+  - Removed local duplicate `ConfidenceIndicator` component
+
 ---
 
 ### [ ] Step: Main Panel Integration
