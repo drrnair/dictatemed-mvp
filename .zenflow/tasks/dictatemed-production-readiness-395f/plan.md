@@ -80,7 +80,7 @@ npm run lint  # Should pass, no empty catches allowed
 - Added override for test files (`tests/**/*`) to allow empty catches in E2E test cleanup code
 - Note: Existing `src/lib/error-handler.ts` already provides standardized error handling with PHI scrubbing - no new file needed
 
-### [ ] Step 1.3: Require Redis for Rate Limiting in Production
+### [x] Step 1.3: Require Redis for Rate Limiting in Production
 <!-- chat-id: c2ed5b8e-d1fa-466c-97e0-5259d7f5ac09 -->
 
 **Files to modify:**
@@ -92,6 +92,15 @@ npm run lint  # Should pass, no empty catches allowed
 # Production build without Redis should fail
 NODE_ENV=production npm run build  # Should error if Redis not configured
 ```
+
+**Implementation Notes:**
+- Created `RedisRequiredError` class in `rate-limit.ts` that is thrown when Redis is not configured in production
+- Updated `initializeRedis()` function to throw `RedisRequiredError` if `isProductionEnv()` returns true and Redis env vars are missing
+- Updated `checkRateLimit()` (sync) to call `initializeRedis()` at the start, ensuring the production check happens for all rate limit calls
+- Updated `checkRateLimitAsync()` to not catch `RedisRequiredError` - lets it propagate up
+- Updated `env-validation.ts` to require `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in production (changed from warning to error)
+- All 20 rate-limit unit tests pass (run in non-production environment)
+- TypeScript type check passes
 
 ### [ ] Step 1.4: Add Content Security Policy Headers
 
@@ -351,7 +360,7 @@ Output: `report.md` containing:
 ### Critical (Must complete for production)
 - [x] E2E_MOCK_AUTH blocked in production
 - [x] Empty catch blocks fixed
-- [ ] Redis required for rate limiting
+- [x] Redis required for rate limiting
 - [ ] CSP headers active
 
 ### High Priority

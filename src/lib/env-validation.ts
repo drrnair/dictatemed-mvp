@@ -25,10 +25,9 @@ const DANGEROUS_ENV_VARS = [
  */
 const REQUIRED_PRODUCTION_ENV_VARS = [
   // Redis is required for distributed rate limiting across serverless instances
-  // Without it, rate limits are per-instance and ineffective
-  // 'UPSTASH_REDIS_REST_URL',
-  // 'UPSTASH_REDIS_REST_TOKEN',
-  // Note: Redis requirement will be enforced in step 1.3
+  // Without it, rate limits are per-instance and ineffective in serverless deployments
+  'UPSTASH_REDIS_REST_URL',
+  'UPSTASH_REDIS_REST_TOKEN',
 ] as const;
 
 export interface EnvValidationResult {
@@ -83,9 +82,11 @@ export function validateProductionEnv(): EnvValidationResult {
   );
 
   if (missingRequiredVars.length > 0) {
-    warnings.push(
-      `Missing recommended production environment variables: ${missingRequiredVars.join(', ')}. ` +
-        'Some security features may not work correctly without these.'
+    errors.push(
+      `SECURITY: Missing required production environment variables: ${missingRequiredVars.join(', ')}. ` +
+        'Rate limiting requires Redis (Upstash) in production to work across serverless instances. ' +
+        'Without Redis, rate limits are per-instance and can be trivially bypassed. ' +
+        'Sign up at https://upstash.com and add credentials to Vercel environment variables.'
     );
   }
 
