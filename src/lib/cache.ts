@@ -13,6 +13,7 @@
 
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/infrastructure/db/client';
+import type { Subspecialty } from '@prisma/client';
 
 // ============================================================================
 // Cache Configuration
@@ -216,10 +217,10 @@ export const getCachedTemplates = unstable_cache(
  *
  * Returns templates that match the subspecialty or are marked as generic.
  *
- * @param subspecialty - The subspecialty slug to filter by
+ * @param subspecialty - The Subspecialty enum value to filter by
  */
 export const getCachedTemplatesBySubspecialty = unstable_cache(
-  async (subspecialty: string) => {
+  async (subspecialty: Subspecialty) => {
     const templates = await prisma.letterTemplate.findMany({
       where: {
         isActive: true,
@@ -302,36 +303,81 @@ export const getCachedTemplateBySlug = unstable_cache(
 // ============================================================================
 
 /**
- * Get user's practice profile (cached for 30 minutes per user)
+ * Get user's selected specialties (cached for 30 minutes per user)
  *
- * Practice profile includes specialty selections which change infrequently.
+ * Includes both standard and custom specialty selections.
  * Cache is keyed by userId for isolation.
  *
  * @param userId - The user's ID
  */
-export const getCachedPracticeProfile = unstable_cache(
+export const getCachedUserSpecialties = unstable_cache(
   async (userId: string) => {
-    const profile = await prisma.practiceProfile.findUnique({
+    const specialties = await prisma.clinicianSpecialty.findMany({
       where: { userId },
       include: {
-        selectedSpecialties: {
-          include: {
-            specialty: true,
-            customSpecialty: true,
+        specialty: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
           },
         },
-        selectedSubspecialties: {
-          include: {
-            subspecialty: true,
-            customSubspecialty: true,
+        customSpecialty: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
           },
         },
       },
     });
 
-    return profile;
+    return specialties;
   },
-  ['practice-profile'],
+  ['user-specialties'],
+  {
+    revalidate: CACHE_TTL.USER_SETTINGS,
+    tags: [CACHE_TAGS.USER_SETTINGS],
+  }
+);
+
+/**
+ * Get user's selected subspecialties (cached for 30 minutes per user)
+ *
+ * Includes both standard and custom subspecialty selections.
+ *
+ * @param userId - The user's ID
+ */
+export const getCachedUserSubspecialties = unstable_cache(
+  async (userId: string) => {
+    const subspecialties = await prisma.clinicianSubspecialty.findMany({
+      where: { userId },
+      include: {
+        subspecialty: {
+          select: {
+            id: true,
+            specialtyId: true,
+            name: true,
+            slug: true,
+            description: true,
+          },
+        },
+        customSubspecialty: {
+          select: {
+            id: true,
+            specialtyId: true,
+            customSpecialtyId: true,
+            name: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    return subspecialties;
+  },
+  ['user-subspecialties'],
   {
     revalidate: CACHE_TTL.USER_SETTINGS,
     tags: [CACHE_TAGS.USER_SETTINGS],

@@ -194,37 +194,43 @@ export async function createDocument(
     filename: data.filename,
   });
 
-  const document = await prisma.document.create({
-    data: {
-      userId: user.id, // Force current user
-      patientId: data.patientId,
-      consultationId: data.consultationId,
-      filename: data.filename,
-      mimeType: data.mimeType,
-      sizeBytes: data.sizeBytes,
-      storagePath: data.storagePath,
-      documentType: data.documentType,
-      status: 'UPLOADING',
-    },
+  // Use transaction to ensure document creation and audit log are atomic
+  // If audit log fails, document creation is rolled back (PHI compliance)
+  const document = await prisma.$transaction(async (tx) => {
+    const doc = await tx.document.create({
+      data: {
+        userId: user.id, // Force current user
+        patientId: data.patientId,
+        consultationId: data.consultationId,
+        filename: data.filename,
+        mimeType: data.mimeType,
+        sizeBytes: data.sizeBytes,
+        storagePath: data.storagePath,
+        documentType: data.documentType,
+        status: 'UPLOADING',
+      },
+    });
+
+    // PHI creation audit log for compliance
+    await tx.auditLog.create({
+      data: {
+        userId: user.id,
+        action: 'document.create',
+        resourceType: 'document',
+        resourceId: doc.id,
+        metadata: {
+          patientId: data.patientId,
+          documentType: data.documentType,
+          filename: data.filename,
+          consultationId: data.consultationId,
+        },
+      },
+    });
+
+    return doc;
   });
 
   log.info('Document created', { documentId: document.id });
-
-  // PHI creation audit log for compliance
-  await prisma.auditLog.create({
-    data: {
-      userId: user.id,
-      action: 'document.create',
-      resourceType: 'document',
-      resourceId: document.id,
-      metadata: {
-        patientId: data.patientId,
-        documentType: data.documentType,
-        filename: data.filename,
-        consultationId: data.consultationId,
-      },
-    },
-  });
 
   return {
     id: document.id,

@@ -12,6 +12,7 @@ import {
   getCurrentUserOrThrow,
   verifyOwnership,
   NotFoundError,
+  ForbiddenError,
   ValidationError,
 } from './base';
 
@@ -597,7 +598,6 @@ export async function getLetterForSending(letterId: string): Promise<LetterForSe
 
   // Practice-level access check (any user in same practice can send)
   if (letter.user.practiceId !== user.practiceId) {
-    const { ForbiddenError } = await import('./base');
     throw new ForbiddenError(`Not authorized to send letter ${letterId}`);
   }
 
