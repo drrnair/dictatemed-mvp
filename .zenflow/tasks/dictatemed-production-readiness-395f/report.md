@@ -177,11 +177,19 @@ E2E tests require real authentication credentials (`E2E_TEST_USER_EMAIL`, `E2E_T
    - Configure Better Uptime or similar with `/api/health` endpoint
    - Set up alerting for `unhealthy` status
 
+4. **Configure E2E Test Secrets in GitHub Actions:**
+   - Add `E2E_TEST_USER_EMAIL` secret (e.g., `test.cardiologist+e2e@dictatemed.dev`)
+   - Add `E2E_TEST_USER_PASSWORD` secret
+   - E2E tests will then run automatically in CI pipelines
+
 ### Short-term Improvements
 
 1. **Add global-error.tsx:** Sentry recommends this for React rendering errors
 2. **Migrate sentry.client.config.ts:** Move to `instrumentation-client.ts` for Turbopack compatibility
-3. **Fix React Hook Warnings:** Address the 3 pre-existing useEffect dependency warnings
+3. **Fix React Hook Warnings:** Address the 3 pre-existing useEffect/useCallback dependency warnings:
+   - `src/components/letters/LetterEditor.tsx:212` - Missing `letterId` dependency
+   - `src/components/referral/FastExtractionResult.tsx:94` - autoFocus accessibility warning
+   - `src/hooks/use-document-upload-queue.ts:438` - Missing `triggerFullExtraction` dependency
 
 ### Medium-term Improvements
 
