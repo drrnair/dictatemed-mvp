@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Search, Send, Loader2, Sparkles } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Search, Send, Loader2, Sparkles, Command } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface LiteratureSearchInputProps {
@@ -23,6 +22,8 @@ interface LiteratureSearchInputProps {
   placeholder?: string;
   /** Additional class names */
   className?: string;
+  /** Show keyboard shortcut badge */
+  showKeyboardHint?: boolean;
 }
 
 /**
@@ -79,10 +80,12 @@ export function LiteratureSearchInput({
   isLoading = false,
   disabled = false,
   selectedText,
-  placeholder = 'Ask a clinical question...',
+  placeholder = 'Ask about dosing, contraindications, guidelines...',
   className,
+  showKeyboardHint = true,
 }: LiteratureSearchInputProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
