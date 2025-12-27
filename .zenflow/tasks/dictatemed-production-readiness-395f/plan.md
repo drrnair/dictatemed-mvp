@@ -1,7 +1,9 @@
-# Spec and build
+# DictateMED Production Readiness: Implementation Plan
 
 ## Configuration
-- **Artifacts Path**: {@artifacts_path} → `.zenflow/tasks/{task_id}`
+- **Artifacts Path**: `.zenflow/tasks/dictatemed-production-readiness-395f`
+- **Difficulty**: Hard
+- **Total Subtasks**: 6
 
 ---
 
@@ -18,47 +20,337 @@ Do not make assumptions on important decisions — get clarification first.
 
 ## Workflow Steps
 
-### [ ] Step: Technical Specification
+### [x] Step: Technical Specification
 
-Assess the task's difficulty, as underestimating it leads to poor outcomes.
-- easy: Straightforward implementation, trivial bug fix or feature
-- medium: Moderate complexity, some edge cases or caveats to consider
-- hard: Complex logic, many caveats, architectural considerations, or high-risk changes
+Created comprehensive specification analyzing:
+- Current codebase state vs task requirements
+- Identified 23 new files + 15 modified files
+- Mapped implementation approach per subtask
+- Defined verification strategy
 
-Create a technical specification for the task that is appropriate for the complexity level:
-- Review the existing codebase architecture and identify reusable components.
-- Define the implementation approach based on established patterns in the project.
-- Identify all source code files that will be created or modified.
-- Define any necessary data model, API, or interface changes.
-- Describe verification steps using the project's test and lint commands.
-
-Save the output to `{@artifacts_path}/spec.md` with:
-- Technical context (language, dependencies)
-- Implementation approach
-- Source code structure changes
-- Data model / API / interface changes
-- Verification approach
-
-If the task is complex enough, create a detailed implementation plan based on `{@artifacts_path}/spec.md`:
-- Break down the work into concrete tasks (incrementable, testable milestones)
-- Each task should reference relevant contracts and include verification steps
-- Replace the Implementation step below with the planned tasks
-
-Rule of thumb for step size: each step should represent a coherent unit of work (e.g., implement a component, add an API endpoint, write tests for a module). Avoid steps that are too granular (single function).
-
-Save to `{@artifacts_path}/plan.md`. If the feature is trivial and doesn't warrant this breakdown, keep the Implementation step below as is.
+Output: `spec.md`
 
 ---
 
-### [ ] Step: Implementation
+## Subtask 1: Critical Security Fixes (Priority: CRITICAL)
 
-Implement the task according to the technical specification and general engineering best practices.
+### [ ] Step 1.1: E2E Mock Auth Production Guard
 
-1. Break the task into steps where possible.
-2. Implement the required changes in the codebase.
-3. Add and run relevant tests and linters.
-4. Perform basic manual verification if applicable.
-5. After completion, write a report to `{@artifacts_path}/report.md` describing:
-   - What was implemented
-   - How the solution was tested
-   - The biggest issues or challenges encountered
+**Files to create/modify:**
+- `src/middleware.ts` - Add NODE_ENV check before E2E_MOCK_AUTH bypass
+- `src/lib/env-validation.ts` - New file for dangerous env var validation
+- `.github/workflows/env-check.yml` - New workflow to block dangerous deployments
+
+**Verification:**
+```bash
+NODE_ENV=production E2E_MOCK_AUTH=true npm run build  # Should fail
+npm run dev  # Should still work with mock auth in dev
+```
+
+### [ ] Step 1.2: Fix Empty Catch Blocks
+
+**Files to modify:**
+- `src/infrastructure/anthropic/unified-service.ts:416` - Add error logging for cost tracking failure
+- `src/app/api/referrals/[id]/extract-structured/route.ts:130` - Add error context
+- `src/hooks/useLiteratureSearch.ts:101` - Add debug logging
+
+**New file:**
+- `src/lib/error-handler.ts` - Standardized error handling with PHI scrubbing
+
+**ESLint update:**
+- `.eslintrc.json` - Add `"no-empty": ["error", { "allowEmptyCatch": false }]`
+
+**Verification:**
+```bash
+npm run lint  # Should pass, no empty catches allowed
+```
+
+### [ ] Step 1.3: Require Redis for Rate Limiting in Production
+
+**Files to modify:**
+- `src/lib/rate-limit.ts` - Add production enforcement for Redis
+- `src/lib/env-validation.ts` - Add UPSTASH_REDIS check
+
+**Verification:**
+```bash
+# Production build without Redis should fail
+NODE_ENV=production npm run build  # Should error if Redis not configured
+```
+
+### [ ] Step 1.4: Add Content Security Policy Headers
+
+**Files to modify:**
+- `next.config.js` - Add CSP header to security headers array
+
+**New file (optional):**
+- `src/app/api/csp-report/route.ts` - CSP violation reporting endpoint
+
+**Verification:**
+```bash
+curl -I http://localhost:3000 | grep -i content-security-policy
+npm run dev  # Check console for CSP violations
+```
+
+---
+
+## Subtask 2: Authentication & Authorization
+
+### [ ] Step 2.1: Create Data Access Layer
+
+**New files:**
+- `src/lib/dal/base.ts` - Auth helpers: getCurrentUser(), verifyOwnership(), custom errors
+- `src/lib/dal/letters.ts` - Letter CRUD with built-in auth
+- `src/lib/dal/recordings.ts` - Recording operations with auth
+- `src/lib/dal/documents.ts` - Document operations with auth
+- `src/lib/dal/index.ts` - Barrel export
+
+**Verification:**
+```bash
+npm run typecheck  # Type safety for DAL
+npm run test  # Unit tests for DAL
+```
+
+### [ ] Step 2.2: Migrate API Routes to DAL
+
+**Files to modify:**
+- `src/app/api/letters/route.ts` - Use DAL for letter operations
+- `src/app/api/letters/[id]/route.ts` - Use DAL with ownership verification
+- `src/app/api/recordings/route.ts` - Use DAL
+- `src/app/api/documents/route.ts` - Use DAL
+
+**Verification:**
+```bash
+npm run test:e2e  # E2E tests still pass
+# Manual test: access another user's resource should fail
+```
+
+### [ ] Step 2.3: Add Route-Specific Error Boundaries
+
+**New files:**
+- `src/app/(dashboard)/clinical-assistant/error.tsx`
+- `src/app/(dashboard)/referrals/error.tsx`
+- `src/app/(dashboard)/settings/error.tsx`
+
+**Verification:**
+- Throw test error in each route, verify error boundary catches it
+
+---
+
+## Subtask 3: Error Handling & Monitoring
+
+### [ ] Step 3.1: Install and Configure Sentry
+
+**Install:**
+```bash
+npx @sentry/wizard@latest -i nextjs
+```
+
+**New files:**
+- `sentry.client.config.ts` - Client config with PHI scrubbing
+- `sentry.server.config.ts` - Server config
+- `sentry.edge.config.ts` - Edge runtime config
+
+**Modify:**
+- `next.config.js` - Wrap with withSentryConfig
+
+**Verification:**
+- Trigger test error, verify appears in Sentry dashboard
+- Verify PHI fields are redacted
+
+### [ ] Step 3.2: Create Security Event Logger
+
+**New file:**
+- `src/lib/security-logger.ts` - Functions: logAuthFailure(), logRateLimitHit(), logUnauthorizedAccess()
+
+**Integration points:**
+- `src/middleware.ts` - Log auth failures
+- `src/lib/rate-limit.ts` - Log rate limit hits
+- `src/lib/dal/base.ts` - Log ownership violations
+
+**Verification:**
+- Trigger auth failure, verify logged
+- Trigger rate limit, verify logged
+
+### [ ] Step 3.3: Enhance Health Endpoint
+
+**File to modify:**
+- `src/app/api/health/route.ts` - Add Redis check, Anthropic check, response time metrics
+
+**Verification:**
+```bash
+curl http://localhost:3000/api/health | jq
+# Should show all service checks
+```
+
+### [ ] Step 3.4: Add Transaction Wrapping for Critical Operations
+
+**Files to modify:**
+- `src/domains/letters/approval.service.ts` - Wrap in transaction
+- Email sending operations - Wrap in transaction
+
+**Verification:**
+- Simulate failure mid-operation, verify rollback
+
+---
+
+## Subtask 4: Security Hardening
+
+### [ ] Step 4.1: Add Dependency Scanning to CI
+
+**New file:**
+- `.github/workflows/security.yml` - Snyk scan, TruffleHog, license check
+
+**Verification:**
+```bash
+# Push to PR, verify security scan runs
+```
+
+### [ ] Step 4.2: Add Webhook IP Allowlisting
+
+**File to modify:**
+- `src/middleware.ts` - Add IP validation for /api/transcription/webhook, /api/webhooks/resend
+
+**Verification:**
+- Verify webhooks still work from correct IPs
+- Verify blocked from other IPs
+
+### [ ] Step 4.3: Enable Renovate
+
+**New file:**
+- `renovate.json` - Auto-merge minor/patch, security alerts
+
+**Verification:**
+- Renovate should create PRs for outdated deps
+
+---
+
+## Subtask 5: Performance & Caching
+
+### [ ] Step 5.1: Install and Configure React Query
+
+**Install:**
+```bash
+npm install @tanstack/react-query @tanstack/react-query-devtools
+```
+
+**New files:**
+- `src/lib/react-query.ts` - Query client configuration
+- `src/app/providers.tsx` - QueryClientProvider wrapper
+- `src/hooks/useLetters.ts` - Letters query hooks
+- `src/hooks/useRecordings.ts` - Recordings query hooks
+
+**Modify:**
+- `src/app/layout.tsx` - Import providers
+
+**Verification:**
+- React Query DevTools visible in dev
+- Network tab shows caching working
+
+### [ ] Step 5.2: Add Optimistic Updates
+
+**Modify hooks:**
+- `src/hooks/useLetters.ts` - Add optimistic update for approve/send
+
+**Verification:**
+- UI updates immediately before server confirms
+
+### [ ] Step 5.3: Add Cache Wrappers
+
+**New file:**
+- `src/lib/cache.ts` - unstable_cache wrappers for templates, settings
+
+**Verification:**
+- Same data fetched twice hits cache
+
+### [ ] Step 5.4: Enable ISR for Static Pages
+
+**Modify:**
+- `src/app/(marketing)/about/page.tsx` - Add `export const revalidate = 3600`
+- Other marketing pages
+
+**Verification:**
+```bash
+curl -I http://localhost:3000/about | grep cache
+```
+
+---
+
+## Subtask 6: Developer Experience
+
+### [ ] Step 6.1: Add Pre-commit Hooks
+
+**Install:**
+```bash
+npm install --save-dev husky lint-staged
+npx husky install
+```
+
+**New files:**
+- `.husky/pre-commit`
+- `.lintstagedrc.js`
+
+**Modify:**
+- `package.json` - Add "prepare": "husky install"
+
+**Verification:**
+```bash
+git add . && git commit -m "test"
+# Should run lint + typecheck before commit
+```
+
+### [ ] Step 6.2: Add Performance Measurement Helper
+
+**New file:**
+- `src/lib/performance.ts` - measureAsync() helper
+
+**Verification:**
+- Wrap expensive operation, verify timing logged
+
+---
+
+## Final Verification
+
+### [ ] Step: Complete Verification Suite
+
+```bash
+npm run lint          # All lint rules pass
+npm run typecheck     # No type errors
+npm run test          # All unit tests pass
+npm run build         # Production build succeeds
+npm run test:e2e      # E2E tests pass
+```
+
+### [ ] Step: Write Implementation Report
+
+Output: `report.md` containing:
+- What was implemented
+- How the solution was tested
+- Challenges encountered
+- Remaining work or recommendations
+
+---
+
+## Completion Checklist
+
+### Critical (Must complete for production)
+- [ ] E2E_MOCK_AUTH blocked in production
+- [ ] Empty catch blocks fixed
+- [ ] Redis required for rate limiting
+- [ ] CSP headers active
+
+### High Priority
+- [ ] DAL pattern implemented
+- [ ] Error boundaries on all routes
+- [ ] Sentry configured with PHI scrubbing
+- [ ] Security logging active
+
+### Medium Priority
+- [ ] Dependency scanning in CI
+- [ ] Webhook IP allowlisting
+- [ ] React Query caching
+- [ ] Pre-commit hooks
+
+### Nice to Have
+- [ ] Optimistic updates
+- [ ] ISR for marketing pages
+- [ ] Performance helpers
