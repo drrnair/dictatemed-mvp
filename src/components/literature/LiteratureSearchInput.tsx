@@ -6,12 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { durations, buttonHoverEffect } from '@/styles/clinical-animations';
 
-/**
- * Stagger delay for dropdown suggestions.
- * Using faster delay (30ms) than standard stagger (80ms) for snappier dropdown feel.
- */
-const SUGGESTION_STAGGER_DELAY = 0.03;
-
 interface LiteratureSearchInputProps {
   /** Current query value */
   value: string;
@@ -291,7 +285,7 @@ export function LiteratureSearchInput({
                   animate={{
                     opacity: 1,
                     x: 0,
-                    transition: { delay: index * SUGGESTION_STAGGER_DELAY },
+                    transition: { delay: index * durations.staggerFast },
                   }}
                   className={cn(
                     'w-full text-left px-3 py-2.5 rounded-lg',

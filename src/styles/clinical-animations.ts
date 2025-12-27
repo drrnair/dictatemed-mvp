@@ -66,8 +66,14 @@ export const durations = {
   /** Stagger delay (80ms) - between cascading items */
   stagger: 0.08,
 
+  /** Fast stagger (30ms) - for quick suggestion lists */
+  staggerFast: 0.03,
+
   /** Content delay (180ms) - after container animations */
   contentDelay: 0.18,
+
+  /** Loading stage duration (1500ms) - time per loading stage cycle */
+  loadingStage: 1.5,
 } as const;
 
 // =============================================================================

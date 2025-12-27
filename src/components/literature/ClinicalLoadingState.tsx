@@ -41,9 +41,6 @@ const LOADING_STAGES = [
   },
 ] as const;
 
-/** Duration each stage is shown (in ms) */
-const STAGE_DURATION = 1500;
-
 interface ClinicalLoadingStateProps {
   /** Additional class names */
   className?: string;
@@ -74,11 +71,11 @@ export function ClinicalLoadingState({
 }: ClinicalLoadingStateProps) {
   const [stage, setStage] = useState(0);
 
-  // Cycle through stages
+  // Cycle through stages (convert seconds to ms for setInterval)
   useEffect(() => {
     const interval = setInterval(() => {
       setStage((s) => (s + 1) % LOADING_STAGES.length);
-    }, STAGE_DURATION);
+    }, durations.loadingStage * 1000);
 
     return () => clearInterval(interval);
   }, []);
