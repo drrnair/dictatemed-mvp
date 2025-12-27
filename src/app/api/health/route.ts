@@ -1,151 +1,458 @@
 // src/app/api/health/route.ts
-// System health check endpoint for monitoring and load balancers
+// Enhanced system health check endpoint for monitoring and load balancers
+// Provides comprehensive service health status with latency metrics
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/infrastructure/db/client';
+import { isRedisRateLimitingActive } from '@/lib/rate-limit';
+import { getSupabaseServiceClient, STORAGE_BUCKETS } from '@/infrastructure/supabase/client';
+import { logger } from '@/lib/logger';
 
 interface ServiceStatus {
   status: 'up' | 'down' | 'degraded';
   latencyMs?: number;
   message?: string;
+  details?: Record<string, unknown>;
 }
 
 interface HealthCheckResponse {
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: string;
   version: string;
+  environment: string;
+  uptime: number;
   checks: {
     database: ServiceStatus;
+    redis: ServiceStatus;
     deepgram: ServiceStatus;
-    bedrock: ServiceStatus;
+    anthropic: ServiceStatus;
     supabase: ServiceStatus;
+  };
+  summary: {
+    totalChecks: number;
+    passing: number;
+    failing: number;
+    degraded: number;
   };
 }
 
-// Cache health check results for 30 seconds
-let cachedResponse: { data: HealthCheckResponse; timestamp: number } | null =
-  null;
+// Cache health check results for 30 seconds to prevent overwhelming services
+// NOTE: In serverless environments (Vercel), this cache is per-instance. Each function
+// instance maintains its own cache, so cache misses may occur when requests hit different
+// instances. This is acceptable for health checks since the primary goal is connectivity
+// verification, not shared state.
+let cachedResponse: { data: HealthCheckResponse; timestamp: number } | null = null;
 const CACHE_TTL_MS = 30_000;
 
+// Timeout for external service calls to prevent health check from hanging
+const EXTERNAL_CALL_TIMEOUT_MS = 5_000;
+
+// Track process start time for uptime calculation
+// NOTE: In serverless, this reflects the instance start time, not deployment time.
+// Different instances may report different uptimes.
+const processStartTime = Date.now();
+
+/**
+ * Wrap a promise with a timeout
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${operation} timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+}
+
+/**
+ * Check database connectivity with a simple query
+ */
 async function checkDatabase(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    // Run a simple query to verify connectivity with timeout
+    await withTimeout(
+      prisma.$queryRaw`SELECT 1 as health_check`,
+      EXTERNAL_CALL_TIMEOUT_MS,
+      'Database query'
+    );
+
     return {
       status: 'up',
       latencyMs: Date.now() - start,
+      details: {
+        connectionPool: 'active',
+      },
+    };
+  } catch (error) {
+    const latency = Date.now() - start;
+    logger.error('Database health check failed', {
+      error: error instanceof Error ? error.message : String(error),
+      latencyMs: latency,
+    });
+
+    return {
+      status: 'down',
+      latencyMs: latency,
+      message: error instanceof Error ? error.message : 'Database connection failed',
+    };
+  }
+}
+
+/**
+ * Check Redis connectivity for rate limiting
+ * Uses the isRedisRateLimitingActive() function which safely handles
+ * production checks without throwing
+ *
+ * IMPORTANT: Per security requirements (Issue 1.3), Redis is REQUIRED in production.
+ * If Redis is not configured in production, this returns 'down' (not 'degraded')
+ * to ensure the health check properly reflects the security issue.
+ */
+async function checkRedis(): Promise<ServiceStatus> {
+  const start = Date.now();
+
+  // In test mode, skip Redis check
+  if (process.env.MOCK_REDIS === 'true' || process.env.NODE_ENV === 'test') {
+    return { status: 'up', message: 'mocked' };
+  }
+
+  try {
+    const isActive = isRedisRateLimitingActive();
+    const latency = Date.now() - start;
+
+    if (isActive) {
+      return {
+        status: 'up',
+        latencyMs: latency,
+        details: {
+          provider: 'upstash',
+          ratelimiting: 'active',
+        },
+      };
+    }
+
+    // Redis not configured
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      // SECURITY: Redis is REQUIRED in production for effective rate limiting.
+      // Without Redis, rate limits are per-instance and easily bypassed.
+      // Return 'down' to ensure health check fails appropriately.
+      return {
+        status: 'down',
+        latencyMs: latency,
+        message: 'SECURITY: Redis not configured - rate limiting ineffective in production',
+        details: {
+          provider: 'none',
+          ratelimiting: 'disabled',
+          required: true,
+        },
+      };
+    }
+
+    // In development, in-memory fallback is acceptable
+    return {
+      status: 'up',
+      latencyMs: latency,
+      message: 'Using in-memory rate limiting (acceptable for development)',
+      details: {
+        provider: 'memory',
+        ratelimiting: 'fallback',
+      },
     };
   } catch (error) {
     return {
       status: 'down',
       latencyMs: Date.now() - start,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: error instanceof Error ? error.message : 'Redis check failed',
     };
   }
 }
 
-async function checkDeepgram(): Promise<ServiceStatus> {
-  // Deepgram health check - just verify API key is configured
-  // Full connectivity check would be expensive
+/**
+ * Check Deepgram API availability
+ * Full connectivity check would consume API credits, so we validate config only.
+ * This is a synchronous check wrapped in Promise.resolve for API consistency.
+ */
+function checkDeepgram(): ServiceStatus {
   // In test mode with mocking enabled, skip this check
   if (process.env.MOCK_DEEPGRAM_SERVICE === 'true') {
     return { status: 'up', message: 'mocked' };
   }
+
   if (!process.env.DEEPGRAM_API_KEY) {
     return {
       status: 'down',
-      message: 'API key not configured',
+      message: 'DEEPGRAM_API_KEY not configured',
     };
   }
-  return { status: 'up' };
+
+  return {
+    status: 'up',
+    details: {
+      keyConfigured: true,
+    },
+  };
 }
 
-async function checkBedrock(): Promise<ServiceStatus> {
-  // Bedrock health check - verify credentials are configured
-  // Full connectivity check would be expensive
+/**
+ * Check Anthropic/Claude API availability
+ * We only validate config since actual API calls cost money.
+ * This is a synchronous check wrapped in Promise.resolve for API consistency.
+ */
+function checkAnthropic(): ServiceStatus {
   // In test mode with mocking enabled, skip this check
-  if (process.env.MOCK_BEDROCK_SERVICE === 'true') {
+  if (process.env.MOCK_ANTHROPIC_SERVICE === 'true' || process.env.MOCK_BEDROCK_SERVICE === 'true') {
     return { status: 'up', message: 'mocked' };
   }
-  if (!process.env.AWS_REGION) {
+
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const awsRegion = process.env.AWS_REGION;
+  const bedrockEnabled = process.env.USE_BEDROCK === 'true';
+
+  // Check for either direct Anthropic or Bedrock configuration
+  if (bedrockEnabled) {
+    if (!awsRegion) {
+      return {
+        status: 'down',
+        message: 'AWS_REGION not configured for Bedrock',
+      };
+    }
     return {
-      status: 'down',
-      message: 'AWS region not configured',
+      status: 'up',
+      details: {
+        provider: 'bedrock',
+        region: awsRegion,
+      },
     };
   }
-  return { status: 'up' };
+
+  if (!anthropicKey) {
+    return {
+      status: 'down',
+      message: 'ANTHROPIC_API_KEY not configured',
+    };
+  }
+
+  return {
+    status: 'up',
+    details: {
+      provider: 'anthropic-direct',
+      keyConfigured: true,
+    },
+  };
 }
 
+/**
+ * Check Supabase storage connectivity
+ * Performs actual API call to verify bucket access
+ */
 async function checkSupabase(): Promise<ServiceStatus> {
-  // Supabase health check - verify credentials are configured
+  const start = Date.now();
+
   // In test mode with mocking enabled, skip this check
   if (process.env.MOCK_SUPABASE_STORAGE === 'true') {
     return { status: 'up', message: 'mocked' };
   }
+
+  // First verify config
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
     return {
       status: 'down',
-      message: 'Supabase URL not configured',
+      message: 'NEXT_PUBLIC_SUPABASE_URL not configured',
     };
   }
+
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return {
       status: 'down',
-      message: 'Supabase service role key not configured',
+      message: 'SUPABASE_SERVICE_ROLE_KEY not configured',
     };
   }
-  return { status: 'up' };
+
+  try {
+    const client = getSupabaseServiceClient();
+
+    // Actually verify connectivity by listing buckets with timeout
+    const { data: buckets, error } = await withTimeout(
+      client.storage.listBuckets(),
+      EXTERNAL_CALL_TIMEOUT_MS,
+      'Supabase listBuckets'
+    );
+
+    if (error) {
+      return {
+        status: 'down',
+        latencyMs: Date.now() - start,
+        message: `Supabase API error: ${error.message}`,
+      };
+    }
+
+    const bucketNames = buckets?.map((b) => b.name) || [];
+    const requiredBuckets = Object.values(STORAGE_BUCKETS);
+    const missingBuckets = requiredBuckets.filter((b) => !bucketNames.includes(b));
+
+    if (missingBuckets.length > 0) {
+      return {
+        status: 'degraded',
+        latencyMs: Date.now() - start,
+        message: `Missing buckets: ${missingBuckets.join(', ')}`,
+        details: {
+          availableBuckets: bucketNames,
+          missingBuckets,
+        },
+      };
+    }
+
+    return {
+      status: 'up',
+      latencyMs: Date.now() - start,
+      details: {
+        buckets: bucketNames.length,
+        allBucketsPresent: true,
+      },
+    };
+  } catch (error) {
+    const latency = Date.now() - start;
+    logger.error('Supabase health check failed', {
+      error: error instanceof Error ? error.message : String(error),
+      latencyMs: latency,
+    });
+
+    return {
+      status: 'down',
+      latencyMs: latency,
+      message: error instanceof Error ? error.message : 'Supabase connection failed',
+    };
+  }
 }
 
+/**
+ * Perform all health checks in parallel
+ * Note: checkDeepgram and checkAnthropic are synchronous (config-only checks)
+ * but we wrap them in Promise.resolve for consistency with Promise.all
+ */
 async function performHealthCheck(): Promise<HealthCheckResponse> {
-  const [database, deepgram, bedrock, supabase] = await Promise.all([
+  // Run async checks in parallel, sync checks are immediate
+  const [database, redis, supabase] = await Promise.all([
     checkDatabase(),
-    checkDeepgram(),
-    checkBedrock(),
+    checkRedis(),
     checkSupabase(),
   ]);
 
-  const checks = { database, deepgram, bedrock, supabase };
+  // Sync checks (config validation only)
+  const deepgram = checkDeepgram();
+  const anthropic = checkAnthropic();
+
+  const checks = { database, redis, deepgram, anthropic, supabase };
+
+  // Calculate summary
+  const allChecks = Object.values(checks);
+  const passing = allChecks.filter((c) => c.status === 'up').length;
+  const failing = allChecks.filter((c) => c.status === 'down').length;
+  const degraded = allChecks.filter((c) => c.status === 'degraded').length;
 
   // Determine overall status
-  const allChecks = Object.values(checks);
-  const hasDown = allChecks.some((c) => c.status === 'down');
-  const hasDegraded = allChecks.some((c) => c.status === 'degraded');
-
-  // Database down = unhealthy (critical)
-  // Other services down = degraded (can still function partially)
+  // Database or Redis down = unhealthy (critical infrastructure)
+  // Other services down = degraded (can function partially)
   let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+
   if (database.status === 'down') {
     status = 'unhealthy';
-  } else if (hasDown || hasDegraded) {
+  } else if (redis.status === 'down' && process.env.NODE_ENV === 'production') {
+    // Redis down in production is critical
+    status = 'unhealthy';
+  } else if (failing > 0 || degraded > 0) {
     status = 'degraded';
   }
 
   return {
     status,
     timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '0.1.0',
+    version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ||
+             process.env.npm_package_version ||
+             '0.1.0',
+    environment: process.env.VERCEL_ENV || process.env.NODE_ENV || 'development',
+    uptime: Math.floor((Date.now() - processStartTime) / 1000),
     checks,
+    summary: {
+      totalChecks: allChecks.length,
+      passing,
+      failing,
+      degraded,
+    },
   };
 }
 
 export async function GET() {
-  // Check cache
+  // Check cache first
   if (cachedResponse && Date.now() - cachedResponse.timestamp < CACHE_TTL_MS) {
-    return NextResponse.json(cachedResponse.data, {
-      status: cachedResponse.data.status === 'unhealthy' ? 503 : 200,
-    });
+    const cached = cachedResponse.data;
+    return NextResponse.json(
+      { ...cached, cached: true },
+      {
+        status: cached.status === 'unhealthy' ? 503 : 200,
+        headers: {
+          'Cache-Control': 'no-store, max-age=0',
+          'X-Health-Cached': 'true',
+          'X-Cache-Age': String(Math.floor((Date.now() - cachedResponse.timestamp) / 1000)),
+        },
+      }
+    );
   }
 
-  const health = await performHealthCheck();
+  try {
+    const health = await performHealthCheck();
 
-  // Cache the result
-  cachedResponse = {
-    data: health,
-    timestamp: Date.now(),
-  };
+    // Cache the result
+    cachedResponse = {
+      data: health,
+      timestamp: Date.now(),
+    };
 
-  return NextResponse.json(health, {
-    status: health.status === 'unhealthy' ? 503 : 200,
-  });
+    // Log health check results for monitoring
+    if (health.status !== 'healthy') {
+      logger.warn('Health check returned non-healthy status', {
+        status: health.status,
+        failing: health.summary.failing,
+        degraded: health.summary.degraded,
+      });
+    }
+
+    return NextResponse.json(health, {
+      status: health.status === 'unhealthy' ? 503 : 200,
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+        'X-Health-Cached': 'false',
+      },
+    });
+  } catch (error) {
+    // If health check itself fails, return unhealthy
+    logger.error('Health check failed with exception', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    return NextResponse.json(
+      {
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        version: process.env.npm_package_version || '0.1.0',
+        environment: process.env.NODE_ENV || 'development',
+        uptime: Math.floor((Date.now() - processStartTime) / 1000),
+        error: error instanceof Error ? error.message : 'Health check failed',
+        checks: {},
+        summary: {
+          totalChecks: 0,
+          passing: 0,
+          failing: 0,
+          degraded: 0,
+        },
+      },
+      {
+        status: 503,
+        headers: {
+          'Cache-Control': 'no-store, max-age=0',
+        },
+      }
+    );
+  }
 }

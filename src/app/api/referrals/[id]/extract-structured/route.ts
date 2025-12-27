@@ -127,8 +127,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             fullExtractionError: message,
           },
         });
-      } catch {
-        // Ignore error from updating status - document may not exist
+      } catch (statusUpdateError) {
+        // Log but don't fail - status update is secondary to returning error response
+        // Document may not exist or was deleted during processing
+        log.warn('Failed to update document extraction status', {
+          documentId: idValidation.data,
+          originalError: message,
+          statusUpdateError: statusUpdateError instanceof Error ? statusUpdateError.message : 'Unknown error',
+        });
       }
     }
 

@@ -1,14 +1,25 @@
 // src/app/api/letters/route.ts
 // Letter generation and listing API
+//
+// Uses the Data Access Layer (DAL) for authenticated data operations.
+// The DAL provides:
+// - Automatic authentication checks
+// - Ownership verification
+// - Consistent error handling
+// - Audit logging for PHI access
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import type { Prisma, Subspecialty, LetterStatus, LetterType as PrismaLetterType } from '@prisma/client';
-import { getSession } from '@/lib/auth';
-import { generateLetter, listLetters } from '@/domains/letters/letter.service';
+import type { Subspecialty, LetterStatus, LetterType } from '@prisma/client';
+import { generateLetter } from '@/domains/letters/letter.service';
 import { checkRateLimit, createRateLimitKey, getRateLimitHeaders } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
-import type { LetterType } from '@/domains/letters/letter.types';
+import {
+  letters as lettersDAL,
+  handleDALError,
+  isDALError,
+  getCurrentUserOrThrow,
+} from '@/lib/dal';
 
 const subspecialtyEnum = z.enum([
   'GENERAL_CARDIOLOGY',
@@ -74,20 +85,18 @@ const generateLetterSchema = z.object({
 
 /**
  * POST /api/letters - Generate a new letter
+ *
+ * Uses DAL for authentication, domain service for business logic.
  */
 export async function POST(request: NextRequest) {
   const log = logger.child({ action: 'generateLetter' });
 
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+    // Get authenticated user via DAL
+    const user = await getCurrentUserOrThrow();
 
     // Check rate limit (10 requests/min for letters)
-    const rateLimitKey = createRateLimitKey(userId, 'letters');
+    const rateLimitKey = createRateLimitKey(user.id, 'letters');
     const rateLimit = checkRateLimit(rateLimitKey, 'letters');
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -106,13 +115,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await generateLetter(userId, {
+    // Generate letter (domain service has business logic)
+    const result = await generateLetter(user.id, {
       ...validated.data,
       subspecialty: validated.data.subspecialty as Subspecialty | undefined,
     });
 
     log.info('Letter generated', {
       letterId: result.id,
+      userId: user.id,
       letterType: validated.data.letterType,
       subspecialty: validated.data.subspecialty,
       modelUsed: result.modelUsed,
@@ -121,6 +132,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: 201, headers: getRateLimitHeaders(rateLimit) });
   } catch (error) {
+    // Handle DAL errors (UnauthorizedError)
+    if (isDALError(error)) {
+      return handleDALError(error, log);
+    }
+
     log.error(
       'Failed to generate letter',
       {},
@@ -137,131 +153,51 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/letters - List letters with filtering
  * Query params: search, type, status, startDate, endDate, page, limit, sortBy, sortOrder
+ *
+ * Uses DAL for centralized auth and data access.
+ * The DAL handles:
+ * - Authentication (throws UnauthorizedError if not logged in)
+ * - Ownership filtering (only returns user's letters)
+ * - Patient data decryption
+ * - Stats calculation
  */
 export async function GET(request: NextRequest) {
   const log = logger.child({ action: 'listLetters' });
 
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
-    const letterType = searchParams.get('type') as LetterType | null;
-    const status = searchParams.get('status');
+
+    // Parse query parameters
+    const search = searchParams.get('search') || undefined;
+    const letterType = searchParams.get('type') as LetterType | undefined;
+    const status = (searchParams.get('status') as LetterStatus) || undefined;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 20;
-    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortBy = searchParams.get('sortBy') === 'approvedAt' ? 'approvedAt' : 'createdAt';
     const sortOrder = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
 
-    // Import dependencies
-    const { prisma } = await import('@/infrastructure/db/client');
-    const { decryptPatientData } = await import('@/infrastructure/db/encryption');
-
-    // Build where clause dynamically with proper Prisma types
-    const where: Prisma.LetterWhereInput = {
-      userId: session.user.id,
-      ...(status && { status: status as LetterStatus }),
-      ...(letterType && { letterType: letterType as PrismaLetterType }),
-      ...((startDate || endDate) && {
-        createdAt: {
-          ...(startDate && { gte: new Date(startDate) }),
-          ...(endDate && { lte: new Date(endDate) }),
-        },
-      }),
-    };
-
-    // Calculate offset from page
-    const offset = (page - 1) * limit;
-
-    // Build orderBy with proper Prisma type
-    const orderBy: Prisma.LetterOrderByWithRelationInput =
-      sortBy === 'approvedAt'
-        ? { approvedAt: sortOrder }
-        : { createdAt: sortOrder };
-
-    // Fetch letters with patient data
-    const [letters, total] = await Promise.all([
-      prisma.letter.findMany({
-        where,
-        orderBy,
-        take: limit,
-        skip: offset,
-        include: {
-          patient: true,
-        },
-      }),
-      prisma.letter.count({ where }),
-    ]);
-
-    // Decrypt patient data and filter by search if needed
-    let processedLetters = letters.map((letter) => {
-      let patientName = 'Unknown Patient';
-      if (letter.patient?.encryptedData) {
-        try {
-          const patientData = decryptPatientData(letter.patient.encryptedData);
-          patientName = patientData.name;
-        } catch (error) {
-          log.warn('Failed to decrypt patient data', { patientId: letter.patientId });
-        }
-      }
-
-      return {
-        id: letter.id,
-        patientId: letter.patientId,
-        patientName,
-        letterType: letter.letterType,
-        status: letter.status,
-        createdAt: letter.createdAt,
-        approvedAt: letter.approvedAt,
-        hallucinationRiskScore: letter.hallucinationRiskScore,
-      };
+    // Use DAL - handles auth and ownership automatically
+    const result = await lettersDAL.listLetters({
+      search,
+      letterType,
+      status,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
     });
 
-    // Apply client-side search filter (since patient data is encrypted)
-    if (search) {
-      const searchLower = search.toLowerCase();
-      processedLetters = processedLetters.filter((letter) =>
-        letter.patientName.toLowerCase().includes(searchLower)
-      );
+    return NextResponse.json(result);
+  } catch (error) {
+    // Handle DAL errors (UnauthorizedError, etc.)
+    if (isDALError(error)) {
+      return handleDALError(error, log);
     }
 
-    // Calculate stats
-    const allLetters = await prisma.letter.findMany({
-      where: { userId: session.user.id },
-      select: {
-        status: true,
-        approvedAt: true,
-      },
-    });
-
-    const stats = {
-      total: allLetters.length,
-      pendingReview: allLetters.filter((l) => l.status === 'IN_REVIEW' || l.status === 'DRAFT').length,
-      approvedThisWeek: allLetters.filter((l) => {
-        if (!l.approvedAt) return false;
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return new Date(l.approvedAt) >= weekAgo;
-      }).length,
-    };
-
-    return NextResponse.json({
-      letters: processedLetters,
-      pagination: {
-        page,
-        limit,
-        total: search ? processedLetters.length : total,
-        totalPages: Math.ceil((search ? processedLetters.length : total) / limit),
-        hasMore: page * limit < (search ? processedLetters.length : total),
-      },
-      stats,
-    });
-  } catch (error) {
     log.error(
       'Failed to list letters',
       {},

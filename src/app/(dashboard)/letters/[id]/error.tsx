@@ -4,6 +4,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, usePathname, useParams } from 'next/navigation';
 import { AlertTriangle, Home, RefreshCw, FileText, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logUnhandledError } from '@/lib/error-logger';
@@ -14,6 +15,9 @@ interface ErrorPageProps {
 }
 
 export default function LetterError({ error, reset }: ErrorPageProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useParams();
   const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false);
   const [savedContent, setSavedContent] = useState<string | null>(null);
 
@@ -21,12 +25,12 @@ export default function LetterError({ error, reset }: ErrorPageProps) {
     // Log error
     logUnhandledError(error, {
       digest: error.digest,
-      route: window.location.pathname,
+      route: pathname,
       context: 'letter-review',
     });
 
     // Check for unsaved edits in sessionStorage
-    const letterId = window.location.pathname.split('/').pop();
+    const letterId = params.id as string;
     const storageKey = `letter-draft-${letterId}`;
     const draft = sessionStorage.getItem(storageKey);
 
@@ -34,7 +38,7 @@ export default function LetterError({ error, reset }: ErrorPageProps) {
       setHasUnsavedEdits(true);
       setSavedContent(draft);
     }
-  }, [error]);
+  }, [error, pathname, params.id]);
 
   const handleSaveDraft = () => {
     if (!savedContent) return;
@@ -52,11 +56,11 @@ export default function LetterError({ error, reset }: ErrorPageProps) {
   };
 
   const handleGoToLetters = () => {
-    window.location.href = '/letters';
+    router.push('/letters');
   };
 
   const handleGoHome = () => {
-    window.location.href = '/dashboard';
+    router.push('/dashboard');
   };
 
   const isDevelopment = process.env.NODE_ENV === 'development';

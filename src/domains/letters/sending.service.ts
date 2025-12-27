@@ -93,7 +93,8 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
   const results: RecipientSendResult[] = [];
 
   for (const recipient of recipients) {
-    // Create LetterSend record (QUEUED status)
+    // Create LetterSend record with SENDING status
+    // Note: Single operations don't need transactions - Prisma operations are atomic
     const letterSend = await prisma.letterSend.create({
       data: {
         letterId,
@@ -106,21 +107,14 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
         channel: recipient.channel,
         subject,
         coverNote: coverNote || null,
-        status: 'QUEUED',
+        status: 'SENDING', // Start as SENDING since we immediately attempt to send
       },
     });
 
+    // Attempt to send email (external API call)
     try {
-      // Update status to SENDING
-      await prisma.letterSend.update({
-        where: { id: letterSend.id },
-        data: { status: 'SENDING' },
-      });
-
-      // Build email body
       const emailBody = buildEmailBody(patientName, coverNote);
 
-      // Send email
       const sendResult = await emailAdapter.sendEmail({
         to: recipient.email,
         subject,
@@ -135,8 +129,8 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
         ],
       });
 
+      // Update status based on result
       if (sendResult.success) {
-        // Update to SENT
         await prisma.letterSend.update({
           where: { id: letterSend.id },
           data: {
@@ -161,7 +155,6 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
           recipient: recipient.email,
         });
       } else {
-        // Update to FAILED
         await prisma.letterSend.update({
           where: { id: letterSend.id },
           data: {
@@ -188,7 +181,7 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
         });
       }
     } catch (error) {
-      // Update to FAILED
+      // Update to FAILED on exception
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       await prisma.letterSend.update({
         where: { id: letterSend.id },
@@ -211,7 +204,7 @@ export async function sendLetter(input: SendLetterInput): Promise<SendLetterResu
     }
   }
 
-  // Create audit log entry
+  // Create audit log entry for the entire send operation
   await prisma.auditLog.create({
     data: {
       userId: senderId,
@@ -297,7 +290,7 @@ export async function retrySend(input: RetrySendInput): Promise<RecipientSendRes
   const pdfBuffer = await generateLetterPdf(letterSend.letterId);
   const pdfFilename = `${sanitizeFilename(patientName)}_Letter_${format(new Date(), 'yyyyMMdd')}.pdf`;
 
-  // Update status to SENDING
+  // Update status to SENDING before attempting send
   await prisma.letterSend.update({
     where: { id: sendId },
     data: {
@@ -307,6 +300,7 @@ export async function retrySend(input: RetrySendInput): Promise<RecipientSendRes
     },
   });
 
+  // Attempt to send email (external API call)
   try {
     const emailAdapter = getEmailAdapter();
     const emailBody = buildEmailBody(patientName, letterSend.coverNote || undefined);
@@ -325,6 +319,7 @@ export async function retrySend(input: RetrySendInput): Promise<RecipientSendRes
       ],
     });
 
+    // Update status based on result
     if (sendResult.success) {
       await prisma.letterSend.update({
         where: { id: sendId },

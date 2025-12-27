@@ -1,11 +1,23 @@
 // src/app/api/letters/[id]/route.ts
 // Individual letter operations
+//
+// Uses the Data Access Layer (DAL) for authenticated data operations.
+// The DAL provides:
+// - Automatic authentication checks
+// - Ownership verification
+// - Consistent error handling
+// - Audit logging for PHI access
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getSession } from '@/lib/auth';
-import { getLetter, updateLetterContent } from '@/domains/letters/letter.service';
+import { updateLetterContent } from '@/domains/letters/letter.service';
 import { logger } from '@/lib/logger';
+import {
+  handleDALError,
+  isDALError,
+  letters as lettersDAL,
+  getCurrentUserOrThrow,
+} from '@/lib/dal';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -21,26 +33,28 @@ const patchLetterSchema = z.object({
 
 /**
  * GET /api/letters/:id - Get a letter by ID
+ *
+ * Uses DAL for:
+ * - Automatic authentication (throws UnauthorizedError)
+ * - Ownership verification (throws ForbiddenError)
+ * - PHI access audit logging
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const log = logger.child({ action: 'getLetter' });
 
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { id } = await params;
 
-    const letter = await getLetter(session.user.id, id);
-
-    if (!letter) {
-      return NextResponse.json({ error: 'Letter not found' }, { status: 404 });
-    }
+    // Use DAL - handles auth, ownership verification, and audit logging
+    const letter = await lettersDAL.getLetter(id);
 
     return NextResponse.json(letter);
   } catch (error) {
+    // Handle DAL errors (UnauthorizedError, ForbiddenError, NotFoundError)
+    if (isDALError(error)) {
+      return handleDALError(error, log);
+    }
+
     log.error(
       'Failed to get letter',
       {},
@@ -48,7 +62,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     );
 
     return NextResponse.json(
-      { error: 'Failed to get letter' },
+      { error: 'Failed to get letter', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }
@@ -56,17 +70,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 /**
  * PUT /api/letters/:id - Update letter content (physician edits)
+ *
+ * Uses domain service updateLetterContent which throws DAL errors:
+ * - NotFoundError if letter not found or not owned by user
+ * - ValidationError if letter is already approved
  */
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   const log = logger.child({ action: 'updateLetter' });
 
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { id } = await params;
+
+    // Get current user from DAL for consistent auth handling
+    const user = await getCurrentUserOrThrow();
 
     const body = await request.json();
     const validated = updateLetterSchema.safeParse(body);
@@ -78,28 +94,26 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const letter = await updateLetterContent(session.user.id, id, validated.data.content);
+    // Use domain service - throws DAL errors (NotFoundError, ValidationError)
+    const letter = await updateLetterContent(user.id, id, validated.data.content);
 
-    log.info('Letter updated', { letterId: id, userId: session.user.id });
+    log.info('Letter updated', { letterId: id, userId: user.id });
 
     return NextResponse.json(letter);
   } catch (error) {
+    // Handle DAL errors (UnauthorizedError, NotFoundError, ValidationError)
+    if (isDALError(error)) {
+      return handleDALError(error, log);
+    }
+
     log.error(
       'Failed to update letter',
       {},
       error instanceof Error ? error : undefined
     );
 
-    if (error instanceof Error && error.message === 'Cannot edit approved letter') {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-
-    if (error instanceof Error && error.message === 'Letter not found') {
-      return NextResponse.json({ error: error.message }, { status: 404 });
-    }
-
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update letter' },
+      { error: 'Failed to update letter', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }
@@ -107,16 +121,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 /**
  * PATCH /api/letters/:id - Partial update (save draft with contentFinal)
+ *
+ * Uses DAL for:
+ * - Automatic authentication (throws UnauthorizedError)
+ * - Ownership verification (throws ForbiddenError)
+ * - Business validation (throws ValidationError if letter is approved)
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const log = logger.child({ action: 'patchLetter' });
 
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { id } = await params;
 
     const body = await request.json();
@@ -129,38 +143,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Import prisma client
-    const { prisma } = await import('@/infrastructure/db/client');
+    // Use DAL - handles auth, ownership verification, and approved status check
+    const updated = await lettersDAL.saveLetterDraft(id, validated.data.contentFinal);
 
-    // Verify letter belongs to user
-    const letter = await prisma.letter.findFirst({
-      where: { id, userId: session.user.id },
-    });
-
-    if (!letter) {
-      return NextResponse.json({ error: 'Letter not found' }, { status: 404 });
-    }
-
-    if (letter.status === 'APPROVED') {
-      return NextResponse.json(
-        { error: 'Cannot edit approved letter' },
-        { status: 400 }
-      );
-    }
-
-    // Update contentFinal (the edited version)
-    const updated = await prisma.letter.update({
-      where: { id },
-      data: {
-        contentFinal: validated.data.contentFinal,
-        status: 'IN_REVIEW',
-      },
-    });
-
-    log.info('Letter draft saved', { letterId: id, userId: session.user.id });
+    log.info('Letter draft saved', { letterId: id });
 
     return NextResponse.json(updated);
   } catch (error) {
+    // Handle DAL errors (UnauthorizedError, ForbiddenError, NotFoundError, ValidationError)
+    if (isDALError(error)) {
+      return handleDALError(error, log);
+    }
+
     log.error(
       'Failed to patch letter',
       {},
@@ -168,7 +162,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     );
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to save draft' },
+      { error: 'Failed to save draft', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }
@@ -176,61 +170,31 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 /**
  * DELETE /api/letters/:id - Delete a letter
+ *
+ * Uses DAL for:
+ * - Automatic authentication (throws UnauthorizedError)
+ * - Ownership verification (throws ForbiddenError)
+ * - Business validation (throws ValidationError if letter is approved)
+ * - Audit logging (automatic via DAL)
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const log = logger.child({ action: 'deleteLetter' });
 
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { id } = await params;
 
-    // Import prisma client
-    const { prisma } = await import('@/infrastructure/db/client');
+    // Use DAL - handles auth, ownership verification, approved status check, and audit logging
+    await lettersDAL.deleteLetter(id);
 
-    // Verify letter belongs to user before deleting
-    const letter = await prisma.letter.findFirst({
-      where: { id, userId: session.user.id },
-    });
-
-    if (!letter) {
-      return NextResponse.json({ error: 'Letter not found' }, { status: 404 });
-    }
-
-    // Don't allow deleting approved letters (safety check)
-    if (letter.status === 'APPROVED') {
-      return NextResponse.json(
-        { error: 'Cannot delete approved letter' },
-        { status: 400 }
-      );
-    }
-
-    // Delete the letter (cascade will handle related records like provenance)
-    await prisma.letter.delete({
-      where: { id },
-    });
-
-    // Create audit log
-    await prisma.auditLog.create({
-      data: {
-        userId: session.user.id,
-        action: 'letter.delete',
-        resourceType: 'letter',
-        resourceId: id,
-        metadata: {
-          letterType: letter.letterType,
-          status: letter.status,
-        },
-      },
-    });
-
-    log.info('Letter deleted', { letterId: id, userId: session.user.id });
+    log.info('Letter deleted', { letterId: id });
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
+    // Handle DAL errors (UnauthorizedError, ForbiddenError, NotFoundError, ValidationError)
+    if (isDALError(error)) {
+      return handleDALError(error, log);
+    }
+
     log.error(
       'Failed to delete letter',
       {},
@@ -238,7 +202,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     );
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete letter' },
+      { error: 'Failed to delete letter', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }

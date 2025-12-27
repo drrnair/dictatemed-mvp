@@ -1,0 +1,87 @@
+name: Production Environment Safety Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-env-safety:
+    name: Check for Dangerous Environment Variables
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for dangerous env vars in codebase
+        run: |
+          echo "🔍 Scanning for hardcoded dangerous environment settings..."
+
+          # Check for hardcoded E2E_MOCK_AUTH=true in code (not in comments or tests)
+          if grep -r "E2E_MOCK_AUTH.*=.*['\"]true['\"]" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.env" . | grep -v "node_modules" | grep -v ".test." | grep -v "__tests__" | grep -v "spec." | grep -v "// " | grep -v ".md"; then
+            echo "❌ BLOCKED: Found hardcoded E2E_MOCK_AUTH=true in codebase"
+            echo "This is a security risk if deployed to production."
+            exit 1
+          fi
+
+          # Check for other dangerous patterns
+          if grep -r "DISABLE_AUTH.*=.*['\"]true['\"]" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.env" . | grep -v "node_modules" | grep -v ".test." | grep -v "__tests__"; then
+            echo "❌ BLOCKED: Found hardcoded DISABLE_AUTH=true in codebase"
+            exit 1
+          fi
+
+          echo "✅ No dangerous hardcoded environment settings found"
+
+      - name: Verify env validation exists
+        run: |
+          echo "🔍 Checking for environment validation code..."
+
+          if [ ! -f "src/lib/env-validation.ts" ]; then
+            echo "❌ BLOCKED: src/lib/env-validation.ts is missing"
+            echo "This file is required to validate environment safety at runtime."
+            exit 1
+          fi
+
+          # Check that the validation includes dangerous var checks
+          if ! grep -q "E2E_MOCK_AUTH" src/lib/env-validation.ts; then
+            echo "❌ BLOCKED: env-validation.ts does not check for E2E_MOCK_AUTH"
+            exit 1
+          fi
+
+          echo "✅ Environment validation file exists and includes required checks"
+
+      - name: Check middleware has production guard
+        run: |
+          echo "🔍 Verifying middleware has production safety guard..."
+
+          # Check that middleware.ts has NODE_ENV check for E2E_MOCK_AUTH
+          if ! grep -q "NODE_ENV.*production" src/middleware.ts; then
+            echo "⚠️ WARNING: middleware.ts may not have NODE_ENV production check"
+            echo "Ensure E2E_MOCK_AUTH is blocked in production environment"
+          fi
+
+          if grep -q "SECURITY VIOLATION" src/middleware.ts; then
+            echo "✅ Middleware has production security guard"
+          else
+            echo "⚠️ WARNING: Middleware may be missing security violation logging"
+          fi
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "  Production Environment Safety Check"
+          echo "=========================================="
+          echo ""
+          echo "✅ All checks passed"
+          echo ""
+          echo "This workflow ensures:"
+          echo "  - No dangerous env vars hardcoded in codebase"
+          echo "  - Environment validation file exists"
+          echo "  - Middleware has production safety guards"
+          echo ""
+          echo "Note: Runtime environment variables should be"
+          echo "validated by env-validation.ts at app startup."
+          echo "=========================================="

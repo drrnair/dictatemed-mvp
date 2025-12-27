@@ -14,13 +14,15 @@
     "jsx-a11y/label-has-associated-control": "error",
     "jsx-a11y/no-autofocus": "warn",
     "jsx-a11y/no-noninteractive-element-interactions": "warn",
-    "no-console": ["warn", { "allow": ["warn", "error"] }]
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-empty": ["error", { "allowEmptyCatch": false }]
   },
   "overrides": [
     {
       "files": ["tests/**/*"],
       "rules": {
-        "no-console": "off"
+        "no-console": "off",
+        "no-empty": "off"
       }
     }
   ]

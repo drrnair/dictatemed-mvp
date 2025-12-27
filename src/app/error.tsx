@@ -4,6 +4,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { AlertTriangle, Home, RefreshCw, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logUnhandledError } from '@/lib/error-logger';
@@ -14,13 +15,16 @@ interface ErrorPageProps {
 }
 
 export default function Error({ error, reset }: ErrorPageProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+
   useEffect(() => {
     // Log error when component mounts
     logUnhandledError(error, {
       digest: error.digest,
-      route: window.location.pathname,
+      route: pathname,
     });
-  }, [error]);
+  }, [error, pathname]);
 
   const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -80,7 +84,7 @@ export default function Error({ error, reset }: ErrorPageProps) {
 
           <Button
             variant="outline"
-            onClick={() => (window.location.href = '/dashboard')}
+            onClick={() => router.push('/dashboard')}
             className="w-full sm:w-auto"
           >
             <Home className="mr-2 h-4 w-4" />

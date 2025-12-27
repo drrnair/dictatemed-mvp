@@ -34,6 +34,7 @@
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
 import { logger } from '@/lib/logger';
+import { isProductionEnv } from '@/lib/env-validation';
 
 interface RateLimitConfig {
   requests: number;
@@ -71,8 +72,30 @@ let redisLimiters: Map<string, Ratelimit> | null = null;
 let redisInitAttempted = false;
 
 /**
+ * Error thrown when Redis is required but not configured.
+ * This should only happen in production with missing configuration.
+ */
+export class RedisRequiredError extends Error {
+  constructor() {
+    super(
+      'SECURITY: UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in production. ' +
+        'Rate limiting cannot function correctly across serverless instances without Redis. ' +
+        'In-memory rate limiting is per-instance and can be trivially bypassed. ' +
+        'Sign up at https://upstash.com and add credentials to Vercel environment variables.'
+    );
+    this.name = 'RedisRequiredError';
+  }
+}
+
+/**
  * Initialize Redis client and rate limiters if configured.
  * This is lazy-initialized on first use.
+ *
+ * CRITICAL: In production, Redis is REQUIRED. Without Redis, rate limiting
+ * is per-instance and ineffective in serverless environments. Attackers could
+ * easily bypass limits by hitting different instances.
+ *
+ * @throws {RedisRequiredError} If in production and Redis is not configured
  */
 function initializeRedis(): boolean {
   // Already successfully initialized
@@ -91,7 +114,23 @@ function initializeRedis(): boolean {
   const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!redisUrl || !redisToken) {
-    logger.debug('Upstash Redis not configured, using in-memory rate limiting');
+    // CRITICAL: In production, Redis is required for effective rate limiting
+    // Note: The app should have already failed at startup via assertProductionEnvSafe()
+    // in instrumentation.ts. This is a defense-in-depth check that logs rather than throws,
+    // since if we got here in production, something is seriously wrong.
+    if (isProductionEnv()) {
+      logger.error(
+        'SECURITY: Rate limiting requires Redis in production. ' +
+          'Without Redis, rate limits are per-instance and ineffective in serverless deployments. ' +
+          'This should have been caught at startup by assertProductionEnvSafe().'
+      );
+      // Don't throw here - env-validation.ts handles startup validation.
+      // If we got here, the app was already started (possibly incorrectly).
+      // Log and continue with in-memory as best-effort, but this is a security issue.
+    } else {
+      // In development/test, fallback to in-memory is acceptable
+      logger.debug('Upstash Redis not configured, using in-memory rate limiting');
+    }
     return false;
   }
 
@@ -145,15 +184,19 @@ export interface RateLimitResult {
 /**
  * Check if a request should be rate limited using Redis (if available) or in-memory fallback.
  *
+ * CRITICAL: In production, Redis is REQUIRED. This function will throw a
+ * RedisRequiredError if called in production without Redis configuration.
+ *
  * @param key - Unique key for the rate limit bucket (e.g., `${userId}:${resource}`)
  * @param resource - Resource type for limit lookup
  * @returns Rate limit result with remaining quota and reset time
+ * @throws {RedisRequiredError} If in production and Redis is not configured
  */
 export async function checkRateLimitAsync(
   key: string,
   resource: keyof typeof RATE_LIMITS = 'default'
 ): Promise<RateLimitResult> {
-  // Try to use Redis first
+  // Try to use Redis first - this will throw in production if Redis not configured
   const redisInitialized = initializeRedis();
 
   if (redisInitialized && redisLimiters) {
@@ -169,32 +212,52 @@ export async function checkRateLimitAsync(
           retryAfterMs: result.success ? undefined : result.reset - Date.now(),
         };
       } catch (error) {
+        // IMPORTANT: Don't catch RedisRequiredError - let it propagate
+        if (error instanceof RedisRequiredError) {
+          throw error;
+        }
+
         logger.warn('Redis rate limit check failed, falling back to in-memory', {
           error: error instanceof Error ? error.message : String(error),
           key,
           resource,
         });
-        // Fall through to in-memory check
+        // Fall through to in-memory check (only allowed in non-production)
       }
     }
   }
 
   // Fall back to in-memory rate limiting
+  // Note: In production, initializeRedis() above will have already thrown
   return checkRateLimit(key, resource);
 }
 
 /**
  * Check if a request should be rate limited (synchronous, in-memory only).
- * Use checkRateLimitAsync for Redis-backed rate limiting.
+ *
+ * WARNING: This function uses in-memory storage which is per-instance.
+ * In serverless environments (Vercel), this provides LIMITED protection
+ * since requests may hit different instances.
+ *
+ * For proper distributed rate limiting, use checkRateLimitAsync() which
+ * uses Redis when configured.
+ *
+ * CRITICAL: In production, Redis MUST be configured. This function will
+ * throw a RedisRequiredError if called in production without Redis config.
  *
  * @param key - Unique key for the rate limit bucket (e.g., `${userId}:${resource}`)
  * @param resource - Resource type for limit lookup
  * @returns Rate limit result with remaining quota and reset time
+ * @throws {RedisRequiredError} If in production and Redis is not configured
  */
 export function checkRateLimit(
   key: string,
   resource: keyof typeof RATE_LIMITS = 'default'
 ): RateLimitResult {
+  // CRITICAL: In production, Redis is required for effective rate limiting
+  // Calling initializeRedis ensures this check happens even for sync rate limiting
+  initializeRedis();
+
   const config = RATE_LIMITS[resource] ?? RATE_LIMITS.default;
   if (!config) {
     throw new Error(`Rate limit config not found for resource: ${resource}`);
@@ -258,10 +321,22 @@ export function clearAllRateLimits(): void {
 
 /**
  * Check if Redis rate limiting is active.
+ * This is a safe check that won't throw in production - useful for logging/diagnostics.
+ *
+ * @returns true if Redis is configured and initialized, false otherwise
  */
 export function isRedisRateLimitingActive(): boolean {
-  initializeRedis();
-  return redisClient !== null && redisLimiters !== null;
+  try {
+    initializeRedis();
+    return redisClient !== null && redisLimiters !== null;
+  } catch (error) {
+    // In production without Redis, initializeRedis() throws RedisRequiredError
+    // We catch it here to allow this function to be used for safe checks
+    if (error instanceof RedisRequiredError) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 /**

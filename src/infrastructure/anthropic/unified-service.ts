@@ -413,8 +413,13 @@ class UnifiedAnthropicService {
         params.outputTokens
       );
       this.usageStats.totalCostUSD += cost.totalCost;
-    } catch {
-      // Unknown model, skip cost tracking
+    } catch (error) {
+      // Unknown model - log for debugging but don't fail the operation
+      // This is expected for new models not yet in MODELS config
+      logger.debug('Cost estimation skipped for unknown model', {
+        model: params.model,
+        reason: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   }
 

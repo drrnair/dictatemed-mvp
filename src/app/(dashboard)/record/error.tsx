@@ -4,6 +4,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { AlertTriangle, Home, RefreshCw, Mic, Save, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logUnhandledError } from '@/lib/error-logger';
@@ -15,6 +16,8 @@ interface ErrorPageProps {
 }
 
 export default function RecordError({ error, reset }: ErrorPageProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [hasRecoveryData, setHasRecoveryData] = useState(false);
   const [recoveryAttempted, setRecoveryAttempted] = useState(false);
   const [recoverySuccess, setRecoverySuccess] = useState(false);
@@ -23,7 +26,7 @@ export default function RecordError({ error, reset }: ErrorPageProps) {
     // Log error
     logUnhandledError(error, {
       digest: error.digest,
-      route: window.location.pathname,
+      route: pathname,
       context: 'recording',
     });
 
@@ -35,7 +38,7 @@ export default function RecordError({ error, reset }: ErrorPageProps) {
       setHasRecoveryData(true);
       attemptRecovery(recoveryData);
     }
-  }, [error]);
+  }, [error, pathname]);
 
   const attemptRecovery = async (recoveryDataString: string) => {
     setRecoveryAttempted(true);
@@ -80,11 +83,11 @@ export default function RecordError({ error, reset }: ErrorPageProps) {
   const handleStartNewRecording = () => {
     // Clear recovery data
     sessionStorage.removeItem('recording-recovery-data');
-    window.location.href = '/record';
+    router.push('/record');
   };
 
   const handleGoHome = () => {
-    window.location.href = '/dashboard';
+    router.push('/dashboard');
   };
 
   const isDevelopment = process.env.NODE_ENV === 'development';

@@ -1,0 +1,84 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base"
+  ],
+  "schedule": [
+    "before 3am on Monday"
+  ],
+  "timezone": "Australia/Sydney",
+  "labels": [
+    "dependencies"
+  ],
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 10,
+  "packageRules": [
+    {
+      "description": "Auto-merge minor and patch updates for non-major dependencies",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Major updates require manual review",
+      "matchPackagePatterns": ["*"],
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major-update"],
+      "automerge": false
+    },
+    {
+      "description": "Security updates get priority",
+      "matchDepTypes": ["dependencies", "devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "matchCategories": ["security"],
+      "labels": ["dependencies", "security"],
+      "automerge": true,
+      "schedule": ["at any time"],
+      "prPriority": 10
+    },
+    {
+      "description": "Group ESLint-related packages",
+      "matchPackagePatterns": ["^eslint", "^@typescript-eslint"],
+      "groupName": "eslint"
+    },
+    {
+      "description": "Group React-related packages",
+      "matchPackagePatterns": ["^react", "^@types/react"],
+      "groupName": "react"
+    },
+    {
+      "description": "Group Next.js-related packages",
+      "matchPackagePatterns": ["^next", "^@next"],
+      "groupName": "nextjs"
+    },
+    {
+      "description": "Group Sentry packages",
+      "matchPackagePatterns": ["^@sentry"],
+      "groupName": "sentry"
+    },
+    {
+      "description": "Group testing packages",
+      "matchPackagePatterns": ["^@playwright", "^playwright", "^vitest", "^@vitest"],
+      "groupName": "testing"
+    },
+    {
+      "description": "Group Prisma packages",
+      "matchPackagePatterns": ["^prisma", "^@prisma"],
+      "groupName": "prisma"
+    },
+    {
+      "description": "Group TanStack packages",
+      "matchPackagePatterns": ["^@tanstack"],
+      "groupName": "tanstack"
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["dependencies", "security"],
+    "schedule": ["at any time"]
+  },
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "Dependency Dashboard",
+  "commitMessagePrefix": "deps:",
+  "semanticCommits": "enabled"
+}

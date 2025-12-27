@@ -6,9 +6,9 @@ import { getSession } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import {
   searchSpecialties,
-  getAllSpecialties,
   specialtiesApiQuerySchema,
 } from '@/domains/specialties';
+import { getCachedSpecialties } from '@/lib/cache';
 
 const log = logger.child({ module: 'specialties-api' });
 
@@ -41,9 +41,9 @@ export async function GET(request: NextRequest) {
 
     const { query, limit, includeCustom } = parsed.data;
 
-    // If no query provided, return all specialties
+    // If no query provided, return all specialties (cached for 24 hours)
     if (!query || query.trim().length === 0) {
-      const specialties = await getAllSpecialties();
+      const specialties = await getCachedSpecialties();
       return NextResponse.json({
         specialties: specialties.slice(0, limit),
         total: specialties.length,
@@ -60,7 +60,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    log.error('Failed to search specialties', { action: 'searchSpecialties' }, error as Error);
+    log.error(
+      'Failed to search specialties',
+      { action: 'searchSpecialties' },
+      error as Error
+    );
     return NextResponse.json(
       { error: 'Failed to search specialties' },
       { status: 500 }

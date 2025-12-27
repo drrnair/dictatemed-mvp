@@ -1,15 +1,26 @@
 // src/app/api/recordings/[id]/upload-url/route.ts
 // Generate presigned Supabase Storage upload URL for an existing recording
+//
+// Uses the Data Access Layer (DAL) for authenticated data operations.
+// The DAL provides:
+// - Automatic authentication checks
+// - Ownership verification
+// - Status validation
+// - Consistent error handling
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
-import { prisma } from '@/infrastructure/db/client';
 import {
   generateUploadUrl,
   generateAudioPath,
 } from '@/infrastructure/supabase/storage.service';
 import { STORAGE_BUCKETS } from '@/infrastructure/supabase/client';
 import { logger } from '@/lib/logger';
+import {
+  recordings as recordingsDAL,
+  handleDALError,
+  isDALError,
+  getCurrentUserOrThrow,
+} from '@/lib/dal';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -20,53 +31,34 @@ interface RouteParams {
  *
  * Returns a presigned URL that the client can use to upload audio directly to Supabase Storage.
  * This is useful for resumable uploads or when the recording was created separately.
+ *
+ * Uses DAL for:
+ * - Automatic authentication (throws UnauthorizedError)
+ * - Ownership verification (throws ForbiddenError)
+ * - Status validation (throws ValidationError if not UPLOADING)
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const log = logger.child({ action: 'getUploadUrl' });
+
   try {
-    // Get authenticated user
-    const session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const { id } = await params;
-    const userId = session.user.id;
 
-    // Verify recording exists and belongs to user
-    const recording = await prisma.recording.findFirst({
-      where: { id, userId },
-    });
+    // Verify recording exists, user owns it, and it's in UPLOADING status
+    // Uses DAL - handles auth, ownership verification, and status validation
+    const recording = await recordingsDAL.getRecordingForUpload(id);
 
-    if (!recording) {
-      return NextResponse.json(
-        { error: 'Recording not found' },
-        { status: 404 }
-      );
-    }
-
-    // Only generate upload URL for recordings in UPLOADING status
-    if (recording.status !== 'UPLOADING') {
-      return NextResponse.json(
-        { error: 'Recording is not in UPLOADING status' },
-        { status: 409 }
-      );
-    }
+    // Get user for storage path generation
+    const user = await getCurrentUserOrThrow();
 
     // Use existing storagePath if available, otherwise generate a new one
     let storagePath = recording.storagePath;
     if (!storagePath) {
       const consultationId = recording.consultationId ?? id;
       const mode = recording.mode.toLowerCase() as 'ambient' | 'dictation';
-      storagePath = generateAudioPath(userId, consultationId, mode, 'webm');
+      storagePath = generateAudioPath(user.id, consultationId, mode, 'webm');
 
-      // Update the recording with the storage path
-      await prisma.recording.update({
-        where: { id },
-        data: { storagePath },
-      });
+      // Update the recording with the storage path using DAL
+      await recordingsDAL.setRecordingStoragePath(id, storagePath);
     }
 
     // Generate presigned upload URL for Supabase Storage
@@ -76,9 +68,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       'audio/webm'
     );
 
-    logger.info('Presigned upload URL generated', {
+    log.info('Presigned upload URL generated', {
       recordingId: id,
-      userId,
+      userId: user.id,
       storagePath,
       expiresAt,
     });
@@ -89,13 +81,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       recordingId: id,
     });
   } catch (error) {
-    logger.error(
+    // Handle DAL errors (UnauthorizedError, ForbiddenError, NotFoundError, ValidationError)
+    if (isDALError(error)) {
+      return handleDALError(error, log);
+    }
+
+    log.error(
       'Failed to generate upload URL',
       {},
       error instanceof Error ? error : undefined
     );
     return NextResponse.json(
-      { error: 'Failed to generate upload URL' },
+      { error: 'Failed to generate upload URL', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }
