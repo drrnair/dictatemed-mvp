@@ -223,6 +223,7 @@ Enhance results display with clinical styling.
 ---
 
 ### [ ] Step: Badge Components Polish
+<!-- chat-id: 115a819c-af10-4bd2-9047-771faa9c2cce -->
 
 Polish confidence and source badges.
 
