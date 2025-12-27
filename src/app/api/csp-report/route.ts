@@ -46,13 +46,36 @@ interface CSPViolationReport {
 /**
  * Rate limiting for CSP reports (in-memory, per-instance)
  * Prevents DoS via report flooding
+ *
+ * Note: In serverless environments (Vercel), each instance has its own Map,
+ * providing per-instance rate limiting. For stricter limits, use Redis.
  */
 const reportCounts = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
 const RATE_LIMIT_MAX_REPORTS = 50; // Max reports per IP per minute
+const CLEANUP_PROBABILITY = 0.05; // 5% chance to run cleanup on each request
+
+/**
+ * Periodically clean up expired rate limit entries to prevent memory growth.
+ * Uses probabilistic cleanup to avoid running on every request.
+ */
+function cleanupExpiredEntries(): void {
+  const now = Date.now();
+  for (const [ip, record] of reportCounts.entries()) {
+    if (now > record.resetAt) {
+      reportCounts.delete(ip);
+    }
+  }
+}
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
+
+  // Probabilistic cleanup to prevent memory leak from stale entries
+  if (Math.random() < CLEANUP_PROBABILITY) {
+    cleanupExpiredEntries();
+  }
+
   const record = reportCounts.get(ip);
 
   if (!record || now > record.resetAt) {

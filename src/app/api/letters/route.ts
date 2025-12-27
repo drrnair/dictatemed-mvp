@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const search = searchParams.get('search') || undefined;
-    const letterType = searchParams.get('type') as PrismaLetterType | undefined;
+    const letterType = searchParams.get('type') as LetterType | undefined;
     const status = (searchParams.get('status') as LetterStatus) || undefined;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');

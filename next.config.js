@@ -1,3 +1,5 @@
+const { withSentryConfig } = require('@sentry/nextjs');
+
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
@@ -126,4 +128,33 @@ const nextConfig = {
   },
 };
 
-module.exports = withBundleAnalyzer(nextConfig);
+// Sentry configuration options
+// See: https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+const sentryWebpackPluginOptions = {
+  // Suppress source map upload logs in CI
+  silent: true,
+
+  // Upload source maps only in production CI builds
+  // Source maps are used to decode minified stack traces
+  dryRun: process.env.CI !== 'true',
+
+  // Routes to exclude from auto-instrumentation
+  // These routes contain PHI and should not send data to Sentry
+  excludeServerRoutes: [
+    // API routes that handle sensitive patient data
+    '/api/letters/[id]',
+    '/api/patients/[id]',
+    '/api/recordings/[id]',
+    '/api/documents/[id]',
+  ],
+
+  // Don't create release in non-production
+  release: process.env.VERCEL_GIT_COMMIT_SHA || undefined,
+};
+
+// Apply Sentry wrapper only in production to avoid dev overhead
+const finalConfig = process.env.NODE_ENV === 'production'
+  ? withSentryConfig(withBundleAnalyzer(nextConfig), sentryWebpackPluginOptions)
+  : withBundleAnalyzer(nextConfig);
+
+module.exports = finalConfig;

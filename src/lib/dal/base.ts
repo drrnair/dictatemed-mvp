@@ -67,6 +67,22 @@ export class NotFoundError extends Error {
   }
 }
 
+/**
+ * Error thrown when a business rule is violated.
+ * HTTP Status: 400 Bad Request
+ */
+export class ValidationError extends Error {
+  public readonly code: string;
+  public readonly statusCode = 400;
+
+  constructor(message: string, code: string = 'VALIDATION_ERROR') {
+    super(message);
+    this.name = 'ValidationError';
+    this.code = code;
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
 // =============================================================================
 // Auth Helpers
 // =============================================================================

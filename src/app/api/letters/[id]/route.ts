@@ -1,16 +1,22 @@
 // src/app/api/letters/[id]/route.ts
 // Individual letter operations
+//
+// Uses the Data Access Layer (DAL) for authenticated data operations.
+// The DAL provides:
+// - Automatic authentication checks
+// - Ownership verification
+// - Consistent error handling
+// - Audit logging for PHI access
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSession } from '@/lib/auth';
-import { getLetter, updateLetterContent } from '@/domains/letters/letter.service';
+import { getLetter as getLetterService, updateLetterContent } from '@/domains/letters/letter.service';
 import { logger } from '@/lib/logger';
 import {
   handleDALError,
   isDALError,
-  ForbiddenError,
-  NotFoundError,
+  letters as lettersDAL,
 } from '@/lib/dal';
 
 interface RouteParams {
@@ -27,26 +33,28 @@ const patchLetterSchema = z.object({
 
 /**
  * GET /api/letters/:id - Get a letter by ID
+ *
+ * Uses DAL for:
+ * - Automatic authentication (throws UnauthorizedError)
+ * - Ownership verification (throws ForbiddenError)
+ * - PHI access audit logging
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const log = logger.child({ action: 'getLetter' });
 
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { id } = await params;
 
-    const letter = await getLetter(session.user.id, id);
-
-    if (!letter) {
-      return NextResponse.json({ error: 'Letter not found' }, { status: 404 });
-    }
+    // Use DAL - handles auth, ownership verification, and audit logging
+    const letter = await lettersDAL.getLetter(id);
 
     return NextResponse.json(letter);
   } catch (error) {
+    // Handle DAL errors (UnauthorizedError, ForbiddenError, NotFoundError)
+    if (isDALError(error)) {
+      return handleDALError(error, log);
+    }
+
     log.error(
       'Failed to get letter',
       {},
@@ -54,7 +62,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     );
 
     return NextResponse.json(
-      { error: 'Failed to get letter' },
+      { error: 'Failed to get letter', code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }
