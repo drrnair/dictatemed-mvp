@@ -305,7 +305,7 @@ export const getCachedTemplateBySlug = unstable_cache(
 /**
  * Get user's selected specialties (cached for 30 minutes per user)
  *
- * Includes both standard and custom specialty selections.
+ * Returns standard specialty selections from the clinician_specialties junction table.
  * Cache is keyed by userId for isolation.
  *
  * @param userId - The user's ID
@@ -323,13 +323,6 @@ export const getCachedUserSpecialties = unstable_cache(
             description: true,
           },
         },
-        customSpecialty: {
-          select: {
-            id: true,
-            name: true,
-            status: true,
-          },
-        },
       },
     });
 
@@ -345,7 +338,7 @@ export const getCachedUserSpecialties = unstable_cache(
 /**
  * Get user's selected subspecialties (cached for 30 minutes per user)
  *
- * Includes both standard and custom subspecialty selections.
+ * Returns standard subspecialty selections from the clinician_subspecialties junction table.
  *
  * @param userId - The user's ID
  */
@@ -361,15 +354,6 @@ export const getCachedUserSubspecialties = unstable_cache(
             name: true,
             slug: true,
             description: true,
-          },
-        },
-        customSubspecialty: {
-          select: {
-            id: true,
-            specialtyId: true,
-            customSpecialtyId: true,
-            name: true,
-            status: true,
           },
         },
       },

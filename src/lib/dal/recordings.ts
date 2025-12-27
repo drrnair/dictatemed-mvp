@@ -10,6 +10,7 @@ import {
   getCurrentUserOrThrow,
   verifyOwnership,
   NotFoundError,
+  ForbiddenError,
   ValidationError,
 } from './base';
 
@@ -328,15 +329,19 @@ export interface RecordingForUpload {
  * Get a recording ready for upload.
  * Auth: Verified ownership - throws ForbiddenError if not owner.
  * Validation: Throws ValidationError if recording is not in UPLOADING status.
+ *
+ * Note: This function performs ownership check inline to avoid double-fetching
+ * the recording (once for ownership, once for data).
  */
 export async function getRecordingForUpload(recordingId: string): Promise<RecordingForUpload> {
   const user = await getCurrentUserOrThrow();
-  await verifyOwnership('recording', recordingId, user.id);
 
+  // Fetch recording with userId for inline ownership check (avoids double-fetch)
   const recording = await prisma.recording.findUnique({
     where: { id: recordingId },
     select: {
       id: true,
+      userId: true, // For ownership check
       status: true,
       mode: true,
       storagePath: true,
@@ -348,12 +353,23 @@ export async function getRecordingForUpload(recordingId: string): Promise<Record
     throw new NotFoundError(`Recording with ID ${recordingId} not found`);
   }
 
+  // Inline ownership check
+  if (recording.userId !== user.id) {
+    throw new ForbiddenError(`Not authorized to access recording ${recordingId}`);
+  }
+
   // Validate recording status
   if (recording.status !== 'UPLOADING') {
     throw new ValidationError('Recording is not in UPLOADING status', 'RECORDING_INVALID_STATUS');
   }
 
-  return recording;
+  return {
+    id: recording.id,
+    status: recording.status,
+    mode: recording.mode,
+    storagePath: recording.storagePath,
+    consultationId: recording.consultationId,
+  };
 }
 
 /**

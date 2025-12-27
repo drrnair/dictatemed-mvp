@@ -159,9 +159,15 @@ function ipToNumber(ip: string): number | null {
   return result >>> 0; // Ensure unsigned
 }
 
+// Track whether we've logged custom IP configuration (log only once per service)
+const customIPsLogged: Record<WebhookService, boolean> = {
+  resend: false,
+  deepgram: false,
+};
+
 /**
  * Get allowed IPs for a webhook service.
- * Logs when custom overrides are active for visibility.
+ * Logs once when custom overrides are first detected.
  */
 function getAllowedIPs(service: WebhookService): string[] {
   switch (service) {
@@ -170,9 +176,13 @@ function getAllowedIPs(service: WebhookService): string[] {
       const resendOverride = process.env.RESEND_WEBHOOK_IPS;
       if (resendOverride) {
         const customIPs = resendOverride.split(',').map((ip) => ip.trim());
-        logger.info('Using custom Resend webhook IPs from RESEND_WEBHOOK_IPS env var', {
-          count: customIPs.length,
-        });
+        // Log only once to avoid flooding logs on every request
+        if (!customIPsLogged.resend) {
+          logger.info('Using custom Resend webhook IPs from RESEND_WEBHOOK_IPS env var', {
+            count: customIPs.length,
+          });
+          customIPsLogged.resend = true;
+        }
         return customIPs;
       }
       return RESEND_WEBHOOK_IPS;
@@ -184,9 +194,13 @@ function getAllowedIPs(service: WebhookService): string[] {
       const deepgramIPs = process.env.DEEPGRAM_WEBHOOK_IPS;
       if (deepgramIPs) {
         const customIPs = deepgramIPs.split(',').map((ip) => ip.trim());
-        logger.info('Using custom Deepgram webhook IPs from DEEPGRAM_WEBHOOK_IPS env var', {
-          count: customIPs.length,
-        });
+        // Log only once to avoid flooding logs on every request
+        if (!customIPsLogged.deepgram) {
+          logger.info('Using custom Deepgram webhook IPs from DEEPGRAM_WEBHOOK_IPS env var', {
+            count: customIPs.length,
+          });
+          customIPsLogged.deepgram = true;
+        }
         return customIPs;
       }
       // Return empty - IP check will be skipped, signature is primary security
@@ -318,5 +332,17 @@ export function validateWebhookIPMiddleware(
         'Content-Type': 'application/json',
       },
     }
+  );
+}
+
+/**
+ * Reset the custom IPs logged state.
+ * Only exposed for testing purposes.
+ * @internal
+ */
+export function _resetCustomIPsLogged(): void {
+  customIPsLogged.resend = false;
+  customIPsLogged.deepgram = false;
+}
   );
 }
