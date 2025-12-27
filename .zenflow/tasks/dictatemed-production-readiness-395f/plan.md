@@ -477,41 +477,73 @@ npm test -- tests/unit/lib/webhook-ip-validation.test.ts  # ✅ 25 tests pass
 ### [x] Step 5.1: Install and Configure React Query
 <!-- chat-id: 97de75b3-cedd-45db-8c72-74267b6e4846 -->
 
-**Note:** This was implemented but incorrectly committed with "3: Enable Renovate" message (commit d8f5658).
-
 **Installed:**
-- `@tanstack/react-query`
-- `@tanstack/react-query-devtools`
+- `@tanstack/react-query@5.x`
+- `@tanstack/react-query-devtools@5.x`
 
 **Files created:**
-- `src/lib/react-query.ts` - Query client config with key factories, stale times, retry logic
-- `src/components/providers/QueryProvider.tsx` - QueryClientProvider with DevTools
-- `src/hooks/queries/useLettersQuery.ts` - Complete letters hooks with optimistic updates
+- `src/lib/react-query.ts` - Query client config with:
+  - Query key factory pattern for letters, recordings, documents, patients, user, specialties, styleProfiles
+  - Default stale time: 5 minutes, GC time: 10 minutes
+  - Retry with exponential backoff (up to 2 retries for queries, 1 for mutations)
+  - Window focus refetch disabled (medical app - intentional)
+  - Singleton pattern for browser client
+- `src/components/providers/QueryProvider.tsx` - QueryClientProvider with DevTools (bottom-left)
+- `src/hooks/queries/useLettersQuery.ts` - Complete letters hooks:
+  - `useLettersQuery` - List with filters, pagination
+  - `useLetterQuery` - Single letter by ID
+  - `useLetterStatsQuery` - Stats only
+  - `useCreateLetterMutation`, `useUpdateLetterMutation`
+  - `useApproveLetterMutation` - With optimistic updates
+  - `useSendLetterMutation`, `useDeleteLetterMutation`
+- `src/hooks/queries/useRecordingsQuery.ts` - Complete recordings hooks:
+  - `useRecordingsQuery`, `useRecordingQuery`, `useRecordingPollQuery`
+  - `useCreateRecordingMutation`, `useUpdateRecordingMutation`
+  - `useGetUploadUrlMutation`, `useTranscribeRecordingMutation` - With optimistic updates
+  - `useDeleteRecordingMutation`
+- `src/hooks/queries/useDocumentsQuery.ts` - Complete documents hooks:
+  - `useDocumentsQuery`, `useDocumentQuery`, `useDocumentPollQuery`
+  - `useUploadDocumentMutation`, `useProcessDocumentMutation` - With optimistic updates
+  - `useDeleteDocumentMutation`
+- `src/hooks/queries/usePatientsQuery.ts` - Complete patients hooks:
+  - `usePatientsQuery`, `usePatientQuery`, `useRecentPatientsQuery`
+  - `useCreatePatientMutation`, `useUpdatePatientMutation`, `useDeletePatientMutation`
+- `src/hooks/queries/usePracticeProfileQuery.ts` - Practice profile hooks:
+  - `usePracticeProfileQuery`
+  - `useSavePracticeProfileMutation`
+  - `useCreateCustomSpecialtyMutation`, `useCreateCustomSubspecialtyMutation`
+- `src/hooks/queries/index.ts` - Barrel export for all hooks and types
 
 **Files modified:**
-- `src/app/layout.tsx` - Integrated QueryProvider
+- `src/app/layout.tsx` - Integrated QueryProvider (wraps ThemeProvider)
+
+**Total Hooks Created:** 25+ hooks across 5 domains
 
 **Implementation Notes:**
-- Query key factory pattern for consistent cache management
-- Default stale time: 5 minutes, GC time: 10 minutes
-- Retry with exponential backoff (up to 2 retries)
-- DevTools included (auto-excluded in production)
-- Singleton pattern for browser client
+- Query key factory pattern enables efficient cache invalidation (`queryKeys.letters.lists()`)
+- All filter interfaces include index signature for type safety with query keys
+- Poll queries for recordings and documents auto-stop when reaching terminal states
+- DevTools included (auto-excluded in production builds)
 
 **Verification:**
 ```bash
 npm run typecheck  # ✅ Passes
+npm run lint       # ✅ Passes (only pre-existing warnings)
 # React Query DevTools visible in bottom-left of dev mode
 ```
 
 ### [x] Step 5.2: Add Optimistic Updates
 
 **Implementation Notes:**
-- `useApproveLetterMutation` includes full optimistic update pattern:
+- Optimistic update pattern implemented in 3 mutations:
+  - `useApproveLetterMutation` - Letter approval
+  - `useTranscribeRecordingMutation` - Recording transcription
+  - `useProcessDocumentMutation` - Document processing
+- Pattern includes:
   - `onMutate`: Cancel queries, snapshot previous data, optimistically update cache
   - `onError`: Rollback to previous data on failure
   - `onSettled`: Invalidate queries to ensure consistency
-- Pattern can be replicated for other mutations as needed
+- Explicit TypeScript context types for type-safe rollback
 
 **Verification:**
 - UI updates immediately before server confirms (visible in letter approval flow)
