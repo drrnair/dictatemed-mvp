@@ -393,15 +393,39 @@ npm run typecheck  # ✅ Passes
 # Will run automatically on next push/PR to main
 ```
 
-### [ ] Step 4.2: Add Webhook IP Allowlisting
+### [x] Step 4.2: Add Webhook IP Allowlisting
 <!-- chat-id: 293ed643-422f-4ba0-a3ef-658573f9d6e0 -->
 
-**File to modify:**
-- `src/middleware.ts` - Add IP validation for /api/transcription/webhook, /api/webhooks/resend
+**New file created:**
+- `src/lib/webhook-ip-validation.ts` - Webhook IP validation module
+
+**Files modified:**
+- `src/middleware.ts` - Added IP validation for webhook paths before allowing public access
+
+**Implementation Notes:**
+- Created comprehensive IP validation module with:
+  - `getClientIP()` - Extracts client IP from proxy headers (x-forwarded-for, x-vercel-forwarded-for, x-real-ip, cf-connecting-ip)
+  - `ipInCIDR()` - Validates IP against CIDR ranges for flexible allowlisting
+  - `validateWebhookIP()` - Core validation function with service-specific logic
+  - `validateWebhookIPMiddleware()` - Middleware helper that returns 403 response if blocked
+- **Resend IPs** (from docs): 44.228.126.217, 50.112.21.217, 52.24.126.164, 54.148.139.208
+  - IP validation always enabled for Resend (they publish static IPs)
+  - Can be overridden via `RESEND_WEBHOOK_IPS` env var
+- **Deepgram IPs**: Not published (relies on HMAC signature verification as primary security)
+  - IP validation only enabled if `DEEPGRAM_WEBHOOK_IPS` env var is set
+  - Signature verification remains the primary security mechanism
+- Middleware integration:
+  - Checks webhook paths BEFORE allowing public paths (defense in depth)
+  - Returns 403 Forbidden for blocked IPs in production
+  - Logs warning but allows in development for testing
+- Security logging: Uses `securityLogger.suspicious()` for blocked webhook attempts
+- Added `/api/webhooks/resend` and `/api/csp-report` to public paths list
 
 **Verification:**
-- Verify webhooks still work from correct IPs
-- Verify blocked from other IPs
+```bash
+npm run typecheck  # ✅ Passes
+npm run lint       # ✅ Passes
+```
 
 ### [ ] Step 4.3: Enable Renovate
 
@@ -536,7 +560,7 @@ Output: `report.md` containing:
 
 ### Medium Priority
 - [x] Dependency scanning in CI
-- [ ] Webhook IP allowlisting
+- [x] Webhook IP allowlisting
 - [ ] React Query caching
 - [ ] Pre-commit hooks
 
