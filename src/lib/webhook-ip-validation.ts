@@ -344,5 +344,3 @@ export function _resetCustomIPsLogged(): void {
   customIPsLogged.resend = false;
   customIPsLogged.deepgram = false;
 }
-  );
-}

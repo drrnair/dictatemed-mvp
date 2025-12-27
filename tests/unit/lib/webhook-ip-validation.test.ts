@@ -4,6 +4,7 @@ import {
   validateWebhookIP,
   validateWebhookIPMiddleware,
   getClientIP,
+  _resetCustomIPsLogged,
 } from '@/lib/webhook-ip-validation';
 
 // Mock the logger
@@ -51,6 +52,8 @@ describe('webhook-ip-validation', () => {
     setNodeEnv(originalEnv ?? 'test');
     delete process.env.RESEND_WEBHOOK_IPS;
     delete process.env.DEEPGRAM_WEBHOOK_IPS;
+    // Reset custom IPs logged state to ensure clean slate between tests
+    _resetCustomIPsLogged();
   });
 
   describe('getClientIP', () => {

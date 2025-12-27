@@ -430,7 +430,8 @@ npm run typecheck  # ⚠️ Errors in unrelated React Query hooks (pre-existing)
   - Logs warning but allows in development for testing
 - Security logging: Uses `securityLogger.suspicious()` for blocked webhook attempts
 - Added `/api/webhooks/resend` and `/api/csp-report` to public paths list
-- Logging: Added info-level logging when custom IPs are used via env vars
+- Logging: Added info-level logging when custom IPs are used via env vars (logs only once per service to avoid flooding)
+- Added `_resetCustomIPsLogged()` test utility for resetting logging state between tests
 
 **Unit Test Coverage (25 tests):**
 - `getClientIP()`: 8 tests covering all proxy header combinations
@@ -548,14 +549,39 @@ npm run lint       # ✅ Passes (only pre-existing warnings)
 **Verification:**
 - UI updates immediately before server confirms (visible in letter approval flow)
 
-### [ ] Step 5.3: Add Cache Wrappers
+### [x] Step 5.3: Add Cache Wrappers
 <!-- chat-id: e572507f-e055-4ded-bb72-04ee5d29cf84 -->
 
-**New file:**
-- `src/lib/cache.ts` - unstable_cache wrappers for templates, settings
+**New file created:**
+- `src/lib/cache.ts` - Server-side caching with Next.js `unstable_cache`
+
+**Implementation Notes:**
+- Created comprehensive caching module with 4 cache tiers:
+  - `STATIC` (24 hours): Reference data like specialties, subspecialties
+  - `TEMPLATES` (1 hour): Admin-managed letter templates
+  - `USER_SETTINGS` (30 minutes): User preferences, specialty selections
+  - `DYNAMIC` (5 minutes): Frequently changing data
+- Specialty caching functions:
+  - `getCachedSpecialties()` - All active medical specialties (24hr cache)
+  - `getCachedSubspecialties(specialtyId)` - Subspecialties by parent (24hr cache)
+  - `getCachedSpecialtyById(id)` - Single specialty lookup (24hr cache)
+- Template caching functions:
+  - `getCachedTemplates()` - All active letter templates (1hr cache)
+  - `getCachedTemplatesBySubspecialty(subspecialty)` - Filtered by Subspecialty enum (1hr cache)
+  - `getCachedTemplateById(id)` - Single template with variants (1hr cache)
+  - `getCachedTemplateBySlug(slug)` - Template by slug (1hr cache)
+- User settings caching:
+  - `getCachedUserSpecialties(userId)` - User's selected specialties (30min cache)
+  - `getCachedUserSubspecialties(userId)` - User's selected subspecialties (30min cache)
+  - `getCachedUserTemplatePreferences(userId)` - Template favorites/usage (30min cache)
+- Cache tags defined for invalidation: `CACHE_TAGS.SPECIALTIES`, `SUBSPECIALTIES`, `TEMPLATES`, `USER_SETTINGS`
+- Documentation includes `revalidateTag()` usage examples for mutations
 
 **Verification:**
-- Same data fetched twice hits cache
+```bash
+npm run typecheck  # ✅ Passes (cache.ts has no errors)
+npm run lint       # ✅ Passes (src/lib/cache.ts clean)
+```
 
 ### [ ] Step 5.4: Enable ISR for Static Pages
 
@@ -644,6 +670,7 @@ Output: `report.md` containing:
 - [x] Dependency scanning in CI
 - [x] Webhook IP allowlisting
 - [x] React Query caching (implemented, incorrectly committed with Renovate)
+- [x] Server-side cache wrappers (unstable_cache for specialties, templates, user settings)
 - [ ] Pre-commit hooks
 
 ### Nice to Have
