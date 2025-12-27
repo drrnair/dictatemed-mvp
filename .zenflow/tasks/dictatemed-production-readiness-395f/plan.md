@@ -705,31 +705,44 @@ npm run lint       # ✅ Passes
 
 ## Subtask 6: Developer Experience
 
-### [ ] Step 6.1: Add Pre-commit Hooks
+### [x] Step 6.1: Add Pre-commit Hooks
 
 <!-- chat-id: 95f67764-4905-4c20-a98f-91099c71708e -->
 
-**Install:**
+**Installed:**
 
 ```bash
 npm install --save-dev husky lint-staged
-npx husky install
+npx husky init
 ```
 
-**New files:**
+**New files created:**
 
-- `.husky/pre-commit`
-- `.lintstagedrc.js`
+- `.husky/pre-commit` - Runs `npx lint-staged` on commit
+- `.lintstagedrc.js` - Configuration for lint-staged
 
-**Modify:**
+**Modified:**
 
-- `package.json` - Add "prepare": "husky install"
+- `package.json` - Added `"prepare": "husky"` (auto-added by husky init)
+
+**Implementation Notes:**
+
+- Husky v9 used with simplified initialization via `npx husky init`
+- lint-staged configuration:
+  - TypeScript files (`src/**/*.{ts,tsx}`): typecheck → eslint --fix → prettier
+  - JavaScript files (`src/**/*.{js,jsx,mjs,cjs}`): eslint --fix → prettier
+  - JSON/Markdown/YAML: prettier --write
+  - CSS: prettier --write
+- Typecheck runs on entire project (not just staged files) because TS errors cascade
+- ESLint runs without `--max-warnings=0` to allow pre-existing warnings while blocking errors
+- Fixed merge conflict markers in `src/lib/react-query.ts` that were committed in previous session
 
 **Verification:**
 
 ```bash
-git add . && git commit -m "test"
-# Should run lint + typecheck before commit
+npm run typecheck  # ✅ Passes
+npm run lint       # ✅ Passes (warnings for pre-existing issues only)
+npx lint-staged    # ✅ Runs on staged files
 ```
 
 ### [ ] Step 6.2: Add Performance Measurement Helper
