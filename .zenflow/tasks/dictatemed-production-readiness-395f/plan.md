@@ -174,21 +174,25 @@ npm run lint       # ✅ Passes (only unrelated warnings in other files)
 <!-- chat-id: c15afa23-ce5f-46a0-85a1-8f36e38ca22f -->
 
 **Files created/modified:**
-- `src/lib/dal/api-handler.ts` - API route error handler utilities (handleDALError, isDALError, withDALErrorHandling)
-- `src/app/api/letters/route.ts` - Updated GET to use DAL, POST uses session-based auth + domain service
-- `src/app/api/letters/[id]/route.ts` - Updated all handlers (GET, PUT, PATCH, DELETE) to use DAL
-- `src/app/api/recordings/route.ts` - Updated to use DAL's getCurrentUserOrThrow() and error handling
-- `src/app/api/documents/route.ts` - Updated to use DAL's getCurrentUserOrThrow() and error handling
+- `src/lib/dal/base.ts` - Added `ValidationError` class for business rule violations (400 status)
+- `src/lib/dal/api-handler.ts` - Added ValidationError handling to isDALError() and handleDALError()
+- `src/lib/dal/letters.ts` - Added `saveLetterDraft()`, `getLetterForSending()` functions with auth/validation
+- `src/lib/dal/recordings.ts` - Added `getRecordingForUpload()`, `setRecordingStoragePath()` functions
+- `src/app/api/letters/route.ts` - Updated GET to use DAL listLetters()
+- `src/app/api/letters/[id]/route.ts` - Updated PATCH to use saveLetterDraft(), DELETE to use deleteLetter()
+- `src/app/api/letters/[id]/send/route.ts` - Updated to use getLetterForSending() for practice-level auth
+- `src/app/api/recordings/[id]/upload-url/route.ts` - Updated to use getRecordingForUpload(), setRecordingStoragePath()
+- `src/app/api/recordings/route.ts` - Updated to use DAL's getCurrentUserOrThrow()
+- `src/app/api/documents/route.ts` - Updated to use DAL's getCurrentUserOrThrow()
 
 **Implementation Notes:**
-- Created API handler utilities for consistent error responses from DAL errors
-- handleDALError() maps UnauthorizedError→401, ForbiddenError→403, NotFoundError→404
-- isDALError() type guard for checking if error is a DAL error
-- withDALErrorHandling() HOF for wrapping route handlers
-- MinimalLogger interface works with both root logger and child loggers
-- All routes now use DAL's `getCurrentUserOrThrow()` for consistent authentication
+- Added `ValidationError` class for business logic errors (e.g., "cannot edit approved letter")
+- Added practice-level authorization for letter sending (any user in same practice can send approved letters)
+- Used dynamic imports (`await import('./base')`) to prevent linter from removing "unused" imports
+- handleDALError() maps: UnauthorizedError→401, ForbiddenError→403, NotFoundError→404, ValidationError→400
+- isDALError() type guard expanded to include ValidationError
+- All routes now use DAL functions for consistent auth, ownership verification, and audit logging
 - Routes continue to use domain services for business logic, but get auth from DAL
-- DAL error handling catches UnauthorizedError and returns proper 401 responses
 
 **Verification:**
 ```bash
