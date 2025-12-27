@@ -53,7 +53,7 @@ npm run dev  # Should still work with mock auth in dev
 - Created `src/lib/env-validation.ts` with `validateProductionEnv()` and `assertProductionEnvSafe()` functions that check for dangerous env vars
 - Created `.github/workflows/env-check.yml` workflow that runs on PRs and pushes to main, checking for hardcoded dangerous env vars and verifying security guards exist
 
-### [ ] Step 1.2: Fix Empty Catch Blocks
+### [x] Step 1.2: Fix Empty Catch Blocks
 <!-- chat-id: 418ca9ce-d22f-48fd-9ca3-ec55e638557c -->
 
 **Files to modify:**
@@ -71,6 +71,14 @@ npm run dev  # Should still work with mock auth in dev
 ```bash
 npm run lint  # Should pass, no empty catches allowed
 ```
+
+**Implementation Notes:**
+- Fixed `unified-service.ts:416` - Added debug logging for cost estimation skipped due to unknown model (uses existing `logger.debug`)
+- Fixed `extract-structured/route.ts:130` - Added warning log with context when status update fails (document may not exist or was deleted)
+- Fixed `useLiteratureSearch.ts:101` - Added development-only console.warn for usage stat refresh failures (non-critical)
+- Added ESLint rule `"no-empty": ["error", { "allowEmptyCatch": false }]` to prevent future empty catches
+- Added override for test files (`tests/**/*`) to allow empty catches in E2E test cleanup code
+- Note: Existing `src/lib/error-handler.ts` already provides standardized error handling with PHI scrubbing - no new file needed
 
 ### [ ] Step 1.3: Require Redis for Rate Limiting in Production
 
@@ -341,7 +349,7 @@ Output: `report.md` containing:
 
 ### Critical (Must complete for production)
 - [x] E2E_MOCK_AUTH blocked in production
-- [ ] Empty catch blocks fixed
+- [x] Empty catch blocks fixed
 - [ ] Redis required for rate limiting
 - [ ] CSP headers active
 
