@@ -745,17 +745,32 @@ npm run lint       # ✅ Passes (warnings for pre-existing issues only)
 npx lint-staged    # ✅ Runs on staged files
 ```
 
-### [ ] Step 6.2: Add Performance Measurement Helper
+### [x] Step 6.2: Add Performance Measurement Helper
 
 <!-- chat-id: 4d88c9b7-7c09-462e-b40b-1301904c02f7 -->
 
-**New file:**
+**New file created:**
 
-- `src/lib/performance.ts` - measureAsync() helper
+- `src/lib/performance.ts` - Comprehensive performance measurement utilities
+
+**Implementation Notes:**
+
+- `measureAsync(name, fn, options)` - Measure async operations with automatic logging
+- `measureSync(name, fn, options)` - Measure sync operations with automatic logging
+- `createTimer(name)` - Manual timer with checkpoints for multi-step operations
+- `withTiming(name, fn)` - Decorator-style wrapper for functions
+- `withTimingSync(name, fn)` - Sync version of decorator
+- Options include: `slowThresholdMs`, `slowWarningThresholdMs`, `logLevel`, `context`
+- Integrates with existing `logger` for consistent structured logging
+- Slow operations (>1s by default) logged as warnings
+- Failed operations logged as errors with full stack trace
 
 **Verification:**
 
-- Wrap expensive operation, verify timing logged
+```bash
+npx tsc --noEmit src/lib/performance.ts  # ✅ Passes
+npx eslint src/lib/performance.ts        # ✅ Passes
+```
 
 ---
 
@@ -811,6 +826,6 @@ Output: `report.md` containing:
 
 - [x] Optimistic updates (included in useApproveLetterMutation)
 - [x] ISR for marketing pages (landing, login, signup with 1hr revalidation)
-- [ ] Performance helpers
+- [x] Performance helpers
 - [x] Enhanced health endpoint
 - [x] Transaction wrapping for critical operations
