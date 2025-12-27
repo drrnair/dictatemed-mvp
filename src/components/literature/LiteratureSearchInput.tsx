@@ -139,77 +139,164 @@ export function LiteratureSearchInput({
 
   return (
     <div className={cn('relative', className)}>
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            ref={inputRef}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setShowSuggestions(true)}
-            placeholder={placeholder}
-            disabled={disabled || isLoading}
-            className="pl-9 pr-4"
-            aria-label="Clinical literature search"
-            aria-autocomplete="list"
-            aria-controls="literature-suggestions"
-            aria-expanded={showSuggestions}
+      {/* Main input container with shadow progression */}
+      <div
+        className={cn(
+          'relative flex items-center gap-2',
+          'clinical-search-input rounded-xl',
+          'bg-white border transition-all duration-200',
+          isFocused
+            ? 'border-transparent ring-2 ring-clinical-blue-500'
+            : 'border-clinical-gray-300 hover:border-clinical-gray-400'
+        )}
+      >
+        {/* Search icon (left) */}
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+          <Search
+            className={cn(
+              'w-[18px] h-[18px] transition-colors duration-200',
+              isFocused ? 'text-clinical-blue-500' : 'text-clinical-gray-400'
+            )}
           />
         </div>
-        <Button
-          onClick={() => {
-            if (value.trim()) {
-              onSubmit();
-              setShowSuggestions(false);
-            }
+
+        {/* Input field */}
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => {
+            setIsFocused(true);
+            setShowSuggestions(true);
           }}
-          disabled={!value.trim() || isLoading || disabled}
-          size="icon"
-          aria-label="Search literature"
-        >
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
+          onBlur={() => setIsFocused(false)}
+          placeholder={placeholder}
+          disabled={disabled || isLoading}
+          className={cn(
+            'flex-1 pl-12 pr-24 py-3.5',
+            'bg-transparent text-[15px] text-clinical-gray-900',
+            'placeholder:text-clinical-gray-500',
+            'font-ui-sans',
+            'focus:outline-none',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
-        </Button>
+          role="combobox"
+          aria-label="Clinical literature search"
+          aria-autocomplete="list"
+          aria-controls="literature-suggestions"
+          aria-expanded={showSuggestions}
+        />
+
+        {/* Right side: keyboard badge or submit button */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          {/* Keyboard shortcut badge - fades out on focus */}
+          {showKeyboardHint && !value && (
+            <AnimatePresence mode="wait">
+              {!isFocused && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.15 }}
+                  className="kbd-badge"
+                >
+                  <Command className="w-3 h-3 text-clinical-gray-600" />
+                  <span>K</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
+
+          {/* Submit button */}
+          <motion.button
+            type="button"
+            onClick={() => {
+              if (value.trim()) {
+                onSubmit();
+                setShowSuggestions(false);
+              }
+            }}
+            disabled={!value.trim() || isLoading || disabled}
+            whileHover={{ y: -1 }}
+            whileTap={{ y: 0 }}
+            className={cn(
+              'flex items-center justify-center',
+              'w-9 h-9 rounded-lg',
+              'transition-colors duration-150',
+              value.trim() && !isLoading && !disabled
+                ? 'bg-clinical-blue-600 text-white hover:bg-clinical-blue-700 shadow-sm hover:shadow-md'
+                : 'bg-clinical-gray-100 text-clinical-gray-400 cursor-not-allowed'
+            )}
+            aria-label="Search literature"
+          >
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+          </motion.button>
+        </div>
       </div>
 
-      {/* Suggestions dropdown */}
-      {showSuggestions && !isLoading && suggestions.length > 0 && (
-        <div
-          ref={suggestionsRef}
-          id="literature-suggestions"
-          role="listbox"
-          className="absolute top-full left-0 right-0 mt-1 z-10 bg-card rounded-lg border shadow-lg overflow-hidden"
-        >
-          <div className="px-3 py-2 border-b bg-muted/50">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Sparkles className="h-3 w-3" />
-              <span>{selectedText ? 'Based on selection' : 'Quick suggestions'}</span>
+      {/* Suggestions dropdown with clinical styling */}
+      <AnimatePresence>
+        {showSuggestions && !isLoading && suggestions.length > 0 && (
+          <motion.div
+            ref={suggestionsRef}
+            id="literature-suggestions"
+            role="listbox"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.15 }}
+            className={cn(
+              'absolute top-full left-0 right-0 mt-2 z-10',
+              'bg-white rounded-xl border border-clinical-gray-200',
+              'shadow-lg overflow-hidden'
+            )}
+          >
+            {/* Header */}
+            <div className="px-4 py-2.5 border-b border-clinical-gray-100 bg-clinical-gray-50">
+              <div className="flex items-center gap-2 text-xs font-medium text-clinical-gray-600">
+                <Sparkles className="w-3.5 h-3.5 text-clinical-blue-500" />
+                <span className="uppercase tracking-wide">
+                  {selectedText ? 'Based on selection' : 'Suggestions'}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="p-1">
-            {suggestions.map((suggestion, index) => (
-              <button
-                key={index}
-                type="button"
-                role="option"
-                aria-selected={false}
-                onClick={() => handleSuggestionClick(suggestion)}
-                className={cn(
-                  'w-full text-left px-3 py-2 text-sm rounded-md',
-                  'hover:bg-muted focus:bg-muted focus:outline-none',
-                  'transition-colors duration-150'
-                )}
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+
+            {/* Suggestion items */}
+            <div className="p-1.5">
+              {suggestions.map((suggestion, index) => (
+                <motion.button
+                  key={index}
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{
+                    opacity: 1,
+                    x: 0,
+                    transition: { delay: index * 0.03 },
+                  }}
+                  className={cn(
+                    'w-full text-left px-3 py-2.5 rounded-lg',
+                    'text-sm text-clinical-gray-700 font-ui-sans',
+                    'hover:bg-clinical-blue-50 hover:text-clinical-blue-700',
+                    'focus:bg-clinical-blue-50 focus:text-clinical-blue-700 focus:outline-none',
+                    'transition-colors duration-150'
+                  )}
+                >
+                  {suggestion}
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
