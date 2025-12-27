@@ -942,6 +942,69 @@ SENTRY_DSN=<dsn>
 
 ---
 
+## Supabase & Vercel API Configuration Verification
+
+### Supabase Configuration
+
+**Storage Buckets Required:**
+| Bucket | Purpose | RLS Policy |
+|--------|---------|------------|
+| `recordings` | Audio files | User-scoped read/write |
+| `documents` | Clinical documents | User-scoped read/write |
+| `referrals` | Referral PDFs | User-scoped read/write |
+| `letterheads` | Practice letterheads | Practice-scoped read |
+
+**Environment Variables (Supabase Dashboard → Settings → API):**
+- `NEXT_PUBLIC_SUPABASE_URL` - Project URL
+- `SUPABASE_SERVICE_ROLE_KEY` - Service role key (server-side only)
+
+**Database Extensions Required:**
+- `pgvector` - For literature vector search (enabled via SQL: `CREATE EXTENSION vector;`)
+
+**Verification Steps:**
+1. Check Supabase Dashboard → Storage → Buckets exist
+2. Verify RLS policies are enabled on each bucket
+3. Test signed URL generation via `/api/health` endpoint
+4. Confirm pgvector extension in SQL Editor: `SELECT * FROM pg_extension WHERE extname = 'vector';`
+
+### Vercel Configuration
+
+**Environment Variables (Vercel Dashboard → Settings → Environment Variables):**
+
+| Variable | Scope | Notes |
+|----------|-------|-------|
+| `DATABASE_URL` | All | Supabase connection string with `?pgbouncer=true` for pooling |
+| `PHI_ENCRYPTION_KEY` | All | 256-bit key for patient data encryption |
+| `AUTH0_*` | All | 5 Auth0 variables |
+| `ANTHROPIC_API_KEY` | All | Claude API access |
+| `DEEPGRAM_API_KEY` | All | Transcription API |
+| `DEEPGRAM_CALLBACK_URL` | Production | Must point to production domain |
+| `RESEND_*` | All | 3 Resend variables |
+| `NEXT_PUBLIC_SUPABASE_URL` | All | Client-accessible |
+| `SUPABASE_SERVICE_ROLE_KEY` | All | Server-only |
+
+**Verification Steps:**
+1. Check Vercel Dashboard → Settings → Environment Variables for all required vars
+2. Verify `DEEPGRAM_CALLBACK_URL` points to production URL (not localhost)
+3. Confirm `DATABASE_URL` uses Supabase pooler endpoint for serverless
+4. Test deployment health: `GET https://<domain>/api/health`
+
+### API Integration Checklist
+
+| Service | Config Location | Verification Method |
+|---------|-----------------|---------------------|
+| PostgreSQL | `DATABASE_URL` | `/api/health` → database check |
+| Supabase Storage | `SUPABASE_*` vars | `/api/health` → supabase check |
+| Auth0 | `AUTH0_*` vars | Login flow test |
+| Anthropic Claude | `ANTHROPIC_API_KEY` | Letter generation test |
+| Deepgram | `DEEPGRAM_*` vars | `/api/health` → deepgram check |
+| Resend | `RESEND_*` vars | Email send test |
+| AWS Bedrock | `AWS_*` vars | `/api/health` → bedrock check (optional) |
+
+**Note:** This audit does not have access to verify actual Supabase/Vercel configurations. The above provides a checklist for manual verification by the deployment team.
+
+---
+
 ## Completion Metrics by Functional Area
 
 | Area | Features | Complete | Partial | Completion |
