@@ -161,26 +161,37 @@ function ipToNumber(ip: string): number | null {
 
 /**
  * Get allowed IPs for a webhook service.
+ * Logs when custom overrides are active for visibility.
  */
 function getAllowedIPs(service: WebhookService): string[] {
   switch (service) {
-    case 'resend':
+    case 'resend': {
       // Use env var override if set, otherwise use known IPs
       const resendOverride = process.env.RESEND_WEBHOOK_IPS;
       if (resendOverride) {
-        return resendOverride.split(',').map((ip) => ip.trim());
+        const customIPs = resendOverride.split(',').map((ip) => ip.trim());
+        logger.info('Using custom Resend webhook IPs from RESEND_WEBHOOK_IPS env var', {
+          count: customIPs.length,
+        });
+        return customIPs;
       }
       return RESEND_WEBHOOK_IPS;
+    }
 
-    case 'deepgram':
+    case 'deepgram': {
       // Deepgram doesn't publish static IPs
       // Allow configurable IPs via env var, or empty (skip IP check)
       const deepgramIPs = process.env.DEEPGRAM_WEBHOOK_IPS;
       if (deepgramIPs) {
-        return deepgramIPs.split(',').map((ip) => ip.trim());
+        const customIPs = deepgramIPs.split(',').map((ip) => ip.trim());
+        logger.info('Using custom Deepgram webhook IPs from DEEPGRAM_WEBHOOK_IPS env var', {
+          count: customIPs.length,
+        });
+        return customIPs;
       }
       // Return empty - IP check will be skipped, signature is primary security
       return [];
+    }
 
     default:
       return [];
